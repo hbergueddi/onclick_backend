@@ -3,9 +3,11 @@ package com.onesley.oneclick.service.auth;
 import com.onesley.oneclick.dto.auth.ProfileDto;
 import com.onesley.oneclick.dto.auth.ProfileUpdateDto;
 import com.onesley.oneclick.entity.auth.Profile;
+import com.onesley.oneclick.event.ProfileUpdatedEvent;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.mapper.auth.ProfileMapper;
 import com.onesley.oneclick.repository.auth.ProfileRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,10 +21,16 @@ public class ProfileService {
 
     private final ProfileRepository repository;
     private final ProfileMapper mapper;
+    private final ApplicationEventPublisher events;
 
-    public ProfileService(ProfileRepository repository, ProfileMapper mapper) {
+    public ProfileService(
+        ProfileRepository repository,
+        ProfileMapper mapper,
+        ApplicationEventPublisher events
+    ) {
         this.repository = repository;
         this.mapper = mapper;
+        this.events = events;
     }
 
     public Optional<ProfileDto> findById(UUID id) {
@@ -46,6 +54,11 @@ public class ProfileService {
         Profile entity = repository.findById(id)
             .orElseThrow(() -> new NotFoundException("Profile", id));
         mapper.applyPatch(patch, entity);
-        return mapper.toDto(repository.save(entity));
+        ProfileDto saved = mapper.toDto(repository.save(entity));
+        // Event publié pendant la transaction. Les listeners @TransactionalEventListener
+        // (AFTER_COMMIT) ne se déclencheront que si le commit réussit. Voir
+        // AuditEventListener + NotificationEventListener.
+        events.publishEvent(ProfileUpdatedEvent.of(id));
+        return saved;
     }
 }
