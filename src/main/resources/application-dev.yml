@@ -1,0 +1,57 @@
+# ════════════════════════════════════════════════════════════════════
+# OneClick Backend — DEV profile (local development)
+# ════════════════════════════════════════════════════════════════════
+# Database : oneclick_local (local Postgres 17, restored from prod dump)
+# Redis    : local (no auth)
+# Server   : http://localhost:8081
+# Swagger  : http://localhost:8081/swagger-ui.html
+# Health   : http://localhost:8081/actuator/health
+# ════════════════════════════════════════════════════════════════════
+
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/oneclick_local
+    username: oneclick_app
+    password: OneclickLocal2026
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 5000
+      idle-timeout: 300000
+      max-lifetime: 1800000
+
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        # Useful in dev to see prepared-statement param values
+        # (do NOT enable in prod, leaks PII to logs)
+        type:
+          descriptor:
+            sql:
+              BasicBinder: TRACE
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+  flyway:
+    # In dev, Flyway is enabled but the existing DB is treated as baseline.
+    # First real migration will be V2__... (V1__init_baseline.sql is reference only).
+    baseline-description: 'OneClick schema baseline (extracted from Supabase prod dump)'
+
+logging:
+  level:
+    com.onesley.oneclick: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
+    org.flywaydb: INFO

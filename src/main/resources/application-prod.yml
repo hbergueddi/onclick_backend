@@ -1,0 +1,77 @@
+# ════════════════════════════════════════════════════════════════════
+# OneClick Backend — PROD profile (template — to complete by ops)
+# ════════════════════════════════════════════════════════════════════
+# All sensitive values come from environment variables — never hardcoded.
+# Required env vars at deployment:
+#   DB_URL              jdbc:postgresql://host:5432/oneclick
+#   DB_USERNAME         (default: oneclick_app)
+#   DB_PASSWORD         REQUIRED
+#   REDIS_HOST          (default: localhost)
+#   REDIS_PORT          (default: 6379)
+#   REDIS_PASSWORD      (optional, prod usually has one)
+#   SENTRY_DSN          (optional, observability)
+# ════════════════════════════════════════════════════════════════════
+
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/oneclick}
+    username: ${DB_USERNAME:oneclick_app}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 30
+      minimum-idle: 5
+      connection-timeout: 5000
+      idle-timeout: 300000
+      max-lifetime: 1800000
+      # Validate connections before use (recommended in prod)
+      connection-test-query: SELECT 1
+
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        # Avoid statistics overhead in prod (enable selectively for tuning)
+        generate_statistics: false
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      ssl:
+        enabled: ${REDIS_SSL:false}
+
+  flyway:
+    # In prod, validate strictly — no baseline-on-migrate (would mask schema drift)
+    baseline-on-migrate: false
+
+server:
+  # Behind Nginx reverse proxy (port 80/443 -> backend 8080)
+  port: ${SERVER_PORT:8080}
+  forward-headers-strategy: native
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # Restrict in prod : only health + info + metrics (no env, no flyway)
+        include: health, info, metrics
+  endpoint:
+    health:
+      show-details: never  # never leak DB URL etc. to anonymous probes
+
+logging:
+  level:
+    com.onesley.oneclick: INFO
+    org.springframework: WARN
+    org.hibernate: WARN
+  file:
+    name: /var/log/oneclick/backend.log
+    max-size: 100MB
+    max-history: 30

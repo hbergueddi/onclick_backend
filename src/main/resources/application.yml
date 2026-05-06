@@ -1,0 +1,108 @@
+# ════════════════════════════════════════════════════════════════════
+# OneClick Backend — Common configuration (all profiles)
+# ════════════════════════════════════════════════════════════════════
+# Profile-specific overrides:
+#   - application-dev.yml   (local development)
+#   - application-prod.yml  (production)
+# Active profile selection:
+#   - default         -> dev
+#   - via env var     -> SPRING_PROFILES_ACTIVE=prod
+#   - via -D arg      -> -Dspring.profiles.active=prod
+# ════════════════════════════════════════════════════════════════════
+
+spring:
+  application:
+    name: oneclick-backend
+  profiles:
+    default: dev
+
+  jpa:
+    # NEVER use ddl-auto=update/create in prod. Schema is managed by Flyway.
+    hibernate:
+      ddl-auto: validate
+    # Avoid lazy-loading triggered by views/REST controllers (anti-pattern)
+    open-in-view: false
+    properties:
+      hibernate:
+        # Always store timestamps in UTC, format dates in app code
+        jdbc:
+          time_zone: UTC
+        # Disable in prod, enable in dev profile
+        format_sql: false
+        # Hibernate 7 uses logical names natively. No naming-strategy override.
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    # baseline-on-migrate=true allows Flyway to apply on a non-empty database.
+    # First migration V1__init_baseline.sql describes the existing schema state.
+    baseline-on-migrate: true
+    baseline-version: 0
+    # Validate migrations checksums on startup
+    validate-on-migrate: true
+
+  cache:
+    type: redis
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000ms
+      lettuce:
+        pool:
+          enabled: true
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+
+server:
+  port: 8081  # 8080 is taken by the React Vite dev server
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-stacktrace: never  # never expose stack traces to clients
+
+# ─── OpenAPI / Swagger UI ─────────────────────────────────────────────
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: alpha
+    tags-sorter: alpha
+    display-request-duration: true
+    show-extensions: true
+    try-it-out-enabled: true
+  default-produces-media-type: application/json
+  default-consumes-media-type: application/json
+  show-actuator: false
+  packages-to-scan: com.onesley.oneclick
+
+# ─── Spring Boot Actuator (health/info/metrics) ───────────────────────
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, flyway, env
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+  info:
+    git:
+      mode: simple
+    env:
+      enabled: true
+
+# ─── Logging defaults (overridden per profile) ────────────────────────
+logging:
+  pattern:
+    console: '%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n'
+  level:
+    root: INFO
+    com.onesley.oneclick: INFO
+    org.springframework.security: WARN
+    org.hibernate: WARN
