@@ -1,0 +1,11 @@
+{
+  "name": "oneclick-scaffold-tools",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "description": "JPA scaffolder for OneClick Spring backend (Phase 4 — Option A)",
+  "engines": { "node": ">=22.0.0" },
+  "dependencies": {
+    "pg": "^8.13.1"
+  }
+}
