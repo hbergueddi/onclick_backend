@@ -23,6 +23,17 @@ export PATH="${JAVA_HOME}/bin:${PATH}"
 echo "→ JAVA_HOME = ${JAVA_HOME}"
 echo "→ $(java -version 2>&1 | head -1)"
 
+# Pre-flight : kill un Spring Boot précédent s'il squatte le port 8081
+if lsof -ti :8081 >/dev/null 2>&1; then
+  PIDS=$(lsof -ti :8081 2>/dev/null || true)
+  echo "→ port 8081 occupé (PIDs: ${PIDS}) — kill"
+  pkill -f "spring-boot:run" 2>/dev/null || true
+  pkill -f "OneClickSpringApplication" 2>/dev/null || true
+  # En dernier recours, kill par PID le squatteur du port
+  echo "${PIDS}" | xargs -r kill -9 2>/dev/null || true
+  sleep 2
+fi
+
 # Auto-source .env si présent (gitignored — pour les secrets locaux)
 if [[ -f ".env" ]]; then
   set -a
