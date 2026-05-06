@@ -1,6 +1,6 @@
 package com.onesley.oneclick.dto.auth;
 
-import com.onesley.oneclick.entity.auth.AppRole;
+import com.onesley.oneclick.entity.shared.AppRole;
 
 import java.util.UUID;
 

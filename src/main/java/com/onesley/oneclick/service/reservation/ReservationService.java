@@ -1,7 +1,7 @@
 package com.onesley.oneclick.service.reservation;
 
 import com.onesley.oneclick.dto.reservation.ReservationDto;
-import com.onesley.oneclick.entity.reservation.ReservationStatus;
+import com.onesley.oneclick.entity.shared.ReservationStatus;
 import com.onesley.oneclick.mapper.reservation.ReservationMapper;
 import com.onesley.oneclick.repository.reservation.ReservationRepository;
 import org.springframework.stereotype.Service;

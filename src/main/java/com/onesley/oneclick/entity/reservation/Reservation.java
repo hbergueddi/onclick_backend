@@ -1,5 +1,7 @@
 package com.onesley.oneclick.entity.reservation;
 
+import com.onesley.oneclick.entity.shared.ReservationStatus;
+
 import com.onesley.oneclick.audit.TimestampedEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

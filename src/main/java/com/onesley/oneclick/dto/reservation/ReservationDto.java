@@ -1,6 +1,6 @@
 package com.onesley.oneclick.dto.reservation;
 
-import com.onesley.oneclick.entity.reservation.ReservationStatus;
+import com.onesley.oneclick.entity.shared.ReservationStatus;
 
 import java.time.Instant;
 import java.time.LocalDate;

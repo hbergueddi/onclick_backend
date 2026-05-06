@@ -1,7 +1,7 @@
 package com.onesley.oneclick.repository.reservation;
 
 import com.onesley.oneclick.entity.reservation.Reservation;
-import com.onesley.oneclick.entity.reservation.ReservationStatus;
+import com.onesley.oneclick.entity.shared.ReservationStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

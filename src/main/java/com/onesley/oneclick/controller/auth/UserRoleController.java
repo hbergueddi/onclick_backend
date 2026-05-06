@@ -2,7 +2,7 @@ package com.onesley.oneclick.controller.auth;
 
 import com.onesley.oneclick.dto.auth.UserRoleCreateDto;
 import com.onesley.oneclick.dto.auth.UserRoleDto;
-import com.onesley.oneclick.entity.auth.AppRole;
+import com.onesley.oneclick.entity.shared.AppRole;
 import com.onesley.oneclick.service.auth.UserRoleService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

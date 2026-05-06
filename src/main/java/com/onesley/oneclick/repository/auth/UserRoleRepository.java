@@ -1,6 +1,6 @@
 package com.onesley.oneclick.repository.auth;
 
-import com.onesley.oneclick.entity.auth.AppRole;
+import com.onesley.oneclick.entity.shared.AppRole;
 import com.onesley.oneclick.entity.auth.UserRole;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;

@@ -1,5 +1,7 @@
 package com.onesley.oneclick.entity.auth;
 
+import com.onesley.oneclick.entity.shared.AppRole;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

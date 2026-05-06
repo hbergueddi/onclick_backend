@@ -1,7 +1,7 @@
 package com.onesley.oneclick.controller.reservation;
 
 import com.onesley.oneclick.dto.reservation.ReservationDto;
-import com.onesley.oneclick.entity.reservation.ReservationStatus;
+import com.onesley.oneclick.entity.shared.ReservationStatus;
 import com.onesley.oneclick.service.reservation.ReservationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

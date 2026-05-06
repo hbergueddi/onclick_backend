@@ -2,7 +2,7 @@ package com.onesley.oneclick.service.auth;
 
 import com.onesley.oneclick.dto.auth.UserRoleCreateDto;
 import com.onesley.oneclick.dto.auth.UserRoleDto;
-import com.onesley.oneclick.entity.auth.AppRole;
+import com.onesley.oneclick.entity.shared.AppRole;
 import com.onesley.oneclick.entity.auth.UserRole;
 import com.onesley.oneclick.mapper.auth.UserRoleMapper;
 import com.onesley.oneclick.repository.auth.UserRoleRepository;
