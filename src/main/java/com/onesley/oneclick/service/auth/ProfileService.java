@@ -3,6 +3,7 @@ package com.onesley.oneclick.service.auth;
 import com.onesley.oneclick.dto.auth.ProfileDto;
 import com.onesley.oneclick.dto.auth.ProfileUpdateDto;
 import com.onesley.oneclick.entity.auth.Profile;
+import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.mapper.auth.ProfileMapper;
 import com.onesley.oneclick.repository.auth.ProfileRepository;
 import org.springframework.stereotype.Service;
@@ -43,7 +44,7 @@ public class ProfileService {
     @Transactional
     public ProfileDto patch(UUID id, ProfileUpdateDto patch) {
         Profile entity = repository.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("Profile not found: " + id));
+            .orElseThrow(() -> new NotFoundException("Profile", id));
         mapper.applyPatch(patch, entity);
         return mapper.toDto(repository.save(entity));
     }
