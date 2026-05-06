@@ -46,6 +46,12 @@ spring:
     # In dev, Flyway is enabled but the existing DB is treated as baseline.
     # First real migration will be V2__... (V1__init_baseline.sql is reference only).
     baseline-description: 'OneClick schema baseline (extracted from Supabase prod dump)'
+    # Override user — the DB tables are owned by `hh` (the human user on the Mac
+    # who restored the dump), not by `oneclick_app`. ALTER TABLE migrations need
+    # the owner. In prod the pipeline creates a fresh DB owned by `oneclick_app`
+    # so this override is not used (cf application-prod.yml).
+    user: ${FLYWAY_USER:hh}
+    password: ${FLYWAY_PASSWORD:}
 
 logging:
   level:

@@ -1,6 +1,6 @@
 package com.onesley.oneclick.entity.auth;
 
-import com.onesley.oneclick.audit.TimestampedEntity;
+import com.onesley.oneclick.audit.AuditedEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -14,11 +14,11 @@ import org.hibernate.type.SqlTypes;
 /**
  * Entité {@code public.custom_roles} (générée par scripts/scaffold-jpa.mjs).
  *
- * <p>Pattern : created_at + updated_at hérités.
+ * <p>Pattern : audit niveau 1 (4 colonnes).
  */
 @Entity
 @Table(name = "custom_roles")
-public class CustomRole extends TimestampedEntity {
+public class CustomRole extends AuditedEntity {
 
     @Id
     @Column(name = "id", nullable = false, updatable = false)
@@ -34,9 +34,6 @@ public class CustomRole extends TimestampedEntity {
     @Column(name = "permissions", nullable = false, columnDefinition = "jsonb")
     private Map<String, Object> permissions = new HashMap<>();
 
-    @Column(name = "created_by")
-    private UUID createdBy;
-
     protected CustomRole() {
         // JPA
     }
@@ -45,5 +42,4 @@ public class CustomRole extends TimestampedEntity {
     public String getName() { return name; }
     public String getDescription() { return description; }
     public Map<String, Object> getPermissions() { return permissions; }
-    public UUID getCreatedBy() { return createdBy; }
 }

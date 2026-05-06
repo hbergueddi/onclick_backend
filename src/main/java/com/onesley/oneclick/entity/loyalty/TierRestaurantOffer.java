@@ -1,0 +1,56 @@
+package com.onesley.oneclick.entity.loyalty;
+
+import com.onesley.oneclick.audit.TimestampedEntity;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import java.util.UUID;
+
+/**
+ * Entité {@code public.tier_restaurant_offers} (générée par scripts/scaffold-jpa.mjs).
+ *
+ * <p>Pattern : created_at + updated_at hérités.
+ */
+@Entity
+@Table(name = "tier_restaurant_offers")
+public class TierRestaurantOffer extends TimestampedEntity {
+
+    @Id
+    @Column(name = "id", nullable = false, updatable = false)
+    private UUID id;
+
+    @Column(name = "restaurant_id", nullable = false)
+    private UUID restaurantId;
+
+    @Column(name = "tier_name", nullable = false)
+    private String tierName;
+
+    @Column(name = "offer_label", nullable = false)
+    private String offerLabel;
+
+    @Column(name = "offer_type", nullable = false)
+    private String offerType;
+
+    @Column(name = "offer_value", nullable = false)
+    private String offerValue;
+
+    @Column(name = "description")
+    private String description;
+
+    @Column(name = "enabled", nullable = false)
+    private Boolean enabled;
+
+    protected TierRestaurantOffer() {
+        // JPA
+    }
+
+    public UUID getId() { return id; }
+    public UUID getRestaurantId() { return restaurantId; }
+    public String getTierName() { return tierName; }
+    public String getOfferLabel() { return offerLabel; }
+    public String getOfferType() { return offerType; }
+    public String getOfferValue() { return offerValue; }
+    public String getDescription() { return description; }
+    public Boolean getEnabled() { return enabled; }
+}
