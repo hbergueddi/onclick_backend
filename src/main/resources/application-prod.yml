@@ -75,3 +75,15 @@ logging:
     name: /var/log/oneclick/backend.log
     max-size: 100MB
     max-history: 30
+
+# ─── Security (prod) ──────────────────────────────────────────────────
+# OAuth2 Resource Server activé. JWT Supabase HS256 avec secret partagé
+# (cf scripts/setup-supabase-jwt.md).
+# REQUIRED env vars:
+#   APP_SECURITY_OAUTH2_ENABLED=true     (default in prod)
+#   APP_SECURITY_JWT_SECRET=<supabase>   (REQUIRED — boot fails if missing)
+app:
+  security:
+    oauth2:
+      enabled: ${APP_SECURITY_OAUTH2_ENABLED:true}
+    jwt-secret: ${APP_SECURITY_JWT_SECRET}
