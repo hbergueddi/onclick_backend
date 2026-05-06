@@ -7,17 +7,35 @@ import com.onesley.oneclick.event.ProfileUpdatedEvent;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.mapper.auth.ProfileMapper;
 import com.onesley.oneclick.repository.auth.ProfileRepository;
+import com.onesley.oneclick.search.SearchRequest;
+import com.onesley.oneclick.search.SpecificationBuilder;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
 @Transactional(readOnly = true)
 public class ProfileService {
+
+    /**
+     * Whitelist des champs exposés à la recherche dynamique côté API.
+     * Inclus uniquement les champs publics utiles à l'usage métier — pas
+     * d'identifiants techniques sensibles ni de timestamps audit.
+     */
+    private static final Set<String> SEARCHABLE_FIELDS = Set.of(
+        "firstName", "lastName", "email", "phone", "city", "language",
+        "tenantId", "tenantGroupId", "reliabilityScore", "referralCode"
+    );
 
     private final ProfileRepository repository;
     private final ProfileMapper mapper;
@@ -47,6 +65,35 @@ public class ProfileService {
 
     public List<ProfileDto> findByTenant(UUID tenantId) {
         return mapper.toDtoList(repository.findAllByTenantId(tenantId));
+    }
+
+    /**
+     * Recherche dynamique paginée. Les critères sont validés contre
+     * {@link #SEARCHABLE_FIELDS} pour éviter le scan arbitraire de colonnes.
+     */
+    public Page<ProfileDto> search(SearchRequest request) {
+        Specification<Profile> spec = SpecificationBuilder.build(
+            request.criteriaOrEmpty(), SEARCHABLE_FIELDS
+        );
+        Pageable pageable = PageRequest.of(
+            request.pageOrZero(),
+            request.sizeOrDefault(),
+            parseSort(request.sort())
+        );
+        return repository.findAll(spec, pageable).map(mapper::toDto);
+    }
+
+    private static Sort parseSort(String sort) {
+        if (sort == null || sort.isBlank()) return Sort.unsorted();
+        // Format "field,direction" — ex "reliabilityScore,desc"
+        String[] parts = sort.split(",");
+        String field = parts[0].trim();
+        if (!SEARCHABLE_FIELDS.contains(field)) {
+            return Sort.unsorted();  // sort silently dropped for unknown fields
+        }
+        Sort.Direction dir = parts.length > 1 && "desc".equalsIgnoreCase(parts[1].trim())
+            ? Sort.Direction.DESC : Sort.Direction.ASC;
+        return Sort.by(dir, field);
     }
 
     @Transactional

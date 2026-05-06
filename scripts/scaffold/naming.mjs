@@ -205,6 +205,8 @@ export const SKIP_TABLES = new Set([
   "v_restaurants_core",
   // Tables système — ne JAMAIS mapper
   "flyway_schema_history",
+  // Phase 6.2 — table mappée manuellement dans com.onesley.oneclick.permission
+  "app_permissions",
 ]);
 
 /**

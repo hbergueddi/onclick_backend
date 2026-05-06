@@ -3,6 +3,7 @@ package com.onesley.oneclick.repository.loyalty;
 import com.onesley.oneclick.entity.loyalty.LoyaltyPoint;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -10,5 +11,5 @@ import org.springframework.stereotype.Repository;
  * scripts/scaffold-jpa.mjs). Étendre par des queries dérivées au besoin.
  */
 @Repository
-public interface LoyaltyPointRepository extends JpaRepository<LoyaltyPoint, UUID> {
+public interface LoyaltyPointRepository extends JpaRepository<LoyaltyPoint, UUID>, JpaSpecificationExecutor<LoyaltyPoint> {
 }

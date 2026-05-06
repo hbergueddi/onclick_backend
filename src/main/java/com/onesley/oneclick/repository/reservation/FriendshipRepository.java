@@ -3,6 +3,7 @@ package com.onesley.oneclick.repository.reservation;
 import com.onesley.oneclick.entity.reservation.Friendship;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -10,5 +11,5 @@ import org.springframework.stereotype.Repository;
  * scripts/scaffold-jpa.mjs). Étendre par des queries dérivées au besoin.
  */
 @Repository
-public interface FriendshipRepository extends JpaRepository<Friendship, UUID> {
+public interface FriendshipRepository extends JpaRepository<Friendship, UUID>, JpaSpecificationExecutor<Friendship> {
 }

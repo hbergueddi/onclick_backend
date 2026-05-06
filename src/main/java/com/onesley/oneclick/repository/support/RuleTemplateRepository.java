@@ -3,6 +3,7 @@ package com.onesley.oneclick.repository.support;
 import com.onesley.oneclick.entity.support.RuleTemplate;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -10,5 +11,5 @@ import org.springframework.stereotype.Repository;
  * scripts/scaffold-jpa.mjs). Étendre par des queries dérivées au besoin.
  */
 @Repository
-public interface RuleTemplateRepository extends JpaRepository<RuleTemplate, UUID> {
+public interface RuleTemplateRepository extends JpaRepository<RuleTemplate, UUID>, JpaSpecificationExecutor<RuleTemplate> {
 }

@@ -432,6 +432,7 @@ export function repositoryTemplate(rel, enumNames) {
     imports.add("org.springframework.data.repository.Repository");
   } else {
     imports.add("org.springframework.data.jpa.repository.JpaRepository");
+    imports.add("org.springframework.data.jpa.repository.JpaSpecificationExecutor");
     imports.add("org.springframework.stereotype.Repository");
   }
 
@@ -441,9 +442,11 @@ export function repositoryTemplate(rel, enumNames) {
     imports.add("java.util.UUID");
   }
 
+  // Vues : pas de Specifications (read-only basique). Tables : on hérite aussi
+  // JpaSpecificationExecutor pour activer la recherche dynamique (Phase 6.3).
   const baseRepo = isView
     ? `Repository<${className}, ${idClassName}>`
-    : `JpaRepository<${className}, ${idClassName}>`;
+    : `JpaRepository<${className}, ${idClassName}>, JpaSpecificationExecutor<${className}>`;
 
   const annot = isView ? "" : "@Repository\n";
 

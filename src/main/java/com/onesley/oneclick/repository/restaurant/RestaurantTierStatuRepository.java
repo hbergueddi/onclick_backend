@@ -3,6 +3,7 @@ package com.onesley.oneclick.repository.restaurant;
 import com.onesley.oneclick.entity.restaurant.RestaurantTierStatu;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -10,5 +11,5 @@ import org.springframework.stereotype.Repository;
  * scripts/scaffold-jpa.mjs). Étendre par des queries dérivées au besoin.
  */
 @Repository
-public interface RestaurantTierStatuRepository extends JpaRepository<RestaurantTierStatu, UUID> {
+public interface RestaurantTierStatuRepository extends JpaRepository<RestaurantTierStatu, UUID>, JpaSpecificationExecutor<RestaurantTierStatu> {
 }

@@ -2,15 +2,18 @@ package com.onesley.oneclick.controller.auth;
 
 import com.onesley.oneclick.dto.auth.ProfileDto;
 import com.onesley.oneclick.dto.auth.ProfileUpdateDto;
+import com.onesley.oneclick.search.SearchRequest;
 import com.onesley.oneclick.service.auth.ProfileService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -68,5 +71,11 @@ public class ProfileController {
     @Operation(summary = "Mise à jour partielle d'un profil (PATCH sémantique)")
     public ProfileDto patch(@PathVariable UUID id, @Valid @RequestBody ProfileUpdateDto dto) {
         return service.patch(id, dto);
+    }
+
+    @PostMapping("/search")
+    @Operation(summary = "Recherche dynamique avec critères + pagination + tri")
+    public Page<ProfileDto> search(@RequestBody SearchRequest request) {
+        return service.search(request);
     }
 }
