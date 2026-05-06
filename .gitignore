@@ -31,3 +31,12 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Secrets — never commit ###
+.env
+.env.*
+!.env.example
+.envrc
+secrets/
+*.local.yml
+**/AuthKey_*.p8

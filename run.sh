@@ -22,11 +22,22 @@ export PATH="${JAVA_HOME}/bin:${PATH}"
 
 echo "→ JAVA_HOME = ${JAVA_HOME}"
 echo "→ $(java -version 2>&1 | head -1)"
+
+# Auto-source .env si présent (gitignored — pour les secrets locaux)
+if [[ -f ".env" ]]; then
+  set -a
+  source ./.env
+  set +a
+  echo "→ loaded .env (${#APP_SECURITY_JWT_SECRET:+APP_SECURITY_JWT_SECRET set, }$(wc -l < .env | tr -d ' ') lines)"
+fi
 echo
 
 if [[ "${1:-}" == "--oauth2" ]]; then
   export APP_SECURITY_OAUTH2_ENABLED=true
-  export APP_SECURITY_JWT_SECRET="${APP_SECURITY_JWT_SECRET:-dev-test-secret-256bits-mini-aaaaaaaaaaaa}"
+  if [[ -z "${APP_SECURITY_JWT_SECRET:-}" ]]; then
+    export APP_SECURITY_JWT_SECRET="dev-test-secret-256bits-mini-aaaaaaaaaaaa"
+    echo "⚠️  APP_SECURITY_JWT_SECRET non défini — utilisation du secret de test (NE PAS faire en prod)"
+  fi
   echo "→ OAuth2 Resource Server enabled (HS256 secret length = ${#APP_SECURITY_JWT_SECRET})"
   echo
 fi
