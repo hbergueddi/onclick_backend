@@ -1,4 +1,4 @@
-package com.example.oneclick_spring;
+package com.onesley.oneclick;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
