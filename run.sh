@@ -28,7 +28,12 @@ if [[ -f ".env" ]]; then
   set -a
   source ./.env
   set +a
-  echo "→ loaded .env (${#APP_SECURITY_JWT_SECRET:+APP_SECURITY_JWT_SECRET set, }$(wc -l < .env | tr -d ' ') lines)"
+  env_lines=$(wc -l < .env | tr -d ' ')
+  jwt_status="JWT secret unset"
+  if [[ -n "${APP_SECURITY_JWT_SECRET:-}" ]]; then
+    jwt_status="JWT secret set (${#APP_SECURITY_JWT_SECRET} chars)"
+  fi
+  echo "→ loaded .env — ${env_lines} lines, ${jwt_status}"
 fi
 echo
 
