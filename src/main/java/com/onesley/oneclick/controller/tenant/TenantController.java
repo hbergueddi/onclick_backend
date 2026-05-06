@@ -1,6 +1,8 @@
 package com.onesley.oneclick.controller.tenant;
 
 import com.onesley.oneclick.dto.tenant.TenantDto;
+import com.onesley.oneclick.permission.PermissionAction;
+import com.onesley.oneclick.permission.RequirePermission;
 import com.onesley.oneclick.service.tenant.TenantService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -17,7 +19,10 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/tenants")
 @Tag(name = "Tenants", description = "Multi-tenant whitelabel (oneclick, restopro, palmeraie, homu, ...)")
+// Politique de groupe (Phase 5.2) — gardée pour défense en profondeur
 @PreAuthorize("hasRole('admin')")
+// Permission fine (Phase 6.2) — actions explicites par méthode
+@RequirePermission(menu = "tenant", action = PermissionAction.READ)
 public class TenantController {
 
     private final TenantService service;
