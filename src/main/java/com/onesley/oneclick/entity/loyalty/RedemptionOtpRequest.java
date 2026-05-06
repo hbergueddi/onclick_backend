@@ -5,6 +5,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
@@ -32,30 +34,39 @@ public class RedemptionOtpRequest {
     @Column(name = "expires_at", nullable = false)
     private Instant expiresAt;
 
+    @NotNull
     @Column(name = "client_id", nullable = false)
     private UUID clientId;
 
+    @NotNull
     @Column(name = "restaurant_id", nullable = false)
     private UUID restaurantId;
 
+    @NotNull
     @Column(name = "staff_id", nullable = false)
     private UUID staffId;
 
+    @NotNull
     @Column(name = "points_requested", nullable = false)
     private Integer pointsRequested;
 
+    @NotNull
     @Column(name = "ticket_montant", nullable = false)
     private BigDecimal ticketMontant;
 
+    @NotNull
     @Column(name = "estimated_discount_dh", nullable = false)
     private BigDecimal estimatedDiscountDh;
 
+    @NotBlank
     @Column(name = "code_hash", nullable = false)
     private String codeHash;
 
+    @NotBlank
     @Column(name = "status", nullable = false)
     private String status;
 
+    @NotNull
     @Column(name = "attempts", nullable = false)
     private Integer attempts;
 

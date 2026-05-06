@@ -5,6 +5,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.UUID;
 import org.springframework.data.annotation.CreatedDate;
@@ -24,24 +26,30 @@ public class NoShowDispute {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotNull
     @Column(name = "reservation_id", nullable = false)
     private UUID reservationId;
 
+    @NotNull
     @Column(name = "client_id", nullable = false)
     private UUID clientId;
 
+    @NotBlank
     @Column(name = "description", nullable = false)
     private String description;
 
     @Column(name = "photo_url")
     private String photoUrl;
 
+    @NotNull
     @Column(name = "is_recontestation", nullable = false)
     private Boolean isRecontestation;
 
+    @NotBlank
     @Column(name = "status", nullable = false)
     private String status;
 
+    @NotBlank
     @Column(name = "escalation_phase", nullable = false)
     private String escalationPhase;
 

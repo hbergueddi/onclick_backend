@@ -5,6 +5,9 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.util.UUID;
 
@@ -21,51 +24,69 @@ public class GainRule extends AuditedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotBlank
     @Column(name = "name", nullable = false)
     private String name;
 
     @Column(name = "description")
     private String description;
 
+    @NotBlank
     @Column(name = "type", nullable = false)
     private String type;
 
+    @NotNull
     @Column(name = "taux_conversion", nullable = false)
     private BigDecimal tauxConversion;
 
+    @NotNull
     @Column(name = "min_ticket", nullable = false)
     private BigDecimal minTicket;
 
+    @NotNull
     @Column(name = "enabled", nullable = false)
     private Boolean enabled;
 
+    @NotNull
     @Column(name = "max_points_par_ticket", nullable = false)
     private Integer maxPointsParTicket;
 
+    @NotBlank
     @Column(name = "period_type", nullable = false)
     private String periodType;
 
+    @NotNull
     @Column(name = "period_value", nullable = false)
     private Integer periodValue;
 
+    @NotNull
     @Column(name = "benefit_duration_days", nullable = false)
     private Integer benefitDurationDays;
 
+    @NotNull
     @Column(name = "min_spend_monthly", nullable = false)
     private BigDecimal minSpendMonthly;
 
+    @Digits(integer = 4, fraction = 2)
+    @NotNull
     @Column(name = "point_value_mad", nullable = false, precision = 6, scale = 2)
     private BigDecimal pointValueMad;
 
+    @NotNull
     @Column(name = "max_redemption_per_24h", nullable = false)
     private Integer maxRedemptionPer24h;
 
+    @Digits(integer = 3, fraction = 2)
+    @NotNull
     @Column(name = "max_redemption_ratio_pct", nullable = false, precision = 5, scale = 2)
     private BigDecimal maxRedemptionRatioPct;
 
+    @NotNull
     @Column(name = "otp_required_above_pts", nullable = false)
     private Integer otpRequiredAbovePts;
 
+    @Digits(integer = 3, fraction = 2)
+    @NotNull
     @Column(name = "otp_required_above_ratio_pct", nullable = false, precision = 5, scale = 2)
     private BigDecimal otpRequiredAboveRatioPct;
 

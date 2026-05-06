@@ -5,6 +5,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.util.UUID;
 
 /**
@@ -20,24 +22,30 @@ public class RestaurantTable extends TimestampedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotNull
     @Column(name = "restaurant_id", nullable = false)
     private UUID restaurantId;
 
+    @NotNull
     @Column(name = "zone_id", nullable = false)
     private UUID zoneId;
 
+    @NotNull
     @Column(name = "numero", nullable = false)
     private Integer numero;
 
+    @NotNull
     @Column(name = "capacite", nullable = false)
     private Integer capacite;
 
+    @NotBlank
     @Column(name = "forme", nullable = false)
     private String forme;
 
     @Column(name = "position")
     private String position;
 
+    @NotBlank
     @Column(name = "status", nullable = false)
     private String status;
 

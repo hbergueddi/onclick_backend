@@ -5,6 +5,9 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.util.UUID;
 
@@ -21,30 +24,39 @@ public class TierThreshold extends TimestampedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotBlank
     @Column(name = "tier_name", nullable = false)
     private String tierName;
 
+    @NotNull
     @Column(name = "period_days", nullable = false)
     private Integer periodDays;
 
+    @NotNull
     @Column(name = "min_spend", nullable = false)
     private BigDecimal minSpend;
 
+    @NotNull
     @Column(name = "points_required", nullable = false)
     private Integer pointsRequired;
 
+    @NotNull
     @Column(name = "sort_order", nullable = false)
     private Integer sortOrder;
 
     @Column(name = "benefits")
     private String benefits;
 
+    @NotNull
     @Column(name = "enabled", nullable = false)
     private Boolean enabled;
 
+    @Digits(integer = 3, fraction = 2)
+    @NotNull
     @Column(name = "gain_bonus_pct", nullable = false, precision = 5, scale = 2)
     private BigDecimal gainBonusPct;
 
+    @Digits(integer = 4, fraction = 2)
     @Column(name = "point_value_mad_override", precision = 6, scale = 2)
     private BigDecimal pointValueMadOverride;
 
@@ -60,15 +72,18 @@ public class TierThreshold extends TimestampedEntity {
     @Column(name = "max_redemption_per_24h_override")
     private Integer maxRedemptionPer24hOverride;
 
+    @Digits(integer = 3, fraction = 2)
     @Column(name = "max_redemption_ratio_pct_override", precision = 5, scale = 2)
     private BigDecimal maxRedemptionRatioPctOverride;
 
     @Column(name = "otp_required_above_pts_override")
     private Integer otpRequiredAbovePtsOverride;
 
+    @Digits(integer = 3, fraction = 2)
     @Column(name = "otp_required_above_ratio_pct_override", precision = 5, scale = 2)
     private BigDecimal otpRequiredAboveRatioPctOverride;
 
+    @Digits(integer = 1, fraction = 4)
     @Column(name = "taux_conversion_override", precision = 5, scale = 4)
     private BigDecimal tauxConversionOverride;
 

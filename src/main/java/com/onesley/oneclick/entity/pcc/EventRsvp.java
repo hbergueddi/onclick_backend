@@ -5,6 +5,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.util.UUID;
 
 /**
@@ -20,12 +22,15 @@ public class EventRsvp extends TimestampedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotNull
     @Column(name = "event_id", nullable = false)
     private UUID eventId;
 
+    @NotNull
     @Column(name = "user_id", nullable = false)
     private UUID userId;
 
+    @NotBlank
     @Column(name = "status", nullable = false)
     private String status;
 

@@ -5,6 +5,9 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,18 +28,23 @@ public class OnboardingRequest extends TimestampedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotBlank
     @Column(name = "status", nullable = false)
     private String status;
 
+    @NotBlank
     @Column(name = "restaurant_name", nullable = false)
     private String restaurantName;
 
+    @NotBlank
     @Column(name = "city", nullable = false)
     private String city;
 
+    @NotBlank
     @Column(name = "address", nullable = false)
     private String address;
 
+    @NotBlank
     @Column(name = "phone", nullable = false)
     private String phone;
 
@@ -49,21 +57,28 @@ public class OnboardingRequest extends TimestampedEntity {
     @Column(name = "description")
     private String description;
 
+    @NotBlank
     @Column(name = "first_name", nullable = false)
     private String firstName;
 
+    @NotBlank
     @Column(name = "last_name", nullable = false)
     private String lastName;
 
+    @Email
+    @NotBlank
     @Column(name = "email", nullable = false)
     private String email;
 
+    @NotBlank
     @Column(name = "contact_phone", nullable = false)
     private String contactPhone;
 
+    @NotBlank
     @Column(name = "role", nullable = false)
     private String role;
 
+    @NotBlank
     @Column(name = "ice", nullable = false)
     private String ice;
 
@@ -76,10 +91,12 @@ public class OnboardingRequest extends TimestampedEntity {
     @Column(name = "patente")
     private String patente;
 
+    @NotNull
     @Column(name = "capacity", nullable = false)
     private Integer capacity;
 
     @JdbcTypeCode(SqlTypes.ARRAY)
+    @NotNull
     @Column(name = "services", nullable = false, columnDefinition = "text[]")
     private List<String> services = new ArrayList<>();
 

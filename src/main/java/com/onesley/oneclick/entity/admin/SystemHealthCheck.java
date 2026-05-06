@@ -5,6 +5,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
@@ -25,15 +27,19 @@ public class SystemHealthCheck {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotBlank
     @Column(name = "metric_name", nullable = false)
     private String metricName;
 
+    @NotNull
     @Column(name = "metric_value", nullable = false)
     private BigDecimal metricValue;
 
+    @NotBlank
     @Column(name = "metric_unit", nullable = false)
     private String metricUnit;
 
+    @NotBlank
     @Column(name = "status", nullable = false)
     private String status;
 

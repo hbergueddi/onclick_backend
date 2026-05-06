@@ -129,6 +129,49 @@ export function entityTemplate(rel, enumNames) {
 
     if (isId) ann.push("@Id");
 
+    // Bean Validation derived from DB constraints (entity-level, defense in depth).
+    // Skip on views (no writes ever happen) and on @Id (validation makes no sense
+    // for the PK, which is either DB-generated or required by definition).
+    if (!isView && !isId) {
+      // NOT NULL → @NotNull (sauf si default=now()/gen_random_uuid() côté DB)
+      if (
+        !col.nullable &&
+        !col.defaultValue?.includes("now()") &&
+        !col.defaultValue?.includes("gen_random_uuid")
+      ) {
+        // @NotNull pour les Object types ; pour les String on préfère @NotBlank
+        if (mapping.javaType === "String") {
+          ann.unshift("@NotBlank");
+          imports.add("jakarta.validation.constraints.NotBlank");
+        } else {
+          ann.unshift("@NotNull");
+          imports.add("jakarta.validation.constraints.NotNull");
+        }
+      }
+      // varchar(N) ou character_maximum_length → @Size(max=N)
+      if (col.charLength && mapping.javaType === "String") {
+        ann.unshift(`@Size(max = ${col.charLength})`);
+        imports.add("jakarta.validation.constraints.Size");
+      }
+      // numeric(p,s) → @Digits(integer=p-s, fraction=s)
+      if (
+        mapping.javaType === "BigDecimal" &&
+        col.numericPrecision &&
+        col.numericScale != null
+      ) {
+        const integerPart = col.numericPrecision - col.numericScale;
+        ann.unshift(
+          `@Digits(integer = ${integerPart}, fraction = ${col.numericScale})`
+        );
+        imports.add("jakarta.validation.constraints.Digits");
+      }
+      // Heuristique format email
+      if (col.name === "email" || col.name.endsWith("_email")) {
+        ann.unshift("@Email");
+        imports.add("jakarta.validation.constraints.Email");
+      }
+    }
+
     if (isView) {
       ann.push(
         `@Column(name = "${col.name}", insertable = false, updatable = false)`

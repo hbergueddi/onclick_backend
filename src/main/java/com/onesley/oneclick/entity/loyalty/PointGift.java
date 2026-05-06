@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.UUID;
 import org.springframework.data.annotation.CreatedDate;
@@ -24,15 +25,19 @@ public class PointGift {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotNull
     @Column(name = "sender_id", nullable = false)
     private UUID senderId;
 
+    @NotNull
     @Column(name = "receiver_id", nullable = false)
     private UUID receiverId;
 
+    @NotNull
     @Column(name = "restaurant_id", nullable = false)
     private UUID restaurantId;
 
+    @NotNull
     @Column(name = "points", nullable = false)
     private Integer points;
 

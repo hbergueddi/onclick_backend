@@ -5,6 +5,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.UUID;
 import org.springframework.data.annotation.CreatedDate;
@@ -24,15 +26,18 @@ public class AdminWalletTransaction {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotNull
     @Column(name = "admin_id", nullable = false)
     private UUID adminId;
 
     @Column(name = "restaurant_id")
     private UUID restaurantId;
 
+    @NotNull
     @Column(name = "amount", nullable = false)
     private Integer amount;
 
+    @NotBlank
     @Column(name = "reason", nullable = false)
     private String reason;
 
@@ -46,6 +51,7 @@ public class AdminWalletTransaction {
     @Column(name = "expires_at")
     private Instant expiresAt;
 
+    @NotNull
     @Column(name = "remaining_amount", nullable = false)
     private Integer remainingAmount;
 

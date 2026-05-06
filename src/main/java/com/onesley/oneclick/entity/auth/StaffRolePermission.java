@@ -4,6 +4,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -20,12 +22,15 @@ public class StaffRolePermission {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotBlank
     @Column(name = "staff_role", nullable = false)
     private String staffRole;
 
+    @NotBlank
     @Column(name = "permission_id", nullable = false)
     private String permissionId;
 
+    @NotNull
     @Column(name = "enabled", nullable = false)
     private Boolean enabled;
 

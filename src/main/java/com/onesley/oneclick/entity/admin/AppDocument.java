@@ -4,6 +4,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -20,12 +21,14 @@ public class AppDocument {
     @Column(name = "id", nullable = false)
     private String id;
 
+    @NotBlank
     @Column(name = "content", nullable = false)
     private String content;
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    @NotBlank
     @Column(name = "version", nullable = false)
     private String version;
 

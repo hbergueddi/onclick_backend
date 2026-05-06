@@ -5,6 +5,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
@@ -22,24 +24,31 @@ public class SystemAlertRule extends TimestampedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotBlank
     @Column(name = "name", nullable = false)
     private String name;
 
+    @NotBlank
     @Column(name = "metric_name", nullable = false)
     private String metricName;
 
+    @NotBlank
     @Column(name = "operator", nullable = false)
     private String operator;
 
+    @NotNull
     @Column(name = "threshold", nullable = false)
     private BigDecimal threshold;
 
+    @NotBlank
     @Column(name = "severity", nullable = false)
     private String severity;
 
+    @NotNull
     @Column(name = "enabled", nullable = false)
     private Boolean enabled;
 
+    @NotNull
     @Column(name = "cooldown_minutes", nullable = false)
     private Integer cooldownMinutes;
 

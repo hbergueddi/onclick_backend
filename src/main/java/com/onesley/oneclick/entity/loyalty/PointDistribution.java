@@ -8,6 +8,8 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -29,11 +31,13 @@ public class PointDistribution {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotNull
     @Column(name = "admin_id", nullable = false)
     private UUID adminId;
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @NotNull
     @Column(name = "source_type", nullable = false, columnDefinition = "distribution_source")
     private DistributionSource sourceType;
 
@@ -46,9 +50,11 @@ public class PointDistribution {
     @Column(name = "segment")
     private String segment;
 
+    @NotNull
     @Column(name = "points", nullable = false)
     private Integer points;
 
+    @NotBlank
     @Column(name = "reason", nullable = false)
     private String reason;
 
@@ -58,6 +64,7 @@ public class PointDistribution {
     @Column(name = "offer_id")
     private UUID offerId;
 
+    @NotBlank
     @Column(name = "status", nullable = false)
     private String status;
 

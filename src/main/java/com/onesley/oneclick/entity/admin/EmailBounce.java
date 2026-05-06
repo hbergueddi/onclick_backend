@@ -5,6 +5,9 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
@@ -25,21 +28,26 @@ public class EmailBounce extends TimestampedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @Email
+    @NotBlank
     @Column(name = "email", nullable = false)
     private String email;
 
+    @NotBlank
     @Column(name = "bounce_type", nullable = false)
     private String bounceType;
 
     @Column(name = "bounce_reason")
     private String bounceReason;
 
+    @NotNull
     @Column(name = "is_suppressed", nullable = false)
     private Boolean isSuppressed;
 
     @Column(name = "last_bounced_at", nullable = false)
     private Instant lastBouncedAt;
 
+    @NotNull
     @Column(name = "bounce_count", nullable = false)
     private Integer bounceCount;
 

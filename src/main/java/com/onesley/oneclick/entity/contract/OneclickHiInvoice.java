@@ -5,6 +5,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -23,21 +25,27 @@ public class OneclickHiInvoice extends TimestampedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotNull
     @Column(name = "restaurant_id", nullable = false)
     private UUID restaurantId;
 
+    @NotNull
     @Column(name = "period_month", nullable = false)
     private LocalDate periodMonth;
 
+    @NotNull
     @Column(name = "total_ca", nullable = false)
     private BigDecimal totalCa;
 
+    @NotNull
     @Column(name = "credit_3pct", nullable = false)
     private BigDecimal credit3pct;
 
+    @NotNull
     @Column(name = "commission_2pct", nullable = false)
     private BigDecimal commission2pct;
 
+    @NotBlank
     @Column(name = "status", nullable = false)
     private String status;
 
@@ -53,12 +61,15 @@ public class OneclickHiInvoice extends TimestampedEntity {
     @Column(name = "invoice_number")
     private String invoiceNumber;
 
+    @NotNull
     @Column(name = "tva_rate", nullable = false)
     private BigDecimal tvaRate;
 
+    @NotNull
     @Column(name = "tva_amount", nullable = false)
     private BigDecimal tvaAmount;
 
+    @NotNull
     @Column(name = "total_ttc", nullable = false)
     private BigDecimal totalTtc;
 

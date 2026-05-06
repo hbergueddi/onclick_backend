@@ -5,6 +5,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
@@ -28,21 +30,27 @@ public class SystemAlert {
     @Column(name = "rule_id")
     private UUID ruleId;
 
+    @NotBlank
     @Column(name = "metric_name", nullable = false)
     private String metricName;
 
+    @NotNull
     @Column(name = "metric_value", nullable = false)
     private BigDecimal metricValue;
 
+    @NotNull
     @Column(name = "threshold", nullable = false)
     private BigDecimal threshold;
 
+    @NotBlank
     @Column(name = "severity", nullable = false)
     private String severity;
 
+    @NotBlank
     @Column(name = "message", nullable = false)
     private String message;
 
+    @NotNull
     @Column(name = "acknowledged", nullable = false)
     private Boolean acknowledged;
 

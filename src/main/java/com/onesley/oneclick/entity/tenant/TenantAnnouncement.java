@@ -8,6 +8,8 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,15 +30,19 @@ public class TenantAnnouncement extends AuditedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotNull
     @Column(name = "tenant_id", nullable = false)
     private UUID tenantId;
 
+    @NotNull
     @Column(name = "author_id", nullable = false)
     private UUID authorId;
 
+    @NotBlank
     @Column(name = "title", nullable = false)
     private String title;
 
+    @NotBlank
     @Column(name = "body", nullable = false)
     private String body;
 
@@ -45,9 +51,11 @@ public class TenantAnnouncement extends AuditedEntity {
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @NotNull
     @Column(name = "priority", nullable = false, columnDefinition = "announcement_priority")
     private AnnouncementPriority priority;
 
+    @NotNull
     @Column(name = "is_pinned", nullable = false)
     private Boolean isPinned;
 
@@ -60,6 +68,7 @@ public class TenantAnnouncement extends AuditedEntity {
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
+    @NotNull
     @Column(name = "body_version", nullable = false)
     private Integer bodyVersion;
 

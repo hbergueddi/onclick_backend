@@ -5,6 +5,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
@@ -22,30 +24,38 @@ public class GainRuleRequest extends TimestampedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotNull
     @Column(name = "restaurant_id", nullable = false)
     private UUID restaurantId;
 
+    @NotNull
     @Column(name = "requested_by", nullable = false)
     private UUID requestedBy;
 
+    @NotBlank
     @Column(name = "name", nullable = false)
     private String name;
 
     @Column(name = "description")
     private String description;
 
+    @NotBlank
     @Column(name = "type", nullable = false)
     private String type;
 
+    @NotNull
     @Column(name = "taux_conversion", nullable = false)
     private BigDecimal tauxConversion;
 
+    @NotNull
     @Column(name = "min_ticket", nullable = false)
     private BigDecimal minTicket;
 
+    @NotNull
     @Column(name = "max_points_par_ticket", nullable = false)
     private Integer maxPointsParTicket;
 
+    @NotBlank
     @Column(name = "status", nullable = false)
     private String status;
 

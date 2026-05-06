@@ -5,6 +5,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
@@ -22,15 +24,18 @@ public class RestaurantTierStatu extends TimestampedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotNull
     @Column(name = "restaurant_id", nullable = false)
     private UUID restaurantId;
 
     @Column(name = "current_tier_id")
     private UUID currentTierId;
 
+    @NotBlank
     @Column(name = "current_tier_slug", nullable = false)
     private String currentTierSlug;
 
+    @NotNull
     @Column(name = "monthly_ca", nullable = false)
     private BigDecimal monthlyCa;
 

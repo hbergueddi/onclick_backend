@@ -5,6 +5,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.util.UUID;
 
 /**
@@ -20,12 +22,15 @@ public class Friendship extends TimestampedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotNull
     @Column(name = "requester_id", nullable = false)
     private UUID requesterId;
 
+    @NotNull
     @Column(name = "addressee_id", nullable = false)
     private UUID addresseeId;
 
+    @NotBlank
     @Column(name = "status", nullable = false)
     private String status;
 

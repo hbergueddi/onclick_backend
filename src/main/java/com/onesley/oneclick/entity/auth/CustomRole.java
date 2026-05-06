@@ -5,6 +5,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -24,6 +26,7 @@ public class CustomRole extends AuditedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotBlank
     @Column(name = "name", nullable = false)
     private String name;
 
@@ -31,6 +34,7 @@ public class CustomRole extends AuditedEntity {
     private String description;
 
     @JdbcTypeCode(SqlTypes.JSON)
+    @NotNull
     @Column(name = "permissions", nullable = false, columnDefinition = "jsonb")
     private Map<String, Object> permissions = new HashMap<>();
 

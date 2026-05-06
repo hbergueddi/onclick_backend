@@ -5,6 +5,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -24,9 +26,11 @@ public class RuleTemplate extends AuditedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotBlank
     @Column(name = "slug", nullable = false)
     private String slug;
 
+    @NotBlank
     @Column(name = "name", nullable = false)
     private String name;
 
@@ -36,16 +40,20 @@ public class RuleTemplate extends AuditedEntity {
     @Column(name = "icon")
     private String icon;
 
+    @NotBlank
     @Column(name = "category", nullable = false)
     private String category;
 
     @JdbcTypeCode(SqlTypes.JSON)
+    @NotNull
     @Column(name = "config", nullable = false, columnDefinition = "jsonb")
     private Map<String, Object> config = new HashMap<>();
 
+    @NotNull
     @Column(name = "is_builtin", nullable = false)
     private Boolean isBuiltin;
 
+    @NotNull
     @Column(name = "enabled", nullable = false)
     private Boolean enabled;
 

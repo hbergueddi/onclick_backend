@@ -5,6 +5,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.UUID;
 import org.springframework.data.annotation.CreatedDate;
@@ -24,27 +26,35 @@ public class QuotaChangeLog {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotNull
     @Column(name = "restaurant_id", nullable = false)
     private UUID restaurantId;
 
+    @NotBlank
     @Column(name = "service_type", nullable = false)
     private String serviceType;
 
+    @NotBlank
     @Column(name = "service_name", nullable = false)
     private String serviceName;
 
+    @NotNull
     @Column(name = "old_quota", nullable = false)
     private Integer oldQuota;
 
+    @NotNull
     @Column(name = "new_quota", nullable = false)
     private Integer newQuota;
 
+    @NotNull
     @Column(name = "changed_by", nullable = false)
     private UUID changedBy;
 
+    @NotBlank
     @Column(name = "changed_by_name", nullable = false)
     private String changedByName;
 
+    @NotBlank
     @Column(name = "change_source", nullable = false)
     private String changeSource;
 

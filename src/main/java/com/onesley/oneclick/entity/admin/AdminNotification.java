@@ -5,6 +5,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
@@ -35,12 +37,15 @@ public class AdminNotification {
     @Column(name = "admin_id")
     private UUID adminId;
 
+    @NotBlank
     @Column(name = "type", nullable = false)
     private String type;
 
+    @NotBlank
     @Column(name = "severity", nullable = false)
     private String severity;
 
+    @NotBlank
     @Column(name = "title", nullable = false)
     private String title;
 
@@ -51,6 +56,7 @@ public class AdminNotification {
     private String targetUrl;
 
     @JdbcTypeCode(SqlTypes.JSON)
+    @NotNull
     @Column(name = "metadata", nullable = false, columnDefinition = "jsonb")
     private Map<String, Object> metadata = new HashMap<>();
 

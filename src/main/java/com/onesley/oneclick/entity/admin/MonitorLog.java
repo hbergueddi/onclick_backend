@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
@@ -32,9 +33,11 @@ public class MonitorLog {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
+    @NotBlank
     @Column(name = "source", nullable = false)
     private String source;
 
+    @NotBlank
     @Column(name = "event_type", nullable = false)
     private String eventType;
 

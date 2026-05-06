@@ -5,6 +5,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -24,12 +26,14 @@ public class EliteEvent extends TimestampedEntity {
     @Column(name = "restaurant_id")
     private UUID restaurantId;
 
+    @NotBlank
     @Column(name = "title", nullable = false)
     private String title;
 
     @Column(name = "description")
     private String description;
 
+    @NotNull
     @Column(name = "event_date", nullable = false)
     private LocalDate eventDate;
 

@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.IdClass;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -26,6 +27,7 @@ public class AnnouncementRead {
     @Column(name = "user_id", nullable = false)
     private UUID userId;
 
+    @NotNull
     @Column(name = "body_version_read", nullable = false)
     private Integer bodyVersionRead;
 

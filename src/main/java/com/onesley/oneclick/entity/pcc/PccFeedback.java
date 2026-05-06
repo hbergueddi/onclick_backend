@@ -5,6 +5,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -21,12 +23,15 @@ public class PccFeedback extends TimestampedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotNull
     @Column(name = "member_id", nullable = false)
     private UUID memberId;
 
+    @NotBlank
     @Column(name = "sentiment", nullable = false)
     private String sentiment;
 
+    @NotBlank
     @Column(name = "category", nullable = false)
     private String category;
 

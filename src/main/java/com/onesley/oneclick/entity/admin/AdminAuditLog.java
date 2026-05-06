@@ -5,6 +5,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
@@ -31,9 +33,12 @@ public class AdminAuditLog {
     @Column(name = "actor_id")
     private UUID actorId;
 
+    @Email
+    @NotBlank
     @Column(name = "actor_email", nullable = false)
     private String actorEmail;
 
+    @NotBlank
     @Column(name = "action", nullable = false)
     private String action;
 

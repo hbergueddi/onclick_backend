@@ -5,6 +5,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -27,24 +29,31 @@ public class PartnerContract extends AuditedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotNull
     @Column(name = "restaurant_id", nullable = false)
     private UUID restaurantId;
 
+    @NotNull
     @Column(name = "commission_rate", nullable = false)
     private BigDecimal commissionRate;
 
+    @NotNull
     @Column(name = "contract_start", nullable = false)
     private LocalDate contractStart;
 
+    @NotNull
     @Column(name = "contract_end", nullable = false)
     private LocalDate contractEnd;
 
+    @NotBlank
     @Column(name = "payment_terms", nullable = false)
     private String paymentTerms;
 
+    @NotNull
     @Column(name = "auto_renew", nullable = false)
     private Boolean autoRenew;
 
+    @NotBlank
     @Column(name = "status", nullable = false)
     private String status;
 
@@ -63,12 +72,15 @@ public class PartnerContract extends AuditedEntity {
     @Column(name = "restaurant_phone")
     private String restaurantPhone;
 
+    @NotNull
     @Column(name = "client_commission_rate", nullable = false)
     private BigDecimal clientCommissionRate;
 
+    @NotNull
     @Column(name = "wallet_admin_rate", nullable = false)
     private BigDecimal walletAdminRate;
 
+    @NotNull
     @Column(name = "oneclick_commission_rate", nullable = false)
     private BigDecimal oneclickCommissionRate;
 

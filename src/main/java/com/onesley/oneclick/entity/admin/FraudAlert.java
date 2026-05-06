@@ -5,6 +5,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
 import java.math.BigDecimal;
 import java.util.UUID;
 
@@ -21,9 +22,11 @@ public class FraudAlert extends TimestampedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotBlank
     @Column(name = "type", nullable = false)
     private String type;
 
+    @NotBlank
     @Column(name = "severity", nullable = false)
     private String severity;
 
@@ -33,9 +36,11 @@ public class FraudAlert extends TimestampedEntity {
     @Column(name = "client_id")
     private UUID clientId;
 
+    @NotBlank
     @Column(name = "description", nullable = false)
     private String description;
 
+    @NotBlank
     @Column(name = "status", nullable = false)
     private String status;
 

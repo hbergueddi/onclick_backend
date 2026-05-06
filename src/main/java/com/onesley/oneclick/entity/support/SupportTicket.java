@@ -5,6 +5,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -24,15 +26,19 @@ public class SupportTicket extends AuditedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotNull
     @Column(name = "client_id", nullable = false)
     private UUID clientId;
 
+    @NotBlank
     @Column(name = "category", nullable = false)
     private String category;
 
+    @NotBlank
     @Column(name = "subject", nullable = false)
     private String subject;
 
+    @NotBlank
     @Column(name = "message", nullable = false)
     private String message;
 
@@ -40,6 +46,7 @@ public class SupportTicket extends AuditedEntity {
     @Column(name = "photos", columnDefinition = "text[]")
     private List<String> photos = new ArrayList<>();
 
+    @NotBlank
     @Column(name = "status", nullable = false)
     private String status;
 
@@ -49,18 +56,23 @@ public class SupportTicket extends AuditedEntity {
     @Column(name = "restaurant_id")
     private UUID restaurantId;
 
+    @NotBlank
     @Column(name = "ticket_type", nullable = false)
     private String ticketType;
 
+    @NotNull
     @Column(name = "escalated_to_admin", nullable = false)
     private Boolean escalatedToAdmin;
 
+    @NotBlank
     @Column(name = "priority", nullable = false)
     private String priority;
 
+    @NotBlank
     @Column(name = "resolution_level", nullable = false)
     private String resolutionLevel;
 
+    @NotNull
     @Column(name = "ai_handled", nullable = false)
     private Boolean aiHandled;
 

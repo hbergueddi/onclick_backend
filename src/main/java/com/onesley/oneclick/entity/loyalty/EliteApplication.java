@@ -5,6 +5,9 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,21 +28,27 @@ public class EliteApplication extends TimestampedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotNull
     @Column(name = "user_id", nullable = false)
     private UUID userId;
 
+    @NotBlank
     @Column(name = "full_name", nullable = false)
     private String fullName;
 
+    @Email
+    @NotBlank
     @Column(name = "email", nullable = false)
     private String email;
 
     @Column(name = "phone")
     private String phone;
 
+    @NotBlank
     @Column(name = "motivation", nullable = false)
     private String motivation;
 
+    @NotBlank
     @Column(name = "preferred_tier", nullable = false)
     private String preferredTier;
 
@@ -49,6 +58,7 @@ public class EliteApplication extends TimestampedEntity {
     @Column(name = "sponsor_name")
     private String sponsorName;
 
+    @NotBlank
     @Column(name = "status", nullable = false)
     private String status;
 

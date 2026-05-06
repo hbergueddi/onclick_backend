@@ -5,6 +5,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.HashMap;
@@ -29,21 +31,27 @@ public class ScannedTicket {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotNull
     @Column(name = "restaurant_id", nullable = false)
     private UUID restaurantId;
 
+    @NotNull
     @Column(name = "client_id", nullable = false)
     private UUID clientId;
 
+    @NotNull
     @Column(name = "scanned_by", nullable = false)
     private UUID scannedBy;
 
+    @NotBlank
     @Column(name = "ticket_ref", nullable = false)
     private String ticketRef;
 
+    @NotNull
     @Column(name = "montant", nullable = false)
     private BigDecimal montant;
 
+    @NotNull
     @Column(name = "points_credites", nullable = false)
     private Integer pointsCredites;
 
@@ -51,6 +59,7 @@ public class ScannedTicket {
     @Column(name = "items", columnDefinition = "jsonb")
     private Map<String, Object> items = new HashMap<>();
 
+    @NotBlank
     @Column(name = "status", nullable = false)
     private String status;
 

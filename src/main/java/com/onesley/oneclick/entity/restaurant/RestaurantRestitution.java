@@ -5,6 +5,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -22,15 +24,19 @@ public class RestaurantRestitution extends TimestampedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotNull
     @Column(name = "restaurant_id", nullable = false)
     private UUID restaurantId;
 
+    @NotNull
     @Column(name = "period_month", nullable = false)
     private LocalDate periodMonth;
 
+    @NotNull
     @Column(name = "total_points", nullable = false)
     private Integer totalPoints;
 
+    @NotBlank
     @Column(name = "status", nullable = false)
     private String status;
 

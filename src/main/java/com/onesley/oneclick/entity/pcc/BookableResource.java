@@ -9,6 +9,8 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -36,18 +38,23 @@ public class BookableResource extends TimestampedEntity {
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @NotNull
     @Column(name = "resource_type", nullable = false, columnDefinition = "bookable_resource_type")
     private BookableResourceType resourceType;
 
+    @NotBlank
     @Column(name = "name", nullable = false)
     private String name;
 
+    @NotNull
     @Column(name = "capacity", nullable = false)
     private Integer capacity;
 
+    @NotNull
     @Column(name = "slot_duration_minutes", nullable = false)
     private Integer slotDurationMinutes;
 
+    @NotNull
     @Column(name = "max_invitees", nullable = false)
     private Integer maxInvitees;
 
@@ -57,6 +64,7 @@ public class BookableResource extends TimestampedEntity {
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @NotNull
     @Column(name = "payment_mode", nullable = false, columnDefinition = "bookable_payment_mode")
     private BookablePaymentMode paymentMode;
 
@@ -64,6 +72,7 @@ public class BookableResource extends TimestampedEntity {
     @Column(name = "pricing", columnDefinition = "jsonb")
     private Map<String, Object> pricing = new HashMap<>();
 
+    @NotNull
     @Column(name = "enabled", nullable = false)
     private Boolean enabled;
 

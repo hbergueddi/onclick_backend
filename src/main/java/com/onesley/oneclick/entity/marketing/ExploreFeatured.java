@@ -5,6 +5,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -21,9 +22,11 @@ public class ExploreFeatured extends AuditedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotNull
     @Column(name = "restaurant_id", nullable = false)
     private UUID restaurantId;
 
+    @NotNull
     @Column(name = "position", nullable = false)
     private Integer position;
 
@@ -33,6 +36,7 @@ public class ExploreFeatured extends AuditedEntity {
     @Column(name = "expires_at", nullable = false)
     private Instant expiresAt;
 
+    @NotNull
     @Column(name = "is_active", nullable = false)
     private Boolean isActive;
 

@@ -8,6 +8,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
@@ -28,27 +29,34 @@ public class ResourceBooking extends AuditedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotNull
     @Column(name = "resource_id", nullable = false)
     private UUID resourceId;
 
+    @NotNull
     @Column(name = "organizer_id", nullable = false)
     private UUID organizerId;
 
+    @NotNull
     @Column(name = "start_at", nullable = false)
     private Instant startAt;
 
+    @NotNull
     @Column(name = "end_at", nullable = false)
     private Instant endAt;
 
+    @NotNull
     @Column(name = "party_size", nullable = false)
     private Integer partySize;
 
     @JdbcTypeCode(SqlTypes.JSON)
+    @NotNull
     @Column(name = "invitees", nullable = false, columnDefinition = "jsonb")
     private Map<String, Object> invitees = new HashMap<>();
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @NotNull
     @Column(name = "status", nullable = false, columnDefinition = "resource_booking_status")
     private ResourceBookingStatus status;
 

@@ -5,6 +5,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.util.UUID;
 
@@ -21,24 +23,29 @@ public class InvoiceLine extends TimestampedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotNull
     @Column(name = "invoice_id", nullable = false)
     private UUID invoiceId;
 
+    @NotBlank
     @Column(name = "label", nullable = false)
     private String label;
 
     @Column(name = "description")
     private String description;
 
+    @NotNull
     @Column(name = "quantity", nullable = false)
     private BigDecimal quantity;
 
+    @NotNull
     @Column(name = "unit_price_ht", nullable = false)
     private BigDecimal unitPriceHt;
 
     @Column(name = "total_ht")
     private BigDecimal totalHt;
 
+    @NotNull
     @Column(name = "sort_order", nullable = false)
     private Integer sortOrder;
 

@@ -5,6 +5,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotNull;
 import java.util.UUID;
 
 /**
@@ -20,9 +21,11 @@ public class PccFamilyMember extends TimestampedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotNull
     @Column(name = "member_id", nullable = false)
     private UUID memberId;
 
+    @NotNull
     @Column(name = "related_member_id", nullable = false)
     private UUID relatedMemberId;
 

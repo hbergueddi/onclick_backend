@@ -5,6 +5,9 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -27,18 +30,23 @@ public class SeminarRequest extends TimestampedEntity {
     @Column(name = "organizer_id")
     private UUID organizerId;
 
+    @NotBlank
     @Column(name = "company_name", nullable = false)
     private String companyName;
 
+    @NotBlank
     @Column(name = "contact_name", nullable = false)
     private String contactName;
 
+    @Email
+    @NotBlank
     @Column(name = "contact_email", nullable = false)
     private String contactEmail;
 
     @Column(name = "contact_phone")
     private String contactPhone;
 
+    @NotNull
     @Column(name = "expected_attendees", nullable = false)
     private Integer expectedAttendees;
 
@@ -51,6 +59,7 @@ public class SeminarRequest extends TimestampedEntity {
     @Column(name = "needs_text")
     private String needsText;
 
+    @NotBlank
     @Column(name = "status", nullable = false)
     private String status;
 

@@ -5,6 +5,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.UUID;
 import org.springframework.data.annotation.CreatedDate;
@@ -24,15 +26,19 @@ public class ChatMessage {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotNull
     @Column(name = "ticket_id", nullable = false)
     private UUID ticketId;
 
+    @NotNull
     @Column(name = "user_id", nullable = false)
     private UUID userId;
 
+    @NotBlank
     @Column(name = "role", nullable = false)
     private String role;
 
+    @NotBlank
     @Column(name = "content", nullable = false)
     private String content;
 

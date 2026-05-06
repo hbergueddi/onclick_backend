@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
 import java.time.Instant;
 import java.util.UUID;
 import org.springframework.data.annotation.CreatedBy;
@@ -25,12 +26,15 @@ public class DocumentVersion {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotBlank
     @Column(name = "document_id", nullable = false)
     private String documentId;
 
+    @NotBlank
     @Column(name = "version", nullable = false)
     private String version;
 
+    @NotBlank
     @Column(name = "content", nullable = false)
     private String content;
 

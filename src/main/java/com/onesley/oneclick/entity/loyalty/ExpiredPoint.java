@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.UUID;
 import org.springframework.data.annotation.CreatedDate;
@@ -24,18 +25,23 @@ public class ExpiredPoint {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotNull
     @Column(name = "client_id", nullable = false)
     private UUID clientId;
 
+    @NotNull
     @Column(name = "restaurant_id", nullable = false)
     private UUID restaurantId;
 
+    @NotNull
     @Column(name = "original_point_id", nullable = false)
     private UUID originalPointId;
 
+    @NotNull
     @Column(name = "points_expired", nullable = false)
     private Integer pointsExpired;
 
+    @NotNull
     @Column(name = "earned_at", nullable = false)
     private Instant earnedAt;
 

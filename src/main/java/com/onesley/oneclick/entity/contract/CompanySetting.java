@@ -5,6 +5,9 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.util.UUID;
 
@@ -21,6 +24,7 @@ public class CompanySetting extends TimestampedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotBlank
     @Column(name = "raison_sociale", nullable = false)
     private String raisonSociale;
 
@@ -42,6 +46,7 @@ public class CompanySetting extends TimestampedEntity {
     @Column(name = "telephone")
     private String telephone;
 
+    @Email
     @Column(name = "email")
     private String email;
 
@@ -69,12 +74,15 @@ public class CompanySetting extends TimestampedEntity {
     @Column(name = "logo_url")
     private String logoUrl;
 
+    @NotNull
     @Column(name = "tva_rate", nullable = false)
     private BigDecimal tvaRate;
 
+    @NotNull
     @Column(name = "payment_delay_days", nullable = false)
     private Integer paymentDelayDays;
 
+    @NotBlank
     @Column(name = "invoice_prefix", nullable = false)
     private String invoicePrefix;
 

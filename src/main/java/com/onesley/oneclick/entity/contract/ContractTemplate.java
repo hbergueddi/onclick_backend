@@ -5,6 +5,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.util.UUID;
 
 /**
@@ -20,18 +22,23 @@ public class ContractTemplate extends TimestampedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotBlank
     @Column(name = "name", nullable = false)
     private String name;
 
+    @NotBlank
     @Column(name = "version", nullable = false)
     private String version;
 
+    @NotBlank
     @Column(name = "preamble", nullable = false)
     private String preamble;
 
+    @NotBlank
     @Column(name = "footer", nullable = false)
     private String footer;
 
+    @NotNull
     @Column(name = "is_active", nullable = false)
     private Boolean isActive;
 

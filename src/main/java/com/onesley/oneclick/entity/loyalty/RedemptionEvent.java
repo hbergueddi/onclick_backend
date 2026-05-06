@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
@@ -29,9 +30,11 @@ public class RedemptionEvent {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
+    @NotNull
     @Column(name = "client_id", nullable = false)
     private UUID clientId;
 
+    @NotNull
     @Column(name = "restaurant_id", nullable = false)
     private UUID restaurantId;
 
@@ -41,36 +44,45 @@ public class RedemptionEvent {
     @Column(name = "ticket_ref")
     private String ticketRef;
 
+    @NotNull
     @Column(name = "ticket_montant", nullable = false)
     private BigDecimal ticketMontant;
 
+    @NotNull
     @Column(name = "points_redeemed", nullable = false)
     private Integer pointsRedeemed;
 
+    @NotNull
     @Column(name = "discount_dh", nullable = false)
     private BigDecimal discountDh;
 
     @Column(name = "client_tier")
     private String clientTier;
 
+    @NotNull
     @Column(name = "effective_point_value_mad", nullable = false)
     private BigDecimal effectivePointValueMad;
 
+    @NotNull
     @Column(name = "accepted", nullable = false)
     private Boolean accepted;
 
     @Column(name = "rejection_reason")
     private String rejectionReason;
 
+    @NotNull
     @Column(name = "flag_ratio_high", nullable = false)
     private Boolean flagRatioHigh;
 
+    @NotNull
     @Column(name = "flag_daily_near_cap", nullable = false)
     private Boolean flagDailyNearCap;
 
+    @NotNull
     @Column(name = "flag_first_redemption", nullable = false)
     private Boolean flagFirstRedemption;
 
+    @NotNull
     @Column(name = "flag_large_absolute", nullable = false)
     private Boolean flagLargeAbsolute;
 

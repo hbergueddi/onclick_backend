@@ -5,6 +5,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -21,9 +23,11 @@ public class TenantEvent extends TimestampedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotNull
     @Column(name = "tenant_id", nullable = false)
     private UUID tenantId;
 
+    @NotBlank
     @Column(name = "title", nullable = false)
     private String title;
 
@@ -36,6 +40,7 @@ public class TenantEvent extends TimestampedEntity {
     @Column(name = "category")
     private String category;
 
+    @NotNull
     @Column(name = "event_date", nullable = false)
     private Instant eventDate;
 
@@ -45,12 +50,15 @@ public class TenantEvent extends TimestampedEntity {
     @Column(name = "capacity")
     private Integer capacity;
 
+    @NotNull
     @Column(name = "rsvp_enabled", nullable = false)
     private Boolean rsvpEnabled;
 
+    @NotBlank
     @Column(name = "status", nullable = false)
     private String status;
 
+    @NotNull
     @Column(name = "display_order", nullable = false)
     private Integer displayOrder;
 

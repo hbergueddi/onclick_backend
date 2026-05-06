@@ -5,6 +5,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,15 +27,19 @@ public class PromoNotificationRequest extends TimestampedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotNull
     @Column(name = "offer_id", nullable = false)
     private UUID offerId;
 
+    @NotNull
     @Column(name = "restaurant_id", nullable = false)
     private UUID restaurantId;
 
+    @NotNull
     @Column(name = "requested_by", nullable = false)
     private UUID requestedBy;
 
+    @NotBlank
     @Column(name = "status", nullable = false)
     private String status;
 
@@ -41,6 +47,7 @@ public class PromoNotificationRequest extends TimestampedEntity {
     private String message;
 
     @JdbcTypeCode(SqlTypes.ARRAY)
+    @NotNull
     @Column(name = "target_segments", nullable = false, columnDefinition = "text[]")
     private List<String> targetSegments = new ArrayList<>();
 

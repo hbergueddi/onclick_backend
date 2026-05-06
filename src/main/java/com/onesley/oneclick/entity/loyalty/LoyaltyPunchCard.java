@@ -8,6 +8,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -26,23 +27,29 @@ public class LoyaltyPunchCard extends TimestampedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotNull
     @Column(name = "tenant_id", nullable = false)
     private UUID tenantId;
 
+    @NotNull
     @Column(name = "client_id", nullable = false)
     private UUID clientId;
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @NotNull
     @Column(name = "activity_type", nullable = false, columnDefinition = "punch_card_activity")
     private PunchCardActivity activityType;
 
+    @NotNull
     @Column(name = "count_punched", nullable = false)
     private Integer countPunched;
 
+    @NotNull
     @Column(name = "threshold", nullable = false)
     private Integer threshold;
 
+    @NotNull
     @Column(name = "redeemed_count", nullable = false)
     private Integer redeemedCount;
 

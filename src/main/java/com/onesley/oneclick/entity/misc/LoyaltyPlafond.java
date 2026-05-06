@@ -5,6 +5,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.util.UUID;
 
@@ -21,21 +23,26 @@ public class LoyaltyPlafond extends TimestampedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotBlank
     @Column(name = "name", nullable = false)
     private String name;
 
     @Column(name = "description")
     private String description;
 
+    @NotNull
     @Column(name = "value", nullable = false)
     private BigDecimal value;
 
+    @NotBlank
     @Column(name = "unit", nullable = false)
     private String unit;
 
+    @NotBlank
     @Column(name = "scope", nullable = false)
     private String scope;
 
+    @NotNull
     @Column(name = "enabled", nullable = false)
     private Boolean enabled;
 

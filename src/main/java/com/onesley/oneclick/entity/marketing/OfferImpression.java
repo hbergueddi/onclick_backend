@@ -4,6 +4,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -20,15 +22,18 @@ public class OfferImpression {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotNull
     @Column(name = "offer_id", nullable = false)
     private UUID offerId;
 
+    @NotNull
     @Column(name = "user_id", nullable = false)
     private UUID userId;
 
     @Column(name = "viewed_at", nullable = false)
     private Instant viewedAt;
 
+    @NotBlank
     @Column(name = "source", nullable = false)
     private String source;
 

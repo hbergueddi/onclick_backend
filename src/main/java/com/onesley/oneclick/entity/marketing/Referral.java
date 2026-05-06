@@ -5,6 +5,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.UUID;
 import org.springframework.data.annotation.CreatedDate;
@@ -24,9 +26,11 @@ public class Referral {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotNull
     @Column(name = "referrer_id", nullable = false)
     private UUID referrerId;
 
+    @NotBlank
     @Column(name = "referred_phone", nullable = false)
     private String referredPhone;
 
@@ -36,9 +40,11 @@ public class Referral {
     @Column(name = "referred_user_id")
     private UUID referredUserId;
 
+    @NotBlank
     @Column(name = "status", nullable = false)
     private String status;
 
+    @NotNull
     @Column(name = "pts_awarded", nullable = false)
     private Integer ptsAwarded;
 

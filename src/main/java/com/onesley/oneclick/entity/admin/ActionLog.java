@@ -5,6 +5,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.UUID;
 import org.springframework.data.annotation.CreatedDate;
@@ -24,18 +26,23 @@ public class ActionLog {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotNull
     @Column(name = "restaurant_id", nullable = false)
     private UUID restaurantId;
 
+    @NotNull
     @Column(name = "user_id", nullable = false)
     private UUID userId;
 
+    @NotBlank
     @Column(name = "member_name", nullable = false)
     private String memberName;
 
+    @NotBlank
     @Column(name = "action", nullable = false)
     private String action;
 
+    @NotBlank
     @Column(name = "type", nullable = false)
     private String type;
 

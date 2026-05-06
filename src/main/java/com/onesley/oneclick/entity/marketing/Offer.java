@@ -5,6 +5,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,12 +27,15 @@ public class Offer extends AuditedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotNull
     @Column(name = "restaurant_id", nullable = false)
     private UUID restaurantId;
 
+    @NotBlank
     @Column(name = "type", nullable = false)
     private String type;
 
+    @NotBlank
     @Column(name = "title", nullable = false)
     private String title;
 
@@ -40,19 +45,23 @@ public class Offer extends AuditedEntity {
     @Column(name = "image")
     private String image;
 
+    @NotNull
     @Column(name = "pts", nullable = false)
     private Integer pts;
 
     @Column(name = "expires_at", nullable = false)
     private Instant expiresAt;
 
+    @NotNull
     @Column(name = "is_active", nullable = false)
     private Boolean isActive;
 
     @JdbcTypeCode(SqlTypes.ARRAY)
+    @NotNull
     @Column(name = "segments", nullable = false, columnDefinition = "text[]")
     private List<String> segments = new ArrayList<>();
 
+    @NotNull
     @Column(name = "push_notify", nullable = false)
     private Boolean pushNotify;
 

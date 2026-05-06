@@ -5,6 +5,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.UUID;
 import org.springframework.data.annotation.CreatedDate;
@@ -24,24 +26,31 @@ public class TeamInvitation {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotNull
     @Column(name = "restaurant_id", nullable = false)
     private UUID restaurantId;
 
+    @NotNull
     @Column(name = "invited_by", nullable = false)
     private UUID invitedBy;
 
+    @NotBlank
     @Column(name = "first_name", nullable = false)
     private String firstName;
 
+    @NotBlank
     @Column(name = "last_name", nullable = false)
     private String lastName;
 
+    @NotBlank
     @Column(name = "phone", nullable = false)
     private String phone;
 
+    @NotBlank
     @Column(name = "role", nullable = false)
     private String role;
 
+    @NotBlank
     @Column(name = "status", nullable = false)
     private String status;
 

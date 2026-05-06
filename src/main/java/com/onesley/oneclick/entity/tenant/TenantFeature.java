@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.IdClass;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -26,6 +27,7 @@ public class TenantFeature {
     @Column(name = "feature_key", nullable = false)
     private String featureKey;
 
+    @NotNull
     @Column(name = "enabled", nullable = false)
     private Boolean enabled;
 

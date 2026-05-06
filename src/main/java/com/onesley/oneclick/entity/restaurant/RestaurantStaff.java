@@ -8,6 +8,8 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -30,14 +32,17 @@ public class RestaurantStaff {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    @NotNull
     @Column(name = "user_id", nullable = false)
     private UUID userId;
 
+    @NotNull
     @Column(name = "restaurant_id", nullable = false)
     private UUID restaurantId;
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @NotNull
     @Column(name = "staff_role", nullable = false, columnDefinition = "staff_role")
     private StaffRole staffRole;
 
@@ -45,6 +50,7 @@ public class RestaurantStaff {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
+    @NotBlank
     @Column(name = "status", nullable = false)
     private String status;
 
