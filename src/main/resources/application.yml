@@ -56,6 +56,11 @@ spring:
           max-active: 8
           max-idle: 8
           min-idle: 0
+      # We use Redis only for cache (Spring Cache), not as a key-value store
+      # via Spring Data repositories. Disabling repository auto-discovery
+      # prevents Spring from trying to claim our JPA interfaces as Redis ones.
+      repositories:
+        enabled: false
 
 server:
   port: 8081  # 8080 is taken by the React Vite dev server
