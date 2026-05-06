@@ -216,3 +216,32 @@ export const SKIP_TABLES = new Set([
 export function enumNameToClassName(enumName) {
   return pascalCase(enumName);
 }
+
+/**
+ * Politique de sécurité par défaut, par groupe métier.
+ *
+ * Retourne l'expression Spring SpEL utilisée dans {@code @PreAuthorize}, ou
+ * {@code null} si le groupe n'a pas de politique par défaut (vues utilitaires,
+ * groupe `misc`, etc. — restent en `permitAll` jusqu'à classification manuelle).
+ *
+ * Politique conservatrice : tout `admin` peut accéder à tout. Les rôles
+ * applicatifs (`client`, `restaurateur`, `tenant_admin`) ne reçoivent l'accès
+ * que là où ça a un sens fonctionnel. À raffiner endpoint par endpoint dans
+ * la business logic Phase 11+.
+ */
+const GROUP_AUTHORIZATION = {
+  auth:        "hasRole('admin')",                                  // gestion rôles = sensible
+  tenant:      "hasRole('admin')",                                  // multi-tenant config
+  admin:       "hasRole('admin')",                                  // logs, système
+  contract:    "hasRole('admin')",                                  // contrats, factures
+  support:     "hasAnyRole('admin','client')",
+  restaurant:  "hasAnyRole('admin','restaurateur','client')",
+  reservation: "hasAnyRole('admin','restaurateur','client')",
+  loyalty:     "hasAnyRole('admin','restaurateur','client')",
+  marketing:   "hasAnyRole('admin','restaurateur','client')",
+  pcc:         "hasAnyRole('admin','restaurateur','client','tenant_admin')",
+};
+
+export function inferAuthorizationFromGroup(group) {
+  return GROUP_AUTHORIZATION[group] || null;
+}

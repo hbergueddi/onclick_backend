@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,6 +22,10 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/profiles")
 @Tag(name = "Profiles", description = "Profil applicatif d'un utilisateur (1-1 avec auth.users)")
+// TODO Phase 11 : raffiner — un client ne peut accéder qu'à son propre profil
+// (ex: @PostAuthorize("returnObject.id.toString() == authentication.name") sur findById,
+// + @PreAuthorize au niveau méthode pour patch/delete avec check id==sub)
+@PreAuthorize("hasAnyRole('admin','client')")
 public class ProfileController {
 
     private final ProfileService service;

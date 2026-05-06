@@ -5,6 +5,7 @@ import com.onesley.oneclick.service.restaurant.RestaurantCoreService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.data.domain.Page;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -15,6 +16,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/restaurants/core")
 @Tag(name = "Restaurants (core view)", description = "Projection minimale pour les listes (Explore page)")
+@PreAuthorize("hasAnyRole('admin','restaurateur','client')")
 public class RestaurantCoreController {
 
     private final RestaurantCoreService service;

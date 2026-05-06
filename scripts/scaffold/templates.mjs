@@ -7,6 +7,7 @@ import {
   columnNameToFieldName,
   inferGroupFromTable,
   enumNameToClassName,
+  inferAuthorizationFromGroup,
 } from "./naming.mjs";
 import {
   mapColumn,
@@ -594,6 +595,8 @@ export function controllerTemplate(rel) {
     ? "views/" + pluralize(rel.name.replace(/^v_/, "")).replace(/^v_/, "")
     : pluralize(rel.name);
 
+  const authExpression = inferAuthorizationFromGroup(group);
+
   const imports = new Set([
     `${BASE_PACKAGE}.dto.${group}.${dtoName}`,
     `${BASE_PACKAGE}.service.${group}.${serviceName}`,
@@ -604,6 +607,10 @@ export function controllerTemplate(rel) {
     "org.springframework.web.bind.annotation.RestController",
     "java.util.List",
   ]);
+
+  if (authExpression) {
+    imports.add("org.springframework.security.access.prepost.PreAuthorize");
+  }
 
   let findByIdEndpoint = "";
   if (rel.primaryKey.length === 1) {
@@ -627,12 +634,14 @@ ${importLines([...imports])}
 
 /**
  * REST controller pour {@link ${dtoName}} (généré par scripts/scaffold-jpa.mjs).
- * Endpoints minimaux — étendre selon les besoins métier (filtres, pagination,
- * mutations, sécurité @PreAuthorize).
+ * Endpoints minimaux — étendre selon les besoins métier (filtres, pagination, mutations).
+ *
+ * <p>Sécurité par défaut${authExpression ? ` : ${authExpression}` : ` : permitAll (groupe non classifié)`}.
+ * À raffiner endpoint par endpoint quand la business logic est portée (Phase 11+).
  */
 @RestController
 @RequestMapping("/api/${urlPath}")
-@Tag(name = "${className}", description = "Auto-generated controller for ${rel.name}")
+@Tag(name = "${className}", description = "Auto-generated controller for ${rel.name}")${authExpression ? `\n@PreAuthorize("${authExpression}")` : ""}
 public class ${controllerName} {
 
     private final ${serviceName} service;

@@ -5,6 +5,7 @@ import com.onesley.oneclick.service.tenant.TenantService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,6 +17,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/tenants")
 @Tag(name = "Tenants", description = "Multi-tenant whitelabel (oneclick, restopro, palmeraie, homu, ...)")
+@PreAuthorize("hasRole('admin')")
 public class TenantController {
 
     private final TenantService service;

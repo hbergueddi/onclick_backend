@@ -5,6 +5,7 @@ import com.onesley.oneclick.service.tenant.TenantAdminService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -16,6 +17,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/tenant-admins")
 @Tag(name = "Tenant Admins", description = "Junction user ↔ tenant avec rôle (owner/admin/viewer)")
+@PreAuthorize("hasRole('admin')")
 public class TenantAdminController {
 
     private final TenantAdminService service;

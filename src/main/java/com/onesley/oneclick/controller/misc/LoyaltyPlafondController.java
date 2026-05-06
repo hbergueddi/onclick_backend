@@ -14,8 +14,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * REST controller pour {@link LoyaltyPlafondDto} (généré par scripts/scaffold-jpa.mjs).
- * Endpoints minimaux — étendre selon les besoins métier (filtres, pagination,
- * mutations, sécurité @PreAuthorize).
+ * Endpoints minimaux — étendre selon les besoins métier (filtres, pagination, mutations).
+ *
+ * <p>Sécurité par défaut : permitAll (groupe non classifié).
+ * À raffiner endpoint par endpoint quand la business logic est portée (Phase 11+).
  */
 @RestController
 @RequestMapping("/api/loyalty-plafonds")
