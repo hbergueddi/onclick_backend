@@ -1,0 +1,217 @@
+### OneClick Backend — IntelliJ HTTP Client tests
+###
+### Pré-requis :
+###   1. ./run.sh ou ./run.sh --oauth2 doit tourner
+###   2. http-client.env.json (à côté) configure les variables d'environnement
+###   3. Pour les tests authentifiés, exécute d'abord la requête "Login" qui
+###      injecte automatiquement le JWT dans la variable {{jwt}}.
+###
+### Pour exécuter une requête : clic vert ▶ à gauche de chaque ###.
+### Pour basculer dev/oauth2 : sélecteur env en haut à droite (dev | oauth2).
+
+### ═══════════════════════════════════════════════════════════════
+### 1. Health & infra (publics — pas de JWT requis)
+### ═══════════════════════════════════════════════════════════════
+
+### Health check
+GET {{base}}/actuator/health
+
+### Info build/git
+GET {{base}}/actuator/info
+
+### OpenAPI 3 spec (pour générer un client SDK ailleurs)
+GET {{base}}/v3/api-docs
+
+### Swagger UI (ouvrir dans le navigateur)
+GET {{base}}/swagger-ui/index.html
+
+### ═══════════════════════════════════════════════════════════════
+### 2. Génération d'un JWT de test
+###    Spring n'a pas (encore) son propre /auth/login. On signe
+###    localement un JWT HS256 avec le secret du .env.
+###    Pré-test JS injecte le résultat dans {{jwt}}.
+### ═══════════════════════════════════════════════════════════════
+
+### Helper : on récupère le user_id admin via une query directe sur la DB
+###          NB : pour faire ça depuis IntelliJ, ouvre le Database tool
+###          window (View → Tool Windows → Database) et exécute :
+###          SELECT user_id FROM user_roles WHERE role='admin' LIMIT 1;
+###          Puis colle l'UUID dans {{adminUserId}} de http-client.env.json.
+
+### Génère un JWT pour admin (utilise {{adminUserId}} du env file)
+### Le pré-test signe le JWT avec {{jwtSecret}} et stocke dans {{jwt}}.
+GET {{base}}/actuator/health
+Accept: application/json
+
+> {%
+    // Génère un JWT HS256 et le stocke dans la variable globale "jwt"
+    const crypto = require('crypto');
+    const secret = request.environment.get("jwtSecret");
+    const sub = request.environment.get("adminUserId");
+    if (!secret || !sub) {
+        client.log("⚠️  jwtSecret or adminUserId missing in http-client.env.json");
+    } else {
+        const header = Buffer.from(JSON.stringify({alg:"HS256", typ:"JWT"})).toString("base64url");
+        const now = Math.floor(Date.now() / 1000);
+        const payload = Buffer.from(JSON.stringify({
+            iss: "oneclick-test", sub, iat: now, exp: now + 3600, role: "authenticated"
+        })).toString("base64url");
+        const sig = crypto.createHmac("sha256", secret)
+            .update(header + "." + payload).digest("base64url");
+        const jwt = header + "." + payload + "." + sig;
+        client.global.set("jwt", jwt);
+        client.log("✓ JWT généré pour " + sub + " (rôle admin)");
+    }
+%}
+
+### ═══════════════════════════════════════════════════════════════
+### 3. Endpoints sécurisés — nécessitent {{jwt}}
+###    Lance d'abord la requête #2 ci-dessus pour générer le JWT.
+### ═══════════════════════════════════════════════════════════════
+
+### Liste des tenants (admin only)
+GET {{base}}/api/tenants
+Authorization: Bearer {{jwt}}
+
+### Tenant par slug
+GET {{base}}/api/tenants/by-slug/palmeraie
+Authorization: Bearer {{jwt}}
+
+### Liste paginée des restaurants à Casablanca (vue read-only optimisée)
+GET {{base}}/api/restaurants/core/by-city?city=Casablanca&page=0&size=5
+Authorization: Bearer {{jwt}}
+
+### Détail d'un restaurant complet (33 colonnes)
+###   Récupère un id valide via :
+###     SELECT id FROM restaurants WHERE city='Casablanca' LIMIT 1;
+GET {{base}}/api/restaurants/8ad6e68c-2a69-496d-b9b0-33110c4722ce
+Authorization: Bearer {{jwt}}
+
+### Réservations par status "demandée"
+GET {{base}}/api/reservations/by-status?status=demand%C3%A9e
+Authorization: Bearer {{jwt}}
+
+### Loyalty points (FIFO système)
+GET {{base}}/api/loyalty-points
+Authorization: Bearer {{jwt}}
+
+### Notifications in-app
+GET {{base}}/api/notifications
+Authorization: Bearer {{jwt}}
+
+### Bookable resources PCC (Padel/Spa/Golf)
+GET {{base}}/api/bookable-resources
+Authorization: Bearer {{jwt}}
+
+### Vue audit log (read-only @Immutable)
+GET {{base}}/api/views/admin-audit-logs
+Authorization: Bearer {{jwt}}
+
+### ═══════════════════════════════════════════════════════════════
+### 4. Recherche dynamique (Phase 6.3)
+### ═══════════════════════════════════════════════════════════════
+
+### Recherche : profils dont prénom commence par "You" + score >= 3.5
+###             trié par score desc
+POST {{base}}/api/profiles/search
+Authorization: Bearer {{jwt}}
+Content-Type: application/json
+
+{
+  "criteria": [
+    {"field": "firstName", "op": "ILIKE", "value": "You%"},
+    {"field": "reliabilityScore", "op": "GTE", "value": 3.5}
+  ],
+  "sort": "reliabilityScore,desc",
+  "page": 0,
+  "size": 10
+}
+
+### Recherche : profils par city dans un set
+POST {{base}}/api/profiles/search
+Authorization: Bearer {{jwt}}
+Content-Type: application/json
+
+{
+  "criteria": [
+    {"field": "city", "op": "IN", "value": ["Casablanca", "Marrakech", "Rabat"]}
+  ],
+  "size": 5
+}
+
+### Tentative avec field non whitelisté → 400 + ProblemDetails RFC 7807
+POST {{base}}/api/profiles/search
+Authorization: Bearer {{jwt}}
+Content-Type: application/json
+
+{
+  "criteria": [
+    {"field": "internalSecret", "op": "EQ", "value": "x"}
+  ]
+}
+
+### ═══════════════════════════════════════════════════════════════
+### 5. Validation Bean (Phase 6.1)
+### ═══════════════════════════════════════════════════════════════
+
+### Profil par UUID inexistant → 404 + ProblemDetails
+GET {{base}}/api/profiles/00000000-0000-0000-0000-000000000099
+Authorization: Bearer {{jwt}}
+
+### UUID malformé → 400 + ProblemDetails type-mismatch
+GET {{base}}/api/reservations/not-a-valid-uuid
+Authorization: Bearer {{jwt}}
+
+### PATCH avec phone format invalid → 400 + fieldErrors
+###   Récupère un id valide via :
+###     SELECT id FROM profiles WHERE first_name <> '' LIMIT 1;
+PATCH {{base}}/api/profiles/c921ce28-244e-45bc-a19b-66948c56a86e
+Authorization: Bearer {{jwt}}
+Content-Type: application/json
+
+{
+  "phone": "INVALID-PHONE!!"
+}
+
+### PATCH valide → 200 + entité modifiée + log [AUDIT] côté Spring
+PATCH {{base}}/api/profiles/c921ce28-244e-45bc-a19b-66948c56a86e
+Authorization: Bearer {{jwt}}
+Content-Type: application/json
+
+{
+  "city": "Tanger",
+  "language": "fr"
+}
+
+### ═══════════════════════════════════════════════════════════════
+### 6. Sécurité — sans JWT, on doit avoir 401
+### ═══════════════════════════════════════════════════════════════
+
+### Pas de header Authorization → 401
+GET {{base}}/api/tenants
+
+### JWT bidon → 401 (signature invalide)
+GET {{base}}/api/tenants
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0In0.fake-signature
+
+### ═══════════════════════════════════════════════════════════════
+### 7. Permissions par rôle (Phase 6.2)
+###    Pour tester un autre rôle, il faut générer un JWT pour un
+###    user qui a ce rôle. Modifier {{adminUserId}} dans
+###    http-client.env.json ou créer un fichier env spécifique.
+### ═══════════════════════════════════════════════════════════════
+
+### admin → /api/tenants → 200 (admin a la permission tenant.READ)
+GET {{base}}/api/tenants
+Authorization: Bearer {{jwt}}
+
+### Si tu utilises un JWT avec role=client, le call ci-dessus retournera 403
+### + ProblemDetails RFC 7807 :
+### {
+###   "type": "https://api.oneclick.ma/errors/forbidden",
+###   "status": 403,
+###   "detail": "Access denied",
+###   "instance": "/api/tenants",
+###   "timestamp": "...",
+###   "traceId": "..."
+### }

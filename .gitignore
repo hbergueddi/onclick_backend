@@ -40,3 +40,6 @@ build/
 secrets/
 *.local.yml
 **/AuthKey_*.p8
+
+### IntelliJ HTTP Client — private env (contains secrets) ###
+http-client.private.env.json
