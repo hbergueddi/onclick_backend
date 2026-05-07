@@ -104,7 +104,10 @@ assert "POST /api/profiles/search field non-whitelisté → 400" "400" \
 echo
 
 echo "── 7. Validation Bean (Phase 6.1) ──────────────────────────────"
-SAMPLE_PROFILE=$(psql -d oneclick_local -t -A -c "SELECT id FROM profiles WHERE first_name<>'' LIMIT 1")
+SAMPLE_PROFILE=$(PGPASSWORD="${PGPASSWORD:-OneclickLocal2026}" \
+  psql -h "${PGHOST:-localhost}" -p "${PGPORT:-5432}" \
+       -U "${PGUSER:-oneclick_app}" -d "${PGDATABASE:-oneclick_local}" \
+       -t -A -c "SELECT id FROM profiles WHERE first_name<>'' LIMIT 1")
 assert "PATCH /api/profiles/{id} phone format invalid → 400" "400" \
   "$(http_code -X PATCH -H "Content-Type: application/json" -H "Authorization: Bearer ${CLIENT_JWT}" \
        -d '{"phone":"INVALID-PHONE!!"}' \

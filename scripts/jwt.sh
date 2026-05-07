@@ -44,7 +44,13 @@ else
       exit 1
       ;;
   esac
-  USER_ID=$(psql -d "${PGDATABASE:-oneclick_local}" -t -A -c \
+  # TCP localhost (compatible Docker + brew — pas de socket UNIX en Docker)
+  PGHOST="${PGHOST:-localhost}"
+  PGPORT="${PGPORT:-5432}"
+  PGDATABASE="${PGDATABASE:-oneclick_local}"
+  PGUSER="${PGUSER:-oneclick_app}"
+  export PGPASSWORD="${PGPASSWORD:-OneclickLocal2026}"
+  USER_ID=$(psql -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}" -d "${PGDATABASE}" -t -A -c \
     "SELECT user_id FROM user_roles WHERE role='${ARG}' ORDER BY random() LIMIT 1" 2>/dev/null || true)
   if [[ -z "${USER_ID}" ]]; then
     echo "✗ Aucun user avec rôle '${ARG}' dans user_roles"

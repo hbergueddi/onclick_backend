@@ -24,12 +24,28 @@ if [[ -z "${SECRET}" ]]; then
   exit 1
 fi
 
+# Connexion psql — TCP localhost (compatible Docker + brew)
+# Avec Docker : pas de socket UNIX, donc -h localhost obligatoire.
+# Avec brew  : marche aussi via TCP localhost (port 5432 lib).
+PGHOST="${PGHOST:-localhost}"
+PGPORT="${PGPORT:-5432}"
+PGDATABASE="${PGDATABASE:-oneclick_local}"
+PGUSER="${PGUSER:-oneclick_app}"
+export PGPASSWORD="${PGPASSWORD:-OneclickLocal2026}"
+
+PSQL_CMD=(psql -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}" -d "${PGDATABASE}" -t -A)
+
 # Pioche un user_id par rôle
-DB="${PGDATABASE:-oneclick_local}"
-ADMIN_ID=$(psql -d "${DB}" -t -A -c "SELECT user_id FROM user_roles WHERE role='admin' ORDER BY random() LIMIT 1")
-CLIENT_ID=$(psql -d "${DB}" -t -A -c "SELECT user_id FROM user_roles WHERE role='client' ORDER BY random() LIMIT 1")
-RESTAU_ID=$(psql -d "${DB}" -t -A -c "SELECT user_id FROM user_roles WHERE role='restaurateur' ORDER BY random() LIMIT 1")
-TENANT_ID=$(psql -d "${DB}" -t -A -c "SELECT user_id FROM user_roles WHERE role='tenant_admin' ORDER BY random() LIMIT 1")
+ADMIN_ID=$("${PSQL_CMD[@]}" -c "SELECT user_id FROM user_roles WHERE role='admin' ORDER BY random() LIMIT 1")
+CLIENT_ID=$("${PSQL_CMD[@]}" -c "SELECT user_id FROM user_roles WHERE role='client' ORDER BY random() LIMIT 1")
+RESTAU_ID=$("${PSQL_CMD[@]}" -c "SELECT user_id FROM user_roles WHERE role='restaurateur' ORDER BY random() LIMIT 1")
+TENANT_ID=$("${PSQL_CMD[@]}" -c "SELECT user_id FROM user_roles WHERE role='tenant_admin' ORDER BY random() LIMIT 1")
+
+if [[ -z "${ADMIN_ID}" || -z "${CLIENT_ID}" || -z "${RESTAU_ID}" ]]; then
+  echo "✗ Impossible de récupérer les user_id depuis ${PGUSER}@${PGHOST}:${PGPORT}/${PGDATABASE}"
+  echo "  Vérifie que le container/serveur Postgres tourne et que la data est restorée."
+  exit 1
+fi
 
 # Génère un JWT HS256 via Node (env vars en input)
 gen_jwt() {

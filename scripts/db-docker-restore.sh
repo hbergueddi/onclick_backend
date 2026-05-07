@@ -94,8 +94,12 @@ docker exec "${CONTAINER}" pg_restore \
 docker exec "${CONTAINER}" rm /tmp/db-full.dump
 
 # ── 6. Grant privileges sur le user app + BYPASSRLS ─────────────────
+# CRITIQUE : docker exec a besoin de -i pour piper stdin (le heredoc).
+# Sans -i, le SQL n'arrive jamais au container et le GRANT échoue
+# silencieusement → oneclick_app n'a aucune permission, toutes les
+# requêtes Spring retournent 0 rows ou "permission denied".
 echo "→ Configuration oneclick_app (privileges + BYPASSRLS)..."
-docker exec "${CONTAINER}" psql -U "${DB_OWNER}" -d "${DB_NAME}" <<'SQL' >/dev/null
+docker exec -i "${CONTAINER}" psql -U "${DB_OWNER}" -d "${DB_NAME}" <<'SQL'
 GRANT USAGE ON SCHEMA public, auth TO oneclick_app;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO oneclick_app;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO oneclick_app;
