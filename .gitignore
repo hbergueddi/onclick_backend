@@ -43,3 +43,7 @@ secrets/
 
 ### IntelliJ HTTP Client — private env (contains secrets) ###
 http-client.private.env.json
+
+### macOS ###
+.DS_Store
+**/.DS_Store
