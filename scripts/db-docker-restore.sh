@@ -32,16 +32,31 @@ fi
 echo "✓ Container ${CONTAINER} ready"
 
 # ── 2. Trouver le dump prod ─────────────────────────────────────────
+# On cherche un DOSSIER (pas un .tar.gz) qui contient db-full.dump.
+# Plusieurs candidats peuvent exister (duplicates Finder " 2" etc.) — on
+# prend le plus récent qui satisfait les 2 conditions.
 if [[ $# -ge 1 ]]; then
   DUMP_DIR="$1"
 else
-  DUMP_DIR=$(ls -dt ~/Documents/oneclick-prod-* 2>/dev/null | head -1)
+  DUMP_DIR=""
+  while IFS= read -r -d '' candidate; do
+    if [[ -f "${candidate}/db-full.dump" ]]; then
+      DUMP_DIR="${candidate}"
+      break
+    fi
+  done < <(find "${HOME}/Documents" -maxdepth 1 -type d -name "oneclick-prod-*" -print0 2>/dev/null \
+           | xargs -0 stat -f "%m %N" 2>/dev/null | sort -rn | cut -d' ' -f2- | tr '\n' '\0')
 fi
 
 if [[ -z "${DUMP_DIR:-}" ]] || [[ ! -d "${DUMP_DIR}" ]]; then
-  echo "✗ Pas de dump trouvé. Cherché : ~/Documents/oneclick-prod-*"
-  echo "  Soit lance scripts/backup.sh d'abord, soit passe le path :"
-  echo "    ./scripts/db-docker-restore.sh /path/to/dump-dir"
+  echo "✗ Pas de dump trouvé. Cherché : un dossier ~/Documents/oneclick-prod-*"
+  echo "  contenant db-full.dump."
+  echo
+  echo "  Disponibles :"
+  ls -d "${HOME}"/Documents/oneclick-prod-* 2>/dev/null | sed 's/^/    /'
+  echo
+  echo "  Soit lance scripts/backup.sh d'abord, soit passe le path explicite :"
+  echo "    ./scripts/db-docker-restore.sh \"/path/to/dump-dir\""
   exit 1
 fi
 
