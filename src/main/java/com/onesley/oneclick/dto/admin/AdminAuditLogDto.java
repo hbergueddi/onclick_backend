@@ -21,6 +21,8 @@ public record AdminAuditLogDto(
     String ip,
     String userAgent,
     Instant createdAt,
-    UUID tenantId
+    UUID tenantId,
+    UUID createdBy,
+    UUID modifiedBy
 ) {
 }

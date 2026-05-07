@@ -17,6 +17,7 @@ public record ExploreFeaturedDto(
     String notes,
     UUID createdBy,
     Instant createdAt,
-    Instant updatedAt
+    Instant updatedAt,
+    UUID modifiedBy
 ) {
 }

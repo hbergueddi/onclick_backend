@@ -23,6 +23,8 @@ public record ResourceBookingDto(
     Instant createdAt,
     Instant updatedAt,
     Instant reminderJ1SentAt,
-    Instant reminderH2SentAt
+    Instant reminderH2SentAt,
+    UUID createdBy,
+    UUID modifiedBy
 ) {
 }

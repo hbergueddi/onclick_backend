@@ -1,13 +1,92 @@
+# ════════════════════════════════════════════════════════════════════
+# OneClick Backend — stack dev locale (Postgres + Redis + Adminer)
+# ════════════════════════════════════════════════════════════════════
+#
+# Usage rapide :
+#   docker compose up -d                          # postgres + redis only
+#   docker compose --profile tools up -d          # + Adminer UI (port 8082)
+#   docker compose down                           # stop + clean (data preservé)
+#   docker compose down -v                        # stop + DROP TOUTES les data
+#
+# Ports exposés sur l'hôte :
+#   5432  → postgres
+#   6379  → redis
+#   8082  → adminer (uniquement avec --profile tools)
+#
+# ⚠️  Conflit avec brew services :
+#   Si tu as `brew services start postgresql@17` ou `redis` qui tournent,
+#   ils squattent les mêmes ports. Fais d'abord :
+#       brew services stop postgresql@17
+#       brew services stop redis
+#   Et inversement, pour repasser à brew : `docker compose down`.
+#
+# Premier setup d'une fresh DB :
+#   1. docker compose up -d
+#   2. ./scripts/db-docker-restore.sh    # importe le dump prod
+#   3. ./run.sh                           # boot Spring contre cette DB
+
 services:
+
   postgres:
-    image: 'postgres:latest'
+    image: postgres:17-alpine
+    container_name: oneclick_postgres
+    restart: unless-stopped
     environment:
-      - 'POSTGRES_DB=mydatabase'
-      - 'POSTGRES_PASSWORD=secret'
-      - 'POSTGRES_USER=myuser'
+      POSTGRES_DB: oneclick_local
+      POSTGRES_USER: hh                    # owner — match SETUP-LOCAL.md
+      POSTGRES_PASSWORD: oneclick_dev_pwd  # mot de passe dev (jamais en prod)
+      # Locale FR pour les ordres et le tri (matchs Supabase prod)
+      LANG: en_US.utf8
+      LC_ALL: en_US.utf8
     ports:
-      - '5432'
+      - "5432:5432"
+    volumes:
+      - oneclick_pgdata:/var/lib/postgresql/data
+      # Auto-init scripts montés en read-only ; exécutés une seule fois
+      # à la création du volume (vide → init.sql joue).
+      - ./scripts/db-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hh -d oneclick_local"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
   redis:
-    image: 'redis:latest'
+    image: redis:7-alpine
+    container_name: oneclick_redis
+    restart: unless-stopped
     ports:
-      - '6379'
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - oneclick_redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ── Outil optionnel : Adminer (UI web pour explorer la DB) ──────────
+  # Activé via : `docker compose --profile tools up -d`
+  # Accès : http://localhost:8082
+  # Server: postgres  User: hh  Password: oneclick_dev_pwd  DB: oneclick_local
+  adminer:
+    image: adminer:latest
+    container_name: oneclick_adminer
+    restart: unless-stopped
+    profiles: ["tools"]
+    ports:
+      - "8082:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+      ADMINER_DESIGN: hever  # thème lisible
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  oneclick_pgdata:
+    name: oneclick_pgdata
+  oneclick_redisdata:
+    name: oneclick_redisdata

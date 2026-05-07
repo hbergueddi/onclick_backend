@@ -24,6 +24,8 @@ public record OfferDto(
     Boolean pushNotify,
     UUID campaignId,
     Instant startsAt,
-    UUID tenantId
+    UUID tenantId,
+    UUID createdBy,
+    UUID modifiedBy
 ) {
 }

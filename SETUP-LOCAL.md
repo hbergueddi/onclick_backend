@@ -1,15 +1,44 @@
 # Setup local — OneClick Spring backend
 
-> Reproduit l'environnement de dev complet sur une machine neuve. À jour : 06 mai 2026, fin Phase 3.
+> Reproduit l'environnement de dev complet sur une machine neuve. À jour : 07 mai 2026, fin Phase 6.
 
-## Prérequis
+## Deux modes d'install au choix
+
+Tu peux installer Postgres + Redis soit via **Docker** (recommandé — reproductible), soit via **Homebrew** (plus léger). Choisis-en un, ne mélange pas (conflit de ports 5432 / 6379).
+
+### Mode A — Docker (recommandé)
+
+```bash
+# Pré-requis : Docker Desktop installé
+docker --version
+
+# Lance Postgres 17 + Redis 7 en background
+cd OneClick_Spring
+docker compose up -d
+
+# Optionnel : Adminer (UI web pour explorer la DB) sur http://localhost:8082
+docker compose --profile tools up -d
+```
+
+Avantages : reproductible (même version PG/Redis pour toute l'équipe), `docker compose down -v` reset tout proprement, pas d'install brew.
+
+### Mode B — Homebrew
+
+```bash
+brew install openjdk postgresql@17 redis
+brew services start postgresql@17
+brew services start redis
+```
+
+## Prérequis communs
 
 | Outil | Version | Install |
 |---|---|---|
-| **Java** | 26+ | `brew install openjdk` puis `JAVA_HOME=/Users/.../openjdk-26.0.1/Contents/Home` |
+| **Java** | 26+ | `brew install openjdk` puis `JAVA_HOME=$(/usr/libexec/java_home -v 26)` |
 | **Maven Wrapper** | inclus | `./mvnw` (pas besoin de Maven global) |
-| **PostgreSQL** | 17+ | `brew install postgresql@17 && brew services start postgresql@17` |
-| **Redis** | 7+ | `brew install redis && brew services start redis` |
+| **Docker Desktop** | 29+ (mode A) | https://www.docker.com/products/docker-desktop/ |
+| **PostgreSQL** | 17 | dans Docker ou `brew install postgresql@17` |
+| **Redis** | 7 | dans Docker ou `brew install redis` |
 
 Vérification rapide :
 ```bash
@@ -20,7 +49,25 @@ nc -z localhost 6379      # redis up
 
 ## 1. Restaurer la base depuis le dump prod
 
-Le dump prod (~33 MB compressé) est produit par `scripts/backup.sh` (Phase 1) et stocké dans `~/Documents/oneclick-prod-YYYYMMDD-HHMMSS/`. Pour restaurer en local :
+Le dump prod (~33 MB compressé) est produit par `scripts/backup.sh` (Phase 1) et stocké dans `~/Documents/oneclick-prod-YYYYMMDD-HHMMSS/`.
+
+### Mode A — Docker (script automatisé)
+
+```bash
+docker compose up -d                       # si pas déjà fait
+./scripts/db-docker-restore.sh             # auto-détecte le dernier dump
+```
+
+Le script fait tout : drop la DB, recréation, restore, grants oneclick_app, BYPASSRLS. À la fin tu vois :
+```
+✓ Restore complet
+  restaurants : 1042  (attendu ~1042)
+  auth.users  : 17221  (attendu ~17221)
+```
+
+**Skip directement à la section 4** (Compiler + tester) si tu utilises Docker — tout le reste (étapes 2 et 3) est déjà fait par le script.
+
+### Mode B — Homebrew (manuel)
 
 ```bash
 # Crée la DB cible (fresh)

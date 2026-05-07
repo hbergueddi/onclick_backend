@@ -16,6 +16,8 @@ public record ReferralDto(
     Integer ptsAwarded,
     Instant createdAt,
     Instant activatedAt,
-    UUID restaurantId
+    UUID restaurantId,
+    UUID createdBy,
+    UUID modifiedBy
 ) {
 }

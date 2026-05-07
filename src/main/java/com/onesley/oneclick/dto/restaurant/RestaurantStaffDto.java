@@ -15,6 +15,8 @@ public record RestaurantStaffDto(
     StaffRole staffRole,
     Instant createdAt,
     String status,
-    LocalDate startDate
+    LocalDate startDate,
+    UUID createdBy,
+    UUID modifiedBy
 ) {
 }

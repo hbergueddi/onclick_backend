@@ -15,6 +15,7 @@ public record CustomRoleDto(
     Map<String, Object> permissions,
     UUID createdBy,
     Instant createdAt,
-    Instant updatedAt
+    Instant updatedAt,
+    UUID modifiedBy
 ) {
 }

@@ -57,6 +57,8 @@ public record PartnerContractDto(
     Integer renewalNumber,
     Instant expirationNotified30dAt,
     Instant expirationNotified15dAt,
-    Instant expirationNotified7dAt
+    Instant expirationNotified7dAt,
+    UUID createdBy,
+    UUID modifiedBy
 ) {
 }

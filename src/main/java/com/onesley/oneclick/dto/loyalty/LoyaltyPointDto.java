@@ -19,6 +19,8 @@ public record LoyaltyPointDto(
     Instant expiresAt,
     Integer remainingPoints,
     Instant notified7dAt,
-    Instant notified1dAt
+    Instant notified1dAt,
+    UUID createdBy,
+    UUID modifiedBy
 ) {
 }

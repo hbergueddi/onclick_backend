@@ -20,6 +20,7 @@ public record RuleTemplateDto(
     Map<String, Object> config,
     Boolean isBuiltin,
     Boolean enabled,
-    UUID createdBy
+    UUID createdBy,
+    UUID modifiedBy
 ) {
 }

@@ -19,6 +19,8 @@ public record NoShowDisputeDto(
     Instant resolvedAt,
     UUID resolvedBy,
     UUID supportTicketId,
-    Instant createdAt
+    Instant createdAt,
+    UUID createdBy,
+    UUID modifiedBy
 ) {
 }

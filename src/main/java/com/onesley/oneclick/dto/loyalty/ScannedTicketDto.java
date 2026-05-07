@@ -21,6 +21,8 @@ public record ScannedTicketDto(
     String status,
     String photoUrl,
     Instant createdAt,
-    UUID reservationId
+    UUID reservationId,
+    UUID createdBy,
+    UUID modifiedBy
 ) {
 }

@@ -25,6 +25,8 @@ public record TenantAnnouncementDto(
     Instant pushSentAt,
     Instant createdAt,
     Instant updatedAt,
-    List<UUID> targetRestaurantIds
+    List<UUID> targetRestaurantIds,
+    UUID createdBy,
+    UUID modifiedBy
 ) {
 }

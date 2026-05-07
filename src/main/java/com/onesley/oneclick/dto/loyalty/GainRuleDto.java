@@ -27,6 +27,8 @@ public record GainRuleDto(
     BigDecimal maxRedemptionRatioPct,
     Integer otpRequiredAbovePts,
     BigDecimal otpRequiredAboveRatioPct,
-    UUID tenantId
+    UUID tenantId,
+    UUID createdBy,
+    UUID modifiedBy
 ) {
 }

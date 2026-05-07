@@ -25,6 +25,8 @@ public record SupportTicketDto(
     String priority,
     String resolutionLevel,
     Boolean aiHandled,
-    String aiSummary
+    String aiSummary,
+    UUID createdBy,
+    UUID modifiedBy
 ) {
 }
