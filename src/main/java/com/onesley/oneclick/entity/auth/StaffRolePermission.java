@@ -6,13 +6,26 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import org.hibernate.proxy.HibernateProxy;
+
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Entité {@code public.staff_role_permissions} (générée par scripts/scaffold-jpa.mjs).
+ * Entité {@code public.staff_role_permissions} — matrice (staff_role × permission_id) → enabled.
  *
- * <p>Pattern : entité simple.
+ * <p>Aucune jointure JPA : tous les "FK-like" sont en réalité des slugs textuels.
+ *
+ * <h3>Jointures JPA (passe 3 — décisions explicites)</h3>
+ * <ul>
+ *   <li>{@code permission_id} → <b>String slug</b> (ex: {@code "manage_team"},
+ *       {@code "view_calendar"}). <b>Pas une FK UUID</b>. Aucune table de
+ *       permissions normalisée — la liste vit dans le code applicatif.</li>
+ *   <li>{@code staff_role} → idem, slug textuel correspondant à l'enum métier.</li>
+ *   <li>{@code updated_by} → audit field, conserve UUID brut par convention
+ *       (pas de jointure auto sur les audits, sinon Profile chargé partout).</li>
+ * </ul>
  */
 @Entity
 @Table(name = "staff_role_permissions")
@@ -37,6 +50,7 @@ public class StaffRolePermission {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    /** Audit field : UUID brut (cf. Javadoc classe). */
     @Column(name = "updated_by")
     private UUID updatedBy;
 
@@ -50,4 +64,28 @@ public class StaffRolePermission {
     public Boolean getEnabled() { return enabled; }
     public Instant getUpdatedAt() { return updatedAt; }
     public UUID getUpdatedBy() { return updatedBy; }
+
+    // ─── equals / hashCode anti-proxy LAZY ──────────────────────────────────
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null) return false;
+        Class<?> oEffectiveClass = o instanceof HibernateProxy proxy
+            ? proxy.getHibernateLazyInitializer().getPersistentClass()
+            : o.getClass();
+        Class<?> thisEffectiveClass = this instanceof HibernateProxy proxy
+            ? proxy.getHibernateLazyInitializer().getPersistentClass()
+            : this.getClass();
+        if (thisEffectiveClass != oEffectiveClass) return false;
+        StaffRolePermission that = (StaffRolePermission) o;
+        return id != null && Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return this instanceof HibernateProxy proxy
+            ? proxy.getHibernateLazyInitializer().getPersistentClass().hashCode()
+            : getClass().hashCode();
+    }
 }
