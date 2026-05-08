@@ -1,19 +1,35 @@
 package com.onesley.oneclick.entity.support;
 
+import com.onesley.oneclick.entity.auth.Profile;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotNull;
+import org.hibernate.proxy.HibernateProxy;
+
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Entité {@code public.client_ratings} (générée par scripts/scaffold-jpa.mjs).
+ * Entité {@code public.client_ratings} — rating client (3 colonnes parallèles
+ * pour delayed visibility : rating actuel / visible / pending).
  *
- * <p>Pattern : entité simple.
+ * <p><b>Pattern critique :</b> 3 colonnes parallèles ({@code rating} /
+ * {@code visible_rating} / {@code pending_rating}). Tout trigger qui modifie
+ * {@code rating} doit gérer les 3, sinon le client ne voit jamais ses changements
+ * (cf. règle senior {@code feedback_delayed_visibility_rating.md}).
+ *
+ * <h3>Jointures JPA (passe 3)</h3>
+ * <ul>
+ *   <li>{@code client_id NOT NULL} → {@link Profile} en {@code @ManyToOne(LAZY)}, optional=false.</li>
+ * </ul>
  */
 @Entity
 @Table(name = "client_ratings")
@@ -23,9 +39,12 @@ public class ClientRating {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
-    @NotNull
-    @Column(name = "client_id", nullable = false)
+    @Column(name = "client_id", nullable = false, insertable = false, updatable = false)
     private UUID clientId;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "client_id", nullable = false)
+    private Profile client;
 
     @Digits(integer = 1, fraction = 1)
     @NotNull
@@ -86,6 +105,8 @@ public class ClientRating {
 
     public UUID getId() { return id; }
     public UUID getClientId() { return clientId; }
+    public Profile getClient() { return client; }
+    public void setClient(Profile client) { this.client = client; }
     public BigDecimal getRating() { return rating; }
     public Integer getTotalHonored() { return totalHonored; }
     public Integer getTotalNoShow() { return totalNoShow; }
@@ -100,4 +121,26 @@ public class ClientRating {
     public Integer getPendingTotalNoShow() { return pendingTotalNoShow; }
     public Boolean getPendingIsNew() { return pendingIsNew; }
     public Instant getPendingVisibleAt() { return pendingVisibleAt; }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null) return false;
+        Class<?> oEffectiveClass = o instanceof HibernateProxy proxy
+            ? proxy.getHibernateLazyInitializer().getPersistentClass()
+            : o.getClass();
+        Class<?> thisEffectiveClass = this instanceof HibernateProxy proxy
+            ? proxy.getHibernateLazyInitializer().getPersistentClass()
+            : this.getClass();
+        if (thisEffectiveClass != oEffectiveClass) return false;
+        ClientRating that = (ClientRating) o;
+        return id != null && Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return this instanceof HibernateProxy proxy
+            ? proxy.getHibernateLazyInitializer().getPersistentClass().hashCode()
+            : getClass().hashCode();
+    }
 }
