@@ -1,23 +1,35 @@
 package com.onesley.oneclick.entity.marketing;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
+import com.onesley.oneclick.entity.restaurant.Restaurant;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.type.SqlTypes;
 
 /**
- * Entité {@code public.promo_notification_requests} (générée par scripts/scaffold-jpa.mjs).
+ * Entité {@code public.promo_notification_requests} — demandes restaurateur
+ * pour push notification d'une offre (workflow review admin avant envoi).
  *
- * <p>Pattern : created_at + updated_at hérités.
+ * <h3>Jointures JPA (passe 3)</h3>
+ * <ul>
+ *   <li>{@code offer_id NOT NULL} → {@link Offer} en {@code @ManyToOne(LAZY)}, optional=false.</li>
+ *   <li>{@code restaurant_id NOT NULL} → {@link Restaurant} en {@code @ManyToOne(LAZY)}, optional=false.</li>
+ *   <li>{@code requested_by} et {@code reviewed_by} : audit fields, restent UUID brut.</li>
+ * </ul>
  */
 @Entity
 @Table(name = "promo_notification_requests")
@@ -27,14 +39,21 @@ public class PromoNotificationRequest extends TimestampedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
-    @NotNull
-    @Column(name = "offer_id", nullable = false)
+    @Column(name = "offer_id", nullable = false, insertable = false, updatable = false)
     private UUID offerId;
 
-    @NotNull
-    @Column(name = "restaurant_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "offer_id", nullable = false)
+    private Offer offer;
+
+    @Column(name = "restaurant_id", nullable = false, insertable = false, updatable = false)
     private UUID restaurantId;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "restaurant_id", nullable = false)
+    private Restaurant restaurant;
+
+    /** Audit field : UUID brut. */
     @NotNull
     @Column(name = "requested_by", nullable = false)
     private UUID requestedBy;
@@ -54,6 +73,7 @@ public class PromoNotificationRequest extends TimestampedEntity {
     @Column(name = "admin_note")
     private String adminNote;
 
+    /** Audit field : UUID brut. */
     @Column(name = "reviewed_by")
     private UUID reviewedBy;
 
@@ -75,7 +95,11 @@ public class PromoNotificationRequest extends TimestampedEntity {
 
     public UUID getId() { return id; }
     public UUID getOfferId() { return offerId; }
+    public Offer getOffer() { return offer; }
+    public void setOffer(Offer offer) { this.offer = offer; }
     public UUID getRestaurantId() { return restaurantId; }
+    public Restaurant getRestaurant() { return restaurant; }
+    public void setRestaurant(Restaurant restaurant) { this.restaurant = restaurant; }
     public UUID getRequestedBy() { return requestedBy; }
     public String getStatus() { return status; }
     public String getMessage() { return message; }
@@ -86,4 +110,26 @@ public class PromoNotificationRequest extends TimestampedEntity {
     public Instant getPushSentAt() { return pushSentAt; }
     public Integer getPushSentCount() { return pushSentCount; }
     public String getPushError() { return pushError; }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null) return false;
+        Class<?> oEffectiveClass = o instanceof HibernateProxy proxy
+            ? proxy.getHibernateLazyInitializer().getPersistentClass()
+            : o.getClass();
+        Class<?> thisEffectiveClass = this instanceof HibernateProxy proxy
+            ? proxy.getHibernateLazyInitializer().getPersistentClass()
+            : this.getClass();
+        if (thisEffectiveClass != oEffectiveClass) return false;
+        PromoNotificationRequest that = (PromoNotificationRequest) o;
+        return id != null && Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return this instanceof HibernateProxy proxy
+            ? proxy.getHibernateLazyInitializer().getPersistentClass().hashCode()
+            : getClass().hashCode();
+    }
 }
