@@ -3,20 +3,30 @@ package com.onesley.oneclick.entity.restaurant;
 import com.onesley.oneclick.audit.TimestampedEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.type.SqlTypes;
 
 /**
- * Entité {@code public.restaurant_services} (générée par scripts/scaffold-jpa.mjs).
+ * Entité {@code public.restaurant_services} — services d'un resto (déjeuner,
+ * dîner, brunch, happy hour…).
  *
- * <p>Pattern : created_at + updated_at hérités.
+ * <h3>Jointures JPA (passe 3)</h3>
+ * <ul>
+ *   <li>{@code restaurant_id NOT NULL} → {@link Restaurant} en {@code @ManyToOne(LAZY)}, optional=false.
+ *       Côté inverse : {@link Restaurant#getServices()} en cascade {PERSIST, MERGE}.</li>
+ * </ul>
  */
 @Entity
 @Table(name = "restaurant_services")
@@ -26,9 +36,13 @@ public class RestaurantService extends TimestampedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
-    @NotNull
-    @Column(name = "restaurant_id", nullable = false)
+    // ─── Jointure restaurant_id ─────────────────────────────────────────────
+    @Column(name = "restaurant_id", nullable = false, insertable = false, updatable = false)
     private UUID restaurantId;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "restaurant_id", nullable = false)
+    private Restaurant restaurant;
 
     @NotBlank
     @Column(name = "name", nullable = false)
@@ -68,7 +82,13 @@ public class RestaurantService extends TimestampedEntity {
     }
 
     public UUID getId() { return id; }
+
+    /** Raccourci read-only (issu de la colonne FK). */
     public UUID getRestaurantId() { return restaurantId; }
+    /** Lazy load — ne pas appeler hors {@code @Transactional} si proxy non hydraté. */
+    public Restaurant getRestaurant() { return restaurant; }
+    public void setRestaurant(Restaurant restaurant) { this.restaurant = restaurant; }
+
     public String getName() { return name; }
     public String getType() { return type; }
     public String getHeureDebut() { return heureDebut; }
@@ -77,4 +97,28 @@ public class RestaurantService extends TimestampedEntity {
     public Integer getCapaciteMax() { return capaciteMax; }
     public String getStatus() { return status; }
     public Integer getClickgoQuota() { return clickgoQuota; }
+
+    // ─── equals / hashCode anti-proxy LAZY ──────────────────────────────────
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null) return false;
+        Class<?> oEffectiveClass = o instanceof HibernateProxy proxy
+            ? proxy.getHibernateLazyInitializer().getPersistentClass()
+            : o.getClass();
+        Class<?> thisEffectiveClass = this instanceof HibernateProxy proxy
+            ? proxy.getHibernateLazyInitializer().getPersistentClass()
+            : this.getClass();
+        if (thisEffectiveClass != oEffectiveClass) return false;
+        RestaurantService that = (RestaurantService) o;
+        return id != null && Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return this instanceof HibernateProxy proxy
+            ? proxy.getHibernateLazyInitializer().getPersistentClass().hashCode()
+            : getClass().hashCode();
+    }
 }

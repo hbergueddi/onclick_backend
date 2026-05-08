@@ -7,13 +7,19 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import org.hibernate.proxy.HibernateProxy;
+
 import java.math.BigDecimal;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Entité {@code public.restaurant_tier_config} (générée par scripts/scaffold-jpa.mjs).
+ * Entité {@code public.restaurant_tier_config} — config statique des 3 tiers
+ * restaurants (Essentiel / Performance / Signature) avec seuils CA et grace periods.
  *
- * <p>Pattern : created_at + updated_at hérités.
+ * <p>Aucune FK directe : c'est une table de référence (3 lignes en prod).
+ * Les restaurants pointent vers cette table via {@code RestaurantTierStatu.current_tier_id}
+ * — gardé UUID brut côté tier_status (cf. {@link RestaurantTierStatu}).
  */
 @Entity
 @Table(name = "restaurant_tier_config")
@@ -71,4 +77,28 @@ public class RestaurantTierConfig extends TimestampedEntity {
     public String getIcon() { return icon; }
     public Integer getPosition() { return position; }
     public String getDescription() { return description; }
+
+    // ─── equals / hashCode anti-proxy LAZY ──────────────────────────────────
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null) return false;
+        Class<?> oEffectiveClass = o instanceof HibernateProxy proxy
+            ? proxy.getHibernateLazyInitializer().getPersistentClass()
+            : o.getClass();
+        Class<?> thisEffectiveClass = this instanceof HibernateProxy proxy
+            ? proxy.getHibernateLazyInitializer().getPersistentClass()
+            : this.getClass();
+        if (thisEffectiveClass != oEffectiveClass) return false;
+        RestaurantTierConfig that = (RestaurantTierConfig) o;
+        return id != null && Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return this instanceof HibernateProxy proxy
+            ? proxy.getHibernateLazyInitializer().getPersistentClass().hashCode()
+            : getClass().hashCode();
+    }
 }
