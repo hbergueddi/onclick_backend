@@ -1,21 +1,33 @@
 package com.onesley.oneclick.entity.admin;
 
+import com.onesley.oneclick.entity.auth.Profile;
+import com.onesley.oneclick.entity.restaurant.Restaurant;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import java.time.Instant;
-import java.util.UUID;
+import org.hibernate.proxy.HibernateProxy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.time.Instant;
+import java.util.Objects;
+import java.util.UUID;
+
 /**
- * Entité {@code public.action_logs} (générée par scripts/scaffold-jpa.mjs).
+ * Entité {@code public.action_logs} — log des actions staff dans un resto
+ * (Tabs split UX, Realtime publication).
  *
- * <p>Pattern : created_at sans updated_at, inline.
+ * <h3>Jointures JPA (passe 3)</h3>
+ * <ul>
+ *   <li>{@code restaurant_id NOT NULL} → {@link Restaurant} en {@code @ManyToOne(LAZY)}, optional=false.</li>
+ *   <li>{@code user_id NOT NULL} → {@link Profile} en {@code @ManyToOne(LAZY)}, optional=false.</li>
+ * </ul>
  */
 @Entity
 @Table(name = "action_logs")
@@ -26,13 +38,19 @@ public class ActionLog {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
-    @NotNull
-    @Column(name = "restaurant_id", nullable = false)
+    @Column(name = "restaurant_id", nullable = false, insertable = false, updatable = false)
     private UUID restaurantId;
 
-    @NotNull
-    @Column(name = "user_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "restaurant_id", nullable = false)
+    private Restaurant restaurant;
+
+    @Column(name = "user_id", nullable = false, insertable = false, updatable = false)
     private UUID userId;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
+    private Profile user;
 
     @NotBlank
     @Column(name = "member_name", nullable = false)
@@ -62,11 +80,37 @@ public class ActionLog {
 
     public UUID getId() { return id; }
     public UUID getRestaurantId() { return restaurantId; }
+    public Restaurant getRestaurant() { return restaurant; }
+    public void setRestaurant(Restaurant restaurant) { this.restaurant = restaurant; }
     public UUID getUserId() { return userId; }
+    public Profile getUser() { return user; }
+    public void setUser(Profile user) { this.user = user; }
     public String getMemberName() { return memberName; }
     public String getAction() { return action; }
     public String getType() { return type; }
     public String getDetails() { return details; }
     public String getIp() { return ip; }
     public Instant getCreatedAt() { return createdAt; }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null) return false;
+        Class<?> oEffectiveClass = o instanceof HibernateProxy proxy
+            ? proxy.getHibernateLazyInitializer().getPersistentClass()
+            : o.getClass();
+        Class<?> thisEffectiveClass = this instanceof HibernateProxy proxy
+            ? proxy.getHibernateLazyInitializer().getPersistentClass()
+            : this.getClass();
+        if (thisEffectiveClass != oEffectiveClass) return false;
+        ActionLog that = (ActionLog) o;
+        return id != null && Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return this instanceof HibernateProxy proxy
+            ? proxy.getHibernateLazyInitializer().getPersistentClass().hashCode()
+            : getClass().hashCode();
+    }
 }
