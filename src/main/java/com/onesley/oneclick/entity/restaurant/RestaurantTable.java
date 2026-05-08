@@ -38,6 +38,7 @@ public class RestaurantTable extends TimestampedEntity {
     @Column(name = "capacite", nullable = false)
     private Integer capacite;
 
+    //Doit etre enum
     @NotBlank
     @Column(name = "forme", nullable = false)
     private String forme;

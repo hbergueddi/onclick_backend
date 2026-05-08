@@ -99,6 +99,7 @@ public class Reservation extends TimestampedEntity {
     @Column(name = "no_show_penalty_applied_at")
     private Instant noShowPenaltyAppliedAt;
 
+    // Annulation tardive, doit etre une regle , sinon blocage
     @Column(name = "late_cancellation", nullable = false)
     private Boolean lateCancellation = false;
 
