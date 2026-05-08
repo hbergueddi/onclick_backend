@@ -1,9 +1,15 @@
 package com.onesley.oneclick.entity.contract;
 
 import com.onesley.oneclick.audit.AuditedEntity;
+import com.onesley.oneclick.entity.restaurant.Restaurant;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -11,27 +17,53 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
+import org.hibernate.annotations.BatchSize;
+import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.type.SqlTypes;
 
 /**
- * Entité {@code public.partner_contracts} (générée par scripts/scaffold-jpa.mjs).
+ * Entité {@code public.partner_contracts} — contrat de partenariat entre un
+ * restaurant et OneClick (3 taux + plafond + identité légale + clauses).
  *
- * <p>Pattern : audit niveau 1 (4 colonnes).
+ * <h3>Jointures JPA (passe 3) — aggregate root</h3>
+ * <ul>
+ *   <li>{@code restaurant_id NOT NULL} → {@link Restaurant} en {@code @ManyToOne(LAZY)}, optional=false.</li>
+ *   <li>{@code template_id} → {@link ContractTemplate} en {@code @ManyToOne(LAZY)}, nullable
+ *       (les contrats anciens peuvent ne pas avoir de template).</li>
+ *   <li>{@code parent_contract_id} → self-ref en {@code @ManyToOne(LAZY)}, nullable
+ *       (chaîne de renouvellements).</li>
+ *   <li>{@code @OneToMany history} (ContractHistory) cascade {PERSIST, MERGE} +
+ *       @BatchSize(50) — audit interne du contrat (volume ~20).</li>
+ *   <li>{@code @OneToMany disabledArticles} (ContractDisabledArticle) cascade ALL +
+ *       orphanRemoval (opt-out par contrat, lié strictement).</li>
+ *   <li>Pas de {@code @OneToMany invoices} — volume non borné (24+ mois),
+ *       repository paginé à la place.</li>
+ * </ul>
+ *
+ * <p>{@code @DynamicUpdate} : 45+ colonnes, évite UPDATE complet à chaque save.
  */
 @Entity
 @Table(name = "partner_contracts")
+@DynamicUpdate
 public class PartnerContract extends AuditedEntity {
 
     @Id
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
-    @NotNull
-    @Column(name = "restaurant_id", nullable = false)
+    @Column(name = "restaurant_id", nullable = false, insertable = false, updatable = false)
     private UUID restaurantId;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "restaurant_id", nullable = false)
+    private Restaurant restaurant;
 
     @NotNull
     @Column(name = "commission_rate", nullable = false)
@@ -84,8 +116,12 @@ public class PartnerContract extends AuditedEntity {
     @Column(name = "oneclick_commission_rate", nullable = false)
     private BigDecimal oneclickCommissionRate;
 
-    @Column(name = "template_id")
+    @Column(name = "template_id", insertable = false, updatable = false)
     private UUID templateId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "template_id")
+    private ContractTemplate template;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "contract_snapshot", columnDefinition = "jsonb")
@@ -157,8 +193,13 @@ public class PartnerContract extends AuditedEntity {
     @Column(name = "restaurant_name")
     private String restaurantName;
 
-    @Column(name = "parent_contract_id")
+    // ─── Self-reference parent_contract_id (chaîne de renouvellements) ──────
+    @Column(name = "parent_contract_id", insertable = false, updatable = false)
     private UUID parentContractId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_contract_id")
+    private PartnerContract parentContract;
 
     @Column(name = "renewal_number")
     private Integer renewalNumber;
@@ -172,12 +213,25 @@ public class PartnerContract extends AuditedEntity {
     @Column(name = "expiration_notified_7d_at")
     private Instant expirationNotified7dAt;
 
+    // ─── Aggregate members ──────────────────────────────────────────────────
+    @OneToMany(mappedBy = "contract", fetch = FetchType.LAZY,
+               cascade = { CascadeType.PERSIST, CascadeType.MERGE })
+    @BatchSize(size = 50)
+    private Set<ContractHistory> history = new HashSet<>();
+
+    @OneToMany(mappedBy = "contract", fetch = FetchType.LAZY,
+               cascade = CascadeType.ALL, orphanRemoval = true)
+    @BatchSize(size = 50)
+    private Set<ContractDisabledArticle> disabledArticles = new HashSet<>();
+
     protected PartnerContract() {
         // JPA
     }
 
     public UUID getId() { return id; }
     public UUID getRestaurantId() { return restaurantId; }
+    public Restaurant getRestaurant() { return restaurant; }
+    public void setRestaurant(Restaurant restaurant) { this.restaurant = restaurant; }
     public BigDecimal getCommissionRate() { return commissionRate; }
     public LocalDate getContractStart() { return contractStart; }
     public LocalDate getContractEnd() { return contractEnd; }
@@ -193,6 +247,8 @@ public class PartnerContract extends AuditedEntity {
     public BigDecimal getWalletAdminRate() { return walletAdminRate; }
     public BigDecimal getOneclickCommissionRate() { return oneclickCommissionRate; }
     public UUID getTemplateId() { return templateId; }
+    public ContractTemplate getTemplate() { return template; }
+    public void setTemplate(ContractTemplate template) { this.template = template; }
     public Map<String, Object> getContractSnapshot() { return contractSnapshot; }
     public Instant getSignedAt() { return signedAt; }
     public String getSignedBy() { return signedBy; }
@@ -217,8 +273,49 @@ public class PartnerContract extends AuditedEntity {
     public Integer getNombreExemplaires() { return nombreExemplaires; }
     public String getRestaurantName() { return restaurantName; }
     public UUID getParentContractId() { return parentContractId; }
+    public PartnerContract getParentContract() { return parentContract; }
+    public void setParentContract(PartnerContract parentContract) { this.parentContract = parentContract; }
     public Integer getRenewalNumber() { return renewalNumber; }
     public Instant getExpirationNotified30dAt() { return expirationNotified30dAt; }
     public Instant getExpirationNotified15dAt() { return expirationNotified15dAt; }
     public Instant getExpirationNotified7dAt() { return expirationNotified7dAt; }
+    public Set<ContractHistory> getHistory() { return history; }
+    public Set<ContractDisabledArticle> getDisabledArticles() { return disabledArticles; }
+
+    public void addHistory(ContractHistory h) {
+        history.add(h);
+        h.setContract(this);
+    }
+
+    public void addDisabledArticle(ContractDisabledArticle a) {
+        disabledArticles.add(a);
+        a.setContract(this);
+    }
+
+    public void removeDisabledArticle(ContractDisabledArticle a) {
+        disabledArticles.remove(a);
+        a.setContract(null);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null) return false;
+        Class<?> oEffectiveClass = o instanceof HibernateProxy proxy
+            ? proxy.getHibernateLazyInitializer().getPersistentClass()
+            : o.getClass();
+        Class<?> thisEffectiveClass = this instanceof HibernateProxy proxy
+            ? proxy.getHibernateLazyInitializer().getPersistentClass()
+            : this.getClass();
+        if (thisEffectiveClass != oEffectiveClass) return false;
+        PartnerContract that = (PartnerContract) o;
+        return id != null && Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return this instanceof HibernateProxy proxy
+            ? proxy.getHibernateLazyInitializer().getPersistentClass().hashCode()
+            : getClass().hashCode();
+    }
 }

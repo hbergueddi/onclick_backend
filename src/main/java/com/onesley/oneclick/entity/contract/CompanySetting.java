@@ -8,13 +8,18 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import org.hibernate.proxy.HibernateProxy;
+
 import java.math.BigDecimal;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Entité {@code public.company_settings} (générée par scripts/scaffold-jpa.mjs).
+ * Entité {@code public.company_settings} — paramètres comptables/légaux globaux
+ * (TVA, ICE/IF/RC, RIB, prefix factures…).
  *
- * <p>Pattern : created_at + updated_at hérités.
+ * <p>Pas de FK directe — référencée par {@link com.onesley.oneclick.entity.tenant.Tenant}
+ * via {@code tenant.company_settings_id} ({@code @ManyToOne(LAZY)}).
  */
 @Entity
 @Table(name = "company_settings")
@@ -118,4 +123,26 @@ public class CompanySetting extends TimestampedEntity {
     public String getInvoicePrefix() { return invoicePrefix; }
     public String getInvoiceFooterText() { return invoiceFooterText; }
     public String getNumeroTp() { return numeroTp; }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null) return false;
+        Class<?> oEffectiveClass = o instanceof HibernateProxy proxy
+            ? proxy.getHibernateLazyInitializer().getPersistentClass()
+            : o.getClass();
+        Class<?> thisEffectiveClass = this instanceof HibernateProxy proxy
+            ? proxy.getHibernateLazyInitializer().getPersistentClass()
+            : this.getClass();
+        if (thisEffectiveClass != oEffectiveClass) return false;
+        CompanySetting that = (CompanySetting) o;
+        return id != null && Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return this instanceof HibernateProxy proxy
+            ? proxy.getHibernateLazyInitializer().getPersistentClass().hashCode()
+            : getClass().hashCode();
+    }
 }
