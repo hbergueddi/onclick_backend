@@ -1,21 +1,35 @@
 package com.onesley.oneclick.entity.loyalty;
 
+import com.onesley.oneclick.entity.auth.Profile;
+import com.onesley.oneclick.entity.restaurant.Restaurant;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.util.UUID;
+import org.hibernate.proxy.HibernateProxy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.Objects;
+import java.util.UUID;
+
 /**
- * Entité {@code public.redemption_events} (générée par scripts/scaffold-jpa.mjs).
+ * Entité {@code public.redemption_events} — log des consommations de points
+ * (acceptées ou rejetées) avec flags anti-fraude.
  *
- * <p>Pattern : created_at sans updated_at, inline.
+ * <h3>Jointures JPA (passe 3)</h3>
+ * <ul>
+ *   <li>{@code client_id NOT NULL} → {@link Profile} en {@code @ManyToOne(LAZY)}, optional=false.</li>
+ *   <li>{@code restaurant_id NOT NULL} → {@link Restaurant} en {@code @ManyToOne(LAZY)}, optional=false.</li>
+ *   <li>{@code scanned_by} : audit field (qui a effectué le scan), reste UUID brut.</li>
+ * </ul>
  */
 @Entity
 @Table(name = "redemption_events")
@@ -30,14 +44,21 @@ public class RedemptionEvent {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
-    @NotNull
-    @Column(name = "client_id", nullable = false)
+    @Column(name = "client_id", nullable = false, insertable = false, updatable = false)
     private UUID clientId;
 
-    @NotNull
-    @Column(name = "restaurant_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "client_id", nullable = false)
+    private Profile client;
+
+    @Column(name = "restaurant_id", nullable = false, insertable = false, updatable = false)
     private UUID restaurantId;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "restaurant_id", nullable = false)
+    private Restaurant restaurant;
+
+    /** Audit field : UUID brut. */
     @Column(name = "scanned_by")
     private UUID scannedBy;
 
@@ -93,7 +114,11 @@ public class RedemptionEvent {
     public UUID getId() { return id; }
     public Instant getCreatedAt() { return createdAt; }
     public UUID getClientId() { return clientId; }
+    public Profile getClient() { return client; }
+    public void setClient(Profile client) { this.client = client; }
     public UUID getRestaurantId() { return restaurantId; }
+    public Restaurant getRestaurant() { return restaurant; }
+    public void setRestaurant(Restaurant restaurant) { this.restaurant = restaurant; }
     public UUID getScannedBy() { return scannedBy; }
     public String getTicketRef() { return ticketRef; }
     public BigDecimal getTicketMontant() { return ticketMontant; }
@@ -107,4 +132,26 @@ public class RedemptionEvent {
     public Boolean getFlagDailyNearCap() { return flagDailyNearCap; }
     public Boolean getFlagFirstRedemption() { return flagFirstRedemption; }
     public Boolean getFlagLargeAbsolute() { return flagLargeAbsolute; }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null) return false;
+        Class<?> oEffectiveClass = o instanceof HibernateProxy proxy
+            ? proxy.getHibernateLazyInitializer().getPersistentClass()
+            : o.getClass();
+        Class<?> thisEffectiveClass = this instanceof HibernateProxy proxy
+            ? proxy.getHibernateLazyInitializer().getPersistentClass()
+            : this.getClass();
+        if (thisEffectiveClass != oEffectiveClass) return false;
+        RedemptionEvent that = (RedemptionEvent) o;
+        return id != null && Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return this instanceof HibernateProxy proxy
+            ? proxy.getHibernateLazyInitializer().getPersistentClass().hashCode()
+            : getClass().hashCode();
+    }
 }
