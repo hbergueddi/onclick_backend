@@ -1,6 +1,7 @@
 package com.onesley.oneclick.entity.loyalty;
 
 import com.onesley.oneclick.entity.auth.Profile;
+import com.onesley.oneclick.entity.status.EntityStatus;
 import com.onesley.oneclick.entity.restaurant.Restaurant;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -86,9 +87,12 @@ public class RedemptionOtpRequest {
     @Column(name = "code_hash", nullable = false)
     private String codeHash;
 
-    @NotBlank
-    @Column(name = "status", nullable = false)
-    private String status;
+    @Column(name = "status_id", nullable = false, insertable = false, updatable = false)
+    private UUID statusId;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "status_id", nullable = false)
+    private EntityStatus status;
 
     @NotNull
     @Column(name = "attempts", nullable = false)
@@ -120,7 +124,9 @@ public class RedemptionOtpRequest {
     public BigDecimal getTicketMontant() { return ticketMontant; }
     public BigDecimal getEstimatedDiscountDh() { return estimatedDiscountDh; }
     public String getCodeHash() { return codeHash; }
-    public String getStatus() { return status; }
+    public UUID getStatusId() { return statusId; }
+    public EntityStatus getStatus() { return status; }
+    public void setStatus(EntityStatus status) { this.status = status; }
     public Integer getAttempts() { return attempts; }
     public Instant getConsumedAt() { return consumedAt; }
     public String getConsumedForTicketRef() { return consumedForTicketRef; }

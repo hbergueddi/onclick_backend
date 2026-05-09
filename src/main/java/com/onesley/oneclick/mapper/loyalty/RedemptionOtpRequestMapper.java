@@ -3,6 +3,7 @@ package com.onesley.oneclick.mapper.loyalty;
 import com.onesley.oneclick.dto.loyalty.RedemptionOtpRequestDto;
 import com.onesley.oneclick.entity.loyalty.RedemptionOtpRequest;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 import java.util.List;
 
@@ -13,6 +14,7 @@ import java.util.List;
 @Mapper
 public interface RedemptionOtpRequestMapper {
 
+    @Mapping(target = "status", source = "status.code")
     RedemptionOtpRequestDto toDto(RedemptionOtpRequest entity);
 
     List<RedemptionOtpRequestDto> toDtoList(List<RedemptionOtpRequest> entities);

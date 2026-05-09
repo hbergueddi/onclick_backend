@@ -3,6 +3,7 @@ package com.onesley.oneclick.mapper.loyalty;
 import com.onesley.oneclick.dto.loyalty.EliteRsvpDto;
 import com.onesley.oneclick.entity.loyalty.EliteRsvp;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 import java.util.List;
 
@@ -13,6 +14,7 @@ import java.util.List;
 @Mapper
 public interface EliteRsvpMapper {
 
+    @Mapping(target = "status", source = "status.code")
     EliteRsvpDto toDto(EliteRsvp entity);
 
     List<EliteRsvpDto> toDtoList(List<EliteRsvp> entities);

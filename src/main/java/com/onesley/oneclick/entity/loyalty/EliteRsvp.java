@@ -1,6 +1,7 @@
 package com.onesley.oneclick.entity.loyalty;
 
 import com.onesley.oneclick.entity.auth.Profile;
+import com.onesley.oneclick.entity.status.EntityStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -50,9 +51,12 @@ public class EliteRsvp {
     @JoinColumn(name = "user_id", nullable = false)
     private Profile user;
 
-    @NotBlank
-    @Column(name = "status", nullable = false)
-    private String status;
+    @Column(name = "status_id", nullable = false, insertable = false, updatable = false)
+    private UUID statusId;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "status_id", nullable = false)
+    private EntityStatus status;
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -69,7 +73,9 @@ public class EliteRsvp {
     public UUID getUserId() { return userId; }
     public Profile getUser() { return user; }
     public void setUser(Profile user) { this.user = user; }
-    public String getStatus() { return status; }
+    public UUID getStatusId() { return statusId; }
+    public EntityStatus getStatus() { return status; }
+    public void setStatus(EntityStatus status) { this.status = status; }
     public Instant getCreatedAt() { return createdAt; }
 
     @Override
