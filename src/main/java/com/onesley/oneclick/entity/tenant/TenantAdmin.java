@@ -1,9 +1,9 @@
 package com.onesley.oneclick.entity.tenant;
 
 import com.onesley.oneclick.entity.auth.Profile;
+import com.onesley.oneclick.audit.CreatedAtEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.IdClass;
@@ -12,10 +12,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.MapsId;
 import jakarta.persistence.Table;
 import org.hibernate.proxy.HibernateProxy;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -59,8 +56,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "tenant_admins")
 @IdClass(TenantAdminId.class)
-@EntityListeners(AuditingEntityListener.class)
-public class TenantAdmin {
+public class TenantAdmin extends CreatedAtEntity {
 
     @Id
     @Column(name = "tenant_id", nullable = false, updatable = false)
@@ -89,10 +85,6 @@ public class TenantAdmin {
     @Column(name = "invited_by")
     private UUID invitedBy;
 
-    @CreatedDate
-    @Column(name = "created_at", updatable = false, nullable = false)
-    private Instant createdAt;
-
     protected TenantAdmin() {
         // JPA
     }
@@ -120,7 +112,6 @@ public class TenantAdmin {
     public void setRole(String role) { this.role = role; }
 
     public UUID getInvitedBy() { return invitedBy; }
-    public Instant getCreatedAt() { return createdAt; }
 
     // ─── equals / hashCode anti-proxy LAZY ──────────────────────────────────
     // PK composite — utilise (tenantId, userId).

@@ -1,12 +1,12 @@
 package com.onesley.oneclick.entity.loyalty;
 
 import com.onesley.oneclick.entity.auth.Profile;
+import com.onesley.oneclick.audit.CreatedAuditedEntity;
 import com.onesley.oneclick.entity.status.EntityStatus;
 import com.onesley.oneclick.entity.reservation.Reservation;
 import com.onesley.oneclick.entity.restaurant.Restaurant;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
@@ -15,7 +15,6 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -23,8 +22,6 @@ import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.type.SqlTypes;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 /**
  * Entité {@code public.scanned_tickets} — tickets scannés via Snap2Earn (OCR).
@@ -44,8 +41,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
  */
 @Entity
 @Table(name = "scanned_tickets")
-@EntityListeners(AuditingEntityListener.class)
-public class ScannedTicket {
+public class ScannedTicket extends CreatedAuditedEntity {
 
     @Id
     @Column(name = "id", nullable = false, updatable = false)
@@ -96,24 +92,12 @@ public class ScannedTicket {
     @Column(name = "photo_url")
     private String photoUrl;
 
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
-
     @Column(name = "reservation_id", insertable = false, updatable = false)
     private UUID reservationId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reservation_id")
     private Reservation reservation;
-
-    /** Audit field : UUID brut. */
-    @Column(name = "created_by")
-    private UUID createdBy;
-
-    /** Audit field : UUID brut. */
-    @Column(name = "modified_by")
-    private UUID modifiedBy;
 
     protected ScannedTicket() {
         // JPA
@@ -135,12 +119,9 @@ public class ScannedTicket {
     public EntityStatus getStatus() { return status; }
     public void setStatus(EntityStatus status) { this.status = status; }
     public String getPhotoUrl() { return photoUrl; }
-    public Instant getCreatedAt() { return createdAt; }
     public UUID getReservationId() { return reservationId; }
     public Reservation getReservation() { return reservation; }
     public void setReservation(Reservation reservation) { this.reservation = reservation; }
-    public UUID getCreatedBy() { return createdBy; }
-    public UUID getModifiedBy() { return modifiedBy; }
 
     @Override
     public boolean equals(Object o) {

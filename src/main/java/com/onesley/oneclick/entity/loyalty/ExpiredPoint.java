@@ -1,10 +1,10 @@
 package com.onesley.oneclick.entity.loyalty;
 
 import com.onesley.oneclick.entity.auth.Profile;
+import com.onesley.oneclick.audit.CreatedAtEntity;
 import com.onesley.oneclick.entity.restaurant.Restaurant;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
@@ -12,8 +12,6 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
 import org.hibernate.proxy.HibernateProxy;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 import java.util.Objects;
@@ -33,8 +31,7 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "expired_points")
-@EntityListeners(AuditingEntityListener.class)
-public class ExpiredPoint {
+public class ExpiredPoint extends CreatedAtEntity {
 
     @Id
     @Column(name = "id", nullable = false, updatable = false)
@@ -72,10 +69,6 @@ public class ExpiredPoint {
     @Column(name = "expired_at", nullable = false)
     private Instant expiredAt;
 
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
-
     protected ExpiredPoint() {
         // JPA
     }
@@ -93,7 +86,6 @@ public class ExpiredPoint {
     public Integer getPointsExpired() { return pointsExpired; }
     public Instant getEarnedAt() { return earnedAt; }
     public Instant getExpiredAt() { return expiredAt; }
-    public Instant getCreatedAt() { return createdAt; }
 
     @Override
     public boolean equals(Object o) {

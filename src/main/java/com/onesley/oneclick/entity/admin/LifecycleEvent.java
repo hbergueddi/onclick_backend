@@ -1,9 +1,9 @@
 package com.onesley.oneclick.entity.admin;
 
 import com.onesley.oneclick.entity.restaurant.Restaurant;
+import com.onesley.oneclick.audit.CreatedAtEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
@@ -11,10 +11,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import org.hibernate.proxy.HibernateProxy;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -30,8 +27,7 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "lifecycle_events")
-@EntityListeners(AuditingEntityListener.class)
-public class LifecycleEvent {
+public class LifecycleEvent extends CreatedAtEntity {
 
     @Id
     @Column(name = "id", nullable = false, updatable = false)
@@ -55,10 +51,6 @@ public class LifecycleEvent {
     @Column(name = "details")
     private String details;
 
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
-
     protected LifecycleEvent() {
         // JPA
     }
@@ -70,7 +62,6 @@ public class LifecycleEvent {
     public String getEvent() { return event; }
     public String getActor() { return actor; }
     public String getDetails() { return details; }
-    public Instant getCreatedAt() { return createdAt; }
 
     @Override
     public boolean equals(Object o) {

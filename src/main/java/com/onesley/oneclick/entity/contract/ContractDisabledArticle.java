@@ -1,8 +1,8 @@
 package com.onesley.oneclick.entity.contract;
 
+import com.onesley.oneclick.audit.CreatedAtEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
@@ -10,10 +10,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
 import org.hibernate.proxy.HibernateProxy;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -32,8 +29,7 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "contract_disabled_articles")
-@EntityListeners(AuditingEntityListener.class)
-public class ContractDisabledArticle {
+public class ContractDisabledArticle extends CreatedAtEntity {
 
     @Id
     @Column(name = "id", nullable = false, updatable = false)
@@ -60,10 +56,6 @@ public class ContractDisabledArticle {
     @Column(name = "reason")
     private String reason;
 
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
-
     protected ContractDisabledArticle() {
         // JPA
     }
@@ -78,7 +70,6 @@ public class ContractDisabledArticle {
     public void setArticle(ContractTemplateArticle article) { this.article = article; }
     public UUID getDisabledBy() { return disabledBy; }
     public String getReason() { return reason; }
-    public Instant getCreatedAt() { return createdAt; }
 
     @Override
     public boolean equals(Object o) {

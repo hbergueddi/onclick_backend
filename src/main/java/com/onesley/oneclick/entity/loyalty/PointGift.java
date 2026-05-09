@@ -1,10 +1,10 @@
 package com.onesley.oneclick.entity.loyalty;
 
 import com.onesley.oneclick.entity.auth.Profile;
+import com.onesley.oneclick.audit.CreatedAtEntity;
 import com.onesley.oneclick.entity.restaurant.Restaurant;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
@@ -12,10 +12,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
 import org.hibernate.proxy.HibernateProxy;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -32,8 +29,7 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "point_gifts")
-@EntityListeners(AuditingEntityListener.class)
-public class PointGift {
+public class PointGift extends CreatedAtEntity {
 
     @Id
     @Column(name = "id", nullable = false, updatable = false)
@@ -67,10 +63,6 @@ public class PointGift {
     @Column(name = "message")
     private String message;
 
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
-
     protected PointGift() {
         // JPA
     }
@@ -87,7 +79,6 @@ public class PointGift {
     public void setRestaurant(Restaurant restaurant) { this.restaurant = restaurant; }
     public Integer getPoints() { return points; }
     public String getMessage() { return message; }
-    public Instant getCreatedAt() { return createdAt; }
 
     @Override
     public boolean equals(Object o) {

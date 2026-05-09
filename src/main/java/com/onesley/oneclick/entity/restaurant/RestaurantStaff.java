@@ -1,11 +1,11 @@
 package com.onesley.oneclick.entity.restaurant;
 
 import com.onesley.oneclick.entity.auth.Profile;
+import com.onesley.oneclick.audit.CreatedAuditedEntity;
 import com.onesley.oneclick.entity.shared.StaffRole;
 import com.onesley.oneclick.entity.status.EntityStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
@@ -19,10 +19,7 @@ import jakarta.validation.constraints.NotNull;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.type.SqlTypes;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Objects;
 import java.util.UUID;
@@ -52,8 +49,7 @@ import java.util.UUID;
         columnNames = {"user_id", "restaurant_id"}
     )
 )
-@EntityListeners(AuditingEntityListener.class)
-public class RestaurantStaff {
+public class RestaurantStaff extends CreatedAuditedEntity {
 
     @Id
     @Column(name = "id", nullable = false, updatable = false)
@@ -81,10 +77,6 @@ public class RestaurantStaff {
     @Column(name = "staff_role", nullable = false, columnDefinition = "staff_role")
     private StaffRole staffRole;
 
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
-
     @Column(name = "status_id", nullable = false, insertable = false, updatable = false)
     private UUID statusId;
 
@@ -94,14 +86,6 @@ public class RestaurantStaff {
 
     @Column(name = "start_date")
     private LocalDate startDate;
-
-    /** Audit field : UUID brut. */
-    @Column(name = "created_by")
-    private UUID createdBy;
-
-    /** Audit field : UUID brut. */
-    @Column(name = "modified_by")
-    private UUID modifiedBy;
 
     protected RestaurantStaff() {
         // JPA
@@ -122,13 +106,10 @@ public class RestaurantStaff {
     public void setRestaurant(Restaurant restaurant) { this.restaurant = restaurant; }
 
     public StaffRole getStaffRole() { return staffRole; }
-    public Instant getCreatedAt() { return createdAt; }
     public UUID getStatusId() { return statusId; }
     public EntityStatus getStatus() { return status; }
     public void setStatus(EntityStatus status) { this.status = status; }
     public LocalDate getStartDate() { return startDate; }
-    public UUID getCreatedBy() { return createdBy; }
-    public UUID getModifiedBy() { return modifiedBy; }
 
     // ─── equals / hashCode anti-proxy LAZY ──────────────────────────────────
 

@@ -1,8 +1,8 @@
 package com.onesley.oneclick.entity.contract;
 
+import com.onesley.oneclick.audit.CreatedAtEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
@@ -11,10 +11,7 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import org.hibernate.proxy.HibernateProxy;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -30,8 +27,7 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "contract_template_articles")
-@EntityListeners(AuditingEntityListener.class)
-public class ContractTemplateArticle {
+public class ContractTemplateArticle extends CreatedAtEntity {
 
     @Id
     @Column(name = "id", nullable = false, updatable = false)
@@ -60,10 +56,6 @@ public class ContractTemplateArticle {
     @Column(name = "sort_order", nullable = false)
     private Integer sortOrder;
 
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
-
     protected ContractTemplateArticle() {
         // JPA
     }
@@ -77,7 +69,6 @@ public class ContractTemplateArticle {
     public String getTitle() { return title; }
     public String getContent() { return content; }
     public Integer getSortOrder() { return sortOrder; }
-    public Instant getCreatedAt() { return createdAt; }
 
     @Override
     public boolean equals(Object o) {

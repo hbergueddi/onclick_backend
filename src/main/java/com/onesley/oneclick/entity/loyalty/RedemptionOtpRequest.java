@@ -1,11 +1,11 @@
 package com.onesley.oneclick.entity.loyalty;
 
 import com.onesley.oneclick.entity.auth.Profile;
+import com.onesley.oneclick.audit.CreatedAtEntity;
 import com.onesley.oneclick.entity.status.EntityStatus;
 import com.onesley.oneclick.entity.restaurant.Restaurant;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
@@ -14,8 +14,6 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import org.hibernate.proxy.HibernateProxy;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -36,16 +34,11 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "redemption_otp_requests")
-@EntityListeners(AuditingEntityListener.class)
-public class RedemptionOtpRequest {
+public class RedemptionOtpRequest extends CreatedAtEntity {
 
     @Id
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
-
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
 
     @Column(name = "expires_at", nullable = false)
     private Instant expiresAt;
@@ -109,7 +102,6 @@ public class RedemptionOtpRequest {
     }
 
     public UUID getId() { return id; }
-    public Instant getCreatedAt() { return createdAt; }
     public Instant getExpiresAt() { return expiresAt; }
     public UUID getClientId() { return clientId; }
     public Profile getClient() { return client; }

@@ -1,9 +1,9 @@
 package com.onesley.oneclick.entity.loyalty;
 
 import com.onesley.oneclick.entity.auth.Profile;
+import com.onesley.oneclick.audit.CreatedAtEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
@@ -11,8 +11,6 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
 import org.hibernate.proxy.HibernateProxy;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 import java.util.Objects;
@@ -28,8 +26,7 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "ai_usage")
-@EntityListeners(AuditingEntityListener.class)
-public class AiUsage {
+public class AiUsage extends CreatedAtEntity {
 
     @Id
     @Column(name = "id", nullable = false, updatable = false)
@@ -49,10 +46,6 @@ public class AiUsage {
     @Column(name = "last_prompt_at")
     private Instant lastPromptAt;
 
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
-
     protected AiUsage() {
         // JPA
     }
@@ -63,7 +56,6 @@ public class AiUsage {
     public void setUser(Profile user) { this.user = user; }
     public Integer getPromptCount() { return promptCount; }
     public Instant getLastPromptAt() { return lastPromptAt; }
-    public Instant getCreatedAt() { return createdAt; }
 
     @Override
     public boolean equals(Object o) {

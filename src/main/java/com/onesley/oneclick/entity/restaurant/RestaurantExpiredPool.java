@@ -1,10 +1,10 @@
 package com.onesley.oneclick.entity.restaurant;
 
 import com.onesley.oneclick.entity.auth.Profile;
+import com.onesley.oneclick.audit.CreatedAtEntity;
 import com.onesley.oneclick.entity.loyalty.ExpiredPoint;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
@@ -12,8 +12,6 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
 import org.hibernate.proxy.HibernateProxy;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 import java.util.Objects;
@@ -34,8 +32,7 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "restaurant_expired_pool")
-@EntityListeners(AuditingEntityListener.class)
-public class RestaurantExpiredPool {
+public class RestaurantExpiredPool extends CreatedAtEntity {
 
     @Id
     @Column(name = "id", nullable = false, updatable = false)
@@ -68,10 +65,6 @@ public class RestaurantExpiredPool {
     @NotNull
     @Column(name = "points", nullable = false)
     private Integer points;
-
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
 
     @Column(name = "consolidated_at")
     private Instant consolidatedAt;
@@ -109,7 +102,6 @@ public class RestaurantExpiredPool {
     public void setExpiredPoint(ExpiredPoint expiredPoint) { this.expiredPoint = expiredPoint; }
 
     public Integer getPoints() { return points; }
-    public Instant getCreatedAt() { return createdAt; }
     public Instant getConsolidatedAt() { return consolidatedAt; }
 
     /** Raccourci read-only (issu de la colonne FK). */

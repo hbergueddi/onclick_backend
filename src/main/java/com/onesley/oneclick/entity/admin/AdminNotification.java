@@ -1,9 +1,9 @@
 package com.onesley.oneclick.entity.admin;
 
 import com.onesley.oneclick.entity.auth.Profile;
+import com.onesley.oneclick.audit.CreatedAtEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
@@ -19,8 +19,6 @@ import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.type.SqlTypes;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 /**
  * Entité {@code public.admin_notifications} — notifications côté admin
@@ -34,16 +32,11 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
  */
 @Entity
 @Table(name = "admin_notifications")
-@EntityListeners(AuditingEntityListener.class)
-public class AdminNotification {
+public class AdminNotification extends CreatedAtEntity {
 
     @Id
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
-
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
 
     @Column(name = "admin_id", insertable = false, updatable = false)
     private UUID adminId;
@@ -86,7 +79,6 @@ public class AdminNotification {
     }
 
     public UUID getId() { return id; }
-    public Instant getCreatedAt() { return createdAt; }
     public UUID getAdminId() { return adminId; }
     public Profile getAdmin() { return admin; }
     public void setAdmin(Profile admin) { this.admin = admin; }

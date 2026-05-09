@@ -1,10 +1,10 @@
 package com.onesley.oneclick.entity.reservation;
 
 import com.onesley.oneclick.entity.auth.Profile;
+import com.onesley.oneclick.audit.CreatedAtEntity;
 import com.onesley.oneclick.entity.status.EntityStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
@@ -13,10 +13,7 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import org.hibernate.proxy.HibernateProxy;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -37,8 +34,7 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "reservation_guests")
-@EntityListeners(AuditingEntityListener.class)
-public class ReservationGuest {
+public class ReservationGuest extends CreatedAtEntity {
 
     @Id
     @Column(name = "id", nullable = false, updatable = false)
@@ -79,10 +75,6 @@ public class ReservationGuest {
     @JoinColumn(name = "status_id", nullable = false)
     private EntityStatus status;
 
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
-
     @NotNull
     @Column(name = "seen_by_host", nullable = false)
     private Boolean seenByHost;
@@ -114,7 +106,6 @@ public class ReservationGuest {
     public UUID getStatusId() { return statusId; }
     public EntityStatus getStatus() { return status; }
     public void setStatus(EntityStatus status) { this.status = status; }
-    public Instant getCreatedAt() { return createdAt; }
     public Boolean getSeenByHost() { return seenByHost; }
 
     @Override

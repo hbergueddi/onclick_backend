@@ -1,8 +1,8 @@
 package com.onesley.oneclick.entity.admin;
 
+import com.onesley.oneclick.audit.CreatedAtEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
@@ -11,8 +11,6 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import org.hibernate.proxy.HibernateProxy;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -32,8 +30,7 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "system_alerts")
-@EntityListeners(AuditingEntityListener.class)
-public class SystemAlert {
+public class SystemAlert extends CreatedAtEntity {
 
     @Id
     @Column(name = "id", nullable = false, updatable = false)
@@ -77,10 +74,6 @@ public class SystemAlert {
     @Column(name = "acknowledged_at")
     private Instant acknowledgedAt;
 
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
-
     protected SystemAlert() {
         // JPA
     }
@@ -97,7 +90,6 @@ public class SystemAlert {
     public Boolean getAcknowledged() { return acknowledged; }
     public UUID getAcknowledgedBy() { return acknowledgedBy; }
     public Instant getAcknowledgedAt() { return acknowledgedAt; }
-    public Instant getCreatedAt() { return createdAt; }
 
     @Override
     public boolean equals(Object o) {

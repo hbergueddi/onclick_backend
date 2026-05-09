@@ -1,10 +1,10 @@
 package com.onesley.oneclick.entity.admin;
 
 import com.onesley.oneclick.entity.auth.Profile;
+import com.onesley.oneclick.audit.CreatedAtEntity;
 import com.onesley.oneclick.entity.restaurant.Restaurant;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
@@ -13,8 +13,6 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import org.hibernate.proxy.HibernateProxy;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 import java.util.Objects;
@@ -32,8 +30,7 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "admin_wallet_transactions")
-@EntityListeners(AuditingEntityListener.class)
-public class AdminWalletTransaction {
+public class AdminWalletTransaction extends CreatedAtEntity {
 
     @Id
     @Column(name = "id", nullable = false, updatable = false)
@@ -64,10 +61,6 @@ public class AdminWalletTransaction {
     @Column(name = "details")
     private String details;
 
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
-
     @Column(name = "expires_at")
     private Instant expiresAt;
 
@@ -89,7 +82,6 @@ public class AdminWalletTransaction {
     public Integer getAmount() { return amount; }
     public String getReason() { return reason; }
     public String getDetails() { return details; }
-    public Instant getCreatedAt() { return createdAt; }
     public Instant getExpiresAt() { return expiresAt; }
     public Integer getRemainingAmount() { return remainingAmount; }
 

@@ -1,11 +1,11 @@
 package com.onesley.oneclick.entity.support;
 
 import com.onesley.oneclick.entity.auth.Profile;
+import com.onesley.oneclick.audit.CreatedAuditedEntity;
 import com.onesley.oneclick.entity.status.EntityStatus;
 import com.onesley.oneclick.entity.reservation.Reservation;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
@@ -14,8 +14,6 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import org.hibernate.proxy.HibernateProxy;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 import java.util.Objects;
@@ -36,8 +34,7 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "no_show_disputes")
-@EntityListeners(AuditingEntityListener.class)
-public class NoShowDispute {
+public class NoShowDispute extends CreatedAuditedEntity {
 
     @Id
     @Column(name = "id", nullable = false, updatable = false)
@@ -96,18 +93,6 @@ public class NoShowDispute {
     @JoinColumn(name = "support_ticket_id")
     private SupportTicket supportTicket;
 
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
-
-    /** Audit field : UUID brut. */
-    @Column(name = "created_by")
-    private UUID createdBy;
-
-    /** Audit field : UUID brut. */
-    @Column(name = "modified_by")
-    private UUID modifiedBy;
-
     protected NoShowDispute() {
         // JPA
     }
@@ -132,9 +117,6 @@ public class NoShowDispute {
     public UUID getSupportTicketId() { return supportTicketId; }
     public SupportTicket getSupportTicket() { return supportTicket; }
     public void setSupportTicket(SupportTicket supportTicket) { this.supportTicket = supportTicket; }
-    public Instant getCreatedAt() { return createdAt; }
-    public UUID getCreatedBy() { return createdBy; }
-    public UUID getModifiedBy() { return modifiedBy; }
 
     @Override
     public boolean equals(Object o) {

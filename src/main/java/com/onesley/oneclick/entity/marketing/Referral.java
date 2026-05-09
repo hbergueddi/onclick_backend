@@ -1,11 +1,11 @@
 package com.onesley.oneclick.entity.marketing;
 
 import com.onesley.oneclick.entity.auth.Profile;
+import com.onesley.oneclick.audit.CreatedAuditedEntity;
 import com.onesley.oneclick.entity.status.EntityStatus;
 import com.onesley.oneclick.entity.restaurant.Restaurant;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
@@ -14,8 +14,6 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import org.hibernate.proxy.HibernateProxy;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 import java.util.Objects;
@@ -37,8 +35,7 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "referrals")
-@EntityListeners(AuditingEntityListener.class)
-public class Referral {
+public class Referral extends CreatedAuditedEntity {
 
     @Id
     @Column(name = "id", nullable = false, updatable = false)
@@ -76,10 +73,6 @@ public class Referral {
     @Column(name = "pts_awarded", nullable = false)
     private Integer ptsAwarded;
 
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
-
     @Column(name = "activated_at")
     private Instant activatedAt;
 
@@ -89,14 +82,6 @@ public class Referral {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "restaurant_id")
     private Restaurant restaurant;
-
-    /** Audit field : UUID brut. */
-    @Column(name = "created_by")
-    private UUID createdBy;
-
-    /** Audit field : UUID brut. */
-    @Column(name = "modified_by")
-    private UUID modifiedBy;
 
     protected Referral() {
         // JPA
@@ -115,13 +100,10 @@ public class Referral {
     public EntityStatus getStatus() { return status; }
     public void setStatus(EntityStatus status) { this.status = status; }
     public Integer getPtsAwarded() { return ptsAwarded; }
-    public Instant getCreatedAt() { return createdAt; }
     public Instant getActivatedAt() { return activatedAt; }
     public UUID getRestaurantId() { return restaurantId; }
     public Restaurant getRestaurant() { return restaurant; }
     public void setRestaurant(Restaurant restaurant) { this.restaurant = restaurant; }
-    public UUID getCreatedBy() { return createdBy; }
-    public UUID getModifiedBy() { return modifiedBy; }
 
     @Override
     public boolean equals(Object o) {

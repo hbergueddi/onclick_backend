@@ -1,8 +1,8 @@
 package com.onesley.oneclick.entity.admin;
 
+import com.onesley.oneclick.audit.CreatedAuthorEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
@@ -11,10 +11,7 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import org.hibernate.proxy.HibernateProxy;
 import org.springframework.data.annotation.CreatedBy;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -32,8 +29,7 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "document_versions")
-@EntityListeners(AuditingEntityListener.class)
-public class DocumentVersion {
+public class DocumentVersion extends CreatedAuthorEntity {
 
     @Id
     @Column(name = "id", nullable = false, updatable = false)
@@ -54,14 +50,6 @@ public class DocumentVersion {
     @Column(name = "content", nullable = false)
     private String content;
 
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
-
-    @CreatedBy
-    @Column(name = "created_by", updatable = false)
-    private UUID createdBy;
-
     @Column(name = "notes")
     private String notes;
 
@@ -75,8 +63,6 @@ public class DocumentVersion {
     public void setDocument(AppDocument document) { this.document = document; }
     public String getVersion() { return version; }
     public String getContent() { return content; }
-    public Instant getCreatedAt() { return createdAt; }
-    public UUID getCreatedBy() { return createdBy; }
     public String getNotes() { return notes; }
 
     @Override

@@ -1,10 +1,10 @@
 package com.onesley.oneclick.entity.loyalty;
 
 import com.onesley.oneclick.entity.auth.Profile;
+import com.onesley.oneclick.audit.CreatedAtEntity;
 import com.onesley.oneclick.entity.restaurant.Restaurant;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
@@ -12,11 +12,8 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
 import org.hibernate.proxy.HibernateProxy;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -33,16 +30,11 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "redemption_events")
-@EntityListeners(AuditingEntityListener.class)
-public class RedemptionEvent {
+public class RedemptionEvent extends CreatedAtEntity {
 
     @Id
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
-
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
 
     @Column(name = "client_id", nullable = false, insertable = false, updatable = false)
     private UUID clientId;
@@ -112,7 +104,6 @@ public class RedemptionEvent {
     }
 
     public UUID getId() { return id; }
-    public Instant getCreatedAt() { return createdAt; }
     public UUID getClientId() { return clientId; }
     public Profile getClient() { return client; }
     public void setClient(Profile client) { this.client = client; }

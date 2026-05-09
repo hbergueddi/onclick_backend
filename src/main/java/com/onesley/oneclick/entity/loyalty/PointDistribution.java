@@ -1,13 +1,13 @@
 package com.onesley.oneclick.entity.loyalty;
 
 import com.onesley.oneclick.entity.auth.Profile;
+import com.onesley.oneclick.audit.CreatedAtEntity;
 import com.onesley.oneclick.entity.status.EntityStatus;
 import com.onesley.oneclick.entity.marketing.Offer;
 import com.onesley.oneclick.entity.restaurant.Restaurant;
 import com.onesley.oneclick.entity.shared.DistributionSource;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
@@ -17,14 +17,11 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.type.SqlTypes;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 /**
  * Entité {@code public.point_distributions} — distributions de points par l'admin
@@ -43,8 +40,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
  */
 @Entity
 @Table(name = "point_distributions")
-@EntityListeners(AuditingEntityListener.class)
-public class PointDistribution {
+public class PointDistribution extends CreatedAtEntity {
 
     @Id
     @Column(name = "id", nullable = false, updatable = false)
@@ -106,10 +102,6 @@ public class PointDistribution {
     @JoinColumn(name = "status_id", nullable = false)
     private EntityStatus status;
 
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
-
     protected PointDistribution() {
         // JPA
     }
@@ -135,7 +127,6 @@ public class PointDistribution {
     public UUID getStatusId() { return statusId; }
     public EntityStatus getStatus() { return status; }
     public void setStatus(EntityStatus status) { this.status = status; }
-    public Instant getCreatedAt() { return createdAt; }
 
     @Override
     public boolean equals(Object o) {

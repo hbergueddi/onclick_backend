@@ -1,17 +1,16 @@
 package com.onesley.oneclick.entity.admin;
 
 import com.onesley.oneclick.entity.auth.Profile;
+import com.onesley.oneclick.audit.CreatedAtEntity;
 import com.onesley.oneclick.entity.status.EntityStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -19,8 +18,6 @@ import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.type.SqlTypes;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 /**
  * Entité {@code public.monitor_logs} — telemetry events ingérés via EF
@@ -34,16 +31,11 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
  */
 @Entity
 @Table(name = "monitor_logs")
-@EntityListeners(AuditingEntityListener.class)
-public class MonitorLog {
+public class MonitorLog extends CreatedAtEntity {
 
     @Id
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
-
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
 
     @NotBlank
     @Column(name = "source", nullable = false)
@@ -88,7 +80,6 @@ public class MonitorLog {
     }
 
     public UUID getId() { return id; }
-    public Instant getCreatedAt() { return createdAt; }
     public String getSource() { return source; }
     public String getEventType() { return eventType; }
     public UUID getStatusId() { return statusId; }
