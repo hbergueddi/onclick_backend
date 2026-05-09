@@ -1,6 +1,7 @@
 package com.onesley.oneclick.entity.contract;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
+import com.onesley.oneclick.entity.status.EntityStatus;
 import com.onesley.oneclick.entity.tenant.Tenant;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -39,9 +40,12 @@ public class OnboardingRequest extends TimestampedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
-    @NotBlank
-    @Column(name = "status", nullable = false)
-    private String status;
+    @Column(name = "status_id", nullable = false, insertable = false, updatable = false)
+    private UUID statusId;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "status_id", nullable = false)
+    private EntityStatus status;
 
     @NotBlank
     @Column(name = "restaurant_name", nullable = false)
@@ -133,7 +137,9 @@ public class OnboardingRequest extends TimestampedEntity {
     }
 
     public UUID getId() { return id; }
-    public String getStatus() { return status; }
+    public UUID getStatusId() { return statusId; }
+    public EntityStatus getStatus() { return status; }
+    public void setStatus(EntityStatus status) { this.status = status; }
     public String getRestaurantName() { return restaurantName; }
     public String getCity() { return city; }
     public String getAddress() { return address; }

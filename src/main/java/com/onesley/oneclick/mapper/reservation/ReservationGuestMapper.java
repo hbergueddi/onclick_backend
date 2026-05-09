@@ -3,6 +3,7 @@ package com.onesley.oneclick.mapper.reservation;
 import com.onesley.oneclick.dto.reservation.ReservationGuestDto;
 import com.onesley.oneclick.entity.reservation.ReservationGuest;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 import java.util.List;
 
@@ -13,6 +14,7 @@ import java.util.List;
 @Mapper
 public interface ReservationGuestMapper {
 
+    @Mapping(target = "status", source = "status.code")
     ReservationGuestDto toDto(ReservationGuest entity);
 
     List<ReservationGuestDto> toDtoList(List<ReservationGuest> entities);

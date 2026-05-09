@@ -1,6 +1,7 @@
 package com.onesley.oneclick.entity.pcc;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
+import com.onesley.oneclick.entity.status.EntityStatus;
 import com.onesley.oneclick.entity.auth.Profile;
 import com.onesley.oneclick.entity.tenant.TenantEvent;
 import jakarta.persistence.Column;
@@ -48,9 +49,12 @@ public class EventRsvp extends TimestampedEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private Profile user;
 
-    @NotBlank
-    @Column(name = "status", nullable = false)
-    private String status;
+    @Column(name = "status_id", nullable = false, insertable = false, updatable = false)
+    private UUID statusId;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "status_id", nullable = false)
+    private EntityStatus status;
 
     protected EventRsvp() {
         // JPA
@@ -63,8 +67,9 @@ public class EventRsvp extends TimestampedEntity {
     public UUID getUserId() { return userId; }
     public Profile getUser() { return user; }
     public void setUser(Profile user) { this.user = user; }
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public UUID getStatusId() { return statusId; }
+    public EntityStatus getStatus() { return status; }
+    public void setStatus(EntityStatus status) { this.status = status; }
 
     @Override
     public boolean equals(Object o) {

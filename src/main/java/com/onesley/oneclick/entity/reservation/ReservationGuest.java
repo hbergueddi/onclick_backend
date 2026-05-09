@@ -1,6 +1,7 @@
 package com.onesley.oneclick.entity.reservation;
 
 import com.onesley.oneclick.entity.auth.Profile;
+import com.onesley.oneclick.entity.status.EntityStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -71,9 +72,12 @@ public class ReservationGuest {
     @JoinColumn(name = "guest_user_id")
     private Profile guestUser;
 
-    @NotBlank
-    @Column(name = "status", nullable = false)
-    private String status;
+    @Column(name = "status_id", nullable = false, insertable = false, updatable = false)
+    private UUID statusId;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "status_id", nullable = false)
+    private EntityStatus status;
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -107,7 +111,9 @@ public class ReservationGuest {
     public Profile getGuestUser() { return guestUser; }
     public void setGuestUser(Profile guestUser) { this.guestUser = guestUser; }
 
-    public String getStatus() { return status; }
+    public UUID getStatusId() { return statusId; }
+    public EntityStatus getStatus() { return status; }
+    public void setStatus(EntityStatus status) { this.status = status; }
     public Instant getCreatedAt() { return createdAt; }
     public Boolean getSeenByHost() { return seenByHost; }
 

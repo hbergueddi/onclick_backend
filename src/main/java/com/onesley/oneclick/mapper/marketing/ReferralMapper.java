@@ -3,6 +3,7 @@ package com.onesley.oneclick.mapper.marketing;
 import com.onesley.oneclick.dto.marketing.ReferralDto;
 import com.onesley.oneclick.entity.marketing.Referral;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 import java.util.List;
 
@@ -13,6 +14,7 @@ import java.util.List;
 @Mapper
 public interface ReferralMapper {
 
+    @Mapping(target = "status", source = "status.code")
     ReferralDto toDto(Referral entity);
 
     List<ReferralDto> toDtoList(List<Referral> entities);

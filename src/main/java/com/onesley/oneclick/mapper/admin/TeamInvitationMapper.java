@@ -3,6 +3,7 @@ package com.onesley.oneclick.mapper.admin;
 import com.onesley.oneclick.dto.admin.TeamInvitationDto;
 import com.onesley.oneclick.entity.admin.TeamInvitation;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 import java.util.List;
 
@@ -13,6 +14,7 @@ import java.util.List;
 @Mapper
 public interface TeamInvitationMapper {
 
+    @Mapping(target = "status", source = "status.code")
     TeamInvitationDto toDto(TeamInvitation entity);
 
     List<TeamInvitationDto> toDtoList(List<TeamInvitation> entities);

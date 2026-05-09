@@ -3,6 +3,7 @@ package com.onesley.oneclick.mapper.contract;
 import com.onesley.oneclick.dto.contract.OneclickHiInvoiceDto;
 import com.onesley.oneclick.entity.contract.OneclickHiInvoice;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 import java.util.List;
 
@@ -13,6 +14,7 @@ import java.util.List;
 @Mapper
 public interface OneclickHiInvoiceMapper {
 
+    @Mapping(target = "status", source = "status.code")
     OneclickHiInvoiceDto toDto(OneclickHiInvoice entity);
 
     List<OneclickHiInvoiceDto> toDtoList(List<OneclickHiInvoice> entities);

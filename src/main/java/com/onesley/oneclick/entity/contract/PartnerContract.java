@@ -1,6 +1,7 @@
 package com.onesley.oneclick.entity.contract;
 
 import com.onesley.oneclick.audit.AuditedEntity;
+import com.onesley.oneclick.entity.status.EntityStatus;
 import com.onesley.oneclick.entity.restaurant.Restaurant;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -85,9 +86,12 @@ public class PartnerContract extends AuditedEntity {
     @Column(name = "auto_renew", nullable = false)
     private Boolean autoRenew;
 
-    @NotBlank
-    @Column(name = "status", nullable = false)
-    private String status;
+    @Column(name = "status_id", nullable = false, insertable = false, updatable = false)
+    private UUID statusId;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "status_id", nullable = false)
+    private EntityStatus status;
 
     @Column(name = "represented_by")
     private String representedBy;
@@ -237,7 +241,9 @@ public class PartnerContract extends AuditedEntity {
     public LocalDate getContractEnd() { return contractEnd; }
     public String getPaymentTerms() { return paymentTerms; }
     public Boolean getAutoRenew() { return autoRenew; }
-    public String getStatus() { return status; }
+    public UUID getStatusId() { return statusId; }
+    public EntityStatus getStatus() { return status; }
+    public void setStatus(EntityStatus status) { this.status = status; }
     public String getRepresentedBy() { return representedBy; }
     public String getRepresentedTitle() { return representedTitle; }
     public String getRestaurantAddress() { return restaurantAddress; }

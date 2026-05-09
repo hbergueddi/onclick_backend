@@ -3,6 +3,7 @@ package com.onesley.oneclick.mapper.contract;
 import com.onesley.oneclick.dto.contract.OnboardingRequestDto;
 import com.onesley.oneclick.entity.contract.OnboardingRequest;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 import java.util.List;
 
@@ -13,6 +14,7 @@ import java.util.List;
 @Mapper
 public interface OnboardingRequestMapper {
 
+    @Mapping(target = "status", source = "status.code")
     OnboardingRequestDto toDto(OnboardingRequest entity);
 
     List<OnboardingRequestDto> toDtoList(List<OnboardingRequest> entities);

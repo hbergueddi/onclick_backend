@@ -1,6 +1,7 @@
 package com.onesley.oneclick.entity.marketing;
 
 import com.onesley.oneclick.entity.auth.Profile;
+import com.onesley.oneclick.entity.status.EntityStatus;
 import com.onesley.oneclick.entity.restaurant.Restaurant;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -64,9 +65,12 @@ public class Referral {
     @JoinColumn(name = "referred_user_id")
     private Profile referredUser;
 
-    @NotBlank
-    @Column(name = "status", nullable = false)
-    private String status;
+    @Column(name = "status_id", nullable = false, insertable = false, updatable = false)
+    private UUID statusId;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "status_id", nullable = false)
+    private EntityStatus status;
 
     @NotNull
     @Column(name = "pts_awarded", nullable = false)
@@ -107,7 +111,9 @@ public class Referral {
     public UUID getReferredUserId() { return referredUserId; }
     public Profile getReferredUser() { return referredUser; }
     public void setReferredUser(Profile referredUser) { this.referredUser = referredUser; }
-    public String getStatus() { return status; }
+    public UUID getStatusId() { return statusId; }
+    public EntityStatus getStatus() { return status; }
+    public void setStatus(EntityStatus status) { this.status = status; }
     public Integer getPtsAwarded() { return ptsAwarded; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getActivatedAt() { return activatedAt; }

@@ -1,6 +1,7 @@
 package com.onesley.oneclick.entity.admin;
 
 import com.onesley.oneclick.entity.restaurant.Restaurant;
+import com.onesley.oneclick.entity.status.EntityStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -66,9 +67,12 @@ public class TeamInvitation {
     @Column(name = "role", nullable = false)
     private String role;
 
-    @NotBlank
-    @Column(name = "status", nullable = false)
-    private String status;
+    @Column(name = "status_id", nullable = false, insertable = false, updatable = false)
+    private UUID statusId;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "status_id", nullable = false)
+    private EntityStatus status;
 
     @Column(name = "expires_at", nullable = false)
     private Instant expiresAt;
@@ -90,7 +94,9 @@ public class TeamInvitation {
     public String getLastName() { return lastName; }
     public String getPhone() { return phone; }
     public String getRole() { return role; }
-    public String getStatus() { return status; }
+    public UUID getStatusId() { return statusId; }
+    public EntityStatus getStatus() { return status; }
+    public void setStatus(EntityStatus status) { this.status = status; }
     public Instant getExpiresAt() { return expiresAt; }
     public Instant getCreatedAt() { return createdAt; }
 

@@ -3,6 +3,7 @@ package com.onesley.oneclick.mapper.admin;
 import com.onesley.oneclick.dto.admin.FraudAlertDto;
 import com.onesley.oneclick.entity.admin.FraudAlert;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 import java.util.List;
 
@@ -13,6 +14,7 @@ import java.util.List;
 @Mapper
 public interface FraudAlertMapper {
 
+    @Mapping(target = "status", source = "status.code")
     FraudAlertDto toDto(FraudAlert entity);
 
     List<FraudAlertDto> toDtoList(List<FraudAlert> entities);

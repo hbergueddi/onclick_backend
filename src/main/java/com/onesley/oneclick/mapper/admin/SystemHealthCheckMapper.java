@@ -3,6 +3,7 @@ package com.onesley.oneclick.mapper.admin;
 import com.onesley.oneclick.dto.admin.SystemHealthCheckDto;
 import com.onesley.oneclick.entity.admin.SystemHealthCheck;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 import java.util.List;
 
@@ -13,6 +14,7 @@ import java.util.List;
 @Mapper
 public interface SystemHealthCheckMapper {
 
+    @Mapping(target = "status", source = "status.code")
     SystemHealthCheckDto toDto(SystemHealthCheck entity);
 
     List<SystemHealthCheckDto> toDtoList(List<SystemHealthCheck> entities);

@@ -3,6 +3,7 @@ package com.onesley.oneclick.mapper.pcc;
 import com.onesley.oneclick.dto.pcc.SeminarRequestDto;
 import com.onesley.oneclick.entity.pcc.SeminarRequest;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 import java.util.List;
 
@@ -13,6 +14,7 @@ import java.util.List;
 @Mapper
 public interface SeminarRequestMapper {
 
+    @Mapping(target = "status", source = "status.code")
     SeminarRequestDto toDto(SeminarRequest entity);
 
     List<SeminarRequestDto> toDtoList(List<SeminarRequest> entities);

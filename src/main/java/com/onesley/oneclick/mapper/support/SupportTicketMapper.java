@@ -3,6 +3,7 @@ package com.onesley.oneclick.mapper.support;
 import com.onesley.oneclick.dto.support.SupportTicketDto;
 import com.onesley.oneclick.entity.support.SupportTicket;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 import java.util.List;
 
@@ -13,6 +14,7 @@ import java.util.List;
 @Mapper
 public interface SupportTicketMapper {
 
+    @Mapping(target = "status", source = "status.code")
     SupportTicketDto toDto(SupportTicket entity);
 
     List<SupportTicketDto> toDtoList(List<SupportTicket> entities);

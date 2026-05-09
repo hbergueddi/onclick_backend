@@ -1,6 +1,7 @@
 package com.onesley.oneclick.entity.admin;
 
 import com.onesley.oneclick.entity.auth.Profile;
+import com.onesley.oneclick.entity.status.EntityStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -52,8 +53,12 @@ public class MonitorLog {
     @Column(name = "event_type", nullable = false)
     private String eventType;
 
-    @Column(name = "status")
-    private String status;
+    @Column(name = "status_id", insertable = false, updatable = false)
+    private UUID statusId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "status_id")
+    private EntityStatus status;
 
     @Column(name = "user_id", insertable = false, updatable = false)
     private UUID userId;
@@ -86,7 +91,9 @@ public class MonitorLog {
     public Instant getCreatedAt() { return createdAt; }
     public String getSource() { return source; }
     public String getEventType() { return eventType; }
-    public String getStatus() { return status; }
+    public UUID getStatusId() { return statusId; }
+    public EntityStatus getStatus() { return status; }
+    public void setStatus(EntityStatus status) { this.status = status; }
     public UUID getUserId() { return userId; }
     public Profile getUser() { return user; }
     public void setUser(Profile user) { this.user = user; }

@@ -1,6 +1,7 @@
 package com.onesley.oneclick.entity.reservation;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
+import com.onesley.oneclick.entity.status.EntityStatus;
 import com.onesley.oneclick.entity.auth.Profile;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -52,9 +53,12 @@ public class Friendship extends TimestampedEntity {
     @JoinColumn(name = "addressee_id", nullable = false)
     private Profile addressee;
 
-    @NotBlank
-    @Column(name = "status", nullable = false)
-    private String status;
+    @Column(name = "status_id", nullable = false, insertable = false, updatable = false)
+    private UUID statusId;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "status_id", nullable = false)
+    private EntityStatus status;
 
     protected Friendship() {
         // JPA
@@ -67,8 +71,9 @@ public class Friendship extends TimestampedEntity {
     public UUID getAddresseeId() { return addresseeId; }
     public Profile getAddressee() { return addressee; }
     public void setAddressee(Profile addressee) { this.addressee = addressee; }
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public UUID getStatusId() { return statusId; }
+    public EntityStatus getStatus() { return status; }
+    public void setStatus(EntityStatus status) { this.status = status; }
 
     @Override
     public boolean equals(Object o) {
