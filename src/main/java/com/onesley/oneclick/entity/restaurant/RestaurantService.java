@@ -1,6 +1,7 @@
 package com.onesley.oneclick.entity.restaurant;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
+import com.onesley.oneclick.entity.status.EntityStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -69,9 +70,12 @@ public class RestaurantService extends TimestampedEntity {
     @Column(name = "capacite_max", nullable = false)
     private Integer capaciteMax;
 
-    @NotBlank
-    @Column(name = "status", nullable = false)
-    private String status;
+    @Column(name = "status_id", nullable = false, insertable = false, updatable = false)
+    private UUID statusId;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "status_id", nullable = false)
+    private EntityStatus status;
 
     @NotNull
     @Column(name = "clickgo_quota", nullable = false)
@@ -95,7 +99,9 @@ public class RestaurantService extends TimestampedEntity {
     public String getHeureFin() { return heureFin; }
     public List<String> getJoursActifs() { return joursActifs; }
     public Integer getCapaciteMax() { return capaciteMax; }
-    public String getStatus() { return status; }
+    public UUID getStatusId() { return statusId; }
+    public EntityStatus getStatus() { return status; }
+    public void setStatus(EntityStatus status) { this.status = status; }
     public Integer getClickgoQuota() { return clickgoQuota; }
 
     // ─── equals / hashCode anti-proxy LAZY ──────────────────────────────────

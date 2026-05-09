@@ -3,6 +3,7 @@ package com.onesley.oneclick.mapper.restaurant;
 import com.onesley.oneclick.dto.restaurant.RestaurantStaffDto;
 import com.onesley.oneclick.entity.restaurant.RestaurantStaff;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 import java.util.List;
 
@@ -13,6 +14,7 @@ import java.util.List;
 @Mapper
 public interface RestaurantStaffMapper {
 
+    @Mapping(target = "status", source = "status.code")
     RestaurantStaffDto toDto(RestaurantStaff entity);
 
     List<RestaurantStaffDto> toDtoList(List<RestaurantStaff> entities);

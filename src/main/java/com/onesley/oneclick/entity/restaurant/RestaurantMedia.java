@@ -1,6 +1,7 @@
 package com.onesley.oneclick.entity.restaurant;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
+import com.onesley.oneclick.entity.status.EntityStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -53,9 +54,12 @@ public class RestaurantMedia extends TimestampedEntity {
     @Column(name = "url")
     private String url;
 
-    @NotBlank
-    @Column(name = "status", nullable = false)
-    private String status;
+    @Column(name = "status_id", nullable = false, insertable = false, updatable = false)
+    private UUID statusId;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "status_id", nullable = false)
+    private EntityStatus status;
 
     /** Audit field : UUID brut. */
     @Column(name = "uploaded_by")
@@ -76,7 +80,9 @@ public class RestaurantMedia extends TimestampedEntity {
     public String getType() { return type; }
     public String getName() { return name; }
     public String getUrl() { return url; }
-    public String getStatus() { return status; }
+    public UUID getStatusId() { return statusId; }
+    public EntityStatus getStatus() { return status; }
+    public void setStatus(EntityStatus status) { this.status = status; }
     public UUID getUploadedBy() { return uploadedBy; }
 
     // ─── equals / hashCode anti-proxy LAZY ──────────────────────────────────

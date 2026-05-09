@@ -2,6 +2,7 @@ package com.onesley.oneclick.entity.restaurant;
 
 import com.onesley.oneclick.entity.auth.Profile;
 import com.onesley.oneclick.entity.shared.StaffRole;
+import com.onesley.oneclick.entity.status.EntityStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -84,9 +85,12 @@ public class RestaurantStaff {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
-    @NotBlank
-    @Column(name = "status", nullable = false)
-    private String status;
+    @Column(name = "status_id", nullable = false, insertable = false, updatable = false)
+    private UUID statusId;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "status_id", nullable = false)
+    private EntityStatus status;
 
     @Column(name = "start_date")
     private LocalDate startDate;
@@ -119,7 +123,9 @@ public class RestaurantStaff {
 
     public StaffRole getStaffRole() { return staffRole; }
     public Instant getCreatedAt() { return createdAt; }
-    public String getStatus() { return status; }
+    public UUID getStatusId() { return statusId; }
+    public EntityStatus getStatus() { return status; }
+    public void setStatus(EntityStatus status) { this.status = status; }
     public LocalDate getStartDate() { return startDate; }
     public UUID getCreatedBy() { return createdBy; }
     public UUID getModifiedBy() { return modifiedBy; }

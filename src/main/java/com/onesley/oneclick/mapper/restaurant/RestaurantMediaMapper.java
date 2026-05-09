@@ -3,6 +3,7 @@ package com.onesley.oneclick.mapper.restaurant;
 import com.onesley.oneclick.dto.restaurant.RestaurantMediaDto;
 import com.onesley.oneclick.entity.restaurant.RestaurantMedia;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 import java.util.List;
 
@@ -13,6 +14,7 @@ import java.util.List;
 @Mapper
 public interface RestaurantMediaMapper {
 
+    @Mapping(target = "status", source = "status.code")
     RestaurantMediaDto toDto(RestaurantMedia entity);
 
     List<RestaurantMediaDto> toDtoList(List<RestaurantMedia> entities);

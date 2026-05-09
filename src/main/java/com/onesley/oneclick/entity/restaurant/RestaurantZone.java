@@ -1,6 +1,7 @@
 package com.onesley.oneclick.entity.restaurant;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
+import com.onesley.oneclick.entity.status.EntityStatus;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -68,9 +69,12 @@ public class RestaurantZone extends TimestampedEntity {
     @Column(name = "tables_count", nullable = false)
     private Integer tablesCount;
 
-    @NotBlank
-    @Column(name = "status", nullable = false)
-    private String status;
+    @Column(name = "status_id", nullable = false, insertable = false, updatable = false)
+    private UUID statusId;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "status_id", nullable = false)
+    private EntityStatus status;
 
     // ─── @OneToMany tables (cascade light, pas orphanRemoval) ───────────────
     @OneToMany(mappedBy = "zone", fetch = FetchType.LAZY,
@@ -95,7 +99,9 @@ public class RestaurantZone extends TimestampedEntity {
     public String getDescription() { return description; }
     public Integer getCapacite() { return capacite; }
     public Integer getTablesCount() { return tablesCount; }
-    public String getStatus() { return status; }
+    public UUID getStatusId() { return statusId; }
+    public EntityStatus getStatus() { return status; }
+    public void setStatus(EntityStatus status) { this.status = status; }
     public Set<RestaurantTable> getTables() { return tables; }
 
     public void addTable(RestaurantTable t) {
