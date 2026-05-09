@@ -2,6 +2,7 @@ package com.onesley.oneclick.entity.tenant;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
 import com.onesley.oneclick.entity.contract.CompanySetting;
+import com.onesley.oneclick.entity.status.EntityStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -77,8 +78,13 @@ public class Tenant extends TimestampedEntity {
     @Column(name = "legal_name")
     private String legalName;
 
-    @Column(name = "status", nullable = false)
-    private String status;
+    // ─── status_id FK (table entity_statuses, discriminator entity_type='tenant') ──
+    @Column(name = "status_id", nullable = false, insertable = false, updatable = false)
+    private UUID statusId;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "status_id", nullable = false)
+    private EntityStatus status;
 
     // ─── Jointure company_settings_id (référence simple, pas 1-1) ───────────
     @Column(name = "company_settings_id", insertable = false, updatable = false)
@@ -109,7 +115,11 @@ public class Tenant extends TimestampedEntity {
     public String getSlug() { return slug; }
     public String getName() { return name; }
     public String getLegalName() { return legalName; }
-    public String getStatus() { return status; }
+    /** Raccourci read-only (issu de la colonne FK). */
+    public UUID getStatusId() { return statusId; }
+    /** Lazy load — ne pas appeler hors {@code @Transactional} si proxy non hydraté. */
+    public EntityStatus getStatus() { return status; }
+    public void setStatus(EntityStatus status) { this.status = status; }
 
     /** Raccourci read-only (issu de la colonne FK). Utiliser pour DTOs/projections. */
     public UUID getCompanySettingsId() { return companySettingsId; }
