@@ -47,9 +47,12 @@ public class CacheConfig {
 
     @Bean
     public RedisCacheManager cacheManager(RedisConnectionFactory cf) {
-        ObjectMapper om = new ObjectMapper();
-        om.registerModule(new JavaTimeModule());
-        var jsonSerializer = new GenericJackson2JsonRedisSerializer(om);
+        // Pattern Spring Data Redis 4+ :
+        //  1. on instancie le serializer (ObjectMapper interne avec default typing OK)
+        //  2. on enrichit via configure() pour ajouter JavaTimeModule
+        //     (sinon SerializationException sur Instant des DTO records)
+        var jsonSerializer = new GenericJackson2JsonRedisSerializer();
+        jsonSerializer.configure(om -> om.registerModule(new JavaTimeModule()));
 
         RedisCacheConfiguration base = RedisCacheConfiguration.defaultCacheConfig()
             .disableCachingNullValues()
