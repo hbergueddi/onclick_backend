@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.onesley</groupId>
+        <artifactId>oneclick-parent</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>oneclick-shared</artifactId>
+    <packaging>jar</packaging>
+    <name>oneclick-shared</name>
+    <description>DTOs partagés inter-services : events Modulith + PageResponse.
+        Volontairement minimal (pas de DB, pas de web) pour être consommable par
+        n'importe quel microservice sans tirer d'autoconfig lourd.</description>
+
+    <dependencies>
+        <!-- @Externalized annotation pour les events Kafka -->
+        <dependency>
+            <groupId>org.springframework.modulith</groupId>
+            <artifactId>spring-modulith-events-core</artifactId>
+        </dependency>
+
+        <!-- Spring Data : pour PageResponse.from(Page<T>) — accepte n'importe quel
+             Page<T>. Le module est juste data-commons (pas de DB).  -->
+        <dependency>
+            <groupId>org.springframework.data</groupId>
+            <artifactId>spring-data-commons</artifactId>
+        </dependency>
+    </dependencies>
+
+</project>
