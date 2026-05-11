@@ -50,7 +50,7 @@ import java.util.List;
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    @Value("${app.cors.allowed-origins:http://localhost:8080,http://localhost:5173,https://app-oneclick.net}")
+    @Value("${app.cors.allowed-origins:http://localhost:3000,http://localhost:8080,http://localhost:5173,https://app-oneclick.net}")
     private String allowedOrigins;
 
     @Value("${app.security.oauth2.enabled:false}")
