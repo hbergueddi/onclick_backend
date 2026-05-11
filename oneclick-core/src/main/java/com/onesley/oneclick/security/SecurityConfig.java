@@ -81,6 +81,7 @@ public class SecurityConfig {
             http.authorizeHttpRequests(auth -> auth
                 // Documentation API toujours publique
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                .requestMatchers("/api/auth/**").permitAll()  // Phase 4 §2 — login/refresh/otp publics
                 // Health/info publics, le reste de l'actuator authentifié
                 .requestMatchers("/actuator/health/**", "/actuator/info").permitAll()
                 // Preflight CORS
@@ -99,6 +100,7 @@ public class SecurityConfig {
             // Mode dev — permissif, comme en Phase 2.6
             http.authorizeHttpRequests(auth -> auth
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                .requestMatchers("/api/auth/**").permitAll()  // Phase 4 §2 — login/refresh/otp publics
                 .requestMatchers("/actuator/health/**", "/actuator/info", "/actuator/metrics/**").permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .anyRequest().permitAll()

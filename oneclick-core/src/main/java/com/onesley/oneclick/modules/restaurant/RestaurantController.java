@@ -1,5 +1,7 @@
 package com.onesley.oneclick.modules.restaurant;
 
+import com.onesley.oneclick.search.SearchRequest;
+import com.onesley.oneclick.search.Searchable;
 import com.onesley.oneclick.shared.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -9,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -16,10 +19,18 @@ import java.util.UUID;
 @Tag(name = "Restaurants", description = "Catalogue restaurants partenaires")
 public class RestaurantController {
 
-    private final RestaurantCatalogService service;
+    /** Whitelist Phase 4 §6.3 — champs filtrables/sortables. */
+    private static final Set<String> SEARCHABLE_FIELDS = Set.of(
+        "tenantId", "name", "city", "status",
+        "latitude", "longitude", "createdAt", "updatedAt"
+    );
 
-    public RestaurantController(RestaurantCatalogService service) {
+    private final RestaurantCatalogService service;
+    private final RestaurantRepository restaurantRepository;
+
+    public RestaurantController(RestaurantCatalogService service, RestaurantRepository restaurantRepository) {
         this.service = service;
+        this.restaurantRepository = restaurantRepository;
     }
 
     @GetMapping
@@ -51,5 +62,13 @@ public class RestaurantController {
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         service.softDelete(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    @PostMapping("/search")
+    @Operation(summary = "Recherche dynamique (Phase 4 §6.3) — 12 opérateurs + whitelist")
+    public PageResponse<RestaurantDto> search(@RequestBody SearchRequest req) {
+        return PageResponse.from(
+            Searchable.execute(restaurantRepository, req, SEARCHABLE_FIELDS, RestaurantDto::from)
+        );
     }
 }

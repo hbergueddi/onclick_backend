@@ -1,5 +1,7 @@
 package com.onesley.oneclick.core.identity;
 
+import com.onesley.oneclick.search.SearchRequest;
+import com.onesley.oneclick.search.Searchable;
 import com.onesley.oneclick.shared.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -9,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -19,10 +22,18 @@ import java.util.UUID;
 @Tag(name = "Users", description = "Identités applicatives (RBAC simplifié 1 user = 1 role)")
 public class UserController {
 
-    private final UserService service;
+    /** Whitelist Phase 4 spec §6.3 — champs filtrables/sortables via /search. */
+    private static final Set<String> SEARCHABLE_FIELDS = Set.of(
+        "email", "phone", "firstName", "lastName", "language", "status",
+        "tenantId", "roleId", "lastLoginAt", "createdAt", "updatedAt", "enabled"
+    );
 
-    public UserController(UserService service) {
+    private final UserService service;
+    private final UserRepository userRepository;
+
+    public UserController(UserService service, UserRepository userRepository) {
         this.service = service;
+        this.userRepository = userRepository;
     }
 
     @GetMapping
@@ -64,5 +75,19 @@ public class UserController {
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         service.softDelete(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    @PostMapping("/search")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    @Operation(
+        summary = "Recherche dynamique (Phase 4 §6.3) — 12 opérateurs + whitelist",
+        description = "Body : SearchRequest. Champs autorisés : email, phone, firstName, lastName, language, status, tenantId, roleId, lastLoginAt, createdAt, updatedAt, enabled."
+    )
+    public PageResponse<UserDto> search(@RequestBody SearchRequest req) {
+        // @Transactional ouvre une session Hibernate qui couvre l'accès lazy à User.role
+        // → évite LazyInitializationException quand UserDto.from() appelle user.getRole().getCode()
+        return PageResponse.from(
+            Searchable.execute(userRepository, req, SEARCHABLE_FIELDS, UserDto::from)
+        );
     }
 }

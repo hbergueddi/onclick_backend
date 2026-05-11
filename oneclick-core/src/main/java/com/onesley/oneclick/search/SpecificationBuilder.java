@@ -135,6 +135,29 @@ public final class SpecificationBuilder {
             Object e = Enum.valueOf((Class<Enum>) targetType, s);
             return e;
         }
+        // Coercion temporelle : String ISO-8601 → Instant / LocalDate / LocalDateTime
+        if (targetType == java.time.Instant.class && value instanceof String s) {
+            try { return java.time.Instant.parse(s); }
+            catch (java.time.format.DateTimeParseException e) {
+                throw new BadRequestException("Invalid Instant (ISO-8601 required): " + s);
+            }
+        }
+        if (targetType == java.time.LocalDate.class && value instanceof String s) {
+            try { return java.time.LocalDate.parse(s); }
+            catch (java.time.format.DateTimeParseException e) {
+                throw new BadRequestException("Invalid LocalDate (YYYY-MM-DD required): " + s);
+            }
+        }
+        if (targetType == java.time.LocalDateTime.class && value instanceof String s) {
+            try { return java.time.LocalDateTime.parse(s); }
+            catch (java.time.format.DateTimeParseException e) {
+                throw new BadRequestException("Invalid LocalDateTime: " + s);
+            }
+        }
+        // Boolean coercion (rare car JSON nativement bool)
+        if (targetType == Boolean.class && value instanceof String s) {
+            return Boolean.parseBoolean(s);
+        }
         return value;
     }
 

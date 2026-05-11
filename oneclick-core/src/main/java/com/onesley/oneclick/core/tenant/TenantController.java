@@ -1,5 +1,8 @@
 package com.onesley.oneclick.core.tenant;
 
+import com.onesley.oneclick.search.SearchRequest;
+import com.onesley.oneclick.search.Searchable;
+import com.onesley.oneclick.shared.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -8,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -15,10 +19,17 @@ import java.util.UUID;
 @Tag(name = "Tenants", description = "Multi-tenant — racine whitelabel (OneClick, HOMU, PCC, ...)")
 public class TenantController {
 
-    private final TenantService service;
+    /** Whitelist Phase 4 §6.3 — champs filtrables/sortables. */
+    private static final Set<String> SEARCHABLE_FIELDS = Set.of(
+        "name", "slug", "status", "createdAt", "updatedAt"
+    );
 
-    public TenantController(TenantService service) {
+    private final TenantService service;
+    private final TenantRepository tenantRepository;
+
+    public TenantController(TenantService service, TenantRepository tenantRepository) {
         this.service = service;
+        this.tenantRepository = tenantRepository;
     }
 
     @GetMapping
@@ -38,5 +49,13 @@ public class TenantController {
     public ResponseEntity<TenantDto> create(@Valid @RequestBody TenantCreateDto dto) {
         TenantDto t = service.create(dto);
         return ResponseEntity.created(URI.create("/api/tenants/" + t.id())).body(t);
+    }
+
+    @PostMapping("/search")
+    @Operation(summary = "Recherche dynamique (Phase 4 §6.3) — 12 opérateurs + whitelist")
+    public PageResponse<TenantDto> search(@RequestBody SearchRequest req) {
+        return PageResponse.from(
+            Searchable.execute(tenantRepository, req, SEARCHABLE_FIELDS, TenantDto::from)
+        );
     }
 }
