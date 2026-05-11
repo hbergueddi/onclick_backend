@@ -1,0 +1,81 @@
+package com.onesley.oneclick.core.tenant;
+
+import com.onesley.oneclick.audit.TimestampedEntity;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+import jakarta.validation.constraints.NotBlank;
+import org.hibernate.proxy.HibernateProxy;
+
+import java.util.Objects;
+import java.util.UUID;
+
+/**
+ * Feature flag par tenant. Pattern : un couple (tenant_id, feature_code) est UNIQUE.
+ */
+@Entity
+@Table(
+    name = "tenant_features",
+    uniqueConstraints = @UniqueConstraint(columnNames = {"tenant_id", "feature_code"})
+)
+public class TenantFeature extends TimestampedEntity {
+
+    @Id
+    @Column(name = "id", nullable = false, updatable = false)
+    private UUID id;
+
+    @Column(name = "tenant_id", nullable = false, insertable = false, updatable = false)
+    private UUID tenantId;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "tenant_id", nullable = false)
+    private Tenant tenant;
+
+    @NotBlank
+    @Column(name = "feature_code", nullable = false)
+    private String featureCode;
+
+    @Column(name = "enabled", nullable = false)
+    private boolean enabled = false;
+
+    protected TenantFeature() {
+        // JPA
+    }
+
+    public TenantFeature(UUID id, Tenant tenant, String featureCode, boolean enabled) {
+        this.id = id;
+        this.tenant = tenant;
+        this.featureCode = featureCode;
+        this.enabled = enabled;
+    }
+
+    public UUID getId() { return id; }
+    public UUID getTenantId() { return tenantId; }
+    public Tenant getTenant() { return tenant; }
+    public String getFeatureCode() { return featureCode; }
+    public boolean isEnabled() { return enabled; }
+    public void setEnabled(boolean enabled) { this.enabled = enabled; }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null) return false;
+        Class<?> oEffective = o instanceof HibernateProxy p ? p.getHibernateLazyInitializer().getPersistentClass() : o.getClass();
+        Class<?> thisEffective = this instanceof HibernateProxy p ? p.getHibernateLazyInitializer().getPersistentClass() : this.getClass();
+        if (thisEffective != oEffective) return false;
+        TenantFeature that = (TenantFeature) o;
+        return id != null && Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return this instanceof HibernateProxy p
+            ? p.getHibernateLazyInitializer().getPersistentClass().hashCode()
+            : getClass().hashCode();
+    }
+}

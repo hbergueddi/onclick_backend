@@ -1,0 +1,64 @@
+# ════════════════════════════════════════════════════════════════════
+# OneClick Backend — ENTERPRISE profile (refonte greenfield, branche enterprise-architecture)
+# ════════════════════════════════════════════════════════════════════
+# Database : oneclick_enterprise (PostgreSQL 17 local, schéma greenfield Flyway V1+)
+# DB legacy : oneclick_local reste intacte pour ETL data migration (phase finale)
+# Redis    : local (no auth)
+# Server   : http://localhost:8083 (8081 = legacy Spring, 8082 = Phase 11/12 archive)
+# Swagger  : http://localhost:8083/swagger-ui.html
+# ════════════════════════════════════════════════════════════════════
+
+spring:
+  config:
+    activate:
+      on-profile: enterprise
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/oneclick_enterprise
+    username: oneclick_app
+    password: OneclickLocal2026
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 5000
+
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        # Lazy fetching debug — log si on déclenche un fetch hors @Transactional
+        # session.lazy_load_no_trans: false
+        # Évite N+1 silencieux
+    # ddl-auto=validate hérité de application.yml — Flyway gère le schéma
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+  flyway:
+    # Greenfield : pas de baseline, Flyway exécute toutes les V1+ depuis db/migration/
+    baseline-on-migrate: false
+    user: hh
+    password: oneclick_dev_pwd
+    locations: classpath:db/migration
+
+server:
+  port: 8083
+
+logging:
+  level:
+    com.onesley.oneclick: DEBUG
+    org.springframework.modulith: INFO
+    # Trace les SQL Hibernate (volume important)
+    # org.hibernate.SQL: DEBUG
+    # org.hibernate.orm.jdbc.bind: TRACE
+
+# ─── Spring Modulith — détection des modules + verify isolation ──────
+spring.modulith:
+  events:
+    jdbc-schema-initialization:
+      enabled: true
+  republish-outstanding-events-on-restart: true
