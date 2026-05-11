@@ -66,8 +66,7 @@ public class EtlPostgresFdwBootstrap {
     private static final List<String> LEGACY_TABLES_PHASE_B = List.of(
         "notifications", "device_tokens", "friendships", "referrals",
         "support_tickets", "tenant_events", "event_rsvps",
-        // bookable_resources skipped — enum type custom non portable (à recréer manuellement)
-        "resource_bookings",
+        "bookable_resources", "resource_bookings",
         "action_logs", "admin_audit_log"
     );
 
@@ -119,14 +118,26 @@ public class EtlPostgresFdwBootstrap {
             "'owner','manager','waiter','serveur','chef_de_rang','barman','caissier','controleur','responsable_resa','directeur'");
         createEnumIfMissing("app_role",
             "'admin','restaurateur','client','tenant_admin'");
+        // Phase B enums
+        createEnumIfMissing("bookable_resource_type",
+            "'padel_court','spa_room','golf_tee','seminar_room','restaurant_table','barber_chair','coach_session','tennis_court','football_field','basketball_court'");
+        createEnumIfMissing("bookable_payment_mode", "'on_site','upfront'");
+        createEnumIfMissing("resource_booking_status",
+            "'demandee','confirmee','honoree','no_show','annulee'");
 
-        // Import des tables du schéma public legacy — Phase A
+        // Import des tables du schéma public legacy — Phase A + B selon flag
+        List<String> tablesToImport = new java.util.ArrayList<>(LEGACY_TABLES_PHASE_A);
+        if (props.isRunPhaseB()) {
+            tablesToImport.addAll(LEGACY_TABLES_PHASE_B);
+        }
         String publicImport = String.format(
             "IMPORT FOREIGN SCHEMA public LIMIT TO (%s) FROM SERVER %s INTO %s",
-            String.join(", ", LEGACY_TABLES_PHASE_A),
+            String.join(", ", tablesToImport),
             SERVER_NAME,
             FOREIGN_SCHEMA);
-        log.debug("Importing legacy.public tables (Phase A): {}", LEGACY_TABLES_PHASE_A.size());
+        log.debug("Importing legacy.public tables ({}): {}",
+            props.isRunPhaseB() ? "Phase A+B" : "Phase A",
+            tablesToImport.size());
         jdbc.execute(publicImport);
 
         // Import du schéma auth (Supabase managed)

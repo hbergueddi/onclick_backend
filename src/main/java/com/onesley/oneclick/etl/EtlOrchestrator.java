@@ -2,6 +2,7 @@ package com.onesley.oneclick.etl;
 
 import com.onesley.oneclick.etl.steps.CommerceStep;
 import com.onesley.oneclick.etl.steps.LoyaltyStep;
+import com.onesley.oneclick.etl.steps.PhaseBStep;
 import com.onesley.oneclick.etl.steps.ReservationsStep;
 import com.onesley.oneclick.etl.steps.RestaurantsStep;
 import com.onesley.oneclick.etl.steps.RolesStep;
@@ -49,6 +50,7 @@ public class EtlOrchestrator implements CommandLineRunner {
     // concrets ne nous intéressent pas — on les charge par @Autowired sur List<EtlStep>.
     // Mais pour préserver l'ordre, on déclare explicitement la liste.
     private final List<EtlStep> phaseASteps;
+    private final List<EtlStep> phaseBSteps;
 
     public EtlOrchestrator(JdbcTemplate jdbc,
                            EtlProperties props,
@@ -61,7 +63,8 @@ public class EtlOrchestrator implements CommandLineRunner {
                            RestaurantsStep restaurantsStep,
                            ReservationsStep reservationsStep,
                            LoyaltyStep loyaltyStep,
-                           CommerceStep commerceStep) {
+                           CommerceStep commerceStep,
+                           PhaseBStep phaseBStep) {
         this.jdbc = jdbc;
         this.props = props;
         this.fdw = fdw;
@@ -78,6 +81,10 @@ public class EtlOrchestrator implements CommandLineRunner {
             reservationsStep,   // reservations + guests + booking_rules
             loyaltyStep,        // tiers, loyalty_accounts, loyalty_transactions, redemptions, loyalty_rules
             commerceStep        // offers, contracts, invoices, invoice_lines, wallet_transactions
+        );
+        this.phaseBSteps = List.of(
+            phaseBStep          // notifications, device_tokens, friendships, referrals, support_tickets,
+                                // events, event_participations, resources, resource_bookings, audit_logs
         );
     }
 
@@ -112,9 +119,17 @@ public class EtlOrchestrator implements CommandLineRunner {
                 }
             }
 
-            // 4. Phase B — Secondaire (TODO)
+            // 4. Phase B — Secondaire (notifications, social, audit, ...)
             if (props.isRunPhaseB()) {
-                log.warn("Phase 13.B non implémentée encore");
+                log.info("");
+                log.info("───────────────────── Phase 13.B — Secondaire ─────────────────────");
+                for (EtlStep step : phaseBSteps) {
+                    if (step instanceof EtlStep.AbstractEtlStep abstractStep) {
+                        long inserted = abstractStep.run();
+                        results.put(step.getName(), inserted);
+                        step.validate();
+                    }
+                }
             }
 
             // 5. Flush du cache Redis pour éviter les entrées périmées
@@ -177,9 +192,20 @@ public class EtlOrchestrator implements CommandLineRunner {
         log.info("");
         log.info("───────────────────── TRUNCATE des tables cibles ─────────────────────");
 
-        // Liste exhaustive Phase A — ordre inverse FK
+        // Liste exhaustive Phase A + B — ordre inverse FK
         List<String> tables = List.of(
-            // ── Tables très filles ───────────────────────────────────────────
+            // ── Phase B : tables très filles (filles de Phase A) ─────────────
+            "audit_logs",
+            "resource_bookings",
+            "resources",
+            "event_participations",
+            "events",
+            "support_tickets",
+            "referrals",
+            "friendships",
+            "device_tokens",
+            "notifications",
+            // ── Phase A : tables très filles ─────────────────────────────────
             "invoice_lines",
             "redemptions",
             "loyalty_transactions",
@@ -187,7 +213,7 @@ public class EtlOrchestrator implements CommandLineRunner {
             "business_hours",
             "restaurant_staffs",
             "restaurant_tables",
-            // ── Tables filles ────────────────────────────────────────────────
+            // ── Phase A : tables filles ──────────────────────────────────────
             "wallet_transactions",
             "invoices",
             "contracts",
@@ -199,11 +225,11 @@ public class EtlOrchestrator implements CommandLineRunner {
             "restaurant_zones",
             "restaurant_services",
             "permissions",
-            // ── Tables intermédiaires ────────────────────────────────────────
+            // ── Phase A : tables intermédiaires ──────────────────────────────
             "tiers",
             "users",
             "restaurants",
-            // ── Tables racines ───────────────────────────────────────────────
+            // ── Phase A : tables racines ─────────────────────────────────────
             "menus",
             "actions",
             "roles",

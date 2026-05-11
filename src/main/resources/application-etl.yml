@@ -49,9 +49,9 @@ oneclick:
     fallback-password: "TestLocal2026!"
     # Mode test : TRUNCATE puis ETL ; mode prod : abort si tables non vides
     truncate-before-etl: true
-    # Active uniquement la phase A (core path 13.A) par défaut
+    # Phase A (core path 13.A — 25 tables) + Phase B (secondaire — 10 tables additionnelles)
     run-phase-a: true
-    run-phase-b: false
+    run-phase-b: true
 
 logging:
   level:
