@@ -62,6 +62,28 @@ spring:
       repositories:
         enabled: false
 
+  # ─── Multipart upload limits (Phase 3.5 — MinIO uploads) ────────────
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 12MB
+
+# ─── Storage S3/MinIO (Phase 3.5 §X spec senior) ───────────────────────
+# Local dev : MinIO sur localhost:9000 (cf scripts/minio-start.sh)
+# Prod      : override endpoint + access-key + secret-key via env vars (S3 AWS)
+app:
+  storage:
+    s3:
+      endpoint: ${S3_ENDPOINT:http://localhost:9000}
+      region: ${S3_REGION:us-east-1}
+      access-key: ${S3_ACCESS_KEY:minioadmin}
+      secret-key: ${S3_SECRET_KEY:minioadmin}
+      path-style: ${S3_PATH_STYLE:true}
+      bucket: ${S3_BUCKET:oneclick-media}
+      public-base-url: ${S3_PUBLIC_BASE_URL:http://localhost:9000}
+    media:
+      max-size-mb: 10
+
 server:
   port: 8081  # 8080 is taken by the React Vite dev server
   error:

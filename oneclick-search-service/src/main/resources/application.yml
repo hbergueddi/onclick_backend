@@ -1,8 +1,10 @@
 # ════════════════════════════════════════════════════════════════════
-# oneclick-search-service — Phase 2 §21 spec senior dev
+# oneclick-search-service — Phase 2 §21 + Phase 3.4 §X spec senior dev
 # ════════════════════════════════════════════════════════════════════
 # Port    : 8087
 # DB      : oneclick_enterprise (lecture restaurants + restaurant_search_documents)
+# ES      : http://localhost:9200 (Phase 3.4 — primary), tsvector fallback
+# Swagger : http://localhost:8087/swagger-ui.html
 # ════════════════════════════════════════════════════════════════════
 
 spring:
@@ -24,15 +26,34 @@ spring:
       ddl-auto: none
     open-in-view: false
 
+  # ─── Elasticsearch 7.17 (Phase 3.4) ───────────────────────────────────
+  elasticsearch:
+    uris: http://localhost:9200
+    connection-timeout: 5s
+    socket-timeout: 30s
+
+# ─── OneClick search settings ───────────────────────────────────────────
+app:
+  search:
+    elasticsearch:
+      # Si false → bypass ES, tsvector PostgreSQL seulement (fallback dev sans ES)
+      enabled: true
+    sync-interval-ms: 60000  # delta sync toutes les 60s
+
 server:
   port: 8087
 
 logging:
   level:
     com.onesley.oneclick.search: DEBUG
+    # Spring Data ES verbose en dev (à passer en INFO en prod)
+    org.springframework.data.elasticsearch.client.WIRE: INFO
 
 management:
   endpoints:
     web:
       exposure:
-        include: health, info, metrics
+        include: health, info, metrics, prometheus
+  endpoint:
+    health:
+      show-details: when-authorized

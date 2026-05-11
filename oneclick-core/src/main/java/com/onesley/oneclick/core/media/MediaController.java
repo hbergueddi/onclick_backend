@@ -5,8 +5,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.net.URI;
 import java.util.UUID;
@@ -19,9 +21,11 @@ import static com.onesley.oneclick.core.media.MediaDtos.*;
 public class MediaController {
 
     private final MediaService service;
+    private final MediaStorageService storage;
 
-    public MediaController(MediaService service) {
+    public MediaController(MediaService service, MediaStorageService storage) {
         this.service = service;
+        this.storage = storage;
     }
 
     // ─── Media ───────────────────────────────────────────────────────────────
@@ -40,6 +44,33 @@ public class MediaController {
 
     @PostMapping
     public ResponseEntity<MediaDto> createMedia(@Valid @RequestBody MediaCreateDto dto) {
+        MediaDto m = service.createMedia(dto);
+        return ResponseEntity.created(URI.create("/api/media/" + m.id())).body(m);
+    }
+
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(
+        summary = "Upload binaire vers MinIO/S3 + création row Media (Phase 3.5)",
+        description = """
+            Combine en 1 appel : (1) upload binaire dans bucket oneclick-media,
+            (2) INSERT row dans table media. Validation MIME + taille max (10 MB par défaut).
+            Path key : {entityType}/{entityId}/{uuid}-{filename}.
+            """
+    )
+    public ResponseEntity<MediaDto> uploadMedia(
+        @RequestParam("file") MultipartFile file,
+        @RequestParam("entityType") String entityType,
+        @RequestParam("entityId") UUID entityId,
+        @RequestParam(value = "mediaType", defaultValue = "image") String mediaType,
+        @RequestParam(value = "sortOrder", required = false) Integer sortOrder
+    ) {
+        String url = storage.upload(entityType, entityId, file);
+        MediaCreateDto dto = new MediaCreateDto(
+            entityType, entityId, url, mediaType,
+            file.getContentType(),
+            file.getSize(),
+            sortOrder
+        );
         MediaDto m = service.createMedia(dto);
         return ResponseEntity.created(URI.create("/api/media/" + m.id())).body(m);
     }

@@ -1,0 +1,34 @@
+# ════════════════════════════════════════════════════════════════════
+# OneClick Core — profile "secure" (Phase 3.6 §X spec senior)
+# ════════════════════════════════════════════════════════════════════
+# Active OAuth2 Resource Server + JWT validation.
+#
+# Usage :
+#   JWT_SECRET=$(./scripts/jwt.sh secret) \
+#   ./mvnw -pl oneclick-core spring-boot:run -Dspring-boot.run.profiles=enterprise,secure
+#
+# Test E2E :
+#   TOKEN=$(./scripts/jwt.sh sign <user_uuid>)
+#   curl -H "Authorization: Bearer $TOKEN" http://localhost:8083/api/users/me
+# ════════════════════════════════════════════════════════════════════
+
+spring:
+  config:
+    activate:
+      on-profile: secure
+
+# ─── Active la validation JWT sur toutes les routes ────────────────────
+app:
+  security:
+    oauth2:
+      enabled: true
+    # Secret HS256 — DOIT être défini via env var JWT_SECRET en prod
+    # Le default ci-dessous (test-only) permet le smoke test local.
+    jwt-secret: ${JWT_SECRET:onesley-oneclick-dev-secret-256-bits-minimum-length-required}
+
+logging:
+  level:
+    org.springframework.security: INFO
+    org.springframework.security.oauth2: TRACE
+    org.springframework.security.oauth2.jwt: TRACE
+    org.springframework.security.oauth2.server.resource: TRACE

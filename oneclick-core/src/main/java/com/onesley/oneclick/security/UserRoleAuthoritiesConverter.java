@@ -9,6 +9,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -42,10 +43,14 @@ public class UserRoleAuthoritiesConverter
     }
 
     @Override
+    @Transactional(readOnly = true)
     public AbstractAuthenticationToken convert(Jwt jwt) {
         UUID userId = parseUserId(jwt.getSubject());
         List<GrantedAuthority> authorities = List.of();
         if (userId != null) {
+            // @Transactional ouvre une session Hibernate qui couvre l'accès lazy à user.role
+            // → évite LazyInitializationException sur Role proxy quand le converter est
+            //   appelé depuis le SecurityFilterChain (hors @Transactional service).
             Optional<User> user = userRepository.findById(userId);
             if (user.isPresent() && user.get().getRole() != null) {
                 String code = user.get().getRole().getCode();
