@@ -13,6 +13,6 @@
  * </ul>
  */
 @ApplicationModule(type = org.springframework.modulith.ApplicationModule.Type.OPEN, id = "modules.loyalty", displayName = "modules/loyalty")
-package com.onesley.oneclick.modules.loyalty;
+package com.onesley.oneclick.loyalty;
 
 import org.springframework.modulith.ApplicationModule;

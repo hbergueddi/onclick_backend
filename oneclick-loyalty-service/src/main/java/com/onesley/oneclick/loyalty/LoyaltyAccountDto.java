@@ -1,4 +1,4 @@
-package com.onesley.oneclick.modules.loyalty;
+package com.onesley.oneclick.loyalty;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -8,15 +8,15 @@ public record LoyaltyAccountDto(
     UUID clientId,
     UUID restaurantId,
     UUID tierId,
-    String tierName,
     Integer balance,
     Instant createdAt
 ) {
     public static LoyaltyAccountDto from(LoyaltyAccount a) {
+        // tierName retiré : suppression de @ManyToOne Tier dans LoyaltyAccount
+        // (cross-aggregate ref). Si besoin du nom, query séparée par tierId.
         return new LoyaltyAccountDto(
             a.getId(), a.getClientId(), a.getRestaurantId(),
             a.getTierId(),
-            a.getTier() != null ? a.getTier().getName() : null,
             a.getBalance(),
             a.getCreatedAt()
         );

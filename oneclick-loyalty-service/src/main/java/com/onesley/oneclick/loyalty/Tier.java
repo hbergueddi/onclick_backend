@@ -1,13 +1,9 @@
-package com.onesley.oneclick.modules.loyalty;
+package com.onesley.oneclick.loyalty;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
-import com.onesley.oneclick.core.tenant.Tenant;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.DecimalMin;
@@ -33,12 +29,8 @@ public class Tier extends TimestampedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
-    @Column(name = "tenant_id", nullable = false, insertable = false, updatable = false)
+    @Column(name = "tenant_id", nullable = false)
     private UUID tenantId;
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "tenant_id", nullable = false)
-    private Tenant tenant;
 
     @NotBlank
     @Column(name = "name", nullable = false)
@@ -59,9 +51,9 @@ public class Tier extends TimestampedEntity {
         // JPA
     }
 
-    public Tier(UUID id, Tenant tenant, String name, Integer minPoints, BigDecimal bonusPercent) {
+    public Tier(UUID id, UUID tenantId, String name, Integer minPoints, BigDecimal bonusPercent) {
         this.id = id;
-        this.tenant = tenant;
+        this.tenantId = tenantId;
         this.name = name;
         this.minPoints = minPoints;
         this.bonusPercent = bonusPercent;
@@ -69,7 +61,6 @@ public class Tier extends TimestampedEntity {
 
     public UUID getId() { return id; }
     public UUID getTenantId() { return tenantId; }
-    public Tenant getTenant() { return tenant; }
     public String getName() { return name; }
     public Integer getMinPoints() { return minPoints; }
     public BigDecimal getBonusPercent() { return bonusPercent; }

@@ -1,13 +1,9 @@
-package com.onesley.oneclick.modules.loyalty;
+package com.onesley.oneclick.loyalty;
 
-import com.onesley.oneclick.core.identity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -43,12 +39,8 @@ public class LoyaltyTransaction {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
-    @Column(name = "account_id", nullable = false, insertable = false, updatable = false)
+    @Column(name = "account_id", nullable = false)
     private UUID accountId;
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "account_id", nullable = false)
-    private LoyaltyAccount account;
 
     @NotBlank
     @Pattern(regexp = "^(earn|spend|expire|gift|adjust)$")
@@ -76,17 +68,13 @@ public class LoyaltyTransaction {
     @Column(name = "created_by", updatable = false)
     private UUID createdById;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by", insertable = false, updatable = false)
-    private User createdBy;
-
     protected LoyaltyTransaction() {
         // JPA
     }
 
-    public LoyaltyTransaction(UUID id, LoyaltyAccount account, String type, Integer points, String reason) {
+    public LoyaltyTransaction(UUID id, UUID accountId, String type, Integer points, String reason) {
         this.id = id;
-        this.account = account;
+        this.accountId = accountId;
         this.type = type;
         this.points = points;
         this.reason = reason;
@@ -94,7 +82,6 @@ public class LoyaltyTransaction {
 
     public UUID getId() { return id; }
     public UUID getAccountId() { return accountId; }
-    public LoyaltyAccount getAccount() { return account; }
     public String getType() { return type; }
     public Integer getPoints() { return points; }
     public BigDecimal getAmount() { return amount; }
@@ -104,7 +91,6 @@ public class LoyaltyTransaction {
     public void setExpiresAt(Instant expiresAt) { this.expiresAt = expiresAt; }
     public Instant getCreatedAt() { return createdAt; }
     public UUID getCreatedById() { return createdById; }
-    public User getCreatedBy() { return createdBy; }
 
     @Override
     public boolean equals(Object o) {

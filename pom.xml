@@ -33,6 +33,7 @@
         <module>oneclick-shared</module>
         <module>oneclick-core</module>
         <module>oneclick-notification-service</module>
+        <module>oneclick-loyalty-service</module>
     </modules>
 
     <properties>

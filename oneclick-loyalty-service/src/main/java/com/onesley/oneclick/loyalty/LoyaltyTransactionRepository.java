@@ -1,4 +1,4 @@
-package com.onesley.oneclick.modules.loyalty;
+package com.onesley.oneclick.loyalty;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -16,5 +16,5 @@ import java.util.UUID;
 @Repository
 public interface LoyaltyTransactionRepository extends JpaRepository<LoyaltyTransaction, UUID>, JpaSpecificationExecutor<LoyaltyTransaction> {
     java.util.List<LoyaltyTransaction> findAllByAccountId(java.util.UUID accountId);
-    java.util.List<LoyaltyTransaction> findAllByCreatedBy(java.util.UUID createdBy);
+    java.util.List<LoyaltyTransaction> findAllByCreatedById(java.util.UUID createdBy);
 }

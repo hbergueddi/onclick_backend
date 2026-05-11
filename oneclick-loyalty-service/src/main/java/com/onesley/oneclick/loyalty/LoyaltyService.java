@@ -1,11 +1,7 @@
-package com.onesley.oneclick.modules.loyalty;
+package com.onesley.oneclick.loyalty;
 
-import com.onesley.oneclick.core.identity.User;
 import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.NotFoundException;
-import com.onesley.oneclick.modules.restaurant.Restaurant;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,9 +26,6 @@ public class LoyaltyService {
 
     private final LoyaltyAccountRepository accountRepository;
     private final LoyaltyTransactionRepository transactionRepository;
-
-    @PersistenceContext
-    private EntityManager entityManager;
 
     public LoyaltyService(LoyaltyAccountRepository accountRepository,
                           LoyaltyTransactionRepository transactionRepository) {
@@ -68,7 +61,7 @@ public class LoyaltyService {
         LoyaltyAccount account = findOrCreateInternal(dto.clientId(), dto.restaurantId());
 
         LoyaltyTransaction tx = new LoyaltyTransaction(
-            UUID.randomUUID(), account, "earn", dto.points(), dto.reason()
+            UUID.randomUUID(), account.getId(), "earn", dto.points(), dto.reason()
         );
         if (dto.amount() != null) tx.setAmount(dto.amount());
         transactionRepository.save(tx);
@@ -89,7 +82,7 @@ public class LoyaltyService {
             );
         }
         LoyaltyTransaction tx = new LoyaltyTransaction(
-            UUID.randomUUID(), account, "spend", -points, reason
+            UUID.randomUUID(), account.getId(), "spend", -points, reason
         );
         transactionRepository.save(tx);
         account.deductPoints(points);
@@ -106,9 +99,8 @@ public class LoyaltyService {
             .findFirst();
         if (existing.isPresent()) return existing.get();
 
-        User clientRef = entityManager.getReference(User.class, clientId);
-        Restaurant restoRef = entityManager.getReference(Restaurant.class, restaurantId);
-        LoyaltyAccount account = new LoyaltyAccount(UUID.randomUUID(), clientRef, restoRef);
+        // Pattern microservice : insert direct des UUID (pas de getReference cross-aggregate)
+        LoyaltyAccount account = new LoyaltyAccount(UUID.randomUUID(), clientId, restaurantId);
         return accountRepository.save(account);
     }
 }

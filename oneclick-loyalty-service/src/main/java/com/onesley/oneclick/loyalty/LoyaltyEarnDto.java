@@ -1,4 +1,4 @@
-package com.onesley.oneclick.modules.loyalty;
+package com.onesley.oneclick.loyalty;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;

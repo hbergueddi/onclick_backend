@@ -1,14 +1,9 @@
-package com.onesley.oneclick.modules.loyalty;
+package com.onesley.oneclick.loyalty;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
-import com.onesley.oneclick.core.identity.User;
-import com.onesley.oneclick.modules.restaurant.Restaurant;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.Min;
@@ -35,26 +30,14 @@ public class LoyaltyAccount extends TimestampedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
-    @Column(name = "client_id", nullable = false, insertable = false, updatable = false)
+    @Column(name = "client_id", nullable = false)
     private UUID clientId;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "client_id", nullable = false)
-    private User client;
-
-    @Column(name = "restaurant_id", nullable = false, insertable = false, updatable = false)
+    @Column(name = "restaurant_id", nullable = false)
     private UUID restaurantId;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "restaurant_id", nullable = false)
-    private Restaurant restaurant;
-
-    @Column(name = "tier_id", insertable = false, updatable = false)
+    @Column(name = "tier_id")
     private UUID tierId;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "tier_id")
-    private Tier tier;
 
     @Min(0)
     @Column(name = "balance", nullable = false)
@@ -64,20 +47,17 @@ public class LoyaltyAccount extends TimestampedEntity {
         // JPA
     }
 
-    public LoyaltyAccount(UUID id, User client, Restaurant restaurant) {
+    public LoyaltyAccount(UUID id, UUID clientId, UUID restaurantId) {
         this.id = id;
-        this.client = client;
-        this.restaurant = restaurant;
+        this.clientId = clientId;
+        this.restaurantId = restaurantId;
     }
 
     public UUID getId() { return id; }
     public UUID getClientId() { return clientId; }
-    public User getClient() { return client; }
     public UUID getRestaurantId() { return restaurantId; }
-    public Restaurant getRestaurant() { return restaurant; }
     public UUID getTierId() { return tierId; }
-    public Tier getTier() { return tier; }
-    public void setTier(Tier tier) { this.tier = tier; }
+    public void setTierId(UUID tierId) { this.tierId = tierId; }
     public Integer getBalance() { return balance; }
     public void setBalance(Integer balance) { this.balance = balance; }
     public void addPoints(int points) { this.balance = Math.max(0, this.balance + points); }

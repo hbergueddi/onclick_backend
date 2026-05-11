@@ -1,4 +1,4 @@
-package com.onesley.oneclick.modules.loyalty;
+package com.onesley.oneclick.loyalty;
 
 import java.math.BigDecimal;
 import java.time.Instant;

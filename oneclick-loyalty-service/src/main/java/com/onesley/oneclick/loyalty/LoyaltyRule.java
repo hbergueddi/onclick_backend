@@ -1,13 +1,9 @@
-package com.onesley.oneclick.modules.loyalty;
+package com.onesley.oneclick.loyalty;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
-import com.onesley.oneclick.modules.restaurant.Restaurant;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
@@ -32,12 +28,8 @@ public class LoyaltyRule extends TimestampedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
-    @Column(name = "restaurant_id", nullable = false, insertable = false, updatable = false)
+    @Column(name = "restaurant_id", nullable = false)
     private UUID restaurantId;
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "restaurant_id", nullable = false)
-    private Restaurant restaurant;
 
     @NotNull
     @DecimalMin("0.0000")
@@ -70,14 +62,13 @@ public class LoyaltyRule extends TimestampedEntity {
         // JPA
     }
 
-    public LoyaltyRule(UUID id, Restaurant restaurant) {
+    public LoyaltyRule(UUID id, UUID restaurantId) {
         this.id = id;
-        this.restaurant = restaurant;
+        this.restaurantId = restaurantId;
     }
 
     public UUID getId() { return id; }
     public UUID getRestaurantId() { return restaurantId; }
-    public Restaurant getRestaurant() { return restaurant; }
     public BigDecimal getConversionRate() { return conversionRate; }
     public void setConversionRate(BigDecimal conversionRate) { this.conversionRate = conversionRate; }
     public Integer getMaxPoints() { return maxPoints; }

@@ -1,13 +1,9 @@
-package com.onesley.oneclick.modules.loyalty;
+package com.onesley.oneclick.loyalty;
 
-import com.onesley.oneclick.core.identity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
@@ -38,12 +34,8 @@ public class Redemption {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
-    @Column(name = "account_id", nullable = false, insertable = false, updatable = false)
+    @Column(name = "account_id", nullable = false)
     private UUID accountId;
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "account_id", nullable = false)
-    private LoyaltyAccount account;
 
     @NotNull
     @Min(1)
@@ -66,31 +58,25 @@ public class Redemption {
     @Column(name = "created_by", updatable = false)
     private UUID createdById;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by", insertable = false, updatable = false)
-    private User createdBy;
-
     protected Redemption() {
         // JPA
     }
 
-    public Redemption(UUID id, LoyaltyAccount account, Integer pointsUsed, BigDecimal discountAmount) {
+    public Redemption(UUID id, UUID accountId, Integer pointsUsed, BigDecimal discountAmount) {
         this.id = id;
-        this.account = account;
+        this.accountId = accountId;
         this.pointsUsed = pointsUsed;
         this.discountAmount = discountAmount;
     }
 
     public UUID getId() { return id; }
     public UUID getAccountId() { return accountId; }
-    public LoyaltyAccount getAccount() { return account; }
     public Integer getPointsUsed() { return pointsUsed; }
     public BigDecimal getDiscountAmount() { return discountAmount; }
     public boolean isOtpValidated() { return otpValidated; }
     public void setOtpValidated(boolean otpValidated) { this.otpValidated = otpValidated; }
     public Instant getCreatedAt() { return createdAt; }
     public UUID getCreatedById() { return createdById; }
-    public User getCreatedBy() { return createdBy; }
 
     @Override
     public boolean equals(Object o) {
