@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.onesley</groupId>
+        <artifactId>oneclick-parent</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>oneclick-gateway</artifactId>
+    <packaging>jar</packaging>
+    <name>oneclick-gateway</name>
+    <description>API Gateway custom WebFlux — Phase 2.7 §21 spec senior dev.
+
+        Spring Cloud Gateway 2025.0 ne supporte pas Spring Boot 4 (ServerProperties
+        a déménagé). On utilise donc une implémentation custom basée sur Spring
+        WebFlux + WebClient pour le routage HTTP réactif (Netty, pas Tomcat).
+
+        Routes par path prefix :
+          /api/notifications/**  → :8084 (oneclick-notification-service)
+          /api/loyalty/**        → :8085 (oneclick-loyalty-service)
+          /api/payments/**       → :8086 (oneclick-payment-service)
+          /api/search/**         → :8087 (oneclick-search-service)
+          /api/**  (catchall)    → :8083 (oneclick-core, monolithe résiduel)
+
+        Port : 8080 (point d'entrée unique pour les clients).
+    </description>
+
+    <dependencies>
+        <!-- WebFlux : Netty + reactive HTTP -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
+        </dependency>
+
+        <!-- Actuator pour health -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- Tests -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>build-info</id>
+                        <goals>
+                            <goal>build-info</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

@@ -36,6 +36,7 @@
         <module>oneclick-loyalty-service</module>
         <module>oneclick-payment-service</module>
         <module>oneclick-search-service</module>
+        <module>oneclick-gateway</module>
     </modules>
 
     <properties>
