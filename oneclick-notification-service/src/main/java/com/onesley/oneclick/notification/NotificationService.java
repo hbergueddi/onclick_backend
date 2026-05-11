@@ -1,10 +1,6 @@
-package com.onesley.oneclick.core.notification;
+package com.onesley.oneclick.notification;
 
-import com.onesley.oneclick.core.identity.User;
-import com.onesley.oneclick.core.tenant.Tenant;
 import com.onesley.oneclick.exception.NotFoundException;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -15,8 +11,15 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.UUID;
 
-import static com.onesley.oneclick.core.notification.NotificationDtos.*;
+import static com.onesley.oneclick.notification.NotificationDtos.*;
 
+/**
+ * Service du microservice notification (Phase 2 §21 spec senior).
+ *
+ * <p>Pattern microservice : pas de référence aux entities {@code User}/{@code Tenant} de
+ * oneclick-core. Toutes les FK sont matérialisées en {@code UUID} en colonnes directes.
+ * Pas de {@code entityManager.getReference()}.
+ */
 @Service
 @Transactional(readOnly = true)
 public class NotificationService {
@@ -24,9 +27,6 @@ public class NotificationService {
     private final NotificationRepository notifRepo;
     private final NotificationCampaignRepository campaignRepo;
     private final DeviceTokenRepository tokenRepo;
-
-    @PersistenceContext
-    private EntityManager entityManager;
 
     public NotificationService(NotificationRepository notifRepo,
                                NotificationCampaignRepository campaignRepo,
@@ -52,9 +52,8 @@ public class NotificationService {
 
     @Transactional
     public NotificationDto create(NotificationCreateDto dto) {
-        User recipientRef = entityManager.getReference(User.class, dto.recipientUserId());
         String channel = dto.channel() != null ? dto.channel() : "inapp";
-        Notification n = new Notification(UUID.randomUUID(), recipientRef, dto.type(), channel,
+        Notification n = new Notification(UUID.randomUUID(), dto.recipientUserId(), dto.type(), channel,
             dto.title(), dto.body());
         if (dto.link() != null) n.setLink(dto.link());
         return NotificationDto.from(notifRepo.save(n));
@@ -76,8 +75,7 @@ public class NotificationService {
 
     @Transactional
     public CampaignDto createCampaign(CampaignCreateDto dto) {
-        Tenant tenantRef = entityManager.getReference(Tenant.class, dto.tenantId());
-        NotificationCampaign c = new NotificationCampaign(UUID.randomUUID(), tenantRef, dto.title(), dto.message());
+        NotificationCampaign c = new NotificationCampaign(UUID.randomUUID(), dto.tenantId(), dto.title(), dto.message());
         if (dto.targetSegment() != null) c.setTargetSegment(dto.targetSegment());
         if (dto.scheduledAt() != null) {
             c.setScheduledAt(dto.scheduledAt());
@@ -94,12 +92,10 @@ public class NotificationService {
 
     @Transactional
     public DeviceTokenDto registerToken(DeviceTokenCreateDto dto) {
-        // Upsert idempotent : si le token existe déjà, on le retourne tel quel.
         return tokenRepo.findByToken(dto.token())
             .map(DeviceTokenDto::from)
             .orElseGet(() -> {
-                User userRef = entityManager.getReference(User.class, dto.userId());
-                DeviceToken t = new DeviceToken(UUID.randomUUID(), userRef, dto.token(), dto.platform());
+                DeviceToken t = new DeviceToken(UUID.randomUUID(), dto.userId(), dto.token(), dto.platform());
                 if (dto.appId() != null) t.setAppId(dto.appId());
                 return DeviceTokenDto.from(tokenRepo.save(t));
             });

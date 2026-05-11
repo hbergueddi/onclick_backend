@@ -32,6 +32,7 @@
     <modules>
         <module>oneclick-shared</module>
         <module>oneclick-core</module>
+        <module>oneclick-notification-service</module>
     </modules>
 
     <properties>

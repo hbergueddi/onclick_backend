@@ -1,4 +1,4 @@
-package com.onesley.oneclick.core.notification;
+package com.onesley.oneclick.notification;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

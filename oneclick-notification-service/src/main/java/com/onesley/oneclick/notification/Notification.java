@@ -1,15 +1,12 @@
-package com.onesley.oneclick.core.notification;
+package com.onesley.oneclick.notification;
 
-import com.onesley.oneclick.core.identity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.proxy.HibernateProxy;
@@ -25,7 +22,10 @@ import java.util.UUID;
 
 /**
  * Notification unitaire — multi-canal (§7).
- * Type = catégorie métier, channel = canal de diffusion.
+ *
+ * <p>Pattern microservice : pas de FK JPA vers {@code User} (qui vit dans oneclick-core).
+ * Seulement {@code recipient_user_id : UUID}. Cohérence référentielle assurée par la DB
+ * (FK Postgres existe toujours) mais l'entité JPA reste isolée.
  */
 @Entity
 @Table(name = "notifications")
@@ -36,12 +36,9 @@ public class Notification {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
-    @Column(name = "recipient_user_id", nullable = false, insertable = false, updatable = false)
+    @NotNull
+    @Column(name = "recipient_user_id", nullable = false)
     private UUID recipientUserId;
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "recipient_user_id", nullable = false)
-    private User recipient;
 
     @NotBlank
     @Pattern(regexp = "^(reservation|loyalty|promotion|community|support|system|announcement)$")
@@ -79,9 +76,9 @@ public class Notification {
         // JPA
     }
 
-    public Notification(UUID id, User recipient, String type, String channel, String title, String body) {
+    public Notification(UUID id, UUID recipientUserId, String type, String channel, String title, String body) {
         this.id = id;
-        this.recipient = recipient;
+        this.recipientUserId = recipientUserId;
         this.type = type;
         this.channel = channel;
         this.title = title;
@@ -90,7 +87,6 @@ public class Notification {
 
     public UUID getId() { return id; }
     public UUID getRecipientUserId() { return recipientUserId; }
-    public User getRecipient() { return recipient; }
     public String getType() { return type; }
     public String getChannel() { return channel; }
     public String getTitle() { return title; }

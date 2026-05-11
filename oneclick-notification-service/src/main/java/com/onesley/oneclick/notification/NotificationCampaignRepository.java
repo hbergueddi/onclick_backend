@@ -1,4 +1,4 @@
-package com.onesley.oneclick.core.notification;
+package com.onesley.oneclick.notification;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -16,5 +16,5 @@ import java.util.UUID;
 @Repository
 public interface NotificationCampaignRepository extends JpaRepository<NotificationCampaign, UUID>, JpaSpecificationExecutor<NotificationCampaign> {
     java.util.List<NotificationCampaign> findAllByTenantId(java.util.UUID tenantId);
-    java.util.List<NotificationCampaign> findAllByCreatedBy(java.util.UUID createdBy);
+    java.util.List<NotificationCampaign> findAllByCreatedById(java.util.UUID createdById);
 }

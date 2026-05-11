@@ -1,16 +1,12 @@
-package com.onesley.oneclick.core.notification;
+package com.onesley.oneclick.notification;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
-import com.onesley.oneclick.core.identity.User;
-import com.onesley.oneclick.core.tenant.Tenant;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import org.hibernate.proxy.HibernateProxy;
 
@@ -20,6 +16,9 @@ import java.util.UUID;
 
 /**
  * Campagne marketing programmée — envoi batch à un segment de users.
+ *
+ * <p>Microservice pattern : pas de FK JPA vers Tenant/User (qui vivent dans oneclick-core).
+ * Seulement les UUID. Cohérence référentielle assurée par la DB (FK Postgres existent).
  */
 @Entity
 @Table(name = "notification_campaigns")
@@ -29,12 +28,9 @@ public class NotificationCampaign extends TimestampedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
-    @Column(name = "tenant_id", nullable = false, insertable = false, updatable = false)
+    @NotNull
+    @Column(name = "tenant_id", nullable = false)
     private UUID tenantId;
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "tenant_id", nullable = false)
-    private Tenant tenant;
 
     @NotBlank
     @Column(name = "title", nullable = false)
@@ -57,27 +53,22 @@ public class NotificationCampaign extends TimestampedEntity {
     @Column(name = "status", nullable = false)
     private String status = "draft";
 
-    @Column(name = "created_by", insertable = false, updatable = false)
+    @Column(name = "created_by")
     private UUID createdById;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by")
-    private User createdBy;
 
     protected NotificationCampaign() {
         // JPA
     }
 
-    public NotificationCampaign(UUID id, Tenant tenant, String title, String message) {
+    public NotificationCampaign(UUID id, UUID tenantId, String title, String message) {
         this.id = id;
-        this.tenant = tenant;
+        this.tenantId = tenantId;
         this.title = title;
         this.message = message;
     }
 
     public UUID getId() { return id; }
     public UUID getTenantId() { return tenantId; }
-    public Tenant getTenant() { return tenant; }
     public String getTitle() { return title; }
     public String getMessage() { return message; }
     public String getTargetSegment() { return targetSegment; }
@@ -89,7 +80,7 @@ public class NotificationCampaign extends TimestampedEntity {
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
     public UUID getCreatedById() { return createdById; }
-    public User getCreatedBy() { return createdBy; }
+    public void setCreatedById(UUID createdById) { this.createdById = createdById; }
 
     @Override
     public boolean equals(Object o) {

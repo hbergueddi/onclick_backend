@@ -1,4 +1,4 @@
-package com.onesley.oneclick.core.notification;
+package com.onesley.oneclick.notification;
 
 import com.onesley.oneclick.shared.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,7 +12,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 
-import static com.onesley.oneclick.core.notification.NotificationDtos.*;
+import static com.onesley.oneclick.notification.NotificationDtos.*;
 
 @RestController
 @RequestMapping("/api/notifications")

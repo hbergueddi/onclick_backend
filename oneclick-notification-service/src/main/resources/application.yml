@@ -1,0 +1,68 @@
+# ════════════════════════════════════════════════════════════════════
+# oneclick-notification-service — Phase 2 §21 spec senior dev
+# ════════════════════════════════════════════════════════════════════
+# Port    : 8084
+# DB      : oneclick_enterprise (partagée, tables notifications/*/device_tokens)
+# Kafka   : localhost:9092 (consumer group "oneclick-notification")
+# Swagger : http://localhost:8084/swagger-ui.html
+# ════════════════════════════════════════════════════════════════════
+
+spring:
+  application:
+    name: oneclick-notification-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/oneclick_enterprise
+    username: oneclick_app
+    password: OneclickLocal2026
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+      connection-timeout: 5000
+
+  jpa:
+    hibernate:
+      # ddl-auto=none : le schema est géré par oneclick-core/Flyway. Ce service
+      # ne fait que lire/écrire les tables qu'il possède.
+      ddl-auto: none
+    properties:
+      hibernate:
+        format_sql: true
+    show-sql: false
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: oneclick-notification
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.onesley.oneclick.shared.events"
+        spring.json.use.type.headers: true
+    listener:
+      ack-mode: record
+
+  modulith:
+    events:
+      # Schema event_publication créé par oneclick-core/Flyway V8 — pas par notif-service
+      jdbc-schema-initialization:
+        enabled: false
+
+server:
+  port: 8084
+
+logging:
+  level:
+    com.onesley.oneclick.notification: DEBUG
+    org.springframework.kafka: INFO
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
