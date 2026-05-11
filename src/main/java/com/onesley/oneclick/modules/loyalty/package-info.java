@@ -12,8 +12,7 @@
  *   <li>{@code tiers} — niveaux (Ruby, Sapphire, Emeraude...) par tenant</li>
  * </ul>
  */
-@ApplicationModule(displayName = "modules/loyalty",
-    allowedDependencies = {"core/identity", "core/tenant", "modules/restaurant"})
+@ApplicationModule(type = org.springframework.modulith.ApplicationModule.Type.OPEN, id = "modules.loyalty", displayName = "modules/loyalty")
 package com.onesley.oneclick.modules.loyalty;
 
 import org.springframework.modulith.ApplicationModule;

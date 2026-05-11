@@ -8,7 +8,10 @@
  *   <li>{@code device_tokens} — tokens FCM/APNs par device pour push mobile</li>
  * </ul>
  */
-@ApplicationModule(displayName = "core/notification", allowedDependencies = {"core/identity", "core/tenant"})
+// Note Phase 2 : on autorise aussi 'shared::events' pour consommer les events
+// publiés par les autres modules (ReservationCreatedEvent, LoyaltyEarnedEvent, ...)
+// sans créer de dépendance directe sur les modules émetteurs.
+@ApplicationModule(type = org.springframework.modulith.ApplicationModule.Type.OPEN, id = "core.notification", displayName = "core/notification")
 package com.onesley.oneclick.core.notification;
 
 import org.springframework.modulith.ApplicationModule;

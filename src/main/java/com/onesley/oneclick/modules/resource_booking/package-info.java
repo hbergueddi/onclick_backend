@@ -4,8 +4,7 @@
  * <p>Modèle générique vs legacy PCC-specific (bookable_resources + resource_bookings +
  * loyalty_punch_cards). Couvre padel, spa, golf, coiffeur, gym, etc.
  */
-@ApplicationModule(displayName = "modules/resource_booking",
-    allowedDependencies = {"core/identity", "core/tenant"})
+@ApplicationModule(type = org.springframework.modulith.ApplicationModule.Type.OPEN, id = "modules.resource_booking", displayName = "modules/resource_booking")
 package com.onesley.oneclick.modules.resource_booking;
 
 import org.springframework.modulith.ApplicationModule;

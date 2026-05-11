@@ -14,7 +14,7 @@
  * <p>Aucun. Les autres modules communiquent par events (UserCreatedEvent, etc.)
  * et peuvent référencer {@code user.id} (UUID) mais pas l'entité {@link com.onesley.oneclick.core.identity.User}.
  */
-@ApplicationModule(displayName = "core/identity")
+@ApplicationModule(type = org.springframework.modulith.ApplicationModule.Type.OPEN, id = "core.identity", displayName = "core/identity")
 package com.onesley.oneclick.core.identity;
 
 import org.springframework.modulith.ApplicationModule;

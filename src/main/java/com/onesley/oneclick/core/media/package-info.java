@@ -6,7 +6,7 @@
  * spécifiques héritées de Supabase (restaurant_media, avatars, community_covers,
  * ticket-photos, etc.).
  */
-@ApplicationModule(displayName = "core/media", allowedDependencies = "core/identity")
+@ApplicationModule(type = org.springframework.modulith.ApplicationModule.Type.OPEN, id = "core.media", displayName = "core/media")
 package com.onesley.oneclick.core.media;
 
 import org.springframework.modulith.ApplicationModule;

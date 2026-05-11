@@ -7,8 +7,10 @@ import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.modules.restaurant.Restaurant;
 import com.onesley.oneclick.modules.restaurant.MealService;
 import com.onesley.oneclick.modules.restaurant.RestaurantTable;
+import com.onesley.oneclick.shared.events.ReservationCreatedEvent;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -33,14 +35,17 @@ public class ReservationService {
 
     private final ReservationRepository repository;
     private final ReservationStatusHistoryRepository historyRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @PersistenceContext
     private EntityManager entityManager;
 
     public ReservationService(ReservationRepository repository,
-                              ReservationStatusHistoryRepository historyRepository) {
+                              ReservationStatusHistoryRepository historyRepository,
+                              ApplicationEventPublisher eventPublisher) {
         this.repository = repository;
         this.historyRepository = historyRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     public Page<ReservationDto> findAll(UUID clientId, UUID restaurantId, String status,
@@ -83,6 +88,24 @@ public class ReservationService {
             UUID.randomUUID(), saved, null, "pending", clientRef
         );
         historyRepository.save(hist);
+
+        // ─── Publish event Spring Modulith (Phase 2 spec §21) ────────────
+        // Listeners @ApplicationModuleListener consomment cet event en async
+        // après commit. L'event est aussi externalisé vers Kafka pour
+        // consommation cross-service (notification-service, etc.)
+        //
+        // NB : on prend les UUID des DTOs (jamais NULL) plutôt que de
+        // saved.getClientId() (NULL côté Hibernate car FK column avec
+        // insertable=false). Pattern récurrent dans le codebase.
+        eventPublisher.publishEvent(new ReservationCreatedEvent(
+            saved.getId(),
+            dto.clientId(),
+            dto.restaurantId(),
+            dto.tenantId(),
+            dto.reservationAt(),
+            dto.guestCount(),
+            saved.getStatus()
+        ));
 
         return ReservationDto.from(saved);
     }

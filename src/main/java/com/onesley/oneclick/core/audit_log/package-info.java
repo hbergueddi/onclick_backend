@@ -9,7 +9,7 @@
  *   <li>{@code job_executions} — statut des cron jobs / batch</li>
  * </ul>
  */
-@ApplicationModule(displayName = "core/audit_log", allowedDependencies = {"core/identity", "core/tenant"})
+@ApplicationModule(type = org.springframework.modulith.ApplicationModule.Type.OPEN, id = "core.audit_log", displayName = "core/audit_log")
 package com.onesley.oneclick.core.audit_log;
 
 import org.springframework.modulith.ApplicationModule;

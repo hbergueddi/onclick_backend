@@ -13,8 +13,7 @@
  * <p>{@code pending → confirmed | refused | counter_proposed | cancelled}, puis
  * {@code confirmed → honored | no_show | cancelled}.
  */
-@ApplicationModule(displayName = "modules/reservation",
-    allowedDependencies = {"core/identity", "core/tenant", "modules/restaurant"})
+@ApplicationModule(type = org.springframework.modulith.ApplicationModule.Type.OPEN, id = "modules.reservation", displayName = "modules/reservation")
 package com.onesley.oneclick.modules.reservation;
 
 import org.springframework.modulith.ApplicationModule;

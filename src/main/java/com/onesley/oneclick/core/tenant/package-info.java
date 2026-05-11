@@ -9,7 +9,7 @@
  *   <li>{@code company_settings} — config légale Maroc (ICE, RIB, TVA) (1-1 avec tenant)</li>
  * </ul>
  */
-@ApplicationModule(displayName = "core/tenant")
+@ApplicationModule(type = org.springframework.modulith.ApplicationModule.Type.OPEN, id = "core.tenant", displayName = "core/tenant")
 package com.onesley.oneclick.core.tenant;
 
 import org.springframework.modulith.ApplicationModule;

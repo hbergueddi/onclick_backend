@@ -193,6 +193,22 @@
             <groupId>org.springframework.modulith</groupId>
             <artifactId>spring-modulith-starter-core</artifactId>
         </dependency>
+        <!-- JPA event store — table event_publication créée auto par Modulith
+             Permet l'event externalisation + retry après crash + audit des publications -->
+        <dependency>
+            <groupId>org.springframework.modulith</groupId>
+            <artifactId>spring-modulith-starter-jpa</artifactId>
+        </dependency>
+        <!-- Externalisation des events Modulith vers Kafka (Phase 2 §21 spec senior) -->
+        <dependency>
+            <groupId>org.springframework.modulith</groupId>
+            <artifactId>spring-modulith-events-kafka</artifactId>
+        </dependency>
+        <!-- Kafka producer/consumer Spring (utilisé par events-kafka) -->
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
         <!-- Test : verifyModules() pour vérifier l'isolation au build -->
         <dependency>
             <groupId>org.springframework.modulith</groupId>
