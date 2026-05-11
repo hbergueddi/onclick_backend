@@ -1,4 +1,4 @@
-package com.onesley.oneclick.modules.payment;
+package com.onesley.oneclick.payment;
 
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;

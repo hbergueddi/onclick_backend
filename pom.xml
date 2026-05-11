@@ -34,6 +34,8 @@
         <module>oneclick-core</module>
         <module>oneclick-notification-service</module>
         <module>oneclick-loyalty-service</module>
+        <module>oneclick-payment-service</module>
+        <module>oneclick-search-service</module>
     </modules>
 
     <properties>

@@ -24,14 +24,7 @@ public class AnalyticsController {
     public AnalyticsController(AnalyticsService service) {
         this.service = service;
     }
-
-    // ─── Search documents ────────────────────────────────────────────────────
-
-    @GetMapping("/search-docs/{restaurantId}")
-    @Operation(summary = "Méta du search document tsvector (read-only)")
-    public SearchDocDto findSearchDoc(@PathVariable UUID restaurantId) {
-        return service.findSearchDoc(restaurantId);
-    }
+    
 
     // ─── API clients ─────────────────────────────────────────────────────────
 

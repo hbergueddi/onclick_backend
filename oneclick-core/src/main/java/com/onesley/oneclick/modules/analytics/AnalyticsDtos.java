@@ -11,14 +11,7 @@ import java.util.UUID;
 public final class AnalyticsDtos {
 
     private AnalyticsDtos() {}
-
-    // ─── Search document ─────────────────────────────────────────────────────
-
-    public record SearchDocDto(UUID restaurantId, Instant indexedAt) {
-        public static SearchDocDto from(RestaurantSearchDocument d) {
-            return new SearchDocDto(d.getRestaurantId(), d.getIndexedAt());
-        }
-    }
+    
 
     // ─── ApiClient ───────────────────────────────────────────────────────────
 

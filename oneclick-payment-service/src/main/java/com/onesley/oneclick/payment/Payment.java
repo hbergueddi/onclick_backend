@@ -1,7 +1,6 @@
-package com.onesley.oneclick.modules.payment;
+package com.onesley.oneclick.payment;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
-import com.onesley.oneclick.core.identity.User;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 
@@ -15,10 +14,8 @@ import java.util.UUID;
 public class Payment extends TimestampedEntity {
 
     @Id @Column(name = "id", nullable = false, updatable = false) private UUID id;
-    @Column(name = "user_id", nullable = false, insertable = false, updatable = false) private UUID userId;
-    @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "user_id", nullable = false) private User user;
-    @Column(name = "payment_method_id", insertable = false, updatable = false) private UUID paymentMethodId;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "payment_method_id") private PaymentMethod paymentMethod;
+    @Column(name = "user_id", nullable = false) private UUID userId;
+    @Column(name = "payment_method_id") private UUID paymentMethodId;
     @NotNull @DecimalMin("0.01") @Column(name = "amount", nullable = false, precision = 12, scale = 2) private BigDecimal amount;
     @NotBlank @Column(name = "currency", nullable = false) private String currency = "MAD";
     @Pattern(regexp = "^(pending|processing|succeeded|failed|cancelled|refunded)$")
@@ -30,14 +27,12 @@ public class Payment extends TimestampedEntity {
     @Column(name = "completed_at") private Instant completedAt;
 
     protected Payment() {}
-    public Payment(UUID id, User user, BigDecimal amount) { this.id = id; this.user = user; this.amount = amount; }
+    public Payment(UUID id, UUID userId, BigDecimal amount) { this.id = id; this.userId = userId; this.amount = amount; }
 
     public UUID getId() { return id; }
     public UUID getUserId() { return userId; }
-    public User getUser() { return user; }
     public UUID getPaymentMethodId() { return paymentMethodId; }
-    public PaymentMethod getPaymentMethod() { return paymentMethod; }
-    public void setPaymentMethod(PaymentMethod paymentMethod) { this.paymentMethod = paymentMethod; }
+    public void setPaymentMethodId(UUID paymentMethodId) { this.paymentMethodId = paymentMethodId; }
     public BigDecimal getAmount() { return amount; }
     public String getCurrency() { return currency; }
     public void setCurrency(String currency) { this.currency = currency; }

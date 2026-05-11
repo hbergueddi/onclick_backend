@@ -19,8 +19,6 @@ import static com.onesley.oneclick.modules.analytics.AnalyticsDtos.*;
 @Service
 @Transactional(readOnly = true)
 public class AnalyticsService {
-
-    private final RestaurantSearchDocumentRepository searchDocRepo;
     private final ApiClientRepository apiClientRepo;
     private final ApiKeyRepository apiKeyRepo;
     private final WebhookRepository webhookRepo;
@@ -29,24 +27,16 @@ public class AnalyticsService {
     @PersistenceContext
     private EntityManager entityManager;
 
-    public AnalyticsService(RestaurantSearchDocumentRepository searchDocRepo,
-                            ApiClientRepository apiClientRepo,
+    public AnalyticsService(ApiClientRepository apiClientRepo,
                             ApiKeyRepository apiKeyRepo,
                             WebhookRepository webhookRepo,
                             WebhookDeliveryRepository deliveryRepo) {
-        this.searchDocRepo = searchDocRepo;
         this.apiClientRepo = apiClientRepo;
         this.apiKeyRepo = apiKeyRepo;
         this.webhookRepo = webhookRepo;
         this.deliveryRepo = deliveryRepo;
     }
-
-    // ─── Search documents (read-only — gérés par trigger DB) ─────────────────
-
-    public SearchDocDto findSearchDoc(UUID restaurantId) {
-        return SearchDocDto.from(searchDocRepo.findById(restaurantId)
-            .orElseThrow(() -> new NotFoundException("RestaurantSearchDocument", restaurantId)));
-    }
+    
 
     // ─── API clients ─────────────────────────────────────────────────────────
 

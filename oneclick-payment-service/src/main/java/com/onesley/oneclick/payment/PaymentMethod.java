@@ -1,7 +1,6 @@
-package com.onesley.oneclick.modules.payment;
+package com.onesley.oneclick.payment;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
-import com.onesley.oneclick.core.identity.User;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Pattern;
 
@@ -15,8 +14,7 @@ import java.util.UUID;
 public class PaymentMethod extends TimestampedEntity {
 
     @Id @Column(name = "id", nullable = false, updatable = false) private UUID id;
-    @Column(name = "user_id", nullable = false, insertable = false, updatable = false) private UUID userId;
-    @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "user_id", nullable = false) private User user;
+    @Column(name = "user_id", nullable = false) private UUID userId;
     @Pattern(regexp = "^(card|bank_account|wallet|cash_on_site)$") @Column(name = "type", nullable = false) private String type;
     @Column(name = "last4") private String last4;
     @Column(name = "provider") private String provider;
@@ -26,11 +24,10 @@ public class PaymentMethod extends TimestampedEntity {
     @Column(name = "deleted_at") private Instant deletedAt;
 
     protected PaymentMethod() {}
-    public PaymentMethod(UUID id, User user, String type) { this.id = id; this.user = user; this.type = type; }
+    public PaymentMethod(UUID id, UUID userId, String type) { this.id = id; this.userId = userId; this.type = type; }
 
     public UUID getId() { return id; }
     public UUID getUserId() { return userId; }
-    public User getUser() { return user; }
     public String getType() { return type; }
     public String getLast4() { return last4; }
     public void setLast4(String last4) { this.last4 = last4; }

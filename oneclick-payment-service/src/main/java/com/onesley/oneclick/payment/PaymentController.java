@@ -1,4 +1,4 @@
-package com.onesley.oneclick.modules.payment;
+package com.onesley.oneclick.payment;
 
 import com.onesley.oneclick.shared.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,7 +12,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 
-import static com.onesley.oneclick.modules.payment.PaymentDtos.*;
+import static com.onesley.oneclick.payment.PaymentDtos.*;
 
 @RestController
 @RequestMapping("/api/payments")

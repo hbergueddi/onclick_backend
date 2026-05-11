@@ -1,0 +1,38 @@
+# ════════════════════════════════════════════════════════════════════
+# oneclick-search-service — Phase 2 §21 spec senior dev
+# ════════════════════════════════════════════════════════════════════
+# Port    : 8087
+# DB      : oneclick_enterprise (lecture restaurants + restaurant_search_documents)
+# ════════════════════════════════════════════════════════════════════
+
+spring:
+  application:
+    name: oneclick-search-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/oneclick_enterprise
+    username: oneclick_app
+    password: OneclickLocal2026
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+      connection-timeout: 5000
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+
+server:
+  port: 8087
+
+logging:
+  level:
+    com.onesley.oneclick.search: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics

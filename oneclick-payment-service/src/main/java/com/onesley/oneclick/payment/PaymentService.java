@@ -1,9 +1,6 @@
-package com.onesley.oneclick.modules.payment;
+package com.onesley.oneclick.payment;
 
-import com.onesley.oneclick.core.identity.User;
 import com.onesley.oneclick.exception.NotFoundException;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -14,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.UUID;
 
-import static com.onesley.oneclick.modules.payment.PaymentDtos.*;
+import static com.onesley.oneclick.payment.PaymentDtos.*;
 
 @Service
 @Transactional(readOnly = true)
@@ -24,9 +21,6 @@ public class PaymentService {
     private final PaymentRepository paymentRepo;
     private final RefundRepository refundRepo;
     private final PaymentTransactionRepository txRepo;
-
-    @PersistenceContext
-    private EntityManager entityManager;
 
     public PaymentService(PaymentMethodRepository methodRepo,
                           PaymentRepository paymentRepo,
@@ -49,8 +43,7 @@ public class PaymentService {
 
     @Transactional
     public PaymentMethodDto createMethod(PaymentMethodCreateDto dto) {
-        User userRef = entityManager.getReference(User.class, dto.userId());
-        PaymentMethod m = new PaymentMethod(UUID.randomUUID(), userRef, dto.type());
+                PaymentMethod m = new PaymentMethod(UUID.randomUUID(), dto.userId(), dto.type());
         if (dto.last4() != null)         m.setLast4(dto.last4());
         if (dto.provider() != null)      m.setProvider(dto.provider());
         if (dto.providerToken() != null) m.setProviderToken(dto.providerToken());
@@ -85,10 +78,9 @@ public class PaymentService {
 
     @Transactional
     public PaymentDto createPayment(PaymentCreateDto dto) {
-        User userRef = entityManager.getReference(User.class, dto.userId());
-        Payment p = new Payment(UUID.randomUUID(), userRef, dto.amount());
+                Payment p = new Payment(UUID.randomUUID(), dto.userId(), dto.amount());
         if (dto.paymentMethodId() != null) {
-            p.setPaymentMethod(entityManager.getReference(PaymentMethod.class, dto.paymentMethodId()));
+            p.setPaymentMethodId(dto.paymentMethodId());
         }
         if (dto.currency() != null)       p.setCurrency(dto.currency());
         if (dto.provider() != null)       p.setProvider(dto.provider());
@@ -118,8 +110,8 @@ public class PaymentService {
 
     @Transactional
     public RefundDto createRefund(RefundCreateDto dto) {
-        Payment paymentRef = entityManager.getReference(Payment.class, dto.paymentId());
-        Refund r = new Refund(UUID.randomUUID(), paymentRef, dto.amount());
+        
+        Refund r = new Refund(UUID.randomUUID(), dto.paymentId(), dto.amount());
         if (dto.reason() != null) r.setReason(dto.reason());
         return RefundDto.from(refundRepo.save(r));
     }
@@ -145,8 +137,8 @@ public class PaymentService {
 
     @Transactional
     public TransactionDto recordTx(TransactionCreateDto dto) {
-        Payment paymentRef = entityManager.getReference(Payment.class, dto.paymentId());
-        PaymentTransaction t = new PaymentTransaction(UUID.randomUUID(), paymentRef,
+        
+        PaymentTransaction t = new PaymentTransaction(UUID.randomUUID(), dto.paymentId(),
             dto.eventType(), dto.providerResponse());
         return TransactionDto.from(txRepo.save(t));
     }

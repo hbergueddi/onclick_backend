@@ -1,0 +1,45 @@
+# ════════════════════════════════════════════════════════════════════
+# oneclick-payment-service — Phase 2 §21 spec senior dev
+# ════════════════════════════════════════════════════════════════════
+# Port    : 8086
+# DB      : oneclick_enterprise (tables payments/methods/refunds/transactions)
+# Swagger : http://localhost:8086/swagger-ui.html
+# ════════════════════════════════════════════════════════════════════
+
+spring:
+  application:
+    name: oneclick-payment-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/oneclick_enterprise
+    username: oneclick_app
+    password: OneclickLocal2026
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+      connection-timeout: 5000
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        format_sql: true
+    show-sql: false
+
+server:
+  port: 8086
+
+logging:
+  level:
+    com.onesley.oneclick.payment: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
