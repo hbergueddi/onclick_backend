@@ -1,7 +1,10 @@
 package com.onesley.oneclick.core.tenant;
 
+import com.onesley.oneclick.cache.CacheConfig;
 import com.onesley.oneclick.exception.ConflictException;
 import com.onesley.oneclick.exception.NotFoundException;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +35,7 @@ public class TenantService {
         return TenantDto.from(t);
     }
 
+    @Cacheable(value = CacheConfig.CACHE_TENANTS_BY_SLUG, key = "#slug")
     public TenantDto findBySlug(String slug) {
         Tenant t = repository.findBySlug(slug)
             .filter(x -> x.getDeletedAt() == null)
@@ -40,6 +44,7 @@ public class TenantService {
     }
 
     @Transactional
+    @CacheEvict(value = CacheConfig.CACHE_TENANTS_BY_SLUG, allEntries = true)
     public TenantDto create(TenantCreateDto dto) {
         if (repository.findBySlug(dto.slug()).isPresent()) {
             throw new ConflictException("Slug déjà utilisé : " + dto.slug());

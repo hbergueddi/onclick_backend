@@ -1,9 +1,12 @@
 package com.onesley.oneclick.modules.restaurant;
 
+import com.onesley.oneclick.cache.CacheConfig;
 import com.onesley.oneclick.core.tenant.Tenant;
 import com.onesley.oneclick.exception.NotFoundException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -46,6 +49,7 @@ public class RestaurantCatalogService {
         return repository.findAll(spec, PageRequest.of(page, size, Sort.by("name"))).map(RestaurantDto::from);
     }
 
+    @Cacheable(value = CacheConfig.CACHE_RESTAURANTS, key = "#id")
     public RestaurantDto findById(UUID id) {
         Restaurant r = repository.findById(id)
             .filter(x -> x.getDeletedAt() == null)
@@ -54,6 +58,7 @@ public class RestaurantCatalogService {
     }
 
     @Transactional
+    @CacheEvict(value = CacheConfig.CACHE_RESTAURANTS, allEntries = true)
     public RestaurantDto create(RestaurantCreateDto dto) {
         Tenant tenantRef = entityManager.getReference(Tenant.class, dto.tenantId());
         Restaurant r = new Restaurant(UUID.randomUUID(), tenantRef, dto.name(), dto.city());
@@ -66,6 +71,7 @@ public class RestaurantCatalogService {
     }
 
     @Transactional
+    @CacheEvict(value = CacheConfig.CACHE_RESTAURANTS, key = "#id")
     public void softDelete(UUID id) {
         Restaurant r = repository.findById(id)
             .filter(x -> x.getDeletedAt() == null)

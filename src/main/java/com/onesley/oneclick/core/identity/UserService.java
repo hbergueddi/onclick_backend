@@ -1,10 +1,13 @@
 package com.onesley.oneclick.core.identity;
 
+import com.onesley.oneclick.cache.CacheConfig;
 import com.onesley.oneclick.core.tenant.Tenant;
 import com.onesley.oneclick.exception.ConflictException;
 import com.onesley.oneclick.exception.NotFoundException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -43,6 +46,7 @@ public class UserService {
         return UserDto.from(user);
     }
 
+    @Cacheable(value = CacheConfig.CACHE_USERS_BY_EMAIL, key = "#email.toLowerCase()")
     public UserDto findByEmail(String email) {
         User user = repository.findByEmailIgnoreCase(email)
             .filter(u -> u.getDeletedAt() == null)
@@ -82,6 +86,7 @@ public class UserService {
     }
 
     @Transactional
+    @CacheEvict(value = CacheConfig.CACHE_USERS_BY_EMAIL, allEntries = true)
     public UserDto patch(UUID id, UserUpdateDto dto) {
         User user = repository.findById(id)
             .filter(u -> u.getDeletedAt() == null)
@@ -101,6 +106,7 @@ public class UserService {
     }
 
     @Transactional
+    @CacheEvict(value = CacheConfig.CACHE_USERS_BY_EMAIL, allEntries = true)
     public void softDelete(UUID id) {
         User user = repository.findById(id)
             .filter(u -> u.getDeletedAt() == null)
