@@ -28,6 +28,24 @@ spring:
         format_sql: true
     show-sql: false
 
+  # ─── Kafka producer (publish events) ─────────────────────────────────
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.ByteArraySerializer
+      properties:
+        enable.idempotence: true
+        acks: all
+
+  # ─── Spring Modulith — event externalisation ─────────────────────────
+  modulith:
+    events:
+      jdbc-schema-initialization:
+        enabled: false  # Table event_publication créée par core/Flyway V8
+      externalization:
+        enabled: true
+
 server:
   port: 8085
 

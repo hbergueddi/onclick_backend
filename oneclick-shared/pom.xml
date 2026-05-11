@@ -17,6 +17,13 @@
         n'importe quel microservice sans tirer d'autoconfig lourd.</description>
 
     <dependencies>
+        <!-- Spring Modulith core : @ApplicationModule pour marquer le module shared
+             comme OPEN (visible depuis tous les modules consommateurs sans
+             déclaration explicite dans allowedDependencies) -->
+        <dependency>
+            <groupId>org.springframework.modulith</groupId>
+            <artifactId>spring-modulith-core</artifactId>
+        </dependency>
         <!-- @Externalized annotation pour les events Kafka -->
         <dependency>
             <groupId>org.springframework.modulith</groupId>

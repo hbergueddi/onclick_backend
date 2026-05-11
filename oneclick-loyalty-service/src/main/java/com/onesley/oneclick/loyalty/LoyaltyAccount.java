@@ -39,6 +39,11 @@ public class LoyaltyAccount extends TimestampedEntity {
     @Column(name = "tier_id")
     private UUID tierId;
 
+    // tenant_id rempli automatiquement par trigger DB V10 (depuis restaurants.tenant_id)
+    // → read-only côté Hibernate
+    @Column(name = "tenant_id", insertable = false, updatable = false)
+    private UUID tenantId;
+
     @Min(0)
     @Column(name = "balance", nullable = false)
     private Integer balance = 0;
@@ -58,6 +63,7 @@ public class LoyaltyAccount extends TimestampedEntity {
     public UUID getRestaurantId() { return restaurantId; }
     public UUID getTierId() { return tierId; }
     public void setTierId(UUID tierId) { this.tierId = tierId; }
+    public UUID getTenantId() { return tenantId; }
     public Integer getBalance() { return balance; }
     public void setBalance(Integer balance) { this.balance = balance; }
     public void addPoints(int points) { this.balance = Math.max(0, this.balance + points); }

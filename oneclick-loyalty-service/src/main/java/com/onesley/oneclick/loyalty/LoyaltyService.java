@@ -2,8 +2,15 @@ package com.onesley.oneclick.loyalty;
 
 import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.NotFoundException;
+import com.onesley.oneclick.shared.events.LoyaltyEarnedEvent;
+import com.onesley.oneclick.shared.events.LoyaltyRedeemedEvent;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
 
 import java.util.List;
 import java.util.Optional;
@@ -26,11 +33,17 @@ public class LoyaltyService {
 
     private final LoyaltyAccountRepository accountRepository;
     private final LoyaltyTransactionRepository transactionRepository;
+    private final ApplicationEventPublisher eventPublisher;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public LoyaltyService(LoyaltyAccountRepository accountRepository,
-                          LoyaltyTransactionRepository transactionRepository) {
+                          LoyaltyTransactionRepository transactionRepository,
+                          ApplicationEventPublisher eventPublisher) {
         this.accountRepository = accountRepository;
         this.transactionRepository = transactionRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     public LoyaltyAccountDto findAccount(UUID accountId) {
@@ -69,6 +82,14 @@ public class LoyaltyService {
         account.addPoints(dto.points());
         accountRepository.save(account);
 
+        // Publish event → Kafka topic 'loyalty.earned'
+        eventPublisher.publishEvent(new LoyaltyEarnedEvent(
+            tx.getId(), account.getId(),
+            dto.clientId(), dto.restaurantId(), account.getTenantId(),
+            dto.points(), dto.amount(), dto.reason(),
+            Instant.now()
+        ));
+
         return LoyaltyTransactionDto.from(tx);
     }
 
@@ -87,6 +108,15 @@ public class LoyaltyService {
         transactionRepository.save(tx);
         account.deductPoints(points);
         accountRepository.save(account);
+
+        // Publish event → Kafka topic 'loyalty.redeemed' (notification consumer)
+        eventPublisher.publishEvent(new LoyaltyRedeemedEvent(
+            tx.getId(), account.getId(),
+            clientId, restaurantId, account.getTenantId(),
+            points, null,  // discount_amount calculé séparément si redemption
+            Instant.now()
+        ));
+
         return LoyaltyTransactionDto.from(tx);
     }
 
@@ -101,6 +131,12 @@ public class LoyaltyService {
 
         // Pattern microservice : insert direct des UUID (pas de getReference cross-aggregate)
         LoyaltyAccount account = new LoyaltyAccount(UUID.randomUUID(), clientId, restaurantId);
-        return accountRepository.save(account);
+        LoyaltyAccount saved = accountRepository.save(account);
+
+        // tenant_id est rempli par trigger DB V10 → refresh pour récupérer la valeur
+        // (sinon getTenantId() renvoie null car Hibernate ne re-lit pas après INSERT)
+        entityManager.flush();
+        entityManager.refresh(saved);
+        return saved;
     }
 }

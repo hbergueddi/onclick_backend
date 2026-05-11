@@ -61,10 +61,15 @@
         <!-- Spring Modulith event store : requis car oneclick-shared utilise
              @Externalized (events-core fait référence à un EventPublicationRegistry
              qui vient de starter-jpa). Permet aussi à ce service de publier ses
-             propres events plus tard. -->
+             propres events. -->
         <dependency>
             <groupId>org.springframework.modulith</groupId>
             <artifactId>spring-modulith-starter-jpa</artifactId>
+        </dependency>
+        <!-- Externalisation events Modulith vers Kafka (Phase 3.3) -->
+        <dependency>
+            <groupId>org.springframework.modulith</groupId>
+            <artifactId>spring-modulith-events-kafka</artifactId>
         </dependency>
 
         <!-- API Documentation -->

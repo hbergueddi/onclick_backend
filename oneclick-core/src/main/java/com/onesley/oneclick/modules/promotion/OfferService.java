@@ -3,8 +3,10 @@ package com.onesley.oneclick.modules.promotion;
 import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.modules.restaurant.Restaurant;
+import com.onesley.oneclick.shared.events.OfferCreatedEvent;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -20,12 +22,14 @@ import java.util.UUID;
 public class OfferService {
 
     private final OfferRepository repository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @PersistenceContext
     private EntityManager entityManager;
 
-    public OfferService(OfferRepository repository) {
+    public OfferService(OfferRepository repository, ApplicationEventPublisher eventPublisher) {
         this.repository = repository;
+        this.eventPublisher = eventPublisher;
     }
 
     public Page<OfferDto> findAll(UUID restaurantId, Boolean activeOnly, int page, int size) {
@@ -58,7 +62,22 @@ public class OfferService {
         o.setDescription(dto.description());
         o.setDiscountPct(dto.discountPct());
         o.setDiscountAmount(dto.discountAmount());
-        return OfferDto.from(repository.save(o));
+        Offer saved = repository.save(o);
+
+        // Publish event for downstream consumers (notification campaign trigger, etc.)
+        // tenant_id auto-rempli par trigger DB V10 — on lookup pour l'event payload
+        UUID tenantId = (UUID) entityManager.createNativeQuery(
+            "SELECT tenant_id FROM restaurants WHERE id = ?")
+            .setParameter(1, dto.restaurantId())
+            .getSingleResult();
+        eventPublisher.publishEvent(new OfferCreatedEvent(
+            saved.getId(), dto.restaurantId(), tenantId,
+            dto.title(), dto.description(),
+            dto.startsAt(), dto.expiresAt(),
+            dto.discountPct(), dto.discountAmount()
+        ));
+
+        return OfferDto.from(saved);
     }
 
     @Transactional

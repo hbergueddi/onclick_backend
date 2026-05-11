@@ -4,15 +4,19 @@ import com.onesley.oneclick.cache.CacheConfig;
 import com.onesley.oneclick.core.tenant.Tenant;
 import com.onesley.oneclick.exception.ConflictException;
 import com.onesley.oneclick.exception.NotFoundException;
+import com.onesley.oneclick.shared.events.UserRegisteredEvent;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
 
 import java.util.UUID;
 
@@ -29,14 +33,17 @@ public class UserService {
     private final UserRepository repository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ApplicationEventPublisher eventPublisher;
 
     @PersistenceContext
     private EntityManager entityManager;
 
-    public UserService(UserRepository repository, RoleRepository roleRepository, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository repository, RoleRepository roleRepository,
+                       PasswordEncoder passwordEncoder, ApplicationEventPublisher eventPublisher) {
         this.repository = repository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
+        this.eventPublisher = eventPublisher;
     }
 
     public UserDto findById(UUID id) {
@@ -82,7 +89,18 @@ public class UserService {
         if (dto.tenantId() != null) {
             user.setTenant(entityManager.getReference(Tenant.class, dto.tenantId()));
         }
-        return UserDto.from(repository.save(user));
+        User saved = repository.save(user);
+
+        // Publish event Spring Modulith → Kafka topic 'user.registered'
+        eventPublisher.publishEvent(new UserRegisteredEvent(
+            saved.getId(), dto.tenantId(), dto.email().toLowerCase(),
+            dto.firstName(), dto.lastName(),
+            role.getCode(),
+            dto.language() != null ? dto.language() : "fr",
+            Instant.now()
+        ));
+
+        return UserDto.from(saved);
     }
 
     @Transactional

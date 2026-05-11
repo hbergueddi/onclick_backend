@@ -8,6 +8,7 @@ import com.onesley.oneclick.modules.restaurant.Restaurant;
 import com.onesley.oneclick.modules.restaurant.MealService;
 import com.onesley.oneclick.modules.restaurant.RestaurantTable;
 import com.onesley.oneclick.shared.events.ReservationCreatedEvent;
+import com.onesley.oneclick.shared.events.ReservationStatusChangedEvent;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.context.ApplicationEventPublisher;
@@ -129,6 +130,18 @@ public class ReservationService {
         );
         hist.setReason(reason);
         historyRepository.save(hist);
-        return ReservationDto.from(repository.save(r));
+        Reservation saved = repository.save(r);
+
+        // Publish status change event for downstream consumers (notifications, etc.)
+        eventPublisher.publishEvent(new ReservationStatusChangedEvent(
+            saved.getId(),
+            r.getClientId(),
+            r.getRestaurantId(),
+            r.getTenantId(),
+            oldStatus, newStatus, reason,
+            java.time.Instant.now()
+        ));
+
+        return ReservationDto.from(saved);
     }
 }
