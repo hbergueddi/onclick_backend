@@ -1,6 +1,5 @@
 package com.onesley.oneclick.shared.events;
 
-import org.springframework.modulith.events.Externalized;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -15,7 +14,6 @@ import java.util.UUID;
  *   <li>loyalty-service → crédit points si le paiement = restaurant scannable (futur)</li>
  * </ul>
  */
-@Externalized("payment.succeeded")
 public record PaymentSucceededEvent(
     UUID paymentId,
     UUID userId,

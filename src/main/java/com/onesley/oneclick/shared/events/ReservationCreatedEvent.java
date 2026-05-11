@@ -1,6 +1,5 @@
 package com.onesley.oneclick.shared.events;
 
-import org.springframework.modulith.events.Externalized;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -26,7 +25,6 @@ import java.util.UUID;
  * <p>Le routing key est statique pour V1. En V2 on pourra extraire {@code restaurant_id}
  * pour le partitioning Kafka (sticky par resto).
  */
-@Externalized("reservation.created")
 public record ReservationCreatedEvent(
     UUID reservationId,
     UUID clientId,

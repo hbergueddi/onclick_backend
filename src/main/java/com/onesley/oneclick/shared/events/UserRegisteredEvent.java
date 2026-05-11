@@ -1,6 +1,5 @@
 package com.onesley.oneclick.shared.events;
 
-import org.springframework.modulith.events.Externalized;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -15,7 +14,6 @@ import java.util.UUID;
  *   <li>analytics → KPI inscriptions (futur)</li>
  * </ul>
  */
-@Externalized("user.registered")
 public record UserRegisteredEvent(
     UUID userId,
     UUID tenantId,

@@ -1,6 +1,5 @@
 package com.onesley.oneclick.shared.events;
 
-import org.springframework.modulith.events.Externalized;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -11,7 +10,6 @@ import java.util.UUID;
  *
  * <p>Consommé par notification-service → notif "Vous avez utilisé X pts (-Y MAD)".
  */
-@Externalized("loyalty.redeemed")
 public record LoyaltyRedeemedEvent(
     UUID redemptionId,
     UUID accountId,

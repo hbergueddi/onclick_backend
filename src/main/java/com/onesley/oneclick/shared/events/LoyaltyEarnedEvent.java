@@ -1,6 +1,5 @@
 package com.onesley.oneclick.shared.events;
 
-import org.springframework.modulith.events.Externalized;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -15,7 +14,6 @@ import java.util.UUID;
  *   <li>analytics → enregistrement métrique (Phase 3+)</li>
  * </ul>
  */
-@Externalized("loyalty.earned")
 public record LoyaltyEarnedEvent(
     UUID transactionId,
     UUID accountId,

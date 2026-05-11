@@ -1,6 +1,5 @@
 package com.onesley.oneclick.shared.events;
 
-import org.springframework.modulith.events.Externalized;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -12,7 +11,6 @@ import java.util.UUID;
  * <p>Consommé par notification-service → broadcast push aux clients abonnés
  * (campaign automatique segmentée par favoris / proximité).
  */
-@Externalized("offer.created")
 public record OfferCreatedEvent(
     UUID offerId,
     UUID restaurantId,

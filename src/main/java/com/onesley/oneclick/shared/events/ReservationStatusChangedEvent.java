@@ -1,6 +1,5 @@
 package com.onesley.oneclick.shared.events;
 
-import org.springframework.modulith.events.Externalized;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -11,7 +10,6 @@ import java.util.UUID;
  * <p>Consommé par notification-service → notif au client.
  * Plus tard : loyalty-service pour ré-crédit auto si annulation no-show, etc.
  */
-@Externalized("reservation.status-changed")
 public record ReservationStatusChangedEvent(
     UUID reservationId,
     UUID clientId,
