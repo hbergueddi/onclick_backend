@@ -18,10 +18,14 @@ import java.util.UUID;
 
 /**
  * Créneau de service d'un restaurant (brunch, déjeuner, dîner) avec horaires.
+ *
+ * <p>Renommé de {@code RestaurantService} en {@code MealService} pour éviter
+ * la collision avec le Spring {@code @Service RestaurantCatalogService}.
+ * La table SQL reste {@code restaurant_services} (mapping conservé).
  */
 @Entity
 @Table(name = "restaurant_services")
-public class RestaurantService extends TimestampedEntity {
+public class MealService extends TimestampedEntity {
 
     @Id
     @Column(name = "id", nullable = false, updatable = false)
@@ -46,11 +50,11 @@ public class RestaurantService extends TimestampedEntity {
     @Column(name = "end_time", nullable = false)
     private LocalTime endTime;
 
-    protected RestaurantService() {
+    protected MealService() {
         // JPA
     }
 
-    public RestaurantService(UUID id, Restaurant restaurant, String name, LocalTime startTime, LocalTime endTime) {
+    public MealService(UUID id, Restaurant restaurant, String name, LocalTime startTime, LocalTime endTime) {
         this.id = id;
         this.restaurant = restaurant;
         this.name = name;
@@ -69,17 +73,14 @@ public class RestaurantService extends TimestampedEntity {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null) return false;
-        Class<?> oEffective = o instanceof HibernateProxy p ? p.getHibernateLazyInitializer().getPersistentClass() : o.getClass();
-        Class<?> thisEffective = this instanceof HibernateProxy p ? p.getHibernateLazyInitializer().getPersistentClass() : this.getClass();
-        if (thisEffective != oEffective) return false;
-        RestaurantService that = (RestaurantService) o;
-        return id != null && Objects.equals(id, that.id);
+        Class<?> oe = o instanceof HibernateProxy p ? p.getHibernateLazyInitializer().getPersistentClass() : o.getClass();
+        Class<?> te = this instanceof HibernateProxy p ? p.getHibernateLazyInitializer().getPersistentClass() : this.getClass();
+        if (te != oe) return false;
+        return id != null && Objects.equals(id, ((MealService) o).id);
     }
 
     @Override
     public int hashCode() {
-        return this instanceof HibernateProxy p
-            ? p.getHibernateLazyInitializer().getPersistentClass().hashCode()
-            : getClass().hashCode();
+        return this instanceof HibernateProxy p ? p.getHibernateLazyInitializer().getPersistentClass().hashCode() : getClass().hashCode();
     }
 }

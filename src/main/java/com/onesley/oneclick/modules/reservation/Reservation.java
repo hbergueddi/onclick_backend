@@ -4,7 +4,7 @@ import com.onesley.oneclick.audit.SoftDeletableAuditedEntity;
 import com.onesley.oneclick.core.identity.User;
 import com.onesley.oneclick.core.tenant.Tenant;
 import com.onesley.oneclick.modules.restaurant.Restaurant;
-import com.onesley.oneclick.modules.restaurant.RestaurantService;
+import com.onesley.oneclick.modules.restaurant.MealService;
 import com.onesley.oneclick.modules.restaurant.RestaurantTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -70,7 +70,7 @@ public class Reservation extends SoftDeletableAuditedEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "service_id")
-    private RestaurantService service;
+    private MealService service;
 
     @NotNull
     @Column(name = "reservation_at", nullable = false)
@@ -112,8 +112,8 @@ public class Reservation extends SoftDeletableAuditedEntity {
     public RestaurantTable getTable() { return table; }
     public void setTable(RestaurantTable table) { this.table = table; }
     public UUID getServiceId() { return serviceId; }
-    public RestaurantService getService() { return service; }
-    public void setService(RestaurantService service) { this.service = service; }
+    public MealService getService() { return service; }
+    public void setService(MealService service) { this.service = service; }
     public Instant getReservationAt() { return reservationAt; }
     public void setReservationAt(Instant reservationAt) { this.reservationAt = reservationAt; }
     public Integer getGuestCount() { return guestCount; }
