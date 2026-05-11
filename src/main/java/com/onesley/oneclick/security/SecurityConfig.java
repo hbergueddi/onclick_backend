@@ -1,6 +1,7 @@
 package com.onesley.oneclick.security;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -67,6 +68,7 @@ public class SecurityConfig {
     }
 
     @Bean
+    @ConditionalOnWebApplication
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             .csrf(csrf -> csrf.disable())
@@ -115,6 +117,7 @@ public class SecurityConfig {
     }
 
     @Bean
+    @ConditionalOnWebApplication
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));

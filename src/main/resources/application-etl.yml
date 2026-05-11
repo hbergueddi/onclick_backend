@@ -1,0 +1,60 @@
+# ════════════════════════════════════════════════════════════════════
+# OneClick Backend — ETL profile (Phase 13 — legacy → enterprise data migration)
+# ════════════════════════════════════════════════════════════════════
+# Hérite de enterprise (même DB cible : oneclick_enterprise) + désactive le web server
+# (l'app boote en mode CLI, exécute EtlOrchestrator, puis exit).
+#
+# Datasource secondaire (oneclick_local) : accédée via postgres_fdw setup dans
+# EtlPostgresFdwBootstrap (côté DB enterprise, pas une 2e datasource Spring).
+#
+# Run : SPRING_PROFILES_ACTIVE=enterprise,etl ./mvnw spring-boot:run
+# ════════════════════════════════════════════════════════════════════
+
+spring:
+  config:
+    activate:
+      on-profile: etl
+
+  # Désactive le web embedded — l'ETL tourne en mode console
+  main:
+    web-application-type: none
+
+  # Désactive Flyway pour ne pas réappliquer les migrations (déjà fait via enterprise profile)
+  flyway:
+    enabled: false
+
+  # ─── Override datasource user pour ETL ────────────────────────────────────
+  # L'ETL nécessite des privilèges superuser (CREATE EXTENSION, CREATE SERVER,
+  # IMPORT FOREIGN SCHEMA, USER MAPPING, etc.). Le user "hh" est superuser local.
+  # Production : profil etl jamais actif → aucun risque.
+  datasource:
+    username: hh
+    password: oneclick_dev_pwd
+
+# Pas de serveur web → pas de port (override le 8083 du profile enterprise)
+server:
+  port: -1
+
+# ─── Config ETL ──────────────────────────────────────────────────────
+oneclick:
+  etl:
+    # DB legacy source (postgres_fdw)
+    legacy:
+      host: localhost
+      port: 5432
+      database: oneclick_local
+      user: oneclick_app
+      password: OneclickLocal2026
+    # Mot de passe fallback pour les 7 users sans hash auth.users
+    fallback-password: "TestLocal2026!"
+    # Mode test : TRUNCATE puis ETL ; mode prod : abort si tables non vides
+    truncate-before-etl: true
+    # Active uniquement la phase A (core path 13.A) par défaut
+    run-phase-a: true
+    run-phase-b: false
+
+logging:
+  level:
+    com.onesley.oneclick.etl: DEBUG
+    org.hibernate.SQL: WARN
+    org.springframework.jdbc.core.JdbcTemplate: DEBUG
