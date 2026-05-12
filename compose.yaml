@@ -1,28 +1,40 @@
 # ════════════════════════════════════════════════════════════════════
-# OneClick Backend — stack dev locale (Postgres + Redis + Adminer)
+# OneClick Backend — stack dev locale (Postgres + Redis + ES + Adminer + Kibana)
 # ════════════════════════════════════════════════════════════════════
 #
 # Usage rapide :
-#   docker compose up -d                          # postgres + redis only
-#   docker compose --profile tools up -d          # + Adminer UI (port 8082)
+#   docker compose up -d                          # postgres + redis + elasticsearch
+#   docker compose --profile tools up -d          # + Adminer (8082) + Kibana (5601)
 #   docker compose down                           # stop + clean (data preservé)
 #   docker compose down -v                        # stop + DROP TOUTES les data
 #
 # Ports exposés sur l'hôte :
 #   5432  → postgres
 #   6379  → redis
+#   9200  → elasticsearch (REST API)
+#   9300  → elasticsearch (transport inter-nodes — inutile single-node)
 #   8082  → adminer (uniquement avec --profile tools)
+#   5601  → kibana   (uniquement avec --profile tools)
 #
 # DBs auto-créées au premier `docker compose up -d` (init scripts) :
 #   - oneclick_local       (legacy Supabase dump, ETL source, owner = hh)
 #   - oneclick_enterprise  (greenfield monolith, profil `enterprise`,
 #                           owner = oneclick_app, Flyway-managed)
 #
+# Elasticsearch :
+#   - Version 9.0.0 (cohérent avec client elasticsearch-java 9.2.8 — cf
+#     sprint ES `monolith-v2.2-es9`)
+#   - Single-node, xpack.security désactivé (DEV only — JAMAIS en prod)
+#   - Memory : 1G heap max (ajustable via ES_JAVA_OPTS)
+#   - Healthcheck : status green/yellow + timeout init 60s (ES Java lent)
+#
 # ⚠️  Conflit avec brew services :
-#   Si tu as `brew services start postgresql@17` ou `redis` qui tournent,
-#   ils squattent les mêmes ports. Fais d'abord :
+#   Si tu as `brew services start postgresql@17`, `redis`, ou
+#   `elasticsearch-full` qui tournent, ils squattent les mêmes ports.
+#   Fais d'abord :
 #       brew services stop postgresql@17
 #       brew services stop redis
+#       brew services stop elasticsearch-full
 #   Et inversement, pour repasser à brew : `docker compose down`.
 #
 # Premier setup d'une fresh DB :
@@ -72,6 +84,58 @@ services:
       timeout: 3s
       retries: 5
 
+  # ── Elasticsearch 9.0 — moteur full-text search (modules/analytics/search) ──
+  # Cohérent avec le client elasticsearch-java 9.2.8 utilisé par Spring Data.
+  # En prod : activer xpack.security.enabled=true + TLS + API key
+  # (cf MEMORY.md `feedback_e1_google_places_pending.md`).
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.0.0
+    container_name: oneclick_elasticsearch
+    restart: unless-stopped
+    environment:
+      # Single-node mode (pas de discovery/cluster)
+      discovery.type: single-node
+      # Sécurité désactivée pour le dev — ZERO password
+      # ⚠️ NE JAMAIS faire ça en prod (cf .env.example ES_API_KEY)
+      xpack.security.enabled: "false"
+      xpack.security.enrollment.enabled: "false"
+      xpack.security.http.ssl.enabled: "false"
+      xpack.security.transport.ssl.enabled: "false"
+      # Heap JVM — ES recommande 50% de la RAM hôte, max 32G
+      # Pour le dev : 512m → 1g suffit largement.
+      ES_JAVA_OPTS: "-Xms512m -Xmx1g"
+      # Désactive ML/monitoring/watcher (inutiles en dev)
+      xpack.ml.enabled: "false"
+      xpack.monitoring.collection.enabled: "false"
+      xpack.watcher.enabled: "false"
+      # Bootstrap : pas de check de prod (memlock, ulimits, etc.)
+      bootstrap.memory_lock: "false"
+      # Logs en mode "json" pour parsing facile (en dev on s'en fout, mais
+      # cohérent avec Sentry/Datadog ingestion future)
+      ELASTICSEARCH_LOG_LEVEL: "INFO"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    ports:
+      - "9200:9200"   # REST API
+      - "9300:9300"   # transport (inutile single-node — exposé pour debug)
+    volumes:
+      - oneclick_esdata:/usr/share/elasticsearch/data
+    healthcheck:
+      # ES est long à booter (Java + JVM warmup ~20-30s). Vérifie le cluster
+      # health → yellow (single-node ne peut pas être green sans replicas).
+      test:
+        - "CMD-SHELL"
+        - "curl -s -f http://localhost:9200/_cluster/health | grep -q -E '\"status\":\"(green|yellow)\"' || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s    # ES Java warmup — 1 min de grâce
+
   # ── Outil optionnel : Adminer (UI web pour explorer la DB) ──────────
   # Activé via : `docker compose --profile tools up -d`
   # Accès : http://localhost:8082
@@ -90,8 +154,29 @@ services:
       postgres:
         condition: service_healthy
 
+  # ── Outil optionnel : Kibana (UI web pour explorer ES) ───────────────
+  # Activé via : `docker compose --profile tools up -d`
+  # Accès : http://localhost:5601
+  # Pas d'auth nécessaire (xpack.security désactivé sur ES en dev).
+  kibana:
+    image: docker.elastic.co/kibana/kibana:9.0.0
+    container_name: oneclick_kibana
+    restart: unless-stopped
+    profiles: ["tools"]
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+      # Désactive le check ES TLS (matche xpack.security.enabled=false côté ES)
+      ELASTICSEARCH_SSL_VERIFICATIONMODE: none
+    ports:
+      - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
 volumes:
   oneclick_pgdata:
     name: oneclick_pgdata
   oneclick_redisdata:
     name: oneclick_redisdata
+  oneclick_esdata:
+    name: oneclick_esdata
