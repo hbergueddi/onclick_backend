@@ -2,7 +2,10 @@ package com.onesley.oneclick.core.auth.internal;
 
 import com.onesley.oneclick.core.identity.api.User;
 import com.onesley.oneclick.core.identity.api.UserRepository;
+import com.onesley.oneclick.core.tenant.api.Tenant;
+import com.onesley.oneclick.core.tenant.internal.TenantRepository;
 import com.onesley.oneclick.exception.BadRequestException;
+import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.security.JwtIssuer;
 import org.slf4j.Logger;
@@ -47,6 +50,7 @@ public class AuthService {
     private final RefreshTokenRepository refreshRepo;
     private final OtpRequestRepository otpRepo;
     private final LoginHistoryRepository loginRepo;
+    private final TenantRepository tenantRepo;
     private final PasswordEncoder passwordEncoder;
     private final JwtIssuer jwtIssuer;
 
@@ -54,12 +58,14 @@ public class AuthService {
                        RefreshTokenRepository refreshRepo,
                        OtpRequestRepository otpRepo,
                        LoginHistoryRepository loginRepo,
+                       TenantRepository tenantRepo,
                        PasswordEncoder passwordEncoder,
                        JwtIssuer jwtIssuer) {
         this.userRepo = userRepo;
         this.refreshRepo = refreshRepo;
         this.otpRepo = otpRepo;
         this.loginRepo = loginRepo;
+        this.tenantRepo = tenantRepo;
         this.passwordEncoder = passwordEncoder;
         this.jwtIssuer = jwtIssuer;
     }
@@ -67,6 +73,17 @@ public class AuthService {
     // ─── Login (email + password) ──────────────────────────────────────────────
     @Transactional
     public LoginResult login(String email, String rawPassword, String ipAddress, String device) {
+        return login(email, rawPassword, ipAddress, device, null);
+    }
+
+    /**
+     * Login avec tenant isolation : si {@code tenantSlug} fourni, refuse le login
+     * (403) si le user appartient à un autre tenant. Permet à un même backend
+     * Spring d'être utilisé par plusieurs apps whitelabel (OneClick, HOMU, PCC, ...)
+     * sans qu'un user d'un tenant puisse se connecter à l'app d'un autre.
+     */
+    @Transactional
+    public LoginResult login(String email, String rawPassword, String ipAddress, String device, String tenantSlug) {
         Optional<User> userOpt = userRepo.findByEmailIgnoreCase(email);
         User user = userOpt.orElse(null);
 
@@ -81,6 +98,27 @@ public class AuthService {
             if (!passwordEncoder.matches(rawPassword, user.getPasswordHash())) {
                 throw new BadRequestException("Email ou mot de passe invalide");
             }
+
+            // Tenant isolation — si le frontend transmet le slug de son app,
+            // on vérifie que le user appartient bien à ce tenant.
+            // SUPERADMIN/GROUP_ADMIN sont en cross-tenant par design (peuvent accéder
+            // partout — on les filtrera côté UI si besoin).
+            if (tenantSlug != null && !tenantSlug.isBlank()) {
+                String roleCode = user.getRole() != null ? user.getRole().getCode() : null;
+                boolean isCrossTenantRole = "SUPERADMIN".equals(roleCode) || "GROUP_ADMIN".equals(roleCode);
+                if (!isCrossTenantRole) {
+                    Tenant expectedTenant = tenantRepo.findBySlug(tenantSlug).orElse(null);
+                    UUID expectedTenantId = expectedTenant != null ? expectedTenant.getId() : null;
+                    if (expectedTenantId != null
+                        && user.getTenantId() != null
+                        && !expectedTenantId.equals(user.getTenantId())) {
+                        throw new ForbiddenException(
+                            "Ce compte n'est pas associé à l'application " + tenantSlug
+                        );
+                    }
+                }
+            }
+
             success = true;
 
             // OK : émettre tokens

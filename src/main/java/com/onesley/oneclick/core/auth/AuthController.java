@@ -45,11 +45,15 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    @Operation(summary = "Login email + password → access token JWT HS256 + refresh token opaque")
+    @Operation(summary = "Login email + password → access token JWT HS256 + refresh token opaque (avec tenant isolation optionnelle)")
     public ResponseEntity<LoginResponseDto> login(@Valid @RequestBody LoginRequestDto body, HttpServletRequest req) {
         String ip = clientIp(req);
         String device = req.getHeader("User-Agent");
-        AuthService.LoginResult r = authService.login(body.email(), body.password(), ip, device);
+        // tenantSlug optionnel : si présent, refuse les users d'autres tenants (403 propre).
+        // Permet à un même backend de servir plusieurs apps whitelabel (OneClick/HOMU/PCC/...).
+        AuthService.LoginResult r = authService.login(
+            body.email(), body.password(), ip, device, body.tenantSlug()
+        );
         return ResponseEntity.ok(LoginResponseDto.from(r));
     }
 
@@ -93,7 +97,11 @@ public class AuthController {
     // ─── DTOs ─────────────────────────────────────────────────────────────────
     public record LoginRequestDto(
         @Email @NotBlank String email,
-        @NotBlank String password
+        @NotBlank String password,
+        /** Tenant slug optionnel — si présent, vérifie que le user appartient à
+         *  ce tenant (sinon 403). Permet multi-app whitelabel (OneClick/HOMU/PCC).
+         *  Roles cross-tenant (SUPERADMIN, GROUP_ADMIN) ne sont jamais bloqués. */
+        String tenantSlug
     ) {}
 
     public record RefreshRequestDto(

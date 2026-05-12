@@ -15,7 +15,7 @@
     type = org.springframework.modulith.ApplicationModule.Type.CLOSED,
     id = "core.auth",
     displayName = "core/auth",
-    allowedDependencies = {"core.identity", "exception", "security"}
+    allowedDependencies = {"core.identity", "core.tenant", "exception", "security"}
 )
 package com.onesley.oneclick.core.auth;
 
