@@ -90,4 +90,35 @@ public final class FinancialDtos {
         UUID referenceId,
         String referenceType
     ) {}
+
+    // ─── ContractTemplate (V13) ──────────────────────────────────────────────
+
+    /**
+     * Template contractuel (PDF generation) — versionné + multilangue.
+     *
+     * @param tenantId {@code null} = template platform-wide (fallback global)
+     * @param language ISO 639-1 ∈ {fr | en | ar}
+     */
+    public record ContractTemplateDto(
+        UUID id, UUID tenantId, String code, String name, Integer version, String language,
+        String title, String body, boolean active, Instant createdAt, Instant updatedAt
+    ) {}
+
+    public record ContractTemplateCreateDto(
+        UUID tenantId,
+        @NotBlank String code,
+        @NotBlank String name,
+        @jakarta.validation.constraints.Positive Integer version,
+        @Pattern(regexp = "^(fr|en|ar)$") String language,
+        @NotBlank String title,
+        @NotBlank String body,
+        Boolean isActive
+    ) {}
+
+    public record ContractTemplatePatchDto(
+        String name,
+        String title,
+        String body,
+        Boolean isActive
+    ) {}
 }

@@ -1,7 +1,10 @@
 package com.onesley.oneclick.modules.loyalty.internal;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.UUID;
@@ -17,4 +20,32 @@ import java.util.UUID;
 public interface LoyaltyTransactionRepository extends JpaRepository<LoyaltyTransaction, UUID>, JpaSpecificationExecutor<LoyaltyTransaction> {
     java.util.List<LoyaltyTransaction> findAllByAccountId(java.util.UUID accountId);
     java.util.List<LoyaltyTransaction> findAllByCreatedById(java.util.UUID createdBy);
+
+    /**
+     * Toutes les transactions d'un client cross-comptes (anti-N+1).
+     * JOIN sur {@link LoyaltyAccount} via {@code account_id}, filtrage par {@code client_id}.
+     * Tri {@code created_at DESC}, {@link Pageable} pour limiter.
+     */
+    @Query("""
+        SELECT t FROM LoyaltyTransaction t
+        WHERE t.accountId IN (
+            SELECT a.id FROM LoyaltyAccount a WHERE a.clientId = :clientId
+        )
+        ORDER BY t.createdAt DESC
+        """)
+    java.util.List<LoyaltyTransaction> findAllByClientId(@Param("clientId") UUID clientId, Pageable pageable);
+
+    /**
+     * Transactions de type {@code expire} d'un client (toutes comptes confondus).
+     * Utilisé pour afficher l'historique des points expirés côté Pocket.
+     */
+    @Query("""
+        SELECT t FROM LoyaltyTransaction t
+        WHERE t.accountId IN (
+            SELECT a.id FROM LoyaltyAccount a WHERE a.clientId = :clientId
+        )
+        AND t.type = 'expire'
+        ORDER BY t.createdAt DESC
+        """)
+    java.util.List<LoyaltyTransaction> findExpiredByClientId(@Param("clientId") UUID clientId);
 }

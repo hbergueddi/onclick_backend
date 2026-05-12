@@ -3,14 +3,20 @@ package com.onesley.oneclick.modules.loyalty.internal;
 import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.security.SecurityHelper;
+import com.onesley.oneclick.modules.loyalty.api.ExpiredPointsSummaryDto;
+import com.onesley.oneclick.modules.loyalty.api.GainRuleCreateDto;
+import com.onesley.oneclick.modules.loyalty.api.GainRuleDto;
+import com.onesley.oneclick.modules.loyalty.api.GainRulePatchDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyAccountDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyEarnDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyTransactionDto;
+import com.onesley.oneclick.modules.loyalty.api.TierDto;
 import com.onesley.oneclick.shared.events.LoyaltyEarnedEvent;
 import com.onesley.oneclick.shared.events.LoyaltyRedeemedEvent;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +43,8 @@ public class LoyaltyService {
 
     private final LoyaltyAccountRepository accountRepository;
     private final LoyaltyTransactionRepository transactionRepository;
+    private final GainRuleRepository gainRuleRepository;
+    private final TierRepository tierRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     @PersistenceContext
@@ -44,9 +52,13 @@ public class LoyaltyService {
 
     public LoyaltyService(LoyaltyAccountRepository accountRepository,
                           LoyaltyTransactionRepository transactionRepository,
+                          GainRuleRepository gainRuleRepository,
+                          TierRepository tierRepository,
                           ApplicationEventPublisher eventPublisher) {
         this.accountRepository = accountRepository;
         this.transactionRepository = transactionRepository;
+        this.gainRuleRepository = gainRuleRepository;
+        this.tierRepository = tierRepository;
         this.eventPublisher = eventPublisher;
     }
 
@@ -125,6 +137,99 @@ public class LoyaltyService {
         ));
 
         return tx.toDto();
+    }
+
+    // ─── Gain rules (par-restaurant) ─────────────────────────────────────────
+
+    /** Récupère la règle de gain active d'un restaurant (404 si aucune). */
+    public GainRuleDto findGainRuleByRestaurant(UUID restaurantId) {
+        return gainRuleRepository.findByRestaurantIdAndDeletedAtIsNull(restaurantId)
+            .map(GainRule::toDto)
+            .orElseThrow(() -> new NotFoundException("GainRule (restaurant)", restaurantId));
+    }
+
+    /**
+     * Crée une nouvelle règle de gain pour un restaurant.
+     *
+     * <p>Échoue si une règle non-supprimée existe déjà (contrainte UNIQUE
+     * sur {@code restaurant_id} en DB). Le tenant_id est rempli par trigger DB V13.
+     */
+    @Transactional
+    public GainRuleDto createGainRule(GainRuleCreateDto dto) {
+        if (gainRuleRepository.findByRestaurantIdAndDeletedAtIsNull(dto.restaurantId()).isPresent()) {
+            throw new BadRequestException(
+                "Une règle de gain existe déjà pour ce restaurant — utiliser PATCH pour modifier"
+            );
+        }
+        GainRule rule = new GainRule(UUID.randomUUID(), dto.restaurantId(), dto.conversionRate());
+        if (dto.capPerVisit() != null) rule.setCapPerVisit(dto.capPerVisit());
+        if (dto.capPerMonth() != null) rule.setCapPerMonth(dto.capPerMonth());
+        if (dto.minAmount() != null) rule.setMinAmount(dto.minAmount());
+        GainRule saved = gainRuleRepository.save(rule);
+
+        // tenant_id rempli par trigger DB V13 → refresh pour récupérer la valeur
+        entityManager.flush();
+        entityManager.refresh(saved);
+        return saved.toDto();
+    }
+
+    /** Patch partiel — seuls les champs non-null sont appliqués. */
+    @Transactional
+    public GainRuleDto patchGainRule(UUID id, GainRulePatchDto dto) {
+        GainRule rule = gainRuleRepository.findByIdAndDeletedAtIsNull(id)
+            .orElseThrow(() -> new NotFoundException("GainRule", id));
+        if (dto.conversionRate() != null) rule.setConversionRate(dto.conversionRate());
+        if (dto.capPerVisit() != null) rule.setCapPerVisit(dto.capPerVisit());
+        if (dto.capPerMonth() != null) rule.setCapPerMonth(dto.capPerMonth());
+        if (dto.minAmount() != null) rule.setMinAmount(dto.minAmount());
+        if (dto.isActive() != null) rule.setActive(dto.isActive());
+        return gainRuleRepository.save(rule).toDto();
+    }
+
+    /** Soft delete d'une règle de gain — la ligne reste en DB ({@code deleted_at = now()}). */
+    @Transactional
+    public void deleteGainRule(UUID id) {
+        GainRule rule = gainRuleRepository.findByIdAndDeletedAtIsNull(id)
+            .orElseThrow(() -> new NotFoundException("GainRule", id));
+        rule.markDeleted();
+        gainRuleRepository.save(rule);
+    }
+
+    // ─── Helpers loyalty pour Pocket ─────────────────────────────────────────
+
+    /**
+     * Toutes les transactions d'un client cross-comptes (anti-N+1).
+     * Tri {@code created_at DESC}, {@code limit} default 50 (cf controller).
+     */
+    public List<LoyaltyTransactionDto> findTransactionsByClient(UUID clientId, int limit) {
+        SecurityHelper.requireOwnerOrAdmin(clientId);
+        return transactionRepository.findAllByClientId(clientId, PageRequest.of(0, limit)).stream()
+            .map(LoyaltyTransaction::toDto)
+            .toList();
+    }
+
+    /** Résumé des points expirés d'un client (cross-comptes). */
+    public ExpiredPointsSummaryDto findExpiredPointsByClient(UUID clientId) {
+        SecurityHelper.requireOwnerOrAdmin(clientId);
+        List<LoyaltyTransaction> expired = transactionRepository.findExpiredByClientId(clientId);
+        // points négatifs en DB pour les transactions 'expire' → on remet en positif pour l'UI
+        int totalExpired = expired.stream().mapToInt(t -> Math.abs(t.getPoints())).sum();
+        List<LoyaltyTransactionDto> dtos = expired.stream().map(LoyaltyTransaction::toDto).toList();
+        return new ExpiredPointsSummaryDto(totalExpired, dtos);
+    }
+
+    /** Liste tous les paliers de fidélité (toutes tenants confondus — usage SUPERADMIN). */
+    public List<TierDto> listTiers() {
+        return tierRepository.findAll().stream()
+            .map(Tier::toDto)
+            .toList();
+    }
+
+    /** Liste les paliers d'un tenant spécifique. */
+    public List<TierDto> listTiersByTenant(UUID tenantId) {
+        return tierRepository.findAllByTenantId(tenantId).stream()
+            .map(Tier::toDto)
+            .toList();
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────

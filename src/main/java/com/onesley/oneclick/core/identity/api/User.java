@@ -106,6 +106,13 @@ public class User extends SoftDeletableAuditedEntity {
     @Column(name = "last_login_at")
     private Instant lastLoginAt;
 
+    /**
+     * Code de parrainage public stable (8 chars uppercase) — généré depuis l'UUID
+     * via migration V14. Lecture seule au niveau API : non modifiable via PATCH.
+     */
+    @Column(name = "referral_code", unique = true)
+    private String referralCode;
+
     protected User() {
         // JPA
     }
@@ -149,6 +156,8 @@ public class User extends SoftDeletableAuditedEntity {
     public boolean isEnabled() { return enabled; }
     public Instant getLastLoginAt() { return lastLoginAt; }
     public void setLastLoginAt(Instant lastLoginAt) { this.lastLoginAt = lastLoginAt; }
+    public String getReferralCode() { return referralCode; }
+    public void setReferralCode(String referralCode) { this.referralCode = referralCode; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public UserDto toDto() {
@@ -157,7 +166,7 @@ public class User extends SoftDeletableAuditedEntity {
             role != null ? role.getCode() : null,
             email, phone, firstName, lastName, avatarUrl, language, status,
             accountNonExpired, accountNonLocked, credentialsNonExpired, enabled,
-            lastLoginAt, getCreatedAt()
+            lastLoginAt, getCreatedAt(), referralCode
         );
     }
 

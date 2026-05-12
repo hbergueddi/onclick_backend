@@ -12,6 +12,8 @@ public record OfferCreateDto(
     @NotNull Instant startsAt,
     @NotNull Instant expiresAt,
     @DecimalMin("0.00") @DecimalMax("100.00") BigDecimal discountPct,
-    @DecimalMin("0.00") BigDecimal discountAmount
+    @DecimalMin("0.00") BigDecimal discountAmount,
+    @Pattern(regexp = "^(promo|bonus|reco)$") String type,
+    @Positive Integer pts
 ) {
 }

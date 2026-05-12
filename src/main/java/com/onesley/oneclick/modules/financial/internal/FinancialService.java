@@ -26,6 +26,10 @@ import com.onesley.oneclick.modules.financial.api.FinancialDtos.InvoiceLineDto;
 import com.onesley.oneclick.modules.financial.api.FinancialDtos.InvoiceUpdateDto;
 import com.onesley.oneclick.modules.financial.api.FinancialDtos.WalletTxCreateDto;
 import com.onesley.oneclick.modules.financial.api.FinancialDtos.WalletTxDto;
+import com.onesley.oneclick.modules.financial.api.FinancialDtos.ContractTemplateCreateDto;
+import com.onesley.oneclick.modules.financial.api.FinancialDtos.ContractTemplateDto;
+import com.onesley.oneclick.modules.financial.api.FinancialDtos.ContractTemplatePatchDto;
+import com.onesley.oneclick.exception.BadRequestException;
 
 @Service
 @Transactional(readOnly = true)
@@ -35,6 +39,7 @@ public class FinancialService {
     private final InvoiceRepository invoiceRepo;
     private final InvoiceLineRepository lineRepo;
     private final WalletTransactionRepository walletRepo;
+    private final ContractTemplateRepository templateRepo;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -42,11 +47,13 @@ public class FinancialService {
     public FinancialService(ContractRepository contractRepo,
                             InvoiceRepository invoiceRepo,
                             InvoiceLineRepository lineRepo,
-                            WalletTransactionRepository walletRepo) {
+                            WalletTransactionRepository walletRepo,
+                            ContractTemplateRepository templateRepo) {
         this.contractRepo = contractRepo;
         this.invoiceRepo = invoiceRepo;
         this.lineRepo = lineRepo;
         this.walletRepo = walletRepo;
+        this.templateRepo = templateRepo;
     }
 
     // ─── Contracts ───────────────────────────────────────────────────────────
@@ -166,5 +173,91 @@ public class FinancialService {
         if (dto.referenceId() != null)   t.setReferenceId(dto.referenceId());
         if (dto.referenceType() != null) t.setReferenceType(dto.referenceType());
         return walletRepo.save(t).toDto();
+    }
+
+    // ─── Contract templates (V13) ────────────────────────────────────────────
+
+    /**
+     * Liste les templates non supprimés — filtres optionnels par tenant, langue
+     * et statut. Pagination/tri non requis sur ce volume (≤ qq dizaines de
+     * templates par tenant).
+     */
+    public List<ContractTemplateDto> findAllContractTemplates(UUID tenantId, String language, Boolean isActive) {
+        Specification<ContractTemplate> spec = (root, q, cb) -> cb.isNull(root.get("deletedAt"));
+        if (tenantId != null) spec = spec.and((root, q, cb) -> cb.equal(root.get("tenantId"), tenantId));
+        if (language != null) spec = spec.and((root, q, cb) -> cb.equal(root.get("language"), language));
+        if (isActive != null) spec = spec.and((root, q, cb) -> cb.equal(root.get("active"), isActive));
+        return templateRepo.findAll(spec, Sort.by("code").ascending().and(Sort.by("version").descending()))
+            .stream().map(ContractTemplate::toDto).toList();
+    }
+
+    public ContractTemplateDto findContractTemplateById(UUID id) {
+        return templateRepo.findById(id)
+            .filter(t -> t.getDeletedAt() == null)
+            .orElseThrow(() -> new NotFoundException("ContractTemplate", id))
+            .toDto();
+    }
+
+    /**
+     * Résolution par code fonctionnel — utilisé par {@code ContractDownload}
+     * (génération PDF). Si aucun template tenant-spécifique n'existe, retombe
+     * automatiquement sur la version platform-wide ({@code tenantId IS NULL}).
+     *
+     * @param tenantId tenant courant (non null) — fallback platform si manquant
+     * @param code     code fonctionnel (ex: {@code "partner_contract"})
+     * @param language ISO 639-1 — par défaut {@code "fr"}
+     * @param version  numéro de version — par défaut {@code 1}
+     */
+    public ContractTemplateDto findContractTemplateByCode(UUID tenantId, String code, String language, Integer version) {
+        if (code == null || code.isBlank()) {
+            throw new BadRequestException("code est requis");
+        }
+        String lang = (language != null && !language.isBlank()) ? language : "fr";
+        Integer ver = (version != null) ? version : 1;
+
+        // 1. Tentative tenant-spécifique
+        if (tenantId != null) {
+            var t = templateRepo
+                .findByTenantIdAndCodeAndLanguageAndVersionAndActiveTrueAndDeletedAtIsNull(
+                    tenantId, code, lang, ver);
+            if (t.isPresent()) return t.get().toDto();
+        }
+        // 2. Fallback platform-wide
+        return templateRepo
+            .findByTenantIdIsNullAndCodeAndLanguageAndVersionAndActiveTrueAndDeletedAtIsNull(code, lang, ver)
+            .orElseThrow(() -> new NotFoundException(
+                "ContractTemplate", "code=" + code + " lang=" + lang + " v=" + ver))
+            .toDto();
+    }
+
+    @Transactional
+    public ContractTemplateDto createContractTemplate(ContractTemplateCreateDto dto) {
+        ContractTemplate t = new ContractTemplate(
+            UUID.randomUUID(), dto.tenantId(), dto.code(), dto.name(),
+            dto.version(), dto.language(), dto.title(), dto.body()
+        );
+        if (dto.isActive() != null) t.setActive(dto.isActive());
+        return templateRepo.save(t).toDto();
+    }
+
+    @Transactional
+    public ContractTemplateDto patchContractTemplate(UUID id, ContractTemplatePatchDto dto) {
+        ContractTemplate t = templateRepo.findById(id)
+            .filter(x -> x.getDeletedAt() == null)
+            .orElseThrow(() -> new NotFoundException("ContractTemplate", id));
+        if (dto.name() != null)     t.setName(dto.name());
+        if (dto.title() != null)    t.setTitle(dto.title());
+        if (dto.body() != null)     t.setBody(dto.body());
+        if (dto.isActive() != null) t.setActive(dto.isActive());
+        return templateRepo.save(t).toDto();
+    }
+
+    @Transactional
+    public void softDeleteContractTemplate(UUID id) {
+        ContractTemplate t = templateRepo.findById(id)
+            .filter(x -> x.getDeletedAt() == null)
+            .orElseThrow(() -> new NotFoundException("ContractTemplate", id));
+        t.markDeleted();
+        templateRepo.save(t);
     }
 }

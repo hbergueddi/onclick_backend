@@ -29,6 +29,7 @@ public record UserDto(
     boolean credentialsNonExpired,
     boolean enabled,
     Instant lastLoginAt,
-    Instant createdAt
+    Instant createdAt,
+    String referralCode
 ) {
 }

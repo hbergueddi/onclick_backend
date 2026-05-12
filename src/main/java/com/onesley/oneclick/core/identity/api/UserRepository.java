@@ -1,7 +1,11 @@
 package com.onesley.oneclick.core.identity.api;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -30,4 +34,23 @@ public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificat
 
     /** Existence rapide par téléphone. */
     boolean existsByPhone(String phone);
+
+    /**
+     * Liste paginée des users d'un rôle (code), avec filtrage optionnel par tenant.
+     *
+     * <p>Exclut les rows soft-deleted ({@code deleted_at IS NULL}).
+     * Si {@code tenantId} est null, ramène tous les tenants (utile pour les admins
+     * cross-tenant). Sinon, filtre strictement.
+     */
+    @Query("""
+        SELECT u FROM User u
+        WHERE u.role.code = :roleCode
+          AND u.deletedAt IS NULL
+          AND (:tenantId IS NULL OR u.tenantId = :tenantId)
+        """)
+    Page<User> findByRoleCode(
+        @Param("roleCode") String roleCode,
+        @Param("tenantId") UUID tenantId,
+        Pageable pageable
+    );
 }

@@ -1,13 +1,19 @@
 package com.onesley.oneclick.modules.loyalty;
 
+import com.onesley.oneclick.modules.loyalty.api.ExpiredPointsSummaryDto;
+import com.onesley.oneclick.modules.loyalty.api.GainRuleCreateDto;
+import com.onesley.oneclick.modules.loyalty.api.GainRuleDto;
+import com.onesley.oneclick.modules.loyalty.api.GainRulePatchDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyAccountDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyEarnDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyTransactionDto;
+import com.onesley.oneclick.modules.loyalty.api.TierDto;
 import com.onesley.oneclick.modules.loyalty.internal.LoyaltyService;
 import com.onesley.oneclick.security.SecurityHelper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -79,5 +85,68 @@ public class LoyaltyController {
     public LoyaltyTransactionDto spend(@Valid @RequestBody SpendDto dto) {
         SecurityHelper.requireOwnerOrAdmin(dto.clientId());
         return service.spendPoints(dto.clientId(), dto.restaurantId(), dto.points(), dto.reason());
+    }
+
+    // ─── Gain rules (par-restaurant) ─────────────────────────────────────────
+
+    @GetMapping("/gain-rules/by-restaurant/{restaurantId}")
+    @Operation(summary = "Règle de gain de points d'un restaurant (catalogue public).")
+    @PreAuthorize("isAuthenticated()")
+    public GainRuleDto findGainRuleByRestaurant(@PathVariable UUID restaurantId) {
+        return service.findGainRuleByRestaurant(restaurantId);
+    }
+
+    @PostMapping("/gain-rules")
+    @Operation(summary = "Crée une règle de gain pour un restaurant (1 par resto via UNIQUE).")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
+    public GainRuleDto createGainRule(@Valid @RequestBody GainRuleCreateDto dto) {
+        return service.createGainRule(dto);
+    }
+
+    @PatchMapping("/gain-rules/{id}")
+    @Operation(summary = "Modifie une règle de gain (PATCH partiel).")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
+    public GainRuleDto patchGainRule(@PathVariable UUID id, @Valid @RequestBody GainRulePatchDto dto) {
+        return service.patchGainRule(id, dto);
+    }
+
+    @DeleteMapping("/gain-rules/{id}")
+    @Operation(summary = "Soft delete d'une règle de gain.")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
+    public void deleteGainRule(@PathVariable UUID id) {
+        service.deleteGainRule(id);
+    }
+
+    // ─── Helpers loyalty pour Pocket ─────────────────────────────────────────
+
+    @GetMapping("/transactions/by-client/{clientId}")
+    @Operation(summary = "Toutes les transactions fidélité d'un client (cross-comptes, anti-N+1).")
+    @PreAuthorize("isAuthenticated()")
+    public List<LoyaltyTransactionDto> findTransactionsByClient(
+        @PathVariable UUID clientId,
+        @RequestParam(required = false, defaultValue = "50") @Min(1) @Max(500) Integer limit
+    ) {
+        return service.findTransactionsByClient(clientId, limit);
+    }
+
+    @GetMapping("/expired-points/by-client/{clientId}")
+    @Operation(summary = "Points expirés d'un client (toutes comptes confondus).")
+    @PreAuthorize("isAuthenticated()")
+    public ExpiredPointsSummaryDto findExpiredPointsByClient(@PathVariable UUID clientId) {
+        return service.findExpiredPointsByClient(clientId);
+    }
+
+    @GetMapping("/tiers")
+    @Operation(summary = "Liste tous les paliers de fidélité (toutes tenants confondus).")
+    @PreAuthorize("isAuthenticated()")
+    public List<TierDto> listTiers() {
+        return service.listTiers();
+    }
+
+    @GetMapping("/tiers/by-tenant/{tenantId}")
+    @Operation(summary = "Paliers de fidélité d'un tenant spécifique.")
+    @PreAuthorize("isAuthenticated()")
+    public List<TierDto> listTiersByTenant(@PathVariable UUID tenantId) {
+        return service.listTiersByTenant(tenantId);
     }
 }

@@ -25,6 +25,9 @@ import com.onesley.oneclick.modules.financial.api.FinancialDtos.InvoiceLineDto;
 import com.onesley.oneclick.modules.financial.api.FinancialDtos.InvoiceUpdateDto;
 import com.onesley.oneclick.modules.financial.api.FinancialDtos.WalletTxCreateDto;
 import com.onesley.oneclick.modules.financial.api.FinancialDtos.WalletTxDto;
+import com.onesley.oneclick.modules.financial.api.FinancialDtos.ContractTemplateCreateDto;
+import com.onesley.oneclick.modules.financial.api.FinancialDtos.ContractTemplateDto;
+import com.onesley.oneclick.modules.financial.api.FinancialDtos.ContractTemplatePatchDto;
 import com.onesley.oneclick.modules.financial.internal.FinancialService;
 
 @RestController
@@ -136,5 +139,66 @@ public class FinancialController {
     public ResponseEntity<WalletTxDto> createWalletTx(@Valid @RequestBody WalletTxCreateDto dto) {
         WalletTxDto t = service.createWalletTx(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(t);
+    }
+
+    // ─── Contract templates (V13) ────────────────────────────────────────────
+
+    @GetMapping("/contract-templates")
+    @Operation(summary = "Liste des templates contractuels — filtres tenantId / language / isActive")
+    @PreAuthorize("hasRole('SUPERADMIN')")
+    public List<ContractTemplateDto> findAllContractTemplates(
+        @RequestParam(required = false) UUID tenantId,
+        @RequestParam(required = false) String language,
+        @RequestParam(required = false) Boolean isActive
+    ) {
+        return service.findAllContractTemplates(tenantId, language, isActive);
+    }
+
+    @GetMapping("/contract-templates/{id}")
+    @Operation(summary = "Détail template par UUID (admin only)")
+    @PreAuthorize("hasRole('SUPERADMIN')")
+    public ContractTemplateDto findContractTemplateById(@PathVariable UUID id) {
+        return service.findContractTemplateById(id);
+    }
+
+    @GetMapping("/contract-templates/by-code/{code}")
+    @Operation(summary = "Résolution par code (ContractDownload PDF) — fallback platform si tenant manquant")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
+    public ContractTemplateDto findContractTemplateByCode(
+        @PathVariable String code,
+        @RequestParam(required = false) UUID tenantId,
+        @RequestParam(required = false, defaultValue = "fr") String language,
+        @RequestParam(required = false, defaultValue = "1") Integer version
+    ) {
+        return service.findContractTemplateByCode(tenantId, code, language, version);
+    }
+
+    @PostMapping("/contract-templates")
+    @Operation(summary = "Crée un template contractuel (admin only)")
+    @PreAuthorize("hasRole('SUPERADMIN')")
+    public ResponseEntity<ContractTemplateDto> createContractTemplate(
+        @Valid @RequestBody ContractTemplateCreateDto dto
+    ) {
+        ContractTemplateDto created = service.createContractTemplate(dto);
+        return ResponseEntity
+            .created(URI.create("/api/financial/contract-templates/" + created.id()))
+            .body(created);
+    }
+
+    @PatchMapping("/contract-templates/{id}")
+    @Operation(summary = "Mise à jour partielle d'un template (admin only)")
+    @PreAuthorize("hasRole('SUPERADMIN')")
+    public ContractTemplateDto patchContractTemplate(
+        @PathVariable UUID id, @Valid @RequestBody ContractTemplatePatchDto dto
+    ) {
+        return service.patchContractTemplate(id, dto);
+    }
+
+    @DeleteMapping("/contract-templates/{id}")
+    @Operation(summary = "Soft delete d'un template (admin only)")
+    @PreAuthorize("hasRole('SUPERADMIN')")
+    public ResponseEntity<Void> deleteContractTemplate(@PathVariable UUID id) {
+        service.softDeleteContractTemplate(id);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 }

@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.net.URI;
 import java.util.Set;
 import java.util.UUID;
+import com.onesley.oneclick.core.identity.api.PasswordChangeDto;
 import com.onesley.oneclick.core.identity.api.UserCreateDto;
 import com.onesley.oneclick.core.identity.api.UserDto;
 import com.onesley.oneclick.core.identity.api.UserUpdateDto;
@@ -54,6 +55,16 @@ public class UserController {
         return PageResponse.from(service.findAll(page, size));
     }
 
+    @GetMapping("/me")
+    @Operation(
+        summary = "User courant (depuis JWT.sub) — évite au frontend de parser le JWT",
+        description = "Retourne le UserDto du user actuellement authentifié. 401 si pas de JWT."
+    )
+    @PreAuthorize("isAuthenticated()")
+    public UserDto findMe() {
+        return service.findMe();
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Détail d'un user par UUID — owner ou SUPERADMIN")
     @PreAuthorize("isAuthenticated()")
@@ -69,6 +80,28 @@ public class UserController {
         return service.findByEmail(email);
     }
 
+    @GetMapping("/by-phone")
+    @Operation(summary = "Lookup user par téléphone — SUPERADMIN uniquement")
+    @PreAuthorize("hasRole('SUPERADMIN')")
+    public UserDto findByPhone(@RequestParam String phone) {
+        return service.findByPhone(phone);
+    }
+
+    @GetMapping("/by-role")
+    @Operation(
+        summary = "Liste paginée des users d'un rôle — SUPERADMIN ou STAFF (picker Login)",
+        description = "Filtre par code de rôle (ex: CLIENT, STAFF) et tenant optionnel. Soft-deletes exclus."
+    )
+    @PreAuthorize("hasAnyRole('SUPERADMIN','STAFF')")
+    public PageResponse<UserDto> findByRole(
+        @RequestParam String role,
+        @RequestParam(required = false) UUID tenantId,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size
+    ) {
+        return PageResponse.from(service.findByRole(role, tenantId, page, size));
+    }
+
     @PostMapping
     @Operation(summary = "Crée un user (signup ou création admin)")
     public ResponseEntity<UserDto> create(@Valid @RequestBody UserCreateDto dto) {
@@ -82,6 +115,22 @@ public class UserController {
     public UserDto patch(@PathVariable UUID id, @Valid @RequestBody UserUpdateDto dto) {
         SecurityHelper.requireOwnerOrAdmin(id);
         return service.patch(id, dto);
+    }
+
+    @PostMapping("/{id}/password")
+    @Operation(
+        summary = "Change le mot de passe — owner exact uniquement (admins refusés)",
+        description = "Vérifie le mot de passe courant puis ré-encode le nouveau (BCrypt 12). " +
+                      "Strict ownership : un admin ne peut PAS changer le password de quelqu'un d'autre."
+    )
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> changePassword(
+        @PathVariable UUID id,
+        @Valid @RequestBody PasswordChangeDto dto
+    ) {
+        SecurityHelper.requireOwnerExact(id);
+        service.changePassword(id, dto.currentPassword(), dto.newPassword());
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
     @DeleteMapping("/{id}")

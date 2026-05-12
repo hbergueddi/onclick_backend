@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.loyalty.internal;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
+import com.onesley.oneclick.modules.loyalty.api.TierDto;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -66,6 +67,11 @@ public class Tier extends TimestampedEntity {
     public BigDecimal getBonusPercent() { return bonusPercent; }
     public Integer getSortOrder() { return sortOrder; }
     public void setSortOrder(Integer sortOrder) { this.sortOrder = sortOrder; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public TierDto toDto() {
+        return new TierDto(id, tenantId, name, minPoints, bonusPercent, sortOrder);
+    }
 
     @Override
     public boolean equals(Object o) {

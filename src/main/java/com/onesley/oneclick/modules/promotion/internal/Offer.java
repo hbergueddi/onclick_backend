@@ -7,6 +7,8 @@ import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -27,6 +29,15 @@ public class Offer extends SoftDeletableAuditedEntity {
     @Column(name = "discount_amount", precision = 12, scale = 2) private BigDecimal discountAmount;
     @Column(name = "enabled", nullable = false) private boolean enabled = true;
 
+    /** Catégorie d'offre — promo | bonus | reco. */
+    @NotBlank
+    @Pattern(regexp = "^(promo|bonus|reco)$")
+    @Column(name = "type", nullable = false) private String type = "promo";
+
+    /** Bonus points fidélité — renseigné uniquement quand type='bonus'. */
+    @Positive
+    @Column(name = "pts") private Integer pts;
+
     protected Offer() {}
     public Offer(UUID id, UUID restaurantId, String title, Instant startsAt, Instant expiresAt) {
         this.id = id; this.restaurantId = restaurantId; this.title = title; this.startsAt = startsAt; this.expiresAt = expiresAt;
@@ -39,18 +50,24 @@ public class Offer extends SoftDeletableAuditedEntity {
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
     public Instant getStartsAt() { return startsAt; }
+    public void setStartsAt(Instant startsAt) { this.startsAt = startsAt; }
     public Instant getExpiresAt() { return expiresAt; }
+    public void setExpiresAt(Instant expiresAt) { this.expiresAt = expiresAt; }
     public BigDecimal getDiscountPct() { return discountPct; }
     public void setDiscountPct(BigDecimal discountPct) { this.discountPct = discountPct; }
     public BigDecimal getDiscountAmount() { return discountAmount; }
     public void setDiscountAmount(BigDecimal discountAmount) { this.discountAmount = discountAmount; }
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
+    public String getType() { return type; }
+    public void setType(String type) { this.type = type; }
+    public Integer getPts() { return pts; }
+    public void setPts(Integer pts) { this.pts = pts; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public OfferDto toDto() {
         return new OfferDto(id, restaurantId, title, description, startsAt, expiresAt,
-            discountPct, discountAmount, enabled, getCreatedAt());
+            discountPct, discountAmount, enabled, type, pts, getCreatedAt());
     }
 
     @Override

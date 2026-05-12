@@ -16,6 +16,7 @@ import java.util.Set;
 import java.util.UUID;
 import com.onesley.oneclick.modules.promotion.api.OfferCreateDto;
 import com.onesley.oneclick.modules.promotion.api.OfferDto;
+import com.onesley.oneclick.modules.promotion.api.OfferPatchDto;
 import com.onesley.oneclick.modules.promotion.internal.Offer;
 import com.onesley.oneclick.modules.promotion.internal.OfferRepository;
 import com.onesley.oneclick.modules.promotion.internal.OfferService;
@@ -27,7 +28,7 @@ public class OfferController {
 
     /** Whitelist Phase 4 §6.3 — champs filtrables/sortables. */
     private static final Set<String> SEARCHABLE_FIELDS = Set.of(
-        "tenantId", "restaurantId", "title",
+        "tenantId", "restaurantId", "title", "type",
         "startsAt", "expiresAt", "createdAt", "updatedAt"
     );
 
@@ -62,6 +63,13 @@ public class OfferController {
     public ResponseEntity<OfferDto> create(@Valid @RequestBody OfferCreateDto dto) {
         OfferDto o = service.create(dto);
         return ResponseEntity.created(URI.create("/api/offers/" + o.id())).body(o);
+    }
+
+    @PatchMapping("/{id}")
+    @Operation(summary = "Mise à jour partielle d'une offre — null = pas de modification")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
+    public OfferDto patch(@PathVariable UUID id, @Valid @RequestBody OfferPatchDto dto) {
+        return service.patch(id, dto);
     }
 
     @DeleteMapping("/{id}")
