@@ -27,6 +27,15 @@ public class SupportTicket extends TimestampedEntity {
     @Column(name = "assigned_to", insertable = false, updatable = false) private UUID assignedToId;
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "assigned_to") private User assignedTo;
 
+    // ─── V19 — Sprint G.2.6 (enrich legacy parity) ─────────────────────────
+    @Column(name = "restaurant_id") private UUID restaurantId;
+    @Column(name = "photos", columnDefinition = "text[]") private String[] photos;
+    @Column(name = "internal", nullable = false) private boolean internal = false;
+    @Column(name = "escalated_to_admin", nullable = false) private boolean escalatedToAdmin = false;
+    @Column(name = "last_reply") private String lastReply;
+    @Column(name = "ai_handled", nullable = false) private boolean aiHandled = false;
+    @Column(name = "ai_summary") private String aiSummary;
+
     protected SupportTicket() {}
     public SupportTicket(UUID id, User openedBy, String category, String subject) {
         this.id = id; this.openedBy = openedBy; this.category = category; this.subject = subject;
@@ -50,10 +59,30 @@ public class SupportTicket extends TimestampedEntity {
     public User getAssignedTo() { return assignedTo; }
     public void setAssignedTo(User assignedTo) { this.assignedTo = assignedTo; }
 
+    // V19 getters/setters
+    public UUID getRestaurantId() { return restaurantId; }
+    public void setRestaurantId(UUID restaurantId) { this.restaurantId = restaurantId; }
+    public String[] getPhotos() { return photos; }
+    public void setPhotos(String[] photos) { this.photos = photos; }
+    public boolean isInternal() { return internal; }
+    public void setInternal(boolean internal) { this.internal = internal; }
+    public boolean isEscalatedToAdmin() { return escalatedToAdmin; }
+    public void setEscalatedToAdmin(boolean escalatedToAdmin) { this.escalatedToAdmin = escalatedToAdmin; }
+    public String getLastReply() { return lastReply; }
+    public void setLastReply(String lastReply) { this.lastReply = lastReply; }
+    public boolean isAiHandled() { return aiHandled; }
+    public void setAiHandled(boolean aiHandled) { this.aiHandled = aiHandled; }
+    public String getAiSummary() { return aiSummary; }
+    public void setAiSummary(String aiSummary) { this.aiSummary = aiSummary; }
+
     /** Mapping vers le DTO public exposé hors du module. */
     public TicketDto toDto() {
         return new TicketDto(id, openedById, category, priority, status, subject, resolvedAt, closedAt,
-            assignedToId, getCreatedAt(), getUpdatedAt());
+            assignedToId,
+            restaurantId,
+            photos != null ? java.util.Arrays.asList(photos) : java.util.List.of(),
+            internal, escalatedToAdmin, lastReply, aiHandled, aiSummary,
+            getCreatedAt(), getUpdatedAt());
     }
 
     @Override

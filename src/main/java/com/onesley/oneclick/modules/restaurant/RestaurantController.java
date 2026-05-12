@@ -18,6 +18,7 @@ import java.util.Set;
 import java.util.UUID;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantCreateDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantDto;
+import com.onesley.oneclick.modules.restaurant.api.RestaurantPatchDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.MealServiceCreateDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.MealServiceDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.MealServicePatchDto;
@@ -84,6 +85,17 @@ public class RestaurantController {
     public ResponseEntity<RestaurantDto> create(@Valid @RequestBody RestaurantCreateDto dto) {
         RestaurantDto r = service.create(dto);
         return ResponseEntity.created(URI.create("/api/restaurants/" + r.id())).body(r);
+    }
+
+    @PatchMapping("/{id}")
+    @Operation(
+        summary = "Patch partiel d'un restaurant — Sprint G.2.2",
+        description = "Mise à jour partielle. Tous les champs DTO optionnels. " +
+                      "Owner du restaurant (staff_role=owner) ou SUPERADMIN/GROUP_ADMIN."
+    )
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR')")
+    public RestaurantDto patch(@PathVariable UUID id, @Valid @RequestBody RestaurantPatchDto dto) {
+        return service.patch(id, dto);
     }
 
     @DeleteMapping("/{id}")

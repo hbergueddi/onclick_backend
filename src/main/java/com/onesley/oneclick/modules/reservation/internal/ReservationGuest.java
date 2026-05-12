@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.reservation.internal;
 
 import com.onesley.oneclick.core.identity.api.User;
+import com.onesley.oneclick.modules.reservation.api.ReservationGuestDto;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -18,8 +19,22 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Invité d'une réservation — soit un user OneClick existant (guest_user_id),
- * soit un nom libre (guest_name) — au moins un des deux.
+ * Invité d'une réservation — un des 3 identifiants au minimum (CHECK constraint V17) :
+ *  - {@code guestUser} : user OneClick existant (FK)
+ *  - {@code guestPhone} : téléphone d'un user pas encore inscrit (futur signup)
+ *  - {@code guestName} : nom libre (placeholder informatif)
+ *
+ * <p>Workflow {@code status} (V17) :
+ * <pre>
+ *  linked   → auto-attaché à une résa (default, ex: organisateur ajoute un user OneClick)
+ *  invited  → invitation envoyée par notif/SMS, en attente de réponse
+ *  accepted → guest a accepté de participer
+ *  refused  → guest a décliné (notifier organisateur)
+ *  cancelled → guest s'est désisté APRÈS avoir accepté (notifier organisateur)
+ * </pre>
+ *
+ * <p>{@code seenByHost} : marque que l'organisateur a vu la réponse (badge UI). MAJ
+ * automatique côté service quand l'organisateur consulte la liste.
  */
 @Entity
 @Table(name = "reservation_guests")
@@ -47,6 +62,22 @@ public class ReservationGuest {
     @Column(name = "guest_name")
     private String guestName;
 
+    @Column(name = "guest_phone")
+    private String guestPhone;
+
+    @Column(name = "invited_by", insertable = false, updatable = false)
+    private UUID invitedById;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "invited_by")
+    private User invitedBy;
+
+    @Column(name = "status", nullable = false)
+    private String status = "linked";
+
+    @Column(name = "seen_by_host", nullable = false)
+    private boolean seenByHost = false;
+
     @CreatedDate
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt;
@@ -55,12 +86,18 @@ public class ReservationGuest {
         // JPA
     }
 
-    public ReservationGuest(UUID id, Reservation reservation, User guestUser, String guestName) {
+    public ReservationGuest(UUID id, Reservation reservation, User guestUser, String guestName,
+                            String guestPhone, User invitedBy, String status) {
         this.id = id;
         this.reservation = reservation;
         this.guestUser = guestUser;
         this.guestName = guestName;
+        this.guestPhone = guestPhone;
+        this.invitedBy = invitedBy;
+        if (status != null) this.status = status;
     }
+
+    // ─── Getters ───────────────────────────────────────────────────────
 
     public UUID getId() { return id; }
     public UUID getReservationId() { return reservationId; }
@@ -68,7 +105,34 @@ public class ReservationGuest {
     public UUID getGuestUserId() { return guestUserId; }
     public User getGuestUser() { return guestUser; }
     public String getGuestName() { return guestName; }
+    public String getGuestPhone() { return guestPhone; }
+    public UUID getInvitedById() { return invitedById; }
+    public User getInvitedBy() { return invitedBy; }
+    public String getStatus() { return status; }
+    public boolean isSeenByHost() { return seenByHost; }
     public Instant getCreatedAt() { return createdAt; }
+
+    // ─── Setters (workflow) ────────────────────────────────────────────
+
+    public void setStatus(String status) { this.status = status; }
+    public void setGuestName(String guestName) { this.guestName = guestName; }
+    public void setSeenByHost(boolean seenByHost) { this.seenByHost = seenByHost; }
+
+    // ─── toDto (pattern senior — internal → api autorisé en Modulith) ──
+
+    public ReservationGuestDto toDto() {
+        return new ReservationGuestDto(
+            id,
+            reservationId,
+            guestUserId,
+            guestName,
+            guestPhone,
+            invitedById,
+            status,
+            seenByHost,
+            createdAt
+        );
+    }
 
     @Override
     public boolean equals(Object o) {

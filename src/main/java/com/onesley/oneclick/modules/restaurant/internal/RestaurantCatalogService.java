@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.UUID;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantCreateDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantDto;
+import com.onesley.oneclick.modules.restaurant.api.RestaurantPatchDto;
 
 /**
  * Service {@link Restaurant} — CRUD + filtres par ville/tenant/status.
@@ -80,5 +81,37 @@ public class RestaurantCatalogService {
             .orElseThrow(() -> new NotFoundException("Restaurant", id));
         r.markDeleted();
         repository.save(r);
+    }
+
+    /**
+     * Patch partiel d'un Restaurant — Sprint G.2.2.
+     *
+     * <p>Tous les champs DTO sont optionnels (PATCH semantics). Seuls les champs
+     * non-null sont appliqués. Pour tags (liste), {@code null} = pas de modif,
+     * liste vide = effacement de tous les tags.
+     *
+     * <p>Eviction cache CACHE_RESTAURANTS car la version du DTO change.
+     */
+    @Transactional
+    @CacheEvict(value = CacheConfig.CACHE_RESTAURANTS, key = "#id")
+    public RestaurantDto patch(UUID id, RestaurantPatchDto dto) {
+        Restaurant r = repository.findById(id)
+            .filter(x -> x.getDeletedAt() == null)
+            .orElseThrow(() -> new NotFoundException("Restaurant", id));
+
+        if (dto.name() != null)        r.setName(dto.name());
+        if (dto.description() != null) r.setDescription(dto.description());
+        if (dto.phone() != null)       r.setPhone(dto.phone());
+        if (dto.address() != null)     r.setAddress(dto.address());
+        if (dto.city() != null)        r.setCity(dto.city());
+        if (dto.latitude() != null)    r.setLatitude(dto.latitude());
+        if (dto.longitude() != null)   r.setLongitude(dto.longitude());
+        if (dto.status() != null)      r.setStatus(dto.status());
+        if (dto.budget() != null)      r.setBudget(dto.budget());
+        if (dto.tags() != null)        r.setTags(dto.tags().toArray(new String[0]));
+        if (dto.loungePts() != null)   r.setLoungePts(dto.loungePts());
+        if (dto.image() != null)       r.setImage(dto.image());
+
+        return repository.save(r).toDto();
     }
 }

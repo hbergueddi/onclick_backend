@@ -4,6 +4,7 @@ import com.onesley.oneclick.modules.loyalty.api.ExpiredPointsSummaryDto;
 import com.onesley.oneclick.modules.loyalty.api.GainRuleCreateDto;
 import com.onesley.oneclick.modules.loyalty.api.GainRuleDto;
 import com.onesley.oneclick.modules.loyalty.api.GainRulePatchDto;
+import com.onesley.oneclick.modules.loyalty.api.GainRuleRequestDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyAccountDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyEarnDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyTransactionDto;
@@ -12,6 +13,7 @@ import com.onesley.oneclick.modules.loyalty.api.OcrReceiptResultDto;
 import com.onesley.oneclick.modules.loyalty.api.Snap2EarnDto;
 import com.onesley.oneclick.modules.loyalty.api.Snap2EarnResultDto;
 import com.onesley.oneclick.modules.loyalty.api.TierDto;
+import com.onesley.oneclick.modules.loyalty.internal.GainRuleRequestService;
 import com.onesley.oneclick.modules.loyalty.internal.LoyaltyService;
 import com.onesley.oneclick.modules.loyalty.internal.OcrReceiptService;
 import com.onesley.oneclick.security.SecurityHelper;
@@ -34,10 +36,14 @@ public class LoyaltyController {
 
     private final LoyaltyService service;
     private final OcrReceiptService ocrService;
+    private final GainRuleRequestService gainRuleRequestService;
 
-    public LoyaltyController(LoyaltyService service, OcrReceiptService ocrService) {
+    public LoyaltyController(LoyaltyService service,
+                             OcrReceiptService ocrService,
+                             GainRuleRequestService gainRuleRequestService) {
         this.service = service;
         this.ocrService = ocrService;
+        this.gainRuleRequestService = gainRuleRequestService;
     }
 
     public record SpendDto(
@@ -157,6 +163,19 @@ public class LoyaltyController {
         return service.findExpiredPointsByClient(clientId);
     }
 
+    @GetMapping("/transactions/by-restaurant/{restaurantId}")
+    @Operation(
+        summary = "Sprint G.2.8 — Toutes les transactions fidélité d'un restaurant (anti-N+1).",
+        description = "Utilisé par ProDesk ClientSummary/StaffSummary pour agréger crédité/consommé."
+    )
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR')")
+    public List<LoyaltyTransactionDto> findTransactionsByRestaurant(
+        @PathVariable UUID restaurantId,
+        @RequestParam(required = false, defaultValue = "200") @Min(1) @Max(2000) Integer limit
+    ) {
+        return service.findTransactionsByRestaurant(restaurantId, limit);
+    }
+
     @GetMapping("/tiers")
     @Operation(summary = "Liste tous les paliers de fidélité (toutes tenants confondus).")
     @PreAuthorize("isAuthenticated()")
@@ -169,5 +188,60 @@ public class LoyaltyController {
     @PreAuthorize("isAuthenticated()")
     public List<TierDto> listTiersByTenant(@PathVariable UUID tenantId) {
         return service.listTiersByTenant(tenantId);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  Gain rule requests — workflow approbation admin (Sprint G.2.3)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    @GetMapping("/gain-rule-requests")
+    @Operation(summary = "Liste toutes les demandes de règle (admin platform-wide)")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN')")
+    public List<GainRuleRequestDto> listGainRuleRequests(
+        @RequestParam(required = false, defaultValue = "false") boolean pendingOnly
+    ) {
+        return pendingOnly
+            ? gainRuleRequestService.findPending()
+            : gainRuleRequestService.findAll();
+    }
+
+    @GetMapping("/gain-rule-requests/by-restaurant/{restaurantId}")
+    @Operation(summary = "Demandes d'un restaurant spécifique (restaurateur)")
+    @PreAuthorize("isAuthenticated()")
+    public List<GainRuleRequestDto> findGainRuleRequestsByRestaurant(@PathVariable UUID restaurantId) {
+        return gainRuleRequestService.findByRestaurant(restaurantId);
+    }
+
+    @GetMapping("/gain-rule-requests/{id}")
+    @Operation(summary = "Détail d'une demande de règle")
+    @PreAuthorize("isAuthenticated()")
+    public GainRuleRequestDto findGainRuleRequestById(@PathVariable UUID id) {
+        return gainRuleRequestService.findById(id);
+    }
+
+    @PostMapping("/gain-rule-requests")
+    @Operation(summary = "Crée une demande de règle de gain (restaurateur)")
+    @PreAuthorize("hasAnyRole('RESTAURATEUR','GROUP_ADMIN','SUPERADMIN')")
+    public GainRuleRequestDto createGainRuleRequest(
+        @Valid @RequestBody GainRuleRequestDto.CreateDto dto
+    ) {
+        return gainRuleRequestService.create(dto);
+    }
+
+    @PatchMapping("/gain-rule-requests/{id}/approve")
+    @Operation(summary = "Approuve une demande → crée la GainRule (désactivée)")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN')")
+    public GainRuleRequestDto approveGainRuleRequest(@PathVariable UUID id) {
+        return gainRuleRequestService.approve(id);
+    }
+
+    @PatchMapping("/gain-rule-requests/{id}/reject")
+    @Operation(summary = "Refuse une demande avec motif")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN')")
+    public GainRuleRequestDto rejectGainRuleRequest(
+        @PathVariable UUID id,
+        @Valid @RequestBody GainRuleRequestDto.RejectDto dto
+    ) {
+        return gainRuleRequestService.reject(id, dto);
     }
 }

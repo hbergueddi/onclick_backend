@@ -284,6 +284,20 @@ public class LoyaltyService {
             .toList();
     }
 
+    /**
+     * Sprint G.2.8 — Toutes les transactions d'un restaurant (anti-N+1).
+     *
+     * <p>Utilisé par ProDesk ClientSummary/StaffSummary qui aggrègent les points
+     * crédités/consommés au niveau restaurant. Pas de filtre client_id.
+     *
+     * <p>RBAC : owner du restaurant ou admin (cf controller @PreAuthorize).
+     */
+    public List<LoyaltyTransactionDto> findTransactionsByRestaurant(UUID restaurantId, int limit) {
+        return transactionRepository.findAllByRestaurantId(restaurantId, PageRequest.of(0, limit)).stream()
+            .map(LoyaltyTransaction::toDto)
+            .toList();
+    }
+
     /** Résumé des points expirés d'un client (cross-comptes). */
     public ExpiredPointsSummaryDto findExpiredPointsByClient(UUID clientId) {
         SecurityHelper.requireOwnerOrAdmin(clientId);

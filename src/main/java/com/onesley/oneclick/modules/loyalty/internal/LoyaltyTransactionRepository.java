@@ -70,4 +70,21 @@ public interface LoyaltyTransactionRepository extends JpaRepository<LoyaltyTrans
         @Param("restaurantId") UUID restaurantId,
         @Param("reasonPrefix") String reasonPrefix
     );
+
+    /**
+     * Sprint G.2.8 — Toutes les transactions d'un restaurant (anti-N+1 pour
+     * ProDesk ClientSummary/StaffSummary). JOIN sur LoyaltyAccount.
+     * Tri created_at DESC, Pageable pour limiter.
+     */
+    @Query("""
+        SELECT t FROM LoyaltyTransaction t
+        WHERE t.accountId IN (
+            SELECT a.id FROM LoyaltyAccount a WHERE a.restaurantId = :restaurantId
+        )
+        ORDER BY t.createdAt DESC
+        """)
+    java.util.List<LoyaltyTransaction> findAllByRestaurantId(
+        @Param("restaurantId") UUID restaurantId,
+        Pageable pageable
+    );
 }

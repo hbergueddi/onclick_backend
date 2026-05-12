@@ -22,6 +22,14 @@ public final class SupportDtos {
 
     public record TicketDto(UUID id, UUID openedById, String category, String priority, String status,
                             String subject, Instant resolvedAt, Instant closedAt, UUID assignedToId,
+                            // V19 — Sprint G.2.6 (enrich legacy parity)
+                            UUID restaurantId,
+                            java.util.List<String> photos,
+                            boolean internal,
+                            boolean escalatedToAdmin,
+                            String lastReply,
+                            boolean aiHandled,
+                            String aiSummary,
                             Instant createdAt, Instant updatedAt) {}
 
     public record TicketCreateDto(

@@ -1,6 +1,8 @@
 package com.onesley.oneclick.modules.analytics;
 
 import com.onesley.oneclick.shared.PageResponse;
+import com.onesley.oneclick.modules.analytics.api.AdminStatsDto;
+import com.onesley.oneclick.modules.analytics.internal.AdminStatsService;
 import com.onesley.oneclick.modules.analytics.internal.AnalyticsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,9 +24,24 @@ import static com.onesley.oneclick.modules.analytics.api.AnalyticsDtos.*;
 public class AnalyticsController {
 
     private final AnalyticsService service;
+    private final AdminStatsService adminStatsService;
 
-    public AnalyticsController(AnalyticsService service) {
+    public AnalyticsController(AnalyticsService service, AdminStatsService adminStatsService) {
         this.service = service;
+        this.adminStatsService = adminStatsService;
+    }
+
+    // ─── Admin stats — Sprint G.2.4 ────────────────────────────────────────
+
+    @GetMapping("/admin-stats")
+    @Operation(
+        summary = "KPI platform-wide (users, restos, résas, loyalty, contrats, support) — admin dashboard",
+        description = "Agrégats COUNT/SUM cross-modules en native SQL (anti-N+1). " +
+                      "Filtre tenantId optionnel pour scoper au tenant."
+    )
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN')")
+    public AdminStatsDto getAdminStats(@RequestParam(required = false) UUID tenantId) {
+        return adminStatsService.computeStats(tenantId);
     }
     
 

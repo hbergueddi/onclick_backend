@@ -20,8 +20,10 @@ import com.onesley.oneclick.modules.reservation.api.BookingRuleDtos.BookingRuleD
 import com.onesley.oneclick.modules.reservation.api.BookingRuleDtos.BookingRulePatchDto;
 import com.onesley.oneclick.modules.reservation.api.ReservationCreateDto;
 import com.onesley.oneclick.modules.reservation.api.ReservationDto;
+import com.onesley.oneclick.modules.reservation.api.ReservationGuestDto;
 import com.onesley.oneclick.modules.reservation.internal.BookingRuleService;
 import com.onesley.oneclick.modules.reservation.internal.Reservation;
+import com.onesley.oneclick.modules.reservation.internal.ReservationGuestService;
 import com.onesley.oneclick.modules.reservation.internal.ReservationRepository;
 import com.onesley.oneclick.modules.reservation.internal.ReservationService;
 
@@ -39,15 +41,18 @@ public class ReservationController {
     private final ReservationService service;
     private final ReservationRepository reservationRepository;
     private final BookingRuleService bookingRuleService;
+    private final ReservationGuestService guestService;
 
     public ReservationController(
         ReservationService service,
         ReservationRepository reservationRepository,
-        BookingRuleService bookingRuleService
+        BookingRuleService bookingRuleService,
+        ReservationGuestService guestService
     ) {
         this.service = service;
         this.reservationRepository = reservationRepository;
         this.bookingRuleService = bookingRuleService;
+        this.guestService = guestService;
     }
 
     public record StatusChangeDto(String status, UUID changedById, String reason) {}
@@ -137,5 +142,65 @@ public class ReservationController {
     public ResponseEntity<Void> deleteBookingRule(@PathVariable UUID id) {
         bookingRuleService.delete(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  Reservation guests — workflow invitation (Sprint G.2.1)
+    // ═══════════════════════════════════════════════════════════════════════
+    // Endpoints sous /api/reservations/ pour rester dans le bounded context
+    // reservation (pas de cross-module avec core/identity côté API).
+
+    @GetMapping("/{reservationId}/guests")
+    @Operation(summary = "Liste tous les invités d'une réservation")
+    @PreAuthorize("isAuthenticated()")
+    public List<ReservationGuestDto> findGuestsByReservation(@PathVariable UUID reservationId) {
+        return guestService.findByReservation(reservationId);
+    }
+
+    @GetMapping("/guests/by-user/{userId}")
+    @Operation(summary = "Liste toutes les invitations reçues par un user (Pocket)")
+    @PreAuthorize("isAuthenticated()")
+    public List<ReservationGuestDto> findGuestsByUser(@PathVariable UUID userId) {
+        return guestService.findByGuestUser(userId);
+    }
+
+    @PostMapping("/{reservationId}/guests")
+    @Operation(
+        summary = "Invite un guest à une réservation",
+        description = "Au moins un identifiant requis : guestUserId, guestPhone, ou guestName"
+    )
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ReservationGuestDto> inviteGuest(
+        @PathVariable UUID reservationId,
+        @Valid @RequestBody ReservationGuestDto.CreateDto dto
+    ) {
+        ReservationGuestDto created = guestService.invite(reservationId, dto);
+        return ResponseEntity.created(URI.create("/api/reservations/guests/" + created.id())).body(created);
+    }
+
+    @PatchMapping("/guests/{guestId}/status")
+    @Operation(summary = "Change le statut d'une invitation (guest répond OU organisateur annule)")
+    @PreAuthorize("isAuthenticated()")
+    public ReservationGuestDto updateGuestStatus(
+        @PathVariable UUID guestId,
+        @Valid @RequestBody ReservationGuestDto.StatusUpdateDto dto
+    ) {
+        return guestService.updateStatus(guestId, dto);
+    }
+
+    @PatchMapping("/{reservationId}/guests/mark-seen")
+    @Operation(summary = "Marque toutes les réponses des invités comme vues par l'organisateur")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> markGuestsSeen(@PathVariable UUID reservationId) {
+        guestService.markSeen(reservationId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/guests/{guestId}")
+    @Operation(summary = "Supprime un guest d'une réservation (organisateur)")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> deleteGuest(@PathVariable UUID guestId) {
+        guestService.delete(guestId);
+        return ResponseEntity.noContent().build();
     }
 }
