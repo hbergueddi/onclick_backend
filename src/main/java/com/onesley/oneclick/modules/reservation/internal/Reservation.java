@@ -3,10 +3,7 @@ package com.onesley.oneclick.modules.reservation.internal;
 import com.onesley.oneclick.audit.SoftDeletableAuditedEntity;
 import com.onesley.oneclick.core.identity.internal.User;
 import com.onesley.oneclick.core.tenant.internal.Tenant;
-import com.onesley.oneclick.modules.restaurant.internal.Restaurant;
 import com.onesley.oneclick.modules.reservation.api.ReservationDto;
-import com.onesley.oneclick.modules.restaurant.internal.MealService;
-import com.onesley.oneclick.modules.restaurant.internal.RestaurantTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -52,26 +49,14 @@ public class Reservation extends SoftDeletableAuditedEntity {
     @JoinColumn(name = "client_id", nullable = false)
     private User client;
 
-    @Column(name = "restaurant_id", nullable = false, insertable = false, updatable = false)
+    @Column(name = "restaurant_id", nullable = false)
     private UUID restaurantId;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "restaurant_id", nullable = false)
-    private Restaurant restaurant;
-
-    @Column(name = "table_id", insertable = false, updatable = false)
+    @Column(name = "table_id")
     private UUID tableId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "table_id")
-    private RestaurantTable table;
-
-    @Column(name = "service_id", insertable = false, updatable = false)
+    @Column(name = "service_id")
     private UUID serviceId;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "service_id")
-    private MealService service;
 
     @NotNull
     @Column(name = "reservation_at", nullable = false)
@@ -92,12 +77,12 @@ public class Reservation extends SoftDeletableAuditedEntity {
         // JPA
     }
 
-    public Reservation(UUID id, Tenant tenant, User client, Restaurant restaurant,
+    public Reservation(UUID id, Tenant tenant, User client, UUID restaurantId,
                        Instant reservationAt, Integer guestCount) {
         this.id = id;
         this.tenant = tenant;
         this.client = client;
-        this.restaurant = restaurant;
+        this.restaurantId = restaurantId;
         this.reservationAt = reservationAt;
         this.guestCount = guestCount;
     }
@@ -108,13 +93,10 @@ public class Reservation extends SoftDeletableAuditedEntity {
     public UUID getClientId() { return clientId; }
     public User getClient() { return client; }
     public UUID getRestaurantId() { return restaurantId; }
-    public Restaurant getRestaurant() { return restaurant; }
     public UUID getTableId() { return tableId; }
-    public RestaurantTable getTable() { return table; }
-    public void setTable(RestaurantTable table) { this.table = table; }
+    public void setTableId(UUID tableId) { this.tableId = tableId; }
     public UUID getServiceId() { return serviceId; }
-    public MealService getService() { return service; }
-    public void setService(MealService service) { this.service = service; }
+    public void setServiceId(UUID serviceId) { this.serviceId = serviceId; }
     public Instant getReservationAt() { return reservationAt; }
     public void setReservationAt(Instant reservationAt) { this.reservationAt = reservationAt; }
     public Integer getGuestCount() { return guestCount; }

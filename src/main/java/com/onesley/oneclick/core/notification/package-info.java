@@ -16,4 +16,12 @@
  *   <li>{@code device_tokens} — tokens FCM/APNs par device pour push mobile</li>
  * </ul>
  */
+@ApplicationModule(
+    type = org.springframework.modulith.ApplicationModule.Type.CLOSED,
+    id = "core.notification",
+    displayName = "core/notification",
+    allowedDependencies = {"audit", "exception", "security", "shared"}
+)
 package com.onesley.oneclick.core.notification;
+
+import org.springframework.modulith.ApplicationModule;

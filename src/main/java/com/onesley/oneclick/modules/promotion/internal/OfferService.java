@@ -2,7 +2,6 @@ package com.onesley.oneclick.modules.promotion.internal;
 
 import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.NotFoundException;
-import com.onesley.oneclick.modules.restaurant.internal.Restaurant;
 import com.onesley.oneclick.shared.events.OfferCreatedEvent;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -60,8 +59,7 @@ public class OfferService {
         if (dto.expiresAt().isBefore(dto.startsAt())) {
             throw new BadRequestException("expiresAt doit être > startsAt");
         }
-        Restaurant restoRef = entityManager.getReference(Restaurant.class, dto.restaurantId());
-        Offer o = new Offer(UUID.randomUUID(), restoRef, dto.title(), dto.startsAt(), dto.expiresAt());
+        Offer o = new Offer(UUID.randomUUID(), dto.restaurantId(), dto.title(), dto.startsAt(), dto.expiresAt());
         o.setDescription(dto.description());
         o.setDiscountPct(dto.discountPct());
         o.setDiscountAmount(dto.discountAmount());

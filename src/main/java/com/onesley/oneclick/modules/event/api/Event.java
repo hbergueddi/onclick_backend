@@ -2,7 +2,6 @@ package com.onesley.oneclick.modules.event.api;
 
 import com.onesley.oneclick.audit.SoftDeletableAuditedEntity;
 import com.onesley.oneclick.core.tenant.internal.Tenant;
-import com.onesley.oneclick.modules.restaurant.internal.Restaurant;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -18,8 +17,7 @@ public class Event extends SoftDeletableAuditedEntity {
     @Id @Column(name = "id", nullable = false, updatable = false) private UUID id;
     @Column(name = "tenant_id", nullable = false, insertable = false, updatable = false) private UUID tenantId;
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "tenant_id", nullable = false) private Tenant tenant;
-    @Column(name = "restaurant_id", insertable = false, updatable = false) private UUID restaurantId;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "restaurant_id") private Restaurant restaurant;
+    @Column(name = "restaurant_id") private UUID restaurantId;
     @NotBlank @Column(name = "title", nullable = false) private String title;
     @Column(name = "description") private String description;
     @Column(name = "event_type") private String eventType;
@@ -35,8 +33,7 @@ public class Event extends SoftDeletableAuditedEntity {
     public UUID getTenantId() { return tenantId; }
     public Tenant getTenant() { return tenant; }
     public UUID getRestaurantId() { return restaurantId; }
-    public Restaurant getRestaurant() { return restaurant; }
-    public void setRestaurant(Restaurant restaurant) { this.restaurant = restaurant; }
+    public void setRestaurantId(UUID restaurantId) { this.restaurantId = restaurantId; }
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
     public String getDescription() { return description; }

@@ -1,7 +1,6 @@
 package com.onesley.oneclick.modules.financial.internal;
 
 import com.onesley.oneclick.exception.NotFoundException;
-import com.onesley.oneclick.modules.restaurant.internal.Restaurant;
 import com.onesley.oneclick.security.SecurityHelper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -70,8 +69,7 @@ public class FinancialService {
 
     @Transactional
     public ContractDto createContract(ContractCreateDto dto) {
-        Restaurant restaurantRef = entityManager.getReference(Restaurant.class, dto.restaurantId());
-        Contract c = new Contract(UUID.randomUUID(), restaurantRef, dto.contractNumber(),
+        Contract c = new Contract(UUID.randomUUID(), dto.restaurantId(), dto.contractNumber(),
             dto.commissionRate(), dto.startsAt());
         if (dto.endsAt() != null) c.setEndsAt(dto.endsAt());
         return contractRepo.save(c).toDto();
@@ -110,8 +108,7 @@ public class FinancialService {
 
     @Transactional
     public InvoiceDto createInvoice(InvoiceCreateDto dto) {
-        Restaurant restaurantRef = entityManager.getReference(Restaurant.class, dto.restaurantId());
-        Invoice i = new Invoice(UUID.randomUUID(), restaurantRef, dto.invoiceNumber(),
+        Invoice i = new Invoice(UUID.randomUUID(), dto.restaurantId(), dto.invoiceNumber(),
             dto.periodStart(), dto.periodEnd());
         return invoiceRepo.save(i).toDto();
     }
@@ -164,8 +161,7 @@ public class FinancialService {
 
     @Transactional
     public WalletTxDto createWalletTx(WalletTxCreateDto dto) {
-        Restaurant restaurantRef = entityManager.getReference(Restaurant.class, dto.restaurantId());
-        WalletTransaction t = new WalletTransaction(UUID.randomUUID(), restaurantRef,
+        WalletTransaction t = new WalletTransaction(UUID.randomUUID(), dto.restaurantId(),
             dto.type(), dto.amount(), dto.reason());
         if (dto.referenceId() != null)   t.setReferenceId(dto.referenceId());
         if (dto.referenceType() != null) t.setReferenceType(dto.referenceType());

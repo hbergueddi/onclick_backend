@@ -2,7 +2,6 @@ package com.onesley.oneclick.modules.financial.internal;
 
 import com.onesley.oneclick.audit.SoftDeletableAuditedEntity;
 import com.onesley.oneclick.modules.financial.api.FinancialDtos.ContractDto;
-import com.onesley.oneclick.modules.restaurant.internal.Restaurant;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import org.hibernate.proxy.HibernateProxy;
@@ -21,12 +20,8 @@ public class Contract extends SoftDeletableAuditedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
-    @Column(name = "restaurant_id", nullable = false, insertable = false, updatable = false)
+    @Column(name = "restaurant_id", nullable = false)
     private UUID restaurantId;
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "restaurant_id", nullable = false)
-    private Restaurant restaurant;
 
     @NotBlank
     @Column(name = "contract_number", nullable = false, unique = true)
@@ -50,9 +45,9 @@ public class Contract extends SoftDeletableAuditedEntity {
 
     protected Contract() {}
 
-    public Contract(UUID id, Restaurant restaurant, String contractNumber, BigDecimal commissionRate, LocalDate startsAt) {
+    public Contract(UUID id, UUID restaurantId, String contractNumber, BigDecimal commissionRate, LocalDate startsAt) {
         this.id = id;
-        this.restaurant = restaurant;
+        this.restaurantId = restaurantId;
         this.contractNumber = contractNumber;
         this.commissionRate = commissionRate;
         this.startsAt = startsAt;
@@ -60,7 +55,6 @@ public class Contract extends SoftDeletableAuditedEntity {
 
     public UUID getId() { return id; }
     public UUID getRestaurantId() { return restaurantId; }
-    public Restaurant getRestaurant() { return restaurant; }
     public String getContractNumber() { return contractNumber; }
     public BigDecimal getCommissionRate() { return commissionRate; }
     public void setCommissionRate(BigDecimal commissionRate) { this.commissionRate = commissionRate; }

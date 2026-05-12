@@ -1,7 +1,12 @@
 /**
  * Module {@code modules/financial} — contrats, facturation, wallet (§11).
  */
-@ApplicationModule(type = org.springframework.modulith.ApplicationModule.Type.OPEN, id = "modules.financial", displayName = "modules/financial")
+@ApplicationModule(
+    type = org.springframework.modulith.ApplicationModule.Type.CLOSED,
+    id = "modules.financial",
+    displayName = "modules/financial",
+    allowedDependencies = {"core.identity", "audit", "exception", "security", "shared"}
+)
 package com.onesley.oneclick.modules.financial;
 
 import org.springframework.modulith.ApplicationModule;

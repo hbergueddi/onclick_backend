@@ -2,7 +2,6 @@ package com.onesley.oneclick.modules.financial.internal;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
 import com.onesley.oneclick.modules.financial.api.FinancialDtos.InvoiceDto;
-import com.onesley.oneclick.modules.restaurant.internal.Restaurant;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -24,12 +23,8 @@ public class Invoice extends TimestampedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
-    @Column(name = "restaurant_id", nullable = false, insertable = false, updatable = false)
+    @Column(name = "restaurant_id", nullable = false)
     private UUID restaurantId;
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "restaurant_id", nullable = false)
-    private Restaurant restaurant;
 
     @NotBlank
     @Column(name = "invoice_number", nullable = false, unique = true)
@@ -67,9 +62,9 @@ public class Invoice extends TimestampedEntity {
 
     protected Invoice() {}
 
-    public Invoice(UUID id, Restaurant restaurant, String invoiceNumber, LocalDate periodStart, LocalDate periodEnd) {
+    public Invoice(UUID id, UUID restaurantId, String invoiceNumber, LocalDate periodStart, LocalDate periodEnd) {
         this.id = id;
-        this.restaurant = restaurant;
+        this.restaurantId = restaurantId;
         this.invoiceNumber = invoiceNumber;
         this.periodStart = periodStart;
         this.periodEnd = periodEnd;
@@ -77,7 +72,6 @@ public class Invoice extends TimestampedEntity {
 
     public UUID getId() { return id; }
     public UUID getRestaurantId() { return restaurantId; }
-    public Restaurant getRestaurant() { return restaurant; }
     public String getInvoiceNumber() { return invoiceNumber; }
     public LocalDate getPeriodStart() { return periodStart; }
     public LocalDate getPeriodEnd() { return periodEnd; }

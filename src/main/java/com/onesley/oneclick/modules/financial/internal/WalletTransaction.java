@@ -2,7 +2,6 @@ package com.onesley.oneclick.modules.financial.internal;
 
 import com.onesley.oneclick.core.identity.internal.User;
 import com.onesley.oneclick.modules.financial.api.FinancialDtos.WalletTxDto;
-import com.onesley.oneclick.modules.restaurant.internal.Restaurant;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -26,12 +25,8 @@ public class WalletTransaction {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
-    @Column(name = "restaurant_id", nullable = false, insertable = false, updatable = false)
+    @Column(name = "restaurant_id", nullable = false)
     private UUID restaurantId;
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "restaurant_id", nullable = false)
-    private Restaurant restaurant;
 
     @Pattern(regexp = "^(credit|debit|commission|payout|adjustment)$")
     @Column(name = "type", nullable = false)
@@ -67,9 +62,9 @@ public class WalletTransaction {
 
     protected WalletTransaction() {}
 
-    public WalletTransaction(UUID id, Restaurant restaurant, String type, BigDecimal amount, String reason) {
+    public WalletTransaction(UUID id, UUID restaurantId, String type, BigDecimal amount, String reason) {
         this.id = id;
-        this.restaurant = restaurant;
+        this.restaurantId = restaurantId;
         this.type = type;
         this.amount = amount;
         this.reason = reason;
@@ -77,7 +72,6 @@ public class WalletTransaction {
 
     public UUID getId() { return id; }
     public UUID getRestaurantId() { return restaurantId; }
-    public Restaurant getRestaurant() { return restaurant; }
     public String getType() { return type; }
     public BigDecimal getAmount() { return amount; }
     public BigDecimal getBalanceAfter() { return balanceAfter; }

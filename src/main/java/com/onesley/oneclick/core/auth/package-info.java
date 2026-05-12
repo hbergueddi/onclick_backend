@@ -11,7 +11,12 @@
  * <h3>Dépendance</h3>
  * <p>Référence {@link com.onesley.oneclick.core.identity.internal.User} pour les FKs {@code user_id}.
  */
-@ApplicationModule(type = org.springframework.modulith.ApplicationModule.Type.OPEN, id = "core.auth", displayName = "core/auth")
+@ApplicationModule(
+    type = org.springframework.modulith.ApplicationModule.Type.CLOSED,
+    id = "core.auth",
+    displayName = "core/auth",
+    allowedDependencies = {"core.identity", "exception", "security"}
+)
 package com.onesley.oneclick.core.auth;
 
 import org.springframework.modulith.ApplicationModule;

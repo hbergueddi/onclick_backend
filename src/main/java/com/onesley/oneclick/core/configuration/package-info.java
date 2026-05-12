@@ -8,7 +8,12 @@
  *   <li>{@code cache_configurations} — TTL + max entries des caches (Redis / JVM)</li>
  * </ul>
  */
-@ApplicationModule(type = org.springframework.modulith.ApplicationModule.Type.OPEN, id = "core.configuration", displayName = "core/configuration")
+@ApplicationModule(
+    type = org.springframework.modulith.ApplicationModule.Type.CLOSED,
+    id = "core.configuration",
+    displayName = "core/configuration",
+    allowedDependencies = {"audit", "cache", "exception"}
+)
 package com.onesley.oneclick.core.configuration;
 
 import org.springframework.modulith.ApplicationModule;

@@ -11,7 +11,12 @@
  *   <li>{@code business_hours} — horaires polymorphiques (remplace opening_hours jsonb legacy)</li>
  * </ul>
  */
-@ApplicationModule(type = org.springframework.modulith.ApplicationModule.Type.OPEN, id = "modules.restaurant", displayName = "modules/restaurant")
+@ApplicationModule(
+    type = org.springframework.modulith.ApplicationModule.Type.CLOSED,
+    id = "modules.restaurant",
+    displayName = "modules/restaurant",
+    allowedDependencies = {"core.identity", "core.tenant", "audit", "cache", "exception", "search", "shared"}
+)
 package com.onesley.oneclick.modules.restaurant;
 
 import org.springframework.modulith.ApplicationModule;

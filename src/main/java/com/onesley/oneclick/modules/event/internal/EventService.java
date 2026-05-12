@@ -3,7 +3,6 @@ package com.onesley.oneclick.modules.event.internal;
 import com.onesley.oneclick.core.identity.internal.User;
 import com.onesley.oneclick.core.tenant.internal.Tenant;
 import com.onesley.oneclick.exception.NotFoundException;
-import com.onesley.oneclick.modules.restaurant.internal.Restaurant;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.data.domain.Page;
@@ -65,7 +64,7 @@ public class EventService {
         Tenant tenantRef = entityManager.getReference(Tenant.class, dto.tenantId());
         Event e = new Event(UUID.randomUUID(), tenantRef, dto.title(), dto.eventAt());
         if (dto.restaurantId() != null) {
-            e.setRestaurant(entityManager.getReference(Restaurant.class, dto.restaurantId()));
+            e.setRestaurantId(dto.restaurantId());
         }
         if (dto.description() != null) e.setDescription(dto.description());
         if (dto.eventType() != null)   e.setEventType(dto.eventType());

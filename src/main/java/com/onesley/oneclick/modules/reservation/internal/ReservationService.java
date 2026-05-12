@@ -5,9 +5,6 @@ import com.onesley.oneclick.core.tenant.internal.Tenant;
 import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.security.SecurityHelper;
-import com.onesley.oneclick.modules.restaurant.internal.Restaurant;
-import com.onesley.oneclick.modules.restaurant.internal.MealService;
-import com.onesley.oneclick.modules.restaurant.internal.RestaurantTable;
 import com.onesley.oneclick.shared.events.ReservationCreatedEvent;
 import com.onesley.oneclick.shared.events.ReservationStatusChangedEvent;
 import jakarta.persistence.EntityManager;
@@ -77,13 +74,12 @@ public class ReservationService {
         }
         Tenant tenantRef = entityManager.getReference(Tenant.class, dto.tenantId());
         User clientRef = entityManager.getReference(User.class, dto.clientId());
-        Restaurant restoRef = entityManager.getReference(Restaurant.class, dto.restaurantId());
         Reservation r = new Reservation(
-            UUID.randomUUID(), tenantRef, clientRef, restoRef,
+            UUID.randomUUID(), tenantRef, clientRef, dto.restaurantId(),
             dto.reservationAt(), dto.guestCount()
         );
         if (dto.tableId() != null) {
-            r.setTable(entityManager.getReference(RestaurantTable.class, dto.tableId()));
+            r.setTableId(dto.tableId());
         }
         if (dto.notes() != null) r.setNotes(dto.notes());
         Reservation saved = repository.save(r);
