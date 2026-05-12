@@ -1,5 +1,7 @@
 package com.onesley.oneclick.exception;
 
+import io.sentry.Sentry;
+import io.sentry.SentryLevel;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -77,7 +79,10 @@ public class GlobalExceptionHandler {
         ProblemDetail body = problem(ex.getStatus(), ex.getMessage(), req, slug(ex));
         // Pas de log noisy pour des 4xx prévisibles (NotFoundException etc.)
         if (ex.getStatus().is5xxServerError()) {
-            log.error("API exception 5xx [{}]: {}", body.getProperties().get("traceId"), ex.getMessage(), ex);
+            String traceId = String.valueOf(body.getProperties().get("traceId"));
+            log.error("API exception 5xx [{}]: {}", traceId, ex.getMessage(), ex);
+            // Sprint G.6.2 — Sentry capture explicite avec contexte enrichi
+            captureToSentry(ex, req, traceId, SentryLevel.ERROR);
         }
         return ResponseEntity.status(ex.getStatus()).body(body);
     }
@@ -194,9 +199,13 @@ public class GlobalExceptionHandler {
             req,
             "internal-error"
         );
-        // 500 = bug serveur, on log + Sentry (déjà branché via Sentry Spring Boot starter)
+        String traceId = String.valueOf(body.getProperties().get("traceId"));
+        // 500 = bug serveur, on log + Sentry explicite avec contexte enrichi
         log.error("Unhandled exception [{}] on {}: {}",
-            body.getProperties().get("traceId"), req.getRequestURI(), ex.getMessage(), ex);
+            traceId, req.getRequestURI(), ex.getMessage(), ex);
+        // Sprint G.6.2 — Sentry capture explicite (le starter auto-capture aussi
+        // via logback appender, mais on veut être sûr d'avoir le contexte enrichi).
+        captureToSentry(ex, req, traceId, SentryLevel.FATAL);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }
 
@@ -217,5 +226,38 @@ public class GlobalExceptionHandler {
             .replaceAll("Exception$", "")
             .replaceAll("([a-z])([A-Z])", "$1-$2")
             .toLowerCase();
+    }
+
+    /**
+     * Sprint G.6.2 — Capture explicite vers Sentry avec contexte enrichi.
+     *
+     * <p>Le starter Sentry Spring Boot 4 capture automatiquement via logback
+     * appender (cf {@code SentryLogbackAppender}), mais cette méthode ajoute :
+     * <ul>
+     *   <li>{@code traceId} comme tag (pour corréler avec les logs)</li>
+     *   <li>{@code http.method}, {@code http.path}, {@code http.query} comme contexte</li>
+     *   <li>{@code X-Forwarded-For} comme IP côté Sentry user</li>
+     *   <li>{@link SentryLevel} explicite (ERROR pour 5xx ApiException, FATAL pour 500 fallback)</li>
+     * </ul>
+     *
+     * <p>Si SENTRY_DSN n'est pas configuré, {@code Sentry.captureException} est
+     * un no-op silencieux (pas d'erreur côté app).
+     */
+    private static void captureToSentry(Throwable ex, HttpServletRequest req, String traceId, SentryLevel level) {
+        Sentry.withScope(scope -> {
+            scope.setLevel(level);
+            scope.setTag("traceId", traceId);
+            scope.setTag("http.method", req.getMethod());
+            scope.setTag("http.path", req.getRequestURI());
+            String query = req.getQueryString();
+            if (query != null && !query.isBlank()) {
+                scope.setExtra("http.query", query);
+            }
+            String userAgent = req.getHeader("User-Agent");
+            if (userAgent != null) scope.setExtra("http.userAgent", userAgent);
+            String xff = req.getHeader("X-Forwarded-For");
+            if (xff != null) scope.setTag("http.x-forwarded-for", xff.split(",")[0].trim());
+            Sentry.captureException(ex);
+        });
     }
 }

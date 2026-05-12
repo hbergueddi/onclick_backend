@@ -47,6 +47,22 @@ spring:
       ssl:
         enabled: ${REDIS_SSL:false}
 
+  # ─── Elasticsearch prod (Sprint G.6.3 — TLS + API key) ─────────────────
+  # En dev compose : xpack.security.enabled=false. En prod : ENABLED + TLS.
+  # Procédure setup ES prod :
+  #   1. ES container : xpack.security.enabled=true, xpack.security.http.ssl.enabled=true
+  #   2. Bootstrap : `docker exec -it es bin/elasticsearch-setup-passwords auto`
+  #   3. Create API key : `POST /_security/api_key {"name":"oneclick-backend","role_descriptors":{}}`
+  #   4. Copier API key encodée + CA fingerprint dans .env prod
+  #   5. ES_URL=https://elasticsearch.prod:9200 ES_API_KEY=<key> ES_CA_FINGERPRINT=<sha256>
+  elasticsearch:
+    uris: ${ES_URL:https://elasticsearch:9200}
+    # API key (recommandé) — Authorization: ApiKey <encoded>
+    # Spring Data ES utilise une RestClient sous le capot.
+    # Pour API key : configurer via Bean RestClientBuilderCustomizer (cf src/main/java/com/onesley/oneclick/modules/analytics/search/EsClientConfig.java)
+    username: ${ES_USERNAME:elastic}
+    password: ${ES_PASSWORD:}
+
   flyway:
     # In prod, validate strictly — no baseline-on-migrate (would mask schema drift)
     baseline-on-migrate: false
@@ -87,3 +103,9 @@ app:
     oauth2:
       enabled: ${APP_SECURITY_OAUTH2_ENABLED:true}
     jwt-secret: ${APP_SECURITY_JWT_SECRET}
+
+  # ─── Rate limiting prod (Sprint G.6.1 — anti-bruteforce activé) ────────
+  rate-limit:
+    enabled: ${APP_RATE_LIMIT_ENABLED:true}
+    # defaults + endpoints héritent de application.yml — override uniquement
+    # ici si besoin (par ex en cas de DDoS, baisser temporairement les capacities).

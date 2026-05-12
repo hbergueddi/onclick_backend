@@ -161,6 +161,12 @@
             <artifactId>sentry-spring-boot-4-starter</artifactId>
         </dependency>
 
+        <!-- ─── Rate limiting (Sprint G.6) ───────────────────────────────────── -->
+        <!-- Implémentation maison TokenBucket (pas de dépendance externe).
+             Simple ConcurrentHashMap par IP+path, refill periodic.
+             Suffit pour single-instance V1. V2 distribué : passer sur Bucket4j-Redis. -->
+        <!-- (pas de dépendance Bucket4j externe) -->
+
         <!-- ─── Spring Modulith (IN-PROCESS events, PAS Kafka) ──────────────── -->
         <dependency>
             <groupId>org.springframework.modulith</groupId>

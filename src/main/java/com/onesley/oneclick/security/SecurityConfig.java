@@ -11,9 +11,12 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import com.onesley.oneclick.security.ratelimit.RateLimitFilter;
 
 import java.util.Arrays;
 import java.util.List;
@@ -57,14 +60,18 @@ public class SecurityConfig {
     private boolean oauth2Enabled;
 
     private final UserRoleAuthoritiesConverter authoritiesConverter;
+    private final RateLimitFilter rateLimitFilter;
 
     public SecurityConfig(
-        org.springframework.beans.factory.ObjectProvider<UserRoleAuthoritiesConverter> converterProvider
+        org.springframework.beans.factory.ObjectProvider<UserRoleAuthoritiesConverter> converterProvider,
+        org.springframework.beans.factory.ObjectProvider<RateLimitFilter> rateLimitFilterProvider
     ) {
         // ObjectProvider permet d'injecter optionnellement — le bean
         // UserRoleAuthoritiesConverter existe toujours (Component scan), mais
         // on ne l'utilise que si oauth2Enabled. Pas de @Lazy nécessaire.
         this.authoritiesConverter = converterProvider.getIfAvailable();
+        // RateLimitFilter conditionnel sur app.rate-limit.enabled=true (par défaut désactivé)
+        this.rateLimitFilter = rateLimitFilterProvider.getIfAvailable();
     }
 
     @Bean
@@ -76,6 +83,12 @@ public class SecurityConfig {
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .formLogin(form -> form.disable())
             .httpBasic(basic -> basic.disable());
+
+        // Sprint G.6.1 — Rate limit AVANT JWT (anti-bruteforce sans charger le CPU
+        // sur de l'auth pour des requêtes qui seront 429-bloquées de toute façon).
+        if (rateLimitFilter != null) {
+            http.addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class);
+        }
 
         if (oauth2Enabled) {
             http.authorizeHttpRequests(auth -> auth

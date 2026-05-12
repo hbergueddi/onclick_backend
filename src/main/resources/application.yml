@@ -72,6 +72,41 @@ spring:
 # Local dev : MinIO sur localhost:9000 (cf scripts/minio-start.sh)
 # Prod      : override endpoint + access-key + secret-key via env vars (S3 AWS)
 app:
+  # ─── Rate limiting (Sprint G.6.1 — Bucket4j in-memory) ─────────────────
+  # Active = false par défaut (DX dev). En prod : enabled=true via env var
+  # APP_RATE_LIMIT_ENABLED=true. Override par endpoint via la liste endpoints.
+  # Bucket4j en mémoire (ConcurrentHashMap) — single instance OK, V2 Redis distribué.
+  rate-limit:
+    enabled: ${APP_RATE_LIMIT_ENABLED:false}
+    defaults:
+      capacity: 60                # 60 req / minute par IP (large default)
+      refill-period: PT1M
+    endpoints:
+      # Anti-bruteforce login : 10 tentatives / min par IP
+      - path: /api/auth/login
+        capacity: 10
+        refill-period: PT1M
+      # Anti-bruteforce OTP : 5 demandes / 15 min par IP
+      - path: /api/auth/otp/**
+        capacity: 5
+        refill-period: PT15M
+      # Refresh token : 30 / min (cas légitimes nombreux avec rotation)
+      - path: /api/auth/refresh
+        capacity: 30
+        refill-period: PT1M
+      # Catalogue public restos : 120 / min (browse rapide Login.tsx picker)
+      - path: /api/restaurants
+        capacity: 120
+        refill-period: PT1M
+      # Search full-text : 30 / min (anti-scraping)
+      - path: /api/search/restaurants/**
+        capacity: 30
+        refill-period: PT1M
+      # OCR (coûteux) : 20 / heure par IP
+      - path: /api/loyalty/ocr-receipt
+        capacity: 20
+        refill-period: PT1H
+
   # ─── OCR (Phase B.8 — port snap2earn/ocr-receipt Edge Functions) ─────
   # Si api-key non défini, le service tombe en mode stub (réponse vide + log warn).
   ocr:
