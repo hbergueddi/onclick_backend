@@ -42,6 +42,7 @@ public class EtlOrchestrator implements CommandLineRunner {
     private final EtlPostgresFdwBootstrap fdw;
     private final ConfigurableApplicationContext ctx;
     private final ObjectProvider<CacheManager> cacheManagerProvider;
+    private final EtlVerifyService verifyService;
 
     // Phase A steps
     private final TenantsStep tenantsStep;
@@ -57,6 +58,7 @@ public class EtlOrchestrator implements CommandLineRunner {
                            EtlPostgresFdwBootstrap fdw,
                            ConfigurableApplicationContext ctx,
                            ObjectProvider<CacheManager> cacheManagerProvider,
+                           EtlVerifyService verifyService,
                            TenantsStep tenantsStep,
                            RolesStep rolesStep,
                            com.onesley.oneclick.etl.steps.UsersStep usersStep,
@@ -70,6 +72,7 @@ public class EtlOrchestrator implements CommandLineRunner {
         this.fdw = fdw;
         this.ctx = ctx;
         this.cacheManagerProvider = cacheManagerProvider;
+        this.verifyService = verifyService;
         this.tenantsStep = tenantsStep;
         this.rolesStep = rolesStep;
         // Order MATTERS — FK dependencies
@@ -91,7 +94,7 @@ public class EtlOrchestrator implements CommandLineRunner {
     @Override
     public void run(String... args) {
         log.info("════════════════════════════════════════════════════════════════════");
-        log.info(" Phase 13 ETL — démarrage");
+        log.info(" Phase 13 ETL — démarrage{}", props.isDryRun() ? " (DRY-RUN — pas d'INSERT)" : "");
         log.info("════════════════════════════════════════════════════════════════════");
         Instant t0 = Instant.now();
         int exitCode = 0;
@@ -99,6 +102,17 @@ public class EtlOrchestrator implements CommandLineRunner {
         try {
             // 1. Setup postgres_fdw
             fdw.setup();
+
+            // Sprint G.7 — Dry-run : skip TRUNCATE + steps, just verify counts
+            if (props.isDryRun()) {
+                log.info("");
+                log.info("───────────────────── Dry-run — Verify counts source vs target ─────────────────────");
+                verifyService.verify();
+                Duration total = Duration.between(t0, Instant.now());
+                log.info("");
+                log.info(" Dry-run terminé en {} s — aucun INSERT effectué", total.toSeconds());
+                return; // skip closing context (Spring l'ouvre/ferme normalement en CLI mode)
+            }
 
             // 2. TRUNCATE des tables cibles (reverse FK order across all steps)
             if (props.isTruncateBeforeEtl()) {
@@ -136,7 +150,12 @@ public class EtlOrchestrator implements CommandLineRunner {
             // (TRUNCATE+INSERT bypass @CacheEvict des services Spring)
             flushCaches();
 
-            // 6. Rapport final
+            // 6. Sprint G.7 — Verify counts source vs target (post-ETL audit)
+            if (props.isVerifyCountsAfterEtl()) {
+                verifyService.verify();
+            }
+
+            // 7. Rapport final
             Duration total = Duration.between(t0, Instant.now());
             log.info("");
             log.info("════════════════════════════════════════════════════════════════════");

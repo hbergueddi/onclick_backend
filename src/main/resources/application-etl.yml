@@ -57,6 +57,11 @@ oneclick:
     # Phase A (core path 13.A — 25 tables) + Phase B (secondaire — 10 tables additionnelles)
     run-phase-a: true
     run-phase-b: true
+    # Sprint G.7 — Dry-run skip INSERT, just count source rows + verify mapping.
+    # Activer via ONECLICK_ETL_DRY_RUN=true pour tester FDW + volumétrie avant run réel.
+    dry-run: ${ONECLICK_ETL_DRY_RUN:false}
+    # Sprint G.7 — Vérifie counts source vs target post-ETL (warning si écart > 5%).
+    verify-counts-after-etl: true
 
 logging:
   level:
