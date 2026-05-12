@@ -1,0 +1,35 @@
+# ══════════════════════════════════════════════════════════════════════════
+# OneClick — Elasticsearch 9.4.0 local dev config (Sprint ES mai 2026)
+# ══════════════════════════════════════════════════════════════════════════
+# Single node + xpack.security disabled. NE PAS faire en prod.
+#
+# Installation :
+#   cp scripts/es-config-9.yml ~/elasticsearch-9/elasticsearch-9.4.0/config/elasticsearch.yml
+#   ./scripts/es-start.sh --daemon
+#
+# Vérification :
+#   curl http://localhost:9200/   # → version 9.4.0
+#   curl http://localhost:8083/actuator/health   # → status UP avec elasticsearch UP
+# ══════════════════════════════════════════════════════════════════════════
+
+cluster.name: oneclick-es9-dev
+node.name: oneclick-es9-node-1
+
+# Single-node — pas de cluster discovery
+discovery.type: single-node
+
+# Network — localhost only (sécurité par isolation réseau)
+network.host: 127.0.0.1
+http.port: 9200
+
+# Désactive xpack.security pour dev local (sinon TLS + auth obligatoires en ES 8+)
+xpack.security.enabled: false
+xpack.security.enrollment.enabled: false
+xpack.security.http.ssl.enabled: false
+xpack.security.transport.ssl.enabled: false
+
+# Désactive ML (libs natives incompatibles macOS arm64)
+xpack.ml.enabled: false
+
+# Désactive geoip downloader (évite les warnings réseau au boot)
+ingest.geoip.downloader.enabled: false

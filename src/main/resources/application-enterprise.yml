@@ -64,14 +64,12 @@ management:
     health:
       show-details: always
       show-components: always
-  health:
-    # Désactive le health probe Elasticsearch — version mismatch entre
-    # le client embarqué (Spring Boot 4 → ES 8.x/9.x) et le serveur local
-    # (ES 7.17 via brew/es-start.sh). Le client REST fonctionne pour search,
-    # mais le health probe utilise une API différente qui décode mal le
-    # JSON 7.17. À réactiver après upgrade serveur ES vers 8.x.
-    elasticsearch:
-      enabled: false
+  # Health probe Elasticsearch — réactivé après upgrade serveur 7.17 → 9.4
+  # (Sprint ES, mai 2026). Le client embarqué Spring Boot 4.0.6 est
+  # elasticsearch-java 9.2.8 — désormais compatible avec le serveur.
+  # health:
+  #   elasticsearch:
+  #     enabled: true   # default = true, donc commenté
 
 # ─── Spring Modulith (in-process events, PAS Kafka — monolithe §21) ──
 spring.modulith:
