@@ -34,6 +34,12 @@ public final class NotificationDtos {
         String link
     ) {}
 
+    /** Compteur de notifications non lues pour un user (badge cloche). */
+    public record UnreadCountDto(long count) {}
+
+    /** Résultat de l'opération bulk "marquer tout comme lu". */
+    public record MarkAllReadResultDto(long updated) {}
+
     // ─── Campaign ────────────────────────────────────────────────────────────
 
     public record CampaignDto(UUID id, UUID tenantId, String title, String message, String targetSegment,

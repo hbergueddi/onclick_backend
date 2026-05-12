@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.restaurant.internal;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
+import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantZoneDto;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -51,6 +52,11 @@ public class RestaurantZone extends TimestampedEntity {
     public Restaurant getRestaurant() { return restaurant; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public RestaurantZoneDto toDto() {
+        return new RestaurantZoneDto(id, restaurantId, name, getCreatedAt());
+    }
 
     @Override
     public boolean equals(Object o) {

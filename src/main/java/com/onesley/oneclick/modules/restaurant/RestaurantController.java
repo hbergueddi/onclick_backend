@@ -2,6 +2,7 @@ package com.onesley.oneclick.modules.restaurant;
 
 import com.onesley.oneclick.search.SearchRequest;
 import com.onesley.oneclick.search.Searchable;
+import com.onesley.oneclick.security.SecurityHelper;
 import com.onesley.oneclick.shared.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -12,13 +13,25 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantCreateDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantDto;
+import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.MealServiceCreateDto;
+import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.MealServiceDto;
+import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.MealServicePatchDto;
+import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantStaffCreateDto;
+import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantStaffDto;
+import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantStaffPatchDto;
+import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantTableCreateDto;
+import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantTableDto;
+import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantZoneCreateDto;
+import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantZoneDto;
 import com.onesley.oneclick.modules.restaurant.internal.Restaurant;
 import com.onesley.oneclick.modules.restaurant.internal.RestaurantCatalogService;
 import com.onesley.oneclick.modules.restaurant.internal.RestaurantRepository;
+import com.onesley.oneclick.modules.restaurant.internal.RestaurantSubResourceService;
 
 @RestController
 @RequestMapping("/api/restaurants")
@@ -33,10 +46,16 @@ public class RestaurantController {
 
     private final RestaurantCatalogService service;
     private final RestaurantRepository restaurantRepository;
+    private final RestaurantSubResourceService subResourceService;
 
-    public RestaurantController(RestaurantCatalogService service, RestaurantRepository restaurantRepository) {
+    public RestaurantController(
+        RestaurantCatalogService service,
+        RestaurantRepository restaurantRepository,
+        RestaurantSubResourceService subResourceService
+    ) {
         this.service = service;
         this.restaurantRepository = restaurantRepository;
+        this.subResourceService = subResourceService;
     }
 
     @GetMapping
@@ -82,5 +101,153 @@ public class RestaurantController {
         return PageResponse.from(
             Searchable.execute(restaurantRepository, req, SEARCHABLE_FIELDS, Restaurant::toDto)
         );
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  Staff — junction user × restaurant (role_code: owner, manager, server…)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    @GetMapping("/{restaurantId}/staff")
+    @Operation(summary = "Liste du staff d'un restaurant")
+    @PreAuthorize("isAuthenticated()")
+    public List<RestaurantStaffDto> listStaff(@PathVariable UUID restaurantId) {
+        return subResourceService.listStaff(restaurantId);
+    }
+
+    @PostMapping("/{restaurantId}/staff")
+    @Operation(summary = "Ajoute un staff au restaurant (owner/manager/server…)")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR')")
+    public ResponseEntity<RestaurantStaffDto> addStaff(
+        @PathVariable UUID restaurantId,
+        @Valid @RequestBody RestaurantStaffCreateDto dto
+    ) {
+        RestaurantStaffDto created = subResourceService.addStaff(restaurantId, dto);
+        return ResponseEntity.created(URI.create("/api/restaurants/staff/" + created.id())).body(created);
+    }
+
+    @PatchMapping("/staff/{id}")
+    @Operation(summary = "Modifie le rôle/statut d'un staff")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR')")
+    public RestaurantStaffDto patchStaff(
+        @PathVariable UUID id,
+        @Valid @RequestBody RestaurantStaffPatchDto dto
+    ) {
+        return subResourceService.patchStaff(id, dto);
+    }
+
+    @DeleteMapping("/staff/{id}")
+    @Operation(summary = "Retire un staff (soft delete)")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR')")
+    public ResponseEntity<Void> deleteStaff(@PathVariable UUID id) {
+        subResourceService.deleteStaff(id);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    @GetMapping("/staff/by-user/{userId}")
+    @Operation(summary = "Liste les restaurants où je suis staff (owner check)")
+    @PreAuthorize("isAuthenticated()")
+    public List<RestaurantStaffDto> findStaffByUser(@PathVariable UUID userId) {
+        SecurityHelper.requireOwnerOrAdmin(userId);
+        return subResourceService.findStaffByUser(userId);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  Services repas (brunch / déjeuner / dîner)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    @GetMapping("/{restaurantId}/services")
+    @Operation(summary = "Liste des créneaux service d'un restaurant")
+    @PreAuthorize("isAuthenticated()")
+    public List<MealServiceDto> listServices(@PathVariable UUID restaurantId) {
+        return subResourceService.listServices(restaurantId);
+    }
+
+    @PostMapping("/{restaurantId}/services")
+    @Operation(summary = "Crée un créneau service (brunch, déjeuner, dîner)")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR')")
+    public ResponseEntity<MealServiceDto> addService(
+        @PathVariable UUID restaurantId,
+        @Valid @RequestBody MealServiceCreateDto dto
+    ) {
+        MealServiceDto created = subResourceService.addService(restaurantId, dto);
+        return ResponseEntity.created(URI.create("/api/restaurants/services/" + created.id())).body(created);
+    }
+
+    @PatchMapping("/services/{id}")
+    @Operation(summary = "Modifie un créneau service")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR')")
+    public MealServiceDto patchService(
+        @PathVariable UUID id,
+        @Valid @RequestBody MealServicePatchDto dto
+    ) {
+        return subResourceService.patchService(id, dto);
+    }
+
+    @DeleteMapping("/services/{id}")
+    @Operation(summary = "Supprime un créneau service")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR')")
+    public ResponseEntity<Void> deleteService(@PathVariable UUID id) {
+        subResourceService.deleteService(id);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  Zones (Terrasse, Salle, Bar) — plan de salle ProDesk
+    // ═══════════════════════════════════════════════════════════════════════
+
+    @GetMapping("/{restaurantId}/zones")
+    @Operation(summary = "Liste des zones d'un restaurant")
+    @PreAuthorize("isAuthenticated()")
+    public List<RestaurantZoneDto> listZones(@PathVariable UUID restaurantId) {
+        return subResourceService.listZones(restaurantId);
+    }
+
+    @PostMapping("/{restaurantId}/zones")
+    @Operation(summary = "Crée une zone (Terrasse, Salle, Bar…)")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR')")
+    public ResponseEntity<RestaurantZoneDto> addZone(
+        @PathVariable UUID restaurantId,
+        @Valid @RequestBody RestaurantZoneCreateDto dto
+    ) {
+        RestaurantZoneDto created = subResourceService.addZone(restaurantId, dto);
+        return ResponseEntity.created(URI.create("/api/restaurants/zones/" + created.id())).body(created);
+    }
+
+    @DeleteMapping("/zones/{id}")
+    @Operation(summary = "Supprime une zone (les tables liées sont supprimées en cascade DB)")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR')")
+    public ResponseEntity<Void> deleteZone(@PathVariable UUID id) {
+        subResourceService.deleteZone(id);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  Tables (rattachées à une zone)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    @GetMapping("/{restaurantId}/tables")
+    @Operation(summary = "Liste des tables d'un restaurant (toutes zones confondues)")
+    @PreAuthorize("isAuthenticated()")
+    public List<RestaurantTableDto> listTables(@PathVariable UUID restaurantId) {
+        return subResourceService.listTables(restaurantId);
+    }
+
+    @PostMapping("/{restaurantId}/tables")
+    @Operation(summary = "Crée une table (rattachée à une zone du restaurant)")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR')")
+    public ResponseEntity<RestaurantTableDto> addTable(
+        @PathVariable UUID restaurantId,
+        @Valid @RequestBody RestaurantTableCreateDto dto
+    ) {
+        RestaurantTableDto created = subResourceService.addTable(restaurantId, dto);
+        return ResponseEntity.created(URI.create("/api/restaurants/tables/" + created.id())).body(created);
+    }
+
+    @DeleteMapping("/tables/{id}")
+    @Operation(summary = "Supprime une table")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR')")
+    public ResponseEntity<Void> deleteTable(@PathVariable UUID id) {
+        subResourceService.deleteTable(id);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 }

@@ -15,7 +15,7 @@
     type = org.springframework.modulith.ApplicationModule.Type.CLOSED,
     id = "modules.restaurant",
     displayName = "modules/restaurant",
-    allowedDependencies = {"core.identity", "core.tenant", "audit", "cache", "exception", "search", "shared"}
+    allowedDependencies = {"core.identity", "core.tenant", "audit", "cache", "exception", "search", "security", "shared"}
 )
 package com.onesley.oneclick.modules.restaurant;
 

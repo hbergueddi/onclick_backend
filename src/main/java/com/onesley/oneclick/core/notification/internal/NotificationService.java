@@ -9,6 +9,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -18,8 +19,10 @@ import com.onesley.oneclick.core.notification.api.NotificationDtos.CampaignCreat
 import com.onesley.oneclick.core.notification.api.NotificationDtos.CampaignDto;
 import com.onesley.oneclick.core.notification.api.NotificationDtos.DeviceTokenCreateDto;
 import com.onesley.oneclick.core.notification.api.NotificationDtos.DeviceTokenDto;
+import com.onesley.oneclick.core.notification.api.NotificationDtos.MarkAllReadResultDto;
 import com.onesley.oneclick.core.notification.api.NotificationDtos.NotificationCreateDto;
 import com.onesley.oneclick.core.notification.api.NotificationDtos.NotificationDto;
+import com.onesley.oneclick.core.notification.api.NotificationDtos.UnreadCountDto;
 
 /**
  * Service du microservice notification (Phase 2 §21 spec senior).
@@ -74,6 +77,35 @@ public class NotificationService {
         SecurityHelper.requireOwnerOrAdmin(n.getRecipientUserId());
         if (n.getReadAt() == null) n.markRead();
         return notifRepo.save(n).toDto();
+    }
+
+    /**
+     * Cloche notification : liste complète des notifications d'un user, triée DESC.
+     *
+     * <p>Accès owner-only (ou admin). Pas de pagination — la cloche affiche
+     * généralement les N dernières en mémoire. Pour de grands volumes, utiliser
+     * {@link #findAll(UUID, Boolean, int, int)} avec pagination explicite.
+     */
+    public List<NotificationDto> findByUser(UUID userId, Boolean unreadOnly) {
+        SecurityHelper.requireOwnerOrAdmin(userId);
+        List<Notification> notifs = Boolean.TRUE.equals(unreadOnly)
+            ? notifRepo.findAllByRecipientUserIdAndReadAtIsNullOrderByCreatedAtDesc(userId)
+            : notifRepo.findAllByRecipientUserIdOrderByCreatedAtDesc(userId);
+        return notifs.stream().map(Notification::toDto).toList();
+    }
+
+    /** Badge cloche : compteur de non lues pour un user. */
+    public UnreadCountDto unreadCountByUser(UUID userId) {
+        SecurityHelper.requireOwnerOrAdmin(userId);
+        return new UnreadCountDto(notifRepo.countByRecipientUserIdAndReadAtIsNull(userId));
+    }
+
+    /** Action "Tout lire" depuis la cloche : marque toutes les non lues comme lues. */
+    @Transactional
+    public MarkAllReadResultDto markAllReadByUser(UUID userId) {
+        SecurityHelper.requireOwnerOrAdmin(userId);
+        int updated = notifRepo.markAllReadByRecipientUserId(userId, Instant.now());
+        return new MarkAllReadResultDto(updated);
     }
 
     // ─── Campaigns ───────────────────────────────────────────────────────────

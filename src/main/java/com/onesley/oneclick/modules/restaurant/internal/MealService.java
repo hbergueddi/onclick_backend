@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.restaurant.internal;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
+import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.MealServiceDto;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -66,8 +67,16 @@ public class MealService extends TimestampedEntity {
     public UUID getRestaurantId() { return restaurantId; }
     public Restaurant getRestaurant() { return restaurant; }
     public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
     public LocalTime getStartTime() { return startTime; }
+    public void setStartTime(LocalTime startTime) { this.startTime = startTime; }
     public LocalTime getEndTime() { return endTime; }
+    public void setEndTime(LocalTime endTime) { this.endTime = endTime; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public MealServiceDto toDto() {
+        return new MealServiceDto(id, restaurantId, name, startTime, endTime, getCreatedAt());
+    }
 
     @Override
     public boolean equals(Object o) {

@@ -2,6 +2,7 @@ package com.onesley.oneclick.modules.restaurant.internal;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
 import com.onesley.oneclick.core.identity.api.User;
+import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantStaffDto;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -75,6 +76,11 @@ public class RestaurantStaff extends TimestampedEntity {
     public Instant getDeletedAt() { return deletedAt; }
     public boolean isDeleted() { return deletedAt != null; }
     public void markDeleted() { this.deletedAt = Instant.now(); }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public RestaurantStaffDto toDto() {
+        return new RestaurantStaffDto(id, restaurantId, userId, roleCode, getCreatedAt());
+    }
 
     @Override
     public boolean equals(Object o) {

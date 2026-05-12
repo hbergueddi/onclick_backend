@@ -1,0 +1,97 @@
+package com.onesley.oneclick.modules.restaurant.api;
+
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
+import java.time.Instant;
+import java.time.LocalTime;
+import java.util.UUID;
+
+/**
+ * DTOs publics des sous-ressources du module restaurant : staff, services (repas),
+ * zones et tables.
+ *
+ * <p>Pas de méthode de mapping ici : la conversion Entity → DTO se fait via
+ * {@code Entity.toDto()} dans le package {@code internal} (dépendance
+ * internal → api autorisée en Modulith CLOSED).</p>
+ *
+ * <p>Pattern aligné sur {@link com.onesley.oneclick.modules.social.api.SocialDtos}
+ * (un fichier groupé pour les DTOs sœurs d'un même module).</p>
+ */
+public final class RestaurantSubResourceDtos {
+
+    private RestaurantSubResourceDtos() {}
+
+    // ─── Staff (junction user × restaurant) ──────────────────────────────────
+
+    public record RestaurantStaffDto(
+        UUID id,
+        UUID restaurantId,
+        UUID userId,
+        String roleCode,
+        Instant createdAt
+    ) {}
+
+    public record RestaurantStaffCreateDto(
+        @NotNull UUID userId,
+        @NotBlank String roleCode
+    ) {}
+
+    /** Patch partiel — seul {@code roleCode} est modifiable (le user_id est immuable). */
+    public record RestaurantStaffPatchDto(
+        String roleCode
+    ) {}
+
+    // ─── MealService (créneau brunch/déjeuner/dîner) ─────────────────────────
+
+    public record MealServiceDto(
+        UUID id,
+        UUID restaurantId,
+        String name,
+        LocalTime startTime,
+        LocalTime endTime,
+        Instant createdAt
+    ) {}
+
+    public record MealServiceCreateDto(
+        @NotBlank String name,
+        @NotNull LocalTime startTime,
+        @NotNull LocalTime endTime
+    ) {}
+
+    public record MealServicePatchDto(
+        String name,
+        LocalTime startTime,
+        LocalTime endTime
+    ) {}
+
+    // ─── RestaurantZone (Terrasse, Salle, Bar) ───────────────────────────────
+
+    public record RestaurantZoneDto(
+        UUID id,
+        UUID restaurantId,
+        String name,
+        Instant createdAt
+    ) {}
+
+    public record RestaurantZoneCreateDto(
+        @NotBlank String name
+    ) {}
+
+    // ─── RestaurantTable (T01, T02, ... rattachées à une zone) ───────────────
+
+    public record RestaurantTableDto(
+        UUID id,
+        UUID zoneId,
+        String tableNumber,
+        Integer seats,
+        Instant createdAt
+    ) {}
+
+    public record RestaurantTableCreateDto(
+        @NotNull UUID zoneId,
+        @NotBlank String tableNumber,
+        @NotNull @Min(1) Integer seats
+    ) {}
+}

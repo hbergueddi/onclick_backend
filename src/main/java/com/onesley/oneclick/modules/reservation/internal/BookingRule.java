@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.reservation.internal;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
+import com.onesley.oneclick.modules.reservation.api.BookingRuleDtos.BookingRuleDto;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -56,6 +57,11 @@ public class BookingRule extends TimestampedEntity {
     public void setSlotDuration(Integer slotDuration) { this.slotDuration = slotDuration; }
     public Integer getCancellationWindowHours() { return cancellationWindowHours; }
     public void setCancellationWindowHours(Integer cancellationWindowHours) { this.cancellationWindowHours = cancellationWindowHours; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public BookingRuleDto toDto() {
+        return new BookingRuleDto(id, restaurantId, maxGuest, slotDuration, cancellationWindowHours, getCreatedAt());
+    }
 
     @Override
     public boolean equals(Object o) {

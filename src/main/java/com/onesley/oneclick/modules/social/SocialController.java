@@ -77,4 +77,104 @@ public class SocialController {
     public ReferralDto activate(@PathVariable UUID id, @RequestBody ActivateReferralDto body) {
         return service.activate(id, body.referredUserId());
     }
+
+    // ─── Favoris (user_favorites) ────────────────────────────────────────────
+
+    @GetMapping("/favorites/by-user/{userId}")
+    @Operation(summary = "Liste des restaurants favoris d'un user")
+    @PreAuthorize("isAuthenticated()")
+    public List<UserFavoriteDto> findFavoritesOf(@PathVariable UUID userId) {
+        SecurityHelper.requireOwnerOrAdmin(userId);
+        return service.findFavoritesOf(userId);
+    }
+
+    @PostMapping("/favorites")
+    @Operation(summary = "Ajoute un restaurant aux favoris d'un user")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<UserFavoriteDto> addFavorite(@Valid @RequestBody UserFavoriteCreateDto dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.addFavorite(dto));
+    }
+
+    @DeleteMapping("/favorites/{id}")
+    @Operation(summary = "Retire un favori")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> removeFavorite(@PathVariable UUID id) {
+        service.removeFavorite(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // ─── Friend groups (squads/teams Pocket) ─────────────────────────────────
+
+    @GetMapping("/friend-groups/by-owner/{ownerId}")
+    @Operation(summary = "Groupes possédés par un user")
+    @PreAuthorize("isAuthenticated()")
+    public List<FriendGroupDto> findGroupsByOwner(@PathVariable UUID ownerId) {
+        SecurityHelper.requireOwnerOrAdmin(ownerId);
+        return service.findGroupsByOwner(ownerId);
+    }
+
+    @GetMapping("/friend-groups/by-member/{userId}")
+    @Operation(summary = "Groupes auxquels un user appartient")
+    @PreAuthorize("isAuthenticated()")
+    public List<FriendGroupDto> findGroupsByMember(@PathVariable UUID userId) {
+        SecurityHelper.requireOwnerOrAdmin(userId);
+        return service.findGroupsByMember(userId);
+    }
+
+    @GetMapping("/friend-groups/{id}")
+    @Operation(summary = "Détail d'un groupe (owner, membres, admin)")
+    @PreAuthorize("isAuthenticated()")
+    public FriendGroupDto findGroupById(@PathVariable UUID id) {
+        return service.findGroupById(id);
+    }
+
+    @PostMapping("/friend-groups")
+    @Operation(summary = "Crée un groupe (owner = current user)")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<FriendGroupDto> createGroup(@Valid @RequestBody FriendGroupCreateDto dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.createGroup(dto));
+    }
+
+    @PatchMapping("/friend-groups/{id}")
+    @Operation(summary = "Met à jour nom/description/avatar d'un groupe")
+    @PreAuthorize("isAuthenticated()")
+    public FriendGroupDto updateGroup(@PathVariable UUID id, @Valid @RequestBody FriendGroupUpdateDto dto) {
+        return service.updateGroup(id, dto);
+    }
+
+    @DeleteMapping("/friend-groups/{id}")
+    @Operation(summary = "Soft delete d'un groupe")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> deleteGroup(@PathVariable UUID id) {
+        service.deleteGroup(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/friend-groups/{groupId}/members")
+    @Operation(summary = "Liste des membres d'un groupe")
+    @PreAuthorize("isAuthenticated()")
+    public List<FriendGroupMemberDto> findGroupMembers(@PathVariable UUID groupId) {
+        return service.findGroupMembers(groupId);
+    }
+
+    @PostMapping("/friend-groups/{groupId}/members")
+    @Operation(summary = "Ajoute un membre au groupe (owner/admin du groupe)")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<FriendGroupMemberDto> addGroupMember(
+        @PathVariable UUID groupId,
+        @Valid @RequestBody FriendGroupMemberAddDto dto
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.addGroupMember(groupId, dto));
+    }
+
+    @DeleteMapping("/friend-groups/{groupId}/members/{friendId}")
+    @Operation(summary = "Retire un membre du groupe (owner/admin du groupe, ou self)")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> removeGroupMember(
+        @PathVariable UUID groupId,
+        @PathVariable UUID friendId
+    ) {
+        service.removeGroupMember(groupId, friendId);
+        return ResponseEntity.noContent().build();
+    }
 }

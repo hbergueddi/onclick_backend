@@ -21,8 +21,10 @@ import com.onesley.oneclick.core.notification.api.NotificationDtos.CampaignCreat
 import com.onesley.oneclick.core.notification.api.NotificationDtos.CampaignDto;
 import com.onesley.oneclick.core.notification.api.NotificationDtos.DeviceTokenCreateDto;
 import com.onesley.oneclick.core.notification.api.NotificationDtos.DeviceTokenDto;
+import com.onesley.oneclick.core.notification.api.NotificationDtos.MarkAllReadResultDto;
 import com.onesley.oneclick.core.notification.api.NotificationDtos.NotificationCreateDto;
 import com.onesley.oneclick.core.notification.api.NotificationDtos.NotificationDto;
+import com.onesley.oneclick.core.notification.api.NotificationDtos.UnreadCountDto;
 
 @RestController
 @RequestMapping("/api/notifications")
@@ -61,6 +63,30 @@ public class NotificationController {
     @PreAuthorize("isAuthenticated()")
     public NotificationDto markRead(@PathVariable UUID id) {
         return service.markRead(id);
+    }
+
+    @GetMapping("/by-user/{userId}")
+    @Operation(summary = "Cloche notifications — toutes (ou non lues si unreadOnly=true) triées DESC.")
+    @PreAuthorize("isAuthenticated()")
+    public List<NotificationDto> findByUser(
+        @PathVariable UUID userId,
+        @RequestParam(required = false) Boolean unreadOnly
+    ) {
+        return service.findByUser(userId, unreadOnly);
+    }
+
+    @GetMapping("/unread-count/by-user/{userId}")
+    @Operation(summary = "Badge cloche — nombre de notifications non lues pour un user.")
+    @PreAuthorize("isAuthenticated()")
+    public UnreadCountDto unreadCountByUser(@PathVariable UUID userId) {
+        return service.unreadCountByUser(userId);
+    }
+
+    @PatchMapping("/mark-all-read/by-user/{userId}")
+    @Operation(summary = "Marque toutes les notifications non lues d'un user comme lues — renvoie le compteur.")
+    @PreAuthorize("isAuthenticated()")
+    public MarkAllReadResultDto markAllReadByUser(@PathVariable UUID userId) {
+        return service.markAllReadByUser(userId);
     }
 
     // ─── Campaigns ───────────────────────────────────────────────────────────

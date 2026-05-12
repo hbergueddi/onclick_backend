@@ -6,15 +6,21 @@ import com.onesley.oneclick.shared.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import com.onesley.oneclick.modules.reservation.api.BookingRuleDtos.BookingRuleCreateDto;
+import com.onesley.oneclick.modules.reservation.api.BookingRuleDtos.BookingRuleDto;
+import com.onesley.oneclick.modules.reservation.api.BookingRuleDtos.BookingRulePatchDto;
 import com.onesley.oneclick.modules.reservation.api.ReservationCreateDto;
 import com.onesley.oneclick.modules.reservation.api.ReservationDto;
+import com.onesley.oneclick.modules.reservation.internal.BookingRuleService;
 import com.onesley.oneclick.modules.reservation.internal.Reservation;
 import com.onesley.oneclick.modules.reservation.internal.ReservationRepository;
 import com.onesley.oneclick.modules.reservation.internal.ReservationService;
@@ -32,10 +38,16 @@ public class ReservationController {
 
     private final ReservationService service;
     private final ReservationRepository reservationRepository;
+    private final BookingRuleService bookingRuleService;
 
-    public ReservationController(ReservationService service, ReservationRepository reservationRepository) {
+    public ReservationController(
+        ReservationService service,
+        ReservationRepository reservationRepository,
+        BookingRuleService bookingRuleService
+    ) {
         this.service = service;
         this.reservationRepository = reservationRepository;
+        this.bookingRuleService = bookingRuleService;
     }
 
     public record StatusChangeDto(String status, UUID changedById, String reason) {}
@@ -82,5 +94,48 @@ public class ReservationController {
         return PageResponse.from(
             Searchable.execute(reservationRepository, req, SEARCHABLE_FIELDS, Reservation::toDto)
         );
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  Booking rules — couverts max, durée slot, fenêtre annulation
+    // ═══════════════════════════════════════════════════════════════════════
+    // Note d'archi : endpoints exposés sous /api/reservations/ pour rester
+    // dans le domaine cohérent reservation, plutôt que /api/restaurants/.
+    // Évite un cross-module dependency restaurant → reservation.
+
+    @GetMapping("/booking-rules/by-restaurant/{restaurantId}")
+    @Operation(summary = "Liste les règles de réservation d'un restaurant")
+    @PreAuthorize("isAuthenticated()")
+    public List<BookingRuleDto> findBookingRulesByRestaurant(@PathVariable UUID restaurantId) {
+        return bookingRuleService.findByRestaurant(restaurantId);
+    }
+
+    @PostMapping("/booking-rules/by-restaurant/{restaurantId}")
+    @Operation(summary = "Crée une règle de réservation pour un restaurant")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR')")
+    public ResponseEntity<BookingRuleDto> createBookingRule(
+        @PathVariable UUID restaurantId,
+        @Valid @RequestBody BookingRuleCreateDto dto
+    ) {
+        BookingRuleDto created = bookingRuleService.create(restaurantId, dto);
+        return ResponseEntity.created(URI.create("/api/reservations/booking-rules/" + created.id())).body(created);
+    }
+
+    @PatchMapping("/booking-rules/{id}")
+    @Operation(summary = "Modifie une règle de réservation")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR')")
+    public BookingRuleDto patchBookingRule(
+        @PathVariable UUID id,
+        @Valid @RequestBody BookingRulePatchDto dto
+    ) {
+        return bookingRuleService.patch(id, dto);
+    }
+
+    @DeleteMapping("/booking-rules/{id}")
+    @Operation(summary = "Supprime une règle de réservation")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR')")
+    public ResponseEntity<Void> deleteBookingRule(@PathVariable UUID id) {
+        bookingRuleService.delete(id);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 }

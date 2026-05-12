@@ -2,6 +2,8 @@ package com.onesley.oneclick.modules.social.api;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -24,4 +26,53 @@ public final class SocialDtos {
     public record ReferralDto(UUID id, UUID referrerId, UUID referredUserId, String referralCode, String status, Instant activatedAt, Instant createdAt) {}
 
     public record ReferralCreateDto(@NotNull UUID referrerId, @NotBlank String referralCode) {}
+
+    // ─── Favoris (user_favorites) ────────────────────────────────────────────
+
+    /** Favori d'un user sur un restaurant (bouton ❤️ Pocket). */
+    public record UserFavoriteDto(UUID id, UUID userId, UUID restaurantId, Instant createdAt) {}
+
+    public record UserFavoriteCreateDto(@NotNull UUID userId, @NotNull UUID restaurantId) {}
+
+    // ─── Friend groups (squads/teams) ────────────────────────────────────────
+
+    /**
+     * Groupe d'amis — réservation collective Pocket.
+     * {@code memberCount} = total des entrées {@code friend_group_members}.
+     */
+    public record FriendGroupDto(
+        UUID id,
+        UUID ownerId,
+        String name,
+        String description,
+        String avatarUrl,
+        long memberCount,
+        Instant createdAt
+    ) {}
+
+    public record FriendGroupCreateDto(
+        @NotBlank @Size(max = 500) String name,
+        String description,
+        String avatarUrl
+    ) {}
+
+    public record FriendGroupUpdateDto(
+        @Size(max = 500) String name,
+        String description,
+        String avatarUrl
+    ) {}
+
+    /** Junction users × friend_groups — appartenance + rôle. */
+    public record FriendGroupMemberDto(
+        UUID id,
+        UUID friendGroupId,
+        UUID friendId,
+        String role,
+        Instant joinedAt
+    ) {}
+
+    public record FriendGroupMemberAddDto(
+        @NotNull UUID friendId,
+        @Pattern(regexp = "^(owner|admin|member)$") String role
+    ) {}
 }
