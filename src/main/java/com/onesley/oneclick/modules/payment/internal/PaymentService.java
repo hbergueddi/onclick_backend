@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.payment.internal;
 
 import com.onesley.oneclick.exception.NotFoundException;
+import com.onesley.oneclick.security.SecurityHelper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -68,6 +69,7 @@ public class PaymentService {
         PaymentMethod m = methodRepo.findById(id)
             .filter(x -> x.getDeletedAt() == null)
             .orElseThrow(() -> new NotFoundException("PaymentMethod", id));
+        SecurityHelper.requireOwnerOrAdmin(m.getUserId());
         m.markDeleted();
         methodRepo.save(m);
     }
@@ -83,8 +85,10 @@ public class PaymentService {
     }
 
     public PaymentDto findPaymentById(UUID id) {
-        return PaymentDto.from(paymentRepo.findById(id)
-            .orElseThrow(() -> new NotFoundException("Payment", id)));
+        Payment p = paymentRepo.findById(id)
+            .orElseThrow(() -> new NotFoundException("Payment", id));
+        SecurityHelper.requireOwnerOrAdmin(p.getUserId());
+        return PaymentDto.from(p);
     }
 
     @Transactional
@@ -105,6 +109,7 @@ public class PaymentService {
     public PaymentDto updatePayment(UUID id, PaymentUpdateDto dto) {
         Payment p = paymentRepo.findById(id)
             .orElseThrow(() -> new NotFoundException("Payment", id));
+        SecurityHelper.requireOwnerOrAdmin(p.getUserId());
         if (dto.status() != null) {
             if ("succeeded".equals(dto.status())) p.markCompleted();
             else p.setStatus(dto.status());
@@ -116,12 +121,17 @@ public class PaymentService {
     // ─── Refunds ─────────────────────────────────────────────────────────────
 
     public List<RefundDto> findRefundsByPayment(UUID paymentId) {
+        Payment p = paymentRepo.findById(paymentId)
+            .orElseThrow(() -> new NotFoundException("Payment", paymentId));
+        SecurityHelper.requireOwnerOrAdmin(p.getUserId());
         return refundRepo.findAllByPaymentId(paymentId).stream().map(RefundDto::from).toList();
     }
 
     @Transactional
     public RefundDto createRefund(RefundCreateDto dto) {
-        
+        Payment p = paymentRepo.findById(dto.paymentId())
+            .orElseThrow(() -> new NotFoundException("Payment", dto.paymentId()));
+        SecurityHelper.requireOwnerOrAdmin(p.getUserId());
         Refund r = new Refund(UUID.randomUUID(), dto.paymentId(), dto.amount());
         if (dto.reason() != null) r.setReason(dto.reason());
         return RefundDto.from(refundRepo.save(r));
@@ -131,6 +141,10 @@ public class PaymentService {
     public RefundDto updateRefund(UUID id, RefundUpdateDto dto) {
         Refund r = refundRepo.findById(id)
             .orElseThrow(() -> new NotFoundException("Refund", id));
+        // Check ownership via le payment parent (refund.createdById n'est pas toujours rempli)
+        Payment parentPayment = paymentRepo.findById(r.getPaymentId())
+            .orElseThrow(() -> new NotFoundException("Payment", r.getPaymentId()));
+        SecurityHelper.requireOwnerOrAdmin(parentPayment.getUserId());
         if (dto.status() != null) {
             r.setStatus(dto.status());
             if ("succeeded".equals(dto.status()) || "failed".equals(dto.status())) {
@@ -143,6 +157,9 @@ public class PaymentService {
     // ─── Provider transactions log ───────────────────────────────────────────
 
     public List<TransactionDto> findTxByPayment(UUID paymentId) {
+        Payment p = paymentRepo.findById(paymentId)
+            .orElseThrow(() -> new NotFoundException("Payment", paymentId));
+        SecurityHelper.requireOwnerOrAdmin(p.getUserId());
         return txRepo.findAllByPaymentId(paymentId).stream().map(TransactionDto::from).toList();
     }
 

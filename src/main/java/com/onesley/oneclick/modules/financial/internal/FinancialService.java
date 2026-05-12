@@ -2,6 +2,7 @@ package com.onesley.oneclick.modules.financial.internal;
 
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.modules.restaurant.internal.Restaurant;
+import com.onesley.oneclick.security.SecurityHelper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.data.domain.Page;
@@ -60,9 +61,11 @@ public class FinancialService {
     }
 
     public ContractDto findContractById(UUID id) {
-        return ContractDto.from(contractRepo.findById(id)
-            .filter(c -> c.getDeletedAt() == null)
-            .orElseThrow(() -> new NotFoundException("Contract", id)));
+        Contract c = contractRepo.findById(id)
+            .filter(x -> x.getDeletedAt() == null)
+            .orElseThrow(() -> new NotFoundException("Contract", id));
+        SecurityHelper.requireOwnerOrAdmin(c.getCreatedBy());
+        return ContractDto.from(c);
     }
 
     @Transactional
@@ -79,6 +82,7 @@ public class FinancialService {
         Contract c = contractRepo.findById(id)
             .filter(x -> x.getDeletedAt() == null)
             .orElseThrow(() -> new NotFoundException("Contract", id));
+        SecurityHelper.requireOwnerOrAdmin(c.getCreatedBy());
         if (dto.commissionRate() != null) c.setCommissionRate(dto.commissionRate());
         if (dto.endsAt() != null)         c.setEndsAt(dto.endsAt());
         if (dto.status() != null)         c.setStatus(dto.status());
@@ -96,8 +100,12 @@ public class FinancialService {
     }
 
     public InvoiceDto findInvoiceById(UUID id) {
-        return InvoiceDto.from(invoiceRepo.findById(id)
-            .orElseThrow(() -> new NotFoundException("Invoice", id)));
+        Invoice i = invoiceRepo.findById(id)
+            .orElseThrow(() -> new NotFoundException("Invoice", id));
+        // TODO check ownership — Invoice n'a pas de createdBy direct, fallback restaurantId
+        // (effectivement admin-only car restaurantId != userId courant)
+        SecurityHelper.requireOwnerOrAdmin(i.getRestaurantId());
+        return InvoiceDto.from(i);
     }
 
     @Transactional
@@ -112,6 +120,8 @@ public class FinancialService {
     public InvoiceDto updateInvoice(UUID id, InvoiceUpdateDto dto) {
         Invoice i = invoiceRepo.findById(id)
             .orElseThrow(() -> new NotFoundException("Invoice", id));
+        // TODO check ownership — Invoice n'a pas de createdBy direct, fallback restaurantId
+        SecurityHelper.requireOwnerOrAdmin(i.getRestaurantId());
         if (dto.subtotal() != null)   i.setSubtotal(dto.subtotal());
         if (dto.tvaAmount() != null)  i.setTvaAmount(dto.tvaAmount());
         if (dto.totalTtc() != null)   i.setTotalTtc(dto.totalTtc());
@@ -127,6 +137,10 @@ public class FinancialService {
     // ─── Invoice lines ───────────────────────────────────────────────────────
 
     public List<InvoiceLineDto> findLinesByInvoice(UUID invoiceId) {
+        Invoice i = invoiceRepo.findById(invoiceId)
+            .orElseThrow(() -> new NotFoundException("Invoice", invoiceId));
+        // TODO check ownership — Invoice n'a pas de createdBy direct, fallback restaurantId
+        SecurityHelper.requireOwnerOrAdmin(i.getRestaurantId());
         return lineRepo.findAllByInvoiceId(invoiceId).stream().map(InvoiceLineDto::from).toList();
     }
 

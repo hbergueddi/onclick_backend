@@ -1,6 +1,7 @@
 package com.onesley.oneclick.core.notification.internal;
 
 import com.onesley.oneclick.exception.NotFoundException;
+import com.onesley.oneclick.security.SecurityHelper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -70,6 +71,7 @@ public class NotificationService {
     public NotificationDto markRead(UUID id) {
         Notification n = notifRepo.findById(id)
             .orElseThrow(() -> new NotFoundException("Notification", id));
+        SecurityHelper.requireOwnerOrAdmin(n.getRecipientUserId());
         if (n.getReadAt() == null) n.markRead();
         return NotificationDto.from(notifRepo.save(n));
     }
@@ -112,6 +114,7 @@ public class NotificationService {
     public void unregisterToken(UUID id) {
         DeviceToken t = tokenRepo.findById(id)
             .orElseThrow(() -> new NotFoundException("DeviceToken", id));
+        SecurityHelper.requireOwnerOrAdmin(t.getUserId());
         tokenRepo.delete(t);
     }
 }

@@ -92,7 +92,6 @@ public class ResourceBookingController {
 
     @GetMapping("/bookings/{id}")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public BookingDto findBookingById(@PathVariable UUID id) { return service.findBookingById(id); }
 
     @PostMapping("/bookings")
@@ -104,14 +103,12 @@ public class ResourceBookingController {
 
     @PatchMapping("/bookings/{id}")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public BookingDto updateBooking(@PathVariable UUID id, @Valid @RequestBody BookingUpdateDto dto) {
         return service.updateBooking(id, dto);
     }
 
     @DeleteMapping("/bookings/{id}")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public ResponseEntity<Void> deleteBooking(@PathVariable UUID id) {
         service.softDeleteBooking(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
@@ -121,14 +118,12 @@ public class ResourceBookingController {
 
     @GetMapping("/bookings/{bookingId}/guests")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public List<GuestDto> findGuestsByBooking(@PathVariable UUID bookingId) {
         return service.findGuestsByBooking(bookingId);
     }
 
     @PostMapping("/guests")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public ResponseEntity<GuestDto> addGuest(@Valid @RequestBody GuestCreateDto dto) {
         GuestDto g = service.addGuest(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(g);

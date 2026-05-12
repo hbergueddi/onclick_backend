@@ -1,7 +1,9 @@
 package com.onesley.oneclick.modules.social.internal;
 
 import com.onesley.oneclick.core.identity.internal.User;
+import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
+import com.onesley.oneclick.security.SecurityHelper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Service;
@@ -72,6 +74,9 @@ public class SocialService {
     public FriendshipDto accept(UUID friendshipId) {
         Friendship f = friendshipRepo.findById(friendshipId)
             .orElseThrow(() -> new NotFoundException("Friendship", friendshipId));
+        // Friendship n'a pas de requester/receiver distinct → autorise les 2 parties
+        // (ou admin). Faute de getReceiverUserId, on accepte user1 OU user2.
+        requireFriendshipPartyOrAdmin(f);
         f.markAccepted();
         return FriendshipDto.from(friendshipRepo.save(f));
     }
@@ -80,8 +85,23 @@ public class SocialService {
     public FriendshipDto decline(UUID friendshipId) {
         Friendship f = friendshipRepo.findById(friendshipId)
             .orElseThrow(() -> new NotFoundException("Friendship", friendshipId));
+        requireFriendshipPartyOrAdmin(f);
         f.setStatus("declined");
         return FriendshipDto.from(friendshipRepo.save(f));
+    }
+
+    /**
+     * Vérifie que le user courant fait partie de l'amitié (user1 ou user2) OU est admin.
+     * Faute de champ requester/receiver distinct, on accepte les 2 parties.
+     */
+    private void requireFriendshipPartyOrAdmin(Friendship f) {
+        UUID current = SecurityHelper.currentUserId();
+        if (current == null) {
+            throw new ForbiddenException("Authentification requise");
+        }
+        if (current.equals(f.getUser1Id()) || current.equals(f.getUser2Id())) return;
+        if (SecurityHelper.isAdmin()) return;
+        throw new ForbiddenException("Accès interdit : vous n'êtes pas partie de cette amitié");
     }
 
     // ─── Referrals ───────────────────────────────────────────────────────────

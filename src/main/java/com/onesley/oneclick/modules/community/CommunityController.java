@@ -53,7 +53,6 @@ public class CommunityController {
 
     @DeleteMapping("/posts/{id}")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public ResponseEntity<Void> deletePost(@PathVariable UUID id) {
         service.softDeletePost(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();

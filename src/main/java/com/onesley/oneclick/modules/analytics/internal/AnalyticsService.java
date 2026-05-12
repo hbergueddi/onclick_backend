@@ -2,6 +2,7 @@ package com.onesley.oneclick.modules.analytics.internal;
 
 import com.onesley.oneclick.core.tenant.internal.Tenant;
 import com.onesley.oneclick.exception.NotFoundException;
+import com.onesley.oneclick.security.SecurityHelper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.data.domain.Page;
@@ -57,8 +58,12 @@ public class AnalyticsService {
     }
 
     public ApiClientDto findClientById(UUID id) {
-        return ApiClientDto.from(apiClientRepo.findById(id)
-            .orElseThrow(() -> new NotFoundException("ApiClient", id)));
+        ApiClient c = apiClientRepo.findById(id)
+            .orElseThrow(() -> new NotFoundException("ApiClient", id));
+        // TODO check ownership — ApiClient n'a pas de createdBy direct, fallback tenantId
+        // (effectivement admin-only car tenantId != userId courant)
+        SecurityHelper.requireOwnerOrAdmin(c.getTenantId());
+        return ApiClientDto.from(c);
     }
 
     @Transactional
@@ -74,6 +79,10 @@ public class AnalyticsService {
     // ─── API keys ────────────────────────────────────────────────────────────
 
     public List<ApiKeyDto> findKeysByClient(UUID apiClientId) {
+        ApiClient c = apiClientRepo.findById(apiClientId)
+            .orElseThrow(() -> new NotFoundException("ApiClient", apiClientId));
+        // TODO check ownership — ApiClient n'a pas de createdBy direct, fallback tenantId
+        SecurityHelper.requireOwnerOrAdmin(c.getTenantId());
         return apiKeyRepo.findAllByApiClientId(apiClientId).stream().map(ApiKeyDto::from).toList();
     }
 
@@ -89,6 +98,10 @@ public class AnalyticsService {
     public void revokeKey(UUID id) {
         ApiKey k = apiKeyRepo.findById(id)
             .orElseThrow(() -> new NotFoundException("ApiKey", id));
+        // Check via le parent ApiClient (TODO: ApiClient n'a pas de createdBy direct)
+        ApiClient parent = apiClientRepo.findById(k.getApiClientId())
+            .orElseThrow(() -> new NotFoundException("ApiClient", k.getApiClientId()));
+        SecurityHelper.requireOwnerOrAdmin(parent.getTenantId());
         k.revoke();
         apiKeyRepo.save(k);
     }
@@ -96,6 +109,10 @@ public class AnalyticsService {
     // ─── Webhooks ────────────────────────────────────────────────────────────
 
     public List<WebhookDto> findWebhooksByClient(UUID apiClientId) {
+        ApiClient c = apiClientRepo.findById(apiClientId)
+            .orElseThrow(() -> new NotFoundException("ApiClient", apiClientId));
+        // TODO check ownership — ApiClient n'a pas de createdBy direct, fallback tenantId
+        SecurityHelper.requireOwnerOrAdmin(c.getTenantId());
         return webhookRepo.findAllByApiClientId(apiClientId).stream().map(WebhookDto::from).toList();
     }
 
@@ -111,12 +128,22 @@ public class AnalyticsService {
     public void deleteWebhook(UUID id) {
         Webhook w = webhookRepo.findById(id)
             .orElseThrow(() -> new NotFoundException("Webhook", id));
+        // Check via le parent ApiClient (TODO: ApiClient n'a pas de createdBy direct)
+        ApiClient parent = apiClientRepo.findById(w.getApiClientId())
+            .orElseThrow(() -> new NotFoundException("ApiClient", w.getApiClientId()));
+        SecurityHelper.requireOwnerOrAdmin(parent.getTenantId());
         webhookRepo.delete(w);
     }
 
     // ─── Webhook deliveries (journal) ────────────────────────────────────────
 
     public Page<WebhookDeliveryDto> findDeliveriesByWebhook(UUID webhookId, int page, int size) {
+        Webhook w = webhookRepo.findById(webhookId)
+            .orElseThrow(() -> new NotFoundException("Webhook", webhookId));
+        // Check via le parent ApiClient (TODO: ApiClient n'a pas de createdBy direct)
+        ApiClient parent = apiClientRepo.findById(w.getApiClientId())
+            .orElseThrow(() -> new NotFoundException("ApiClient", w.getApiClientId()));
+        SecurityHelper.requireOwnerOrAdmin(parent.getTenantId());
         Specification<WebhookDelivery> spec = (root, q, cb) -> cb.equal(root.get("webhookId"), webhookId);
         return deliveryRepo.findAll(spec, PageRequest.of(page, size, Sort.by("createdAt").descending()))
             .map(WebhookDeliveryDto::from);

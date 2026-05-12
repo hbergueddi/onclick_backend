@@ -54,7 +54,6 @@ public class FinancialController {
 
     @GetMapping("/contracts/{id}")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public ContractDto findContractById(@PathVariable UUID id) { return service.findContractById(id); }
 
     @PostMapping("/contracts")
@@ -66,7 +65,6 @@ public class FinancialController {
 
     @PatchMapping("/contracts/{id}")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public ContractDto updateContract(@PathVariable UUID id, @Valid @RequestBody ContractUpdateDto dto) {
         return service.updateContract(id, dto);
     }
@@ -87,7 +85,6 @@ public class FinancialController {
 
     @GetMapping("/invoices/{id}")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public InvoiceDto findInvoiceById(@PathVariable UUID id) { return service.findInvoiceById(id); }
 
     @PostMapping("/invoices")
@@ -100,7 +97,6 @@ public class FinancialController {
     @PatchMapping("/invoices/{id}")
     @Operation(summary = "Mise à jour totaux / status. status=paid → paid_at automatique.")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public InvoiceDto updateInvoice(@PathVariable UUID id, @Valid @RequestBody InvoiceUpdateDto dto) {
         return service.updateInvoice(id, dto);
     }
@@ -110,7 +106,6 @@ public class FinancialController {
     @GetMapping("/invoices/{invoiceId}/lines")
     @Operation(summary = "Lignes d'une facture — line_total = quantity × unit_price (GENERATED).")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public List<InvoiceLineDto> findLinesByInvoice(@PathVariable UUID invoiceId) {
         return service.findLinesByInvoice(invoiceId);
     }

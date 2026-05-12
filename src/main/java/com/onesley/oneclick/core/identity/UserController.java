@@ -3,6 +3,7 @@ package com.onesley.oneclick.core.identity;
 import com.onesley.oneclick.search.SearchRequest;
 import com.onesley.oneclick.core.identity.internal.UserService;
 import com.onesley.oneclick.search.Searchable;
+import com.onesley.oneclick.security.SecurityHelper;
 import com.onesley.oneclick.shared.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -53,10 +54,10 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Détail d'un user par UUID")
+    @Operation(summary = "Détail d'un user par UUID — owner ou SUPERADMIN")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public UserDto findById(@PathVariable UUID id) {
+        SecurityHelper.requireOwnerOrAdmin(id);
         return service.findById(id);
     }
 
@@ -75,18 +76,18 @@ public class UserController {
     }
 
     @PatchMapping("/{id}")
-    @Operation(summary = "Mise à jour partielle d'un user")
+    @Operation(summary = "Mise à jour partielle d'un user — owner ou SUPERADMIN")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public UserDto patch(@PathVariable UUID id, @Valid @RequestBody UserUpdateDto dto) {
+        SecurityHelper.requireOwnerOrAdmin(id);
         return service.patch(id, dto);
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Soft delete d'un user")
+    @Operation(summary = "Soft delete d'un user — owner ou SUPERADMIN")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
+        SecurityHelper.requireOwnerOrAdmin(id);
         service.softDelete(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }

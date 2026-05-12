@@ -4,6 +4,7 @@ import com.onesley.oneclick.core.identity.internal.User;
 import com.onesley.oneclick.core.tenant.internal.Tenant;
 import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.NotFoundException;
+import com.onesley.oneclick.security.SecurityHelper;
 import com.onesley.oneclick.modules.restaurant.internal.Restaurant;
 import com.onesley.oneclick.modules.restaurant.internal.MealService;
 import com.onesley.oneclick.modules.restaurant.internal.RestaurantTable;
@@ -65,6 +66,7 @@ public class ReservationService {
         Reservation r = repository.findById(id)
             .filter(x -> x.getDeletedAt() == null)
             .orElseThrow(() -> new NotFoundException("Reservation", id));
+        SecurityHelper.requireOwnerOrAdmin(r.getClientId());
         return ReservationDto.from(r);
     }
 

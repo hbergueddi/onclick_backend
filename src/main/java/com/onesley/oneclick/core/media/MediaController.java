@@ -88,7 +88,6 @@ public class MediaController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public ResponseEntity<Void> deleteMedia(@PathVariable UUID id) {
         service.softDeleteMedia(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
@@ -117,7 +116,6 @@ public class MediaController {
 
     @DeleteMapping("/files/{id}")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public ResponseEntity<Void> deleteFile(@PathVariable UUID id) {
         service.softDeleteFile(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();

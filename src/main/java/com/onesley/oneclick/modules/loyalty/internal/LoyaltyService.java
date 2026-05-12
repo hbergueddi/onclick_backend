@@ -2,6 +2,7 @@ package com.onesley.oneclick.modules.loyalty.internal;
 
 import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.NotFoundException;
+import com.onesley.oneclick.security.SecurityHelper;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyAccountDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyEarnDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyTransactionDto;
@@ -67,6 +68,9 @@ public class LoyaltyService {
     }
 
     public List<LoyaltyTransactionDto> findTransactionsByAccount(UUID accountId) {
+        LoyaltyAccount a = accountRepository.findById(accountId)
+            .orElseThrow(() -> new NotFoundException("LoyaltyAccount", accountId));
+        SecurityHelper.requireOwnerOrAdmin(a.getClientId());
         return transactionRepository.findAllByAccountId(accountId).stream()
             .map(LoyaltyTransaction::toDto)
             .toList();

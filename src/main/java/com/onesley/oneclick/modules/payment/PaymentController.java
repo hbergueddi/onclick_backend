@@ -1,5 +1,6 @@
 package com.onesley.oneclick.modules.payment;
 
+import com.onesley.oneclick.security.SecurityHelper;
 import com.onesley.oneclick.shared.PageResponse;
 import com.onesley.oneclick.modules.payment.internal.PaymentService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -31,22 +32,21 @@ public class PaymentController {
 
     @GetMapping("/methods/by-user/{userId}")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public List<PaymentMethodDto> findMethodsByUser(@PathVariable UUID userId) {
+        SecurityHelper.requireOwnerOrAdmin(userId);
         return service.findMethodsByUser(userId);
     }
 
     @PostMapping("/methods")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public ResponseEntity<PaymentMethodDto> createMethod(@Valid @RequestBody PaymentMethodCreateDto dto) {
+        SecurityHelper.requireOwnerOrAdmin(dto.userId());
         PaymentMethodDto m = service.createMethod(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(m);
     }
 
     @DeleteMapping("/methods/{id}")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public ResponseEntity<Void> deleteMethod(@PathVariable UUID id) {
         service.softDeleteMethod(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
@@ -68,13 +68,12 @@ public class PaymentController {
 
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public PaymentDto findById(@PathVariable UUID id) { return service.findPaymentById(id); }
 
     @PostMapping
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public ResponseEntity<PaymentDto> create(@Valid @RequestBody PaymentCreateDto dto) {
+        SecurityHelper.requireOwnerOrAdmin(dto.userId());
         PaymentDto p = service.createPayment(dto);
         return ResponseEntity.created(URI.create("/api/payments/" + p.id())).body(p);
     }
@@ -82,7 +81,6 @@ public class PaymentController {
     @PatchMapping("/{id}")
     @Operation(summary = "Mise à jour status. status=succeeded → completed_at automatique.")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public PaymentDto update(@PathVariable UUID id, @Valid @RequestBody PaymentUpdateDto dto) {
         return service.updatePayment(id, dto);
     }
@@ -91,14 +89,12 @@ public class PaymentController {
 
     @GetMapping("/{paymentId}/refunds")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public List<RefundDto> findRefundsByPayment(@PathVariable UUID paymentId) {
         return service.findRefundsByPayment(paymentId);
     }
 
     @PostMapping("/refunds")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public ResponseEntity<RefundDto> createRefund(@Valid @RequestBody RefundCreateDto dto) {
         RefundDto r = service.createRefund(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(r);
@@ -106,7 +102,6 @@ public class PaymentController {
 
     @PatchMapping("/refunds/{id}")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public RefundDto updateRefund(@PathVariable UUID id, @Valid @RequestBody RefundUpdateDto dto) {
         return service.updateRefund(id, dto);
     }
@@ -116,7 +111,6 @@ public class PaymentController {
     @GetMapping("/{paymentId}/transactions")
     @Operation(summary = "Journal des événements provider (Stripe webhook, CMI callback…)")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public List<TransactionDto> findTxByPayment(@PathVariable UUID paymentId) {
         return service.findTxByPayment(paymentId);
     }

@@ -55,7 +55,6 @@ public class ReservationController {
     @GetMapping("/{id}")
     @Operation(summary = "Détail réservation par UUID")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public ReservationDto findById(@PathVariable UUID id) {
         return service.findById(id);
     }

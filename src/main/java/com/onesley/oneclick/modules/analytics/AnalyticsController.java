@@ -42,7 +42,6 @@ public class AnalyticsController {
 
     @GetMapping("/api-clients/{id}")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public ApiClientDto findClientById(@PathVariable UUID id) { return service.findClientById(id); }
 
     @PostMapping("/api-clients")
@@ -56,7 +55,6 @@ public class AnalyticsController {
 
     @GetMapping("/api-clients/{apiClientId}/keys")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public List<ApiKeyDto> findKeysByClient(@PathVariable UUID apiClientId) {
         return service.findKeysByClient(apiClientId);
     }
@@ -72,7 +70,6 @@ public class AnalyticsController {
     @DeleteMapping("/api-keys/{id}")
     @Operation(summary = "Revoke une clé API (revoked_at = now()).")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public ResponseEntity<Void> revokeKey(@PathVariable UUID id) {
         service.revokeKey(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
@@ -82,7 +79,6 @@ public class AnalyticsController {
 
     @GetMapping("/api-clients/{apiClientId}/webhooks")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public List<WebhookDto> findWebhooksByClient(@PathVariable UUID apiClientId) {
         return service.findWebhooksByClient(apiClientId);
     }
@@ -96,7 +92,6 @@ public class AnalyticsController {
 
     @DeleteMapping("/webhooks/{id}")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public ResponseEntity<Void> deleteWebhook(@PathVariable UUID id) {
         service.deleteWebhook(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
@@ -106,7 +101,6 @@ public class AnalyticsController {
 
     @GetMapping("/webhooks/{webhookId}/deliveries")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public PageResponse<WebhookDeliveryDto> findDeliveriesByWebhook(
         @PathVariable UUID webhookId,
         @RequestParam(defaultValue = "0") int page,

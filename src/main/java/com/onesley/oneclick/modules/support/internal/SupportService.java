@@ -2,6 +2,7 @@ package com.onesley.oneclick.modules.support.internal;
 
 import com.onesley.oneclick.core.identity.internal.User;
 import com.onesley.oneclick.exception.NotFoundException;
+import com.onesley.oneclick.security.SecurityHelper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.data.domain.Page;
@@ -55,8 +56,10 @@ public class SupportService {
     }
 
     public TicketDto findById(UUID id) {
-        return TicketDto.from(ticketRepo.findById(id)
-            .orElseThrow(() -> new NotFoundException("SupportTicket", id)));
+        SupportTicket t = ticketRepo.findById(id)
+            .orElseThrow(() -> new NotFoundException("SupportTicket", id));
+        SecurityHelper.requireOwnerOrAdmin(t.getOpenedById());
+        return TicketDto.from(t);
     }
 
     @Transactional
@@ -71,6 +74,7 @@ public class SupportService {
     public TicketDto update(UUID id, TicketUpdateDto dto) {
         SupportTicket t = ticketRepo.findById(id)
             .orElseThrow(() -> new NotFoundException("SupportTicket", id));
+        SecurityHelper.requireOwnerOrAdmin(t.getOpenedById());
         if (dto.status() != null) {
             if ("resolved".equals(dto.status())) t.markResolved();
             else if ("closed".equals(dto.status())) t.markClosed();
@@ -86,11 +90,17 @@ public class SupportService {
     // ─── Messages ────────────────────────────────────────────────────────────
 
     public List<MessageDto> findMessages(UUID ticketId) {
+        SupportTicket t = ticketRepo.findById(ticketId)
+            .orElseThrow(() -> new NotFoundException("SupportTicket", ticketId));
+        SecurityHelper.requireOwnerOrAdmin(t.getOpenedById());
         return messageRepo.findAllByTicketId(ticketId).stream().map(MessageDto::from).toList();
     }
 
     @Transactional
     public MessageDto postMessage(MessageCreateDto dto) {
+        SupportTicket t = ticketRepo.findById(dto.ticketId())
+            .orElseThrow(() -> new NotFoundException("SupportTicket", dto.ticketId()));
+        SecurityHelper.requireOwnerOrAdmin(t.getOpenedById());
         SupportTicket ticketRef = entityManager.getReference(SupportTicket.class, dto.ticketId());
         User authorRef = entityManager.getReference(User.class, dto.authorId());
         TicketMessage m = new TicketMessage(UUID.randomUUID(), ticketRef, authorRef, dto.message());
@@ -100,11 +110,17 @@ public class SupportService {
     // ─── Attachments ─────────────────────────────────────────────────────────
 
     public List<AttachmentDto> findAttachments(UUID ticketId) {
+        SupportTicket t = ticketRepo.findById(ticketId)
+            .orElseThrow(() -> new NotFoundException("SupportTicket", ticketId));
+        SecurityHelper.requireOwnerOrAdmin(t.getOpenedById());
         return attachmentRepo.findAllByTicketId(ticketId).stream().map(AttachmentDto::from).toList();
     }
 
     @Transactional
     public AttachmentDto attach(AttachmentCreateDto dto) {
+        SupportTicket t = ticketRepo.findById(dto.ticketId())
+            .orElseThrow(() -> new NotFoundException("SupportTicket", dto.ticketId()));
+        SecurityHelper.requireOwnerOrAdmin(t.getOpenedById());
         SupportTicket ticketRef = entityManager.getReference(SupportTicket.class, dto.ticketId());
         TicketAttachment a = new TicketAttachment(UUID.randomUUID(), ticketRef, dto.url());
         if (dto.fileName() != null) a.setFileName(dto.fileName());

@@ -4,6 +4,7 @@ import com.onesley.oneclick.modules.loyalty.api.LoyaltyAccountDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyEarnDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyTransactionDto;
 import com.onesley.oneclick.modules.loyalty.internal.LoyaltyService;
+import com.onesley.oneclick.security.SecurityHelper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -53,15 +54,14 @@ public class LoyaltyController {
     @GetMapping("/accounts/by-client/{clientId}")
     @Operation(summary = "Tous les comptes fidélité d'un client (1 par restaurant)")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public List<LoyaltyAccountDto> findByClient(@PathVariable UUID clientId) {
+        SecurityHelper.requireOwnerOrAdmin(clientId);
         return service.findByClient(clientId);
     }
 
     @GetMapping("/accounts/{accountId}/transactions")
     @Operation(summary = "Historique des mouvements d'un compte")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public List<LoyaltyTransactionDto> findTransactionsByAccount(@PathVariable UUID accountId) {
         return service.findTransactionsByAccount(accountId);
     }
@@ -76,8 +76,8 @@ public class LoyaltyController {
     @PostMapping("/spend")
     @Operation(summary = "Débite des points (Redemption). Refuse si solde insuffisant.")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public LoyaltyTransactionDto spend(@Valid @RequestBody SpendDto dto) {
+        SecurityHelper.requireOwnerOrAdmin(dto.clientId());
         return service.spendPoints(dto.clientId(), dto.restaurantId(), dto.points(), dto.reason());
     }
 }

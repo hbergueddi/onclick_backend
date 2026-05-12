@@ -1,6 +1,7 @@
 package com.onesley.oneclick.core.media.internal;
 
 import com.onesley.oneclick.exception.NotFoundException;
+import com.onesley.oneclick.security.SecurityHelper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -54,6 +55,7 @@ public class MediaService {
         Media m = mediaRepo.findById(id)
             .filter(x -> x.getDeletedAt() == null)
             .orElseThrow(() -> new NotFoundException("Media", id));
+        SecurityHelper.requireOwnerOrAdmin(m.getCreatedBy());
         m.markDeleted();
         mediaRepo.save(m);
     }
@@ -82,6 +84,7 @@ public class MediaService {
         FileAttachment f = fileRepo.findById(id)
             .filter(x -> !x.isDeleted())
             .orElseThrow(() -> new NotFoundException("FileAttachment", id));
+        SecurityHelper.requireOwnerOrAdmin(f.getCreatedById());
         f.markDeleted();
         fileRepo.save(f);
     }

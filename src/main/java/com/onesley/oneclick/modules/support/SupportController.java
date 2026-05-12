@@ -44,7 +44,6 @@ public class SupportController {
 
     @GetMapping("/tickets/{id}")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public TicketDto findById(@PathVariable UUID id) { return service.findById(id); }
 
     @PostMapping("/tickets")
@@ -57,7 +56,6 @@ public class SupportController {
     @PatchMapping("/tickets/{id}")
     @Operation(summary = "Mise à jour status / priority / assignation. status=resolved → resolved_at, status=closed → closed_at.")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public TicketDto update(@PathVariable UUID id, @Valid @RequestBody TicketUpdateDto dto) {
         return service.update(id, dto);
     }
@@ -66,14 +64,12 @@ public class SupportController {
 
     @GetMapping("/tickets/{ticketId}/messages")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public List<MessageDto> findMessages(@PathVariable UUID ticketId) {
         return service.findMessages(ticketId);
     }
 
     @PostMapping("/messages")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public ResponseEntity<MessageDto> postMessage(@Valid @RequestBody MessageCreateDto dto) {
         MessageDto m = service.postMessage(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(m);
@@ -83,14 +79,12 @@ public class SupportController {
 
     @GetMapping("/tickets/{ticketId}/attachments")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public List<AttachmentDto> findAttachments(@PathVariable UUID ticketId) {
         return service.findAttachments(ticketId);
     }
 
     @PostMapping("/attachments")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public ResponseEntity<AttachmentDto> attach(@Valid @RequestBody AttachmentCreateDto dto) {
         AttachmentDto a = service.attach(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(a);

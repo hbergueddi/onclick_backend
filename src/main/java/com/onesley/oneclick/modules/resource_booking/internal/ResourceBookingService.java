@@ -3,6 +3,7 @@ package com.onesley.oneclick.modules.resource_booking.internal;
 import com.onesley.oneclick.core.identity.internal.User;
 import com.onesley.oneclick.core.tenant.internal.Tenant;
 import com.onesley.oneclick.exception.NotFoundException;
+import com.onesley.oneclick.security.SecurityHelper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.data.domain.Page;
@@ -112,9 +113,11 @@ public class ResourceBookingService {
     }
 
     public BookingDto findBookingById(UUID id) {
-        return BookingDto.from(bookingRepo.findById(id)
-            .filter(b -> b.getDeletedAt() == null)
-            .orElseThrow(() -> new NotFoundException("ResourceBooking", id)));
+        ResourceBooking b = bookingRepo.findById(id)
+            .filter(x -> x.getDeletedAt() == null)
+            .orElseThrow(() -> new NotFoundException("ResourceBooking", id));
+        SecurityHelper.requireOwnerOrAdmin(b.getOrganizerId());
+        return BookingDto.from(b);
     }
 
     @Transactional
@@ -135,6 +138,7 @@ public class ResourceBookingService {
         ResourceBooking b = bookingRepo.findById(id)
             .filter(x -> x.getDeletedAt() == null)
             .orElseThrow(() -> new NotFoundException("ResourceBooking", id));
+        SecurityHelper.requireOwnerOrAdmin(b.getOrganizerId());
         if (dto.status() != null) b.setStatus(dto.status());
         if (dto.notes() != null)  b.setNotes(dto.notes());
         return BookingDto.from(bookingRepo.save(b));
@@ -145,6 +149,7 @@ public class ResourceBookingService {
         ResourceBooking b = bookingRepo.findById(id)
             .filter(x -> x.getDeletedAt() == null)
             .orElseThrow(() -> new NotFoundException("ResourceBooking", id));
+        SecurityHelper.requireOwnerOrAdmin(b.getOrganizerId());
         b.markDeleted();
         bookingRepo.save(b);
     }
@@ -152,11 +157,19 @@ public class ResourceBookingService {
     // ─── Guests ──────────────────────────────────────────────────────────────
 
     public List<GuestDto> findGuestsByBooking(UUID bookingId) {
+        ResourceBooking b = bookingRepo.findById(bookingId)
+            .filter(x -> x.getDeletedAt() == null)
+            .orElseThrow(() -> new NotFoundException("ResourceBooking", bookingId));
+        SecurityHelper.requireOwnerOrAdmin(b.getOrganizerId());
         return guestRepo.findAllByBookingId(bookingId).stream().map(GuestDto::from).toList();
     }
 
     @Transactional
     public GuestDto addGuest(GuestCreateDto dto) {
+        ResourceBooking b = bookingRepo.findById(dto.bookingId())
+            .filter(x -> x.getDeletedAt() == null)
+            .orElseThrow(() -> new NotFoundException("ResourceBooking", dto.bookingId()));
+        SecurityHelper.requireOwnerOrAdmin(b.getOrganizerId());
         ResourceBooking bookingRef = entityManager.getReference(ResourceBooking.class, dto.bookingId());
         User guestUserRef = dto.guestUserId() != null
             ? entityManager.getReference(User.class, dto.guestUserId())

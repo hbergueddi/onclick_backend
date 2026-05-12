@@ -2,6 +2,7 @@ package com.onesley.oneclick.modules.community.internal;
 
 import com.onesley.oneclick.core.identity.internal.User;
 import com.onesley.oneclick.exception.NotFoundException;
+import com.onesley.oneclick.security.SecurityHelper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.data.domain.Page;
@@ -68,6 +69,7 @@ public class CommunityService {
         Post p = postRepo.findById(id)
             .filter(x -> x.getDeletedAt() == null)
             .orElseThrow(() -> new NotFoundException("Post", id));
+        SecurityHelper.requireOwnerOrAdmin(p.getAuthorId());
         p.markDeleted();
         postRepo.save(p);
     }

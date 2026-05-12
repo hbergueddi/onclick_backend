@@ -9,6 +9,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import com.onesley.oneclick.modules.social.internal.SocialService;
+import com.onesley.oneclick.security.SecurityHelper;
 
 import java.util.List;
 import java.util.UUID;
@@ -33,8 +34,8 @@ public class SocialController {
     @GetMapping("/friendships/by-user/{userId}")
     @Operation(summary = "Liste des amis acceptés d'un user")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public List<FriendshipDto> findFriendsOf(@PathVariable UUID userId) {
+        SecurityHelper.requireOwnerOrAdmin(userId);
         return service.findFriendsOf(userId);
     }
 
@@ -48,21 +49,19 @@ public class SocialController {
     @PatchMapping("/friendships/{id}/accept")
     @Operation(summary = "Accepte une demande d'amitié")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public FriendshipDto accept(@PathVariable UUID id) { return service.accept(id); }
 
     @PatchMapping("/friendships/{id}/decline")
     @Operation(summary = "Refuse une demande d'amitié")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public FriendshipDto decline(@PathVariable UUID id) { return service.decline(id); }
 
     // ─── Referrals ───────────────────────────────────────────────────────────
 
     @GetMapping("/referrals/by-referrer/{referrerId}")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public List<ReferralDto> findByReferrer(@PathVariable UUID referrerId) {
+        SecurityHelper.requireOwnerOrAdmin(referrerId);
         return service.findByReferrer(referrerId);
     }
 

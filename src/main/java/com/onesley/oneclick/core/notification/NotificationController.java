@@ -1,5 +1,6 @@
 package com.onesley.oneclick.core.notification;
 
+import com.onesley.oneclick.security.SecurityHelper;
 import com.onesley.oneclick.shared.PageResponse;
 import com.onesley.oneclick.core.notification.internal.NotificationService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -58,7 +59,6 @@ public class NotificationController {
     @PatchMapping("/{id}/read")
     @Operation(summary = "Marque la notification comme lue (read_at = now() si pas déjà lue)")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public NotificationDto markRead(@PathVariable UUID id) {
         return service.markRead(id);
     }
@@ -83,8 +83,8 @@ public class NotificationController {
 
     @GetMapping("/tokens/by-user/{userId}")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public List<DeviceTokenDto> findTokensByUser(@PathVariable UUID userId) {
+        SecurityHelper.requireOwnerOrAdmin(userId);
         return service.findTokensByUser(userId);
     }
 
@@ -98,7 +98,6 @@ public class NotificationController {
 
     @DeleteMapping("/tokens/{id}")
     @PreAuthorize("isAuthenticated()")
-    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public ResponseEntity<Void> unregisterToken(@PathVariable UUID id) {
         service.unregisterToken(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
