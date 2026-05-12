@@ -12,6 +12,10 @@ import org.springframework.web.bind.annotation.*;
 import java.net.URI;
 import java.util.Set;
 import java.util.UUID;
+import com.onesley.oneclick.modules.reservation.api.ReservationCreateDto;
+import com.onesley.oneclick.modules.reservation.api.ReservationDto;
+import com.onesley.oneclick.modules.reservation.internal.ReservationRepository;
+import com.onesley.oneclick.modules.reservation.internal.ReservationService;
 
 @RestController
 @RequestMapping("/api/reservations")

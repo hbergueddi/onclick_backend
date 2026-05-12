@@ -13,6 +13,10 @@ import org.springframework.web.bind.annotation.*;
 import java.net.URI;
 import java.util.Set;
 import java.util.UUID;
+import com.onesley.oneclick.modules.restaurant.api.RestaurantCreateDto;
+import com.onesley.oneclick.modules.restaurant.api.RestaurantDto;
+import com.onesley.oneclick.modules.restaurant.internal.RestaurantCatalogService;
+import com.onesley.oneclick.modules.restaurant.internal.RestaurantRepository;
 
 @RestController
 @RequestMapping("/api/restaurants")

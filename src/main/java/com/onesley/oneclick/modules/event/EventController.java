@@ -12,7 +12,13 @@ import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 
-import static com.onesley.oneclick.modules.event.EventDtos.*;
+import static com.onesley.oneclick.modules.event.api.EventDtos.*;
+import com.onesley.oneclick.modules.event.api.EventDtos;
+import com.onesley.oneclick.modules.event.api.EventDtos.EventCreateDto;
+import com.onesley.oneclick.modules.event.api.EventDtos.EventDto;
+import com.onesley.oneclick.modules.event.api.EventDtos.ParticipationCreateDto;
+import com.onesley.oneclick.modules.event.api.EventDtos.ParticipationDto;
+import com.onesley.oneclick.modules.event.internal.EventService;
 
 @RestController
 @RequestMapping("/api/events")

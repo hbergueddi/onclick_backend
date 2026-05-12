@@ -12,7 +12,19 @@ import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 
-import static com.onesley.oneclick.modules.financial.FinancialDtos.*;
+import static com.onesley.oneclick.modules.financial.api.FinancialDtos.*;
+import com.onesley.oneclick.modules.financial.api.FinancialDtos;
+import com.onesley.oneclick.modules.financial.api.FinancialDtos.ContractCreateDto;
+import com.onesley.oneclick.modules.financial.api.FinancialDtos.ContractDto;
+import com.onesley.oneclick.modules.financial.api.FinancialDtos.ContractUpdateDto;
+import com.onesley.oneclick.modules.financial.api.FinancialDtos.InvoiceCreateDto;
+import com.onesley.oneclick.modules.financial.api.FinancialDtos.InvoiceDto;
+import com.onesley.oneclick.modules.financial.api.FinancialDtos.InvoiceLineCreateDto;
+import com.onesley.oneclick.modules.financial.api.FinancialDtos.InvoiceLineDto;
+import com.onesley.oneclick.modules.financial.api.FinancialDtos.InvoiceUpdateDto;
+import com.onesley.oneclick.modules.financial.api.FinancialDtos.WalletTxCreateDto;
+import com.onesley.oneclick.modules.financial.api.FinancialDtos.WalletTxDto;
+import com.onesley.oneclick.modules.financial.internal.FinancialService;
 
 @RestController
 @RequestMapping("/api/financial")

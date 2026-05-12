@@ -13,6 +13,10 @@ import org.springframework.web.bind.annotation.*;
 import java.net.URI;
 import java.util.Set;
 import java.util.UUID;
+import com.onesley.oneclick.modules.promotion.api.OfferCreateDto;
+import com.onesley.oneclick.modules.promotion.api.OfferDto;
+import com.onesley.oneclick.modules.promotion.internal.OfferRepository;
+import com.onesley.oneclick.modules.promotion.internal.OfferService;
 
 @RestController
 @RequestMapping("/api/offers")
