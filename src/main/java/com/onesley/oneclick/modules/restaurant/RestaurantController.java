@@ -40,8 +40,9 @@ public class RestaurantController {
     }
 
     @GetMapping
-    @Operation(summary = "Liste paginée des restaurants — filtres city + tenantId optionnels")
-    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Liste paginée des restaurants — filtres city + tenantId optionnels (PUBLIC catalogue)")
+    // PUBLIC : catalogue accessible avant authentification (Login.tsx picker resto whitelabel).
+    // Whitelist correspondante dans SecurityConfig (GET /api/restaurants).
     public PageResponse<RestaurantDto> findAll(
         @RequestParam(required = false) String city,
         @RequestParam(required = false) UUID tenantId,
@@ -52,8 +53,8 @@ public class RestaurantController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Détail restaurant par UUID")
-    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Détail restaurant par UUID (PUBLIC catalogue)")
+    // PUBLIC : détail accessible sans auth (utilisé en Spotlight pré-login + SEO).
     public RestaurantDto findById(@PathVariable UUID id) {
         return service.findById(id);
     }

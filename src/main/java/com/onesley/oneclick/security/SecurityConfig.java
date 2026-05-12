@@ -84,6 +84,10 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**").permitAll()  // Phase 4 §2 — login/refresh/otp publics
                 // Health/info publics, le reste de l'actuator authentifié
                 .requestMatchers("/actuator/health/**", "/actuator/info").permitAll()
+                // Catalogue public — Login.tsx picker resto avant authent (GET only)
+                .requestMatchers(HttpMethod.GET, "/api/restaurants", "/api/restaurants/*").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/search/restaurants", "/api/search/restaurants/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/tenants/by-slug").permitAll()  // whitelabel routing avant login
                 // Preflight CORS
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 // Tout le reste demande un JWT valide

@@ -67,8 +67,8 @@ public class SearchController {
     }
 
     @GetMapping("/restaurants")
-    @Operation(summary = "Recherche restaurants par texte libre — ES primary, tsvector fallback")
-    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Recherche restaurants par texte libre — ES primary, tsvector fallback (PUBLIC)")
+    // PUBLIC : recherche catalogue accessible pré-login (Login.tsx whitelabel picker).
     public List<Map<String, Object>> searchRestaurants(
         @RequestParam("q") String query,
         @RequestParam(value = "city", required = false) String city,
@@ -150,8 +150,8 @@ public class SearchController {
     }
 
     @GetMapping("/restaurants/by-city")
-    @Operation(summary = "Liste rapide restaurants par ville (sans full-text)")
-    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Liste rapide restaurants par ville (sans full-text) (PUBLIC)")
+    // PUBLIC : filtre rapide ville (Login.tsx picker resto par ville).
     public List<Map<String, Object>> searchByCity(
         @RequestParam("city") String city,
         @RequestParam(defaultValue = "20") int limit
