@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.resource_booking;
 
 import com.onesley.oneclick.shared.PageResponse;
+import com.onesley.oneclick.modules.resource_booking.internal.ResourceBookingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -12,7 +13,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 
-import static com.onesley.oneclick.modules.resource_booking.ResourceBookingDtos.*;
+import static com.onesley.oneclick.modules.resource_booking.api.ResourceBookingDtos.*;
 
 @RestController
 @RequestMapping("/api/resource-bookings")

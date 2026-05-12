@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.community;
 
 import com.onesley.oneclick.shared.PageResponse;
+import com.onesley.oneclick.modules.community.internal.CommunityService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -12,7 +13,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 
-import static com.onesley.oneclick.modules.community.CommunityDtos.*;
+import static com.onesley.oneclick.modules.community.api.CommunityDtos.*;
 
 @RestController
 @RequestMapping("/api/community")

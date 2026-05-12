@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.support;
 
 import com.onesley.oneclick.shared.PageResponse;
+import com.onesley.oneclick.modules.support.internal.SupportService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -12,7 +13,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 
-import static com.onesley.oneclick.modules.support.SupportDtos.*;
+import static com.onesley.oneclick.modules.support.api.SupportDtos.*;
 
 @RestController
 @RequestMapping("/api/support")

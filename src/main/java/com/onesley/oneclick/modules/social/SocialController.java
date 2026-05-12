@@ -7,10 +7,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.onesley.oneclick.modules.social.internal.SocialService;
+
 import java.util.List;
 import java.util.UUID;
 
-import static com.onesley.oneclick.modules.social.SocialDtos.*;
+import static com.onesley.oneclick.modules.social.api.SocialDtos.*;
 
 @RestController
 @RequestMapping("/api/social")
