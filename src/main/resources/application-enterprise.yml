@@ -14,9 +14,11 @@ spring:
       on-profile: enterprise
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/oneclick_enterprise
-    username: oneclick_app
-    password: OneclickLocal2026
+    # SECURITY : passwords externalisés via env vars. Defaults uniquement pour
+    # setup local (compose.yaml). En prod : ENTERPRISE_DB_PASSWORD via secret manager.
+    url: ${ENTERPRISE_DB_URL:jdbc:postgresql://localhost:5432/oneclick_enterprise}
+    username: ${ENTERPRISE_DB_USERNAME:oneclick_app}
+    password: ${ENTERPRISE_DB_PASSWORD:OneclickLocal2026}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
@@ -41,8 +43,10 @@ spring:
   flyway:
     # Greenfield : pas de baseline, Flyway exécute toutes les V1+ depuis db/migration/
     baseline-on-migrate: false
-    user: hh
-    password: oneclick_dev_pwd
+    # SECURITY : Flyway tourne sous "hh" (owner des tables locales). En prod, le
+    # pipeline crée la DB owned par oneclick_app — ENTERPRISE_FLYWAY_PASSWORD vide.
+    user: ${ENTERPRISE_FLYWAY_USER:hh}
+    password: ${ENTERPRISE_FLYWAY_PASSWORD:oneclick_dev_pwd}
     locations: classpath:db/migration
 
 server:

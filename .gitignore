@@ -37,12 +37,29 @@ build/
 .env.*
 !.env.example
 .envrc
+.envrc.local
 secrets/
 *.local.yml
+*.private.yml
+application-local.yml
 **/AuthKey_*.p8
+**/AuthKey_*.pem
+**/*.private.key
+**/*.private.pem
+**/serviceAccount*.json
+**/google-services.json
+**/GoogleService-Info.plist
 
 ### IntelliJ HTTP Client — private env (contains secrets) ###
 http-client.private.env.json
+*.private.env.json
+
+### Generated keys / certificates ###
+**/*.p12
+**/*.pfx
+**/*.cer
+**/*.crt
+!**/test-fixtures/**/*.crt
 
 ### macOS ###
 .DS_Store

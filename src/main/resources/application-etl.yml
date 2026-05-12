@@ -27,9 +27,13 @@ spring:
   # L'ETL nécessite des privilèges superuser (CREATE EXTENSION, CREATE SERVER,
   # IMPORT FOREIGN SCHEMA, USER MAPPING, etc.). Le user "hh" est superuser local.
   # Production : profil etl jamais actif → aucun risque.
+  #
+  # SECURITY : passwords externalisés via env vars. Les defaults ci-dessous sont
+  # uniquement pour le setup local dev par défaut (cf compose.yaml). En prod,
+  # définir ETL_DB_PASSWORD via secret manager (Vault/AWS Secrets Manager).
   datasource:
-    username: hh
-    password: oneclick_dev_pwd
+    username: ${ETL_DB_USERNAME:hh}
+    password: ${ETL_DB_PASSWORD:oneclick_dev_pwd}
 
 # Pas de serveur web → pas de port (override le 8083 du profile enterprise)
 server:
@@ -40,13 +44,14 @@ oneclick:
   etl:
     # DB legacy source (postgres_fdw)
     legacy:
-      host: localhost
-      port: 5432
-      database: oneclick_local
-      user: oneclick_app
-      password: OneclickLocal2026
+      host: ${ETL_LEGACY_HOST:localhost}
+      port: ${ETL_LEGACY_PORT:5432}
+      database: ${ETL_LEGACY_DB:oneclick_local}
+      user: ${ETL_LEGACY_USER:oneclick_app}
+      password: ${ETL_LEGACY_PASSWORD:OneclickLocal2026}
     # Mot de passe fallback pour les 7 users sans hash auth.users
-    fallback-password: "TestLocal2026!"
+    # SECURITY : à override en prod via ETL_FALLBACK_PASSWORD env var
+    fallback-password: ${ETL_FALLBACK_PASSWORD:TestLocal2026!}
     # Mode test : TRUNCATE puis ETL ; mode prod : abort si tables non vides
     truncate-before-etl: true
     # Phase A (core path 13.A — 25 tables) + Phase B (secondaire — 10 tables additionnelles)
