@@ -1,6 +1,7 @@
 package com.onesley.oneclick.core.notification;
 
 import com.onesley.oneclick.shared.PageResponse;
+import com.onesley.oneclick.core.notification.internal.NotificationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -12,7 +13,14 @@ import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 
-import static com.onesley.oneclick.core.notification.NotificationDtos.*;
+import static com.onesley.oneclick.core.notification.api.NotificationDtos.*;
+import com.onesley.oneclick.core.notification.api.NotificationDtos;
+import com.onesley.oneclick.core.notification.api.NotificationDtos.CampaignCreateDto;
+import com.onesley.oneclick.core.notification.api.NotificationDtos.CampaignDto;
+import com.onesley.oneclick.core.notification.api.NotificationDtos.DeviceTokenCreateDto;
+import com.onesley.oneclick.core.notification.api.NotificationDtos.DeviceTokenDto;
+import com.onesley.oneclick.core.notification.api.NotificationDtos.NotificationCreateDto;
+import com.onesley.oneclick.core.notification.api.NotificationDtos.NotificationDto;
 
 @RestController
 @RequestMapping("/api/notifications")

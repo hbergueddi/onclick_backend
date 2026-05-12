@@ -1,6 +1,7 @@
 package com.onesley.oneclick.core.identity;
 
 import com.onesley.oneclick.search.SearchRequest;
+import com.onesley.oneclick.core.identity.internal.UserService;
 import com.onesley.oneclick.search.Searchable;
 import com.onesley.oneclick.shared.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -13,6 +14,10 @@ import org.springframework.web.bind.annotation.*;
 import java.net.URI;
 import java.util.Set;
 import java.util.UUID;
+import com.onesley.oneclick.core.identity.api.UserCreateDto;
+import com.onesley.oneclick.core.identity.api.UserDto;
+import com.onesley.oneclick.core.identity.api.UserUpdateDto;
+import com.onesley.oneclick.core.identity.internal.UserRepository;
 
 /**
  * REST controller {@code /api/users}.

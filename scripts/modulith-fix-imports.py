@@ -65,8 +65,11 @@ def add_imports(file_path: Path, needed_fqns: set[str], existing_pkg: str) -> in
     text = file_path.read_text(encoding="utf-8")
     # Imports déjà présents
     existing = set(re.findall(r"^import\s+([\w\.]+);", text, re.MULTILINE))
-    # Filtre : ne pas importer ce qui est dans le même package que le fichier
-    to_add = sorted(fqn for fqn in needed_fqns if fqn not in existing and not fqn.startswith(existing_pkg + "."))
+    # Filtre : ne pas importer ce qui est exactement dans le même package que le fichier
+    # (les sous-packages api/, internal/ sont des packages distincts → imports requis)
+    def parent_pkg(fqn: str) -> str:
+        return fqn.rsplit(".", 1)[0]
+    to_add = sorted(fqn for fqn in needed_fqns if fqn not in existing and parent_pkg(fqn) != existing_pkg)
     if not to_add:
         return 0
 

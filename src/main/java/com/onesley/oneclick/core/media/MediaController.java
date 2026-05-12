@@ -1,6 +1,7 @@
 package com.onesley.oneclick.core.media;
 
 import com.onesley.oneclick.shared.PageResponse;
+import com.onesley.oneclick.core.media.internal.MediaService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -13,7 +14,13 @@ import org.springframework.web.multipart.MultipartFile;
 import java.net.URI;
 import java.util.UUID;
 
-import static com.onesley.oneclick.core.media.MediaDtos.*;
+import static com.onesley.oneclick.core.media.api.MediaDtos.*;
+import com.onesley.oneclick.core.media.api.MediaDtos;
+import com.onesley.oneclick.core.media.api.MediaDtos.FileCreateDto;
+import com.onesley.oneclick.core.media.api.MediaDtos.FileDto;
+import com.onesley.oneclick.core.media.api.MediaDtos.MediaCreateDto;
+import com.onesley.oneclick.core.media.api.MediaDtos.MediaDto;
+import com.onesley.oneclick.core.media.internal.MediaStorageService;
 
 @RestController
 @RequestMapping("/api/media")

@@ -10,7 +10,16 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
-import static com.onesley.oneclick.core.configuration.ConfigurationDtos.*;
+import static com.onesley.oneclick.core.configuration.api.ConfigurationDtos.*;
+import com.onesley.oneclick.core.configuration.api.ConfigurationDtos;
+import com.onesley.oneclick.core.configuration.api.ConfigurationDtos.CacheConfigCreateDto;
+import com.onesley.oneclick.core.configuration.api.ConfigurationDtos.CacheConfigDto;
+import com.onesley.oneclick.core.configuration.api.ConfigurationDtos.FeatureFlagCreateDto;
+import com.onesley.oneclick.core.configuration.api.ConfigurationDtos.FeatureFlagDto;
+import com.onesley.oneclick.core.configuration.api.ConfigurationDtos.FeatureFlagTargetCreateDto;
+import com.onesley.oneclick.core.configuration.api.ConfigurationDtos.FeatureFlagTargetDto;
+import com.onesley.oneclick.core.configuration.api.ConfigurationDtos.FeatureFlagUpdateDto;
+import com.onesley.oneclick.core.configuration.internal.ConfigurationService;
 
 @RestController
 @RequestMapping("/api/configuration")

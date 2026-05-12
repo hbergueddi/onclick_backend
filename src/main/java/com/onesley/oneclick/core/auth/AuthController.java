@@ -16,6 +16,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
 import java.util.UUID;
+import com.onesley.oneclick.core.auth.internal.AuthService;
+import com.onesley.oneclick.core.auth.internal.AuthService.LoginResult;
+import com.onesley.oneclick.core.auth.internal.AuthService.OtpResult;
 
 /**
  * Authentification — POST /api/auth/* — Phase 4 §2 spec senior dev.

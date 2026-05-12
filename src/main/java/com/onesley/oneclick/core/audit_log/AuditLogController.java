@@ -1,6 +1,7 @@
 package com.onesley.oneclick.core.audit_log;
 
 import com.onesley.oneclick.shared.PageResponse;
+import com.onesley.oneclick.core.audit_log.internal.AuditLogService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -10,7 +11,15 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
-import static com.onesley.oneclick.core.audit_log.AuditLogDtos.*;
+import static com.onesley.oneclick.core.audit_log.api.AuditLogDtos.*;
+import com.onesley.oneclick.core.audit_log.api.AuditLogDtos;
+import com.onesley.oneclick.core.audit_log.api.AuditLogDtos.AuditLogCreateDto;
+import com.onesley.oneclick.core.audit_log.api.AuditLogDtos.AuditLogDto;
+import com.onesley.oneclick.core.audit_log.api.AuditLogDtos.ErrorLogCreateDto;
+import com.onesley.oneclick.core.audit_log.api.AuditLogDtos.ErrorLogDto;
+import com.onesley.oneclick.core.audit_log.api.AuditLogDtos.JobExecutionDto;
+import com.onesley.oneclick.core.audit_log.api.AuditLogDtos.SystemEventCreateDto;
+import com.onesley.oneclick.core.audit_log.api.AuditLogDtos.SystemEventDto;
 
 @RestController
 @RequestMapping("/api/audit")

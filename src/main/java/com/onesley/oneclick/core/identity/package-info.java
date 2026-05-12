@@ -12,7 +12,7 @@
  *
  * <h3>API exposée aux autres modules</h3>
  * <p>Aucun. Les autres modules communiquent par events (UserCreatedEvent, etc.)
- * et peuvent référencer {@code user.id} (UUID) mais pas l'entité {@link com.onesley.oneclick.core.identity.User}.
+ * et peuvent référencer {@code user.id} (UUID) mais pas l'entité {@link com.onesley.oneclick.core.identity.internal.User}.
  */
 @ApplicationModule(type = org.springframework.modulith.ApplicationModule.Type.OPEN, id = "core.identity", displayName = "core/identity")
 package com.onesley.oneclick.core.identity;

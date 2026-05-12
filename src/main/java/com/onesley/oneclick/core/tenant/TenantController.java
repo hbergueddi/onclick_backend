@@ -1,6 +1,7 @@
 package com.onesley.oneclick.core.tenant;
 
 import com.onesley.oneclick.search.SearchRequest;
+import com.onesley.oneclick.core.tenant.internal.TenantService;
 import com.onesley.oneclick.search.Searchable;
 import com.onesley.oneclick.shared.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -13,6 +14,9 @@ import java.net.URI;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import com.onesley.oneclick.core.tenant.api.TenantCreateDto;
+import com.onesley.oneclick.core.tenant.api.TenantDto;
+import com.onesley.oneclick.core.tenant.internal.TenantRepository;
 
 @RestController
 @RequestMapping("/api/tenants")
