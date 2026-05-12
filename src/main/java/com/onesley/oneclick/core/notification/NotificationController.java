@@ -2,6 +2,7 @@ package com.onesley.oneclick.core.notification;
 
 import com.onesley.oneclick.security.SecurityHelper;
 import com.onesley.oneclick.shared.PageResponse;
+import com.onesley.oneclick.core.notification.internal.FcmPushService;
 import com.onesley.oneclick.core.notification.internal.NotificationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -24,6 +25,9 @@ import com.onesley.oneclick.core.notification.api.NotificationDtos.DeviceTokenDt
 import com.onesley.oneclick.core.notification.api.NotificationDtos.MarkAllReadResultDto;
 import com.onesley.oneclick.core.notification.api.NotificationDtos.NotificationCreateDto;
 import com.onesley.oneclick.core.notification.api.NotificationDtos.NotificationDto;
+import com.onesley.oneclick.core.notification.api.NotificationDtos.PushPromoDto;
+import com.onesley.oneclick.core.notification.api.NotificationDtos.PushReservationDto;
+import com.onesley.oneclick.core.notification.api.NotificationDtos.PushResultDto;
 import com.onesley.oneclick.core.notification.api.NotificationDtos.UnreadCountDto;
 
 @RestController
@@ -32,9 +36,11 @@ import com.onesley.oneclick.core.notification.api.NotificationDtos.UnreadCountDt
 public class NotificationController {
 
     private final NotificationService service;
+    private final FcmPushService pushService;
 
-    public NotificationController(NotificationService service) {
+    public NotificationController(NotificationService service, FcmPushService pushService) {
         this.service = service;
+        this.pushService = pushService;
     }
 
     // ─── Notifications ───────────────────────────────────────────────────────
@@ -127,5 +133,21 @@ public class NotificationController {
     public ResponseEntity<Void> unregisterToken(@PathVariable UUID id) {
         service.unregisterToken(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    // ─── Push FCM (Phase B.8 — port send-*-push Edge Functions) ─────────────
+
+    @PostMapping("/push/promo")
+    @Operation(summary = "Push FCM promo — fan-out vers tous les device_tokens des userIds cibles. Stub si FCM non configuré.")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN')")
+    public PushResultDto pushPromo(@Valid @RequestBody PushPromoDto dto) {
+        return pushService.sendPromo(dto);
+    }
+
+    @PostMapping("/push/reservation")
+    @Operation(summary = "Push FCM réservation — fan-out vers les device_tokens du recipient (client OU staff). Stub si FCM non configuré.")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
+    public PushResultDto pushReservation(@Valid @RequestBody PushReservationDto dto) {
+        return pushService.sendReservation(dto);
     }
 }

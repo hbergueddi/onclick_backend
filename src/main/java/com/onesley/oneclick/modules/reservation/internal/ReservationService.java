@@ -13,7 +13,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,12 +50,43 @@ public class ReservationService {
 
     public Page<ReservationDto> findAll(UUID clientId, UUID restaurantId, String status,
                                         int page, int size) {
-        Specification<Reservation> spec = (root, q, cb) -> cb.isNull(root.get("deletedAt"));
-        if (clientId != null) spec = spec.and((root, q, cb) -> cb.equal(root.get("clientId"), clientId));
-        if (restaurantId != null) spec = spec.and((root, q, cb) -> cb.equal(root.get("restaurantId"), restaurantId));
-        if (status != null) spec = spec.and((root, q, cb) -> cb.equal(root.get("status"), status));
-        return repository.findAll(spec, PageRequest.of(page, size, Sort.by("reservationAt").descending()))
-            .map(Reservation::toDto);
+        // Native query joints (anti N+1) — voir ReservationRepository.findAllWithJoins.
+        // Tri figé par reservation_at DESC : aligné avec le tri historique
+        // (Specification précédente) et avec l'index idx_reservations_at.
+        return repository.findAllWithJoins(
+                clientId, restaurantId, status,
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "reservation_at")))
+            .map(ReservationService::toDto);
+    }
+
+    /**
+     * Conversion projection joints → DTO public. Préserve l'ordre des champs
+     * documenté dans {@link ReservationDto}.
+     */
+    private static ReservationDto toDto(ReservationWithJoinsView v) {
+        return new ReservationDto(
+            v.getId(),
+            v.getTenantId(),
+            v.getClientId(),
+            v.getRestaurantId(),
+            v.getTableId(),
+            v.getServiceId(),
+            v.getReservationAt(),
+            v.getGuestCount(),
+            v.getStatus(),
+            v.getNotes(),
+            v.getCreatedAt(),
+            v.getClientFirstName(),
+            v.getClientLastName(),
+            v.getRestaurantName(),
+            v.getRestaurantCity(),
+            v.getRestaurantImage(),
+            v.getMealServiceName(),
+            v.getZoneName(),
+            v.getTableNumber(),
+            v.getRefusalReason(),
+            v.getCancellationReason()
+        );
     }
 
     public ReservationDto findById(UUID id) {

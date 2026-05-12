@@ -7,8 +7,13 @@ import com.onesley.oneclick.modules.loyalty.api.GainRulePatchDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyAccountDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyEarnDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyTransactionDto;
+import com.onesley.oneclick.modules.loyalty.api.OcrReceiptRequestDto;
+import com.onesley.oneclick.modules.loyalty.api.OcrReceiptResultDto;
+import com.onesley.oneclick.modules.loyalty.api.Snap2EarnDto;
+import com.onesley.oneclick.modules.loyalty.api.Snap2EarnResultDto;
 import com.onesley.oneclick.modules.loyalty.api.TierDto;
 import com.onesley.oneclick.modules.loyalty.internal.LoyaltyService;
+import com.onesley.oneclick.modules.loyalty.internal.OcrReceiptService;
 import com.onesley.oneclick.security.SecurityHelper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,9 +33,11 @@ import java.util.UUID;
 public class LoyaltyController {
 
     private final LoyaltyService service;
+    private final OcrReceiptService ocrService;
 
-    public LoyaltyController(LoyaltyService service) {
+    public LoyaltyController(LoyaltyService service, OcrReceiptService ocrService) {
         this.service = service;
+        this.ocrService = ocrService;
     }
 
     public record SpendDto(
@@ -77,6 +84,20 @@ public class LoyaltyController {
     @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
     public LoyaltyTransactionDto earn(@Valid @RequestBody LoyaltyEarnDto dto) {
         return service.earnPoints(dto);
+    }
+
+    @PostMapping("/snap2earn")
+    @Operation(summary = "Snap2Earn — orchestrateur : lookup gain rule + calcul points + earn() atomic. Anti-doublon par (restaurantId, ticketRef).")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
+    public Snap2EarnResultDto snap2earn(@Valid @RequestBody Snap2EarnDto dto) {
+        return service.snap2earn(dto);
+    }
+
+    @PostMapping("/ocr-receipt")
+    @Operation(summary = "OCR ticket caisse — appel OCR.space + extraction montant via regex. Stub mode si OCR_SPACE_API_KEY absente.")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
+    public OcrReceiptResultDto ocrReceipt(@Valid @RequestBody OcrReceiptRequestDto dto) {
+        return ocrService.ocr(dto);
     }
 
     @PostMapping("/spend")

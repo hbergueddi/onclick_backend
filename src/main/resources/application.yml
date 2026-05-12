@@ -72,6 +72,21 @@ spring:
 # Local dev : MinIO sur localhost:9000 (cf scripts/minio-start.sh)
 # Prod      : override endpoint + access-key + secret-key via env vars (S3 AWS)
 app:
+  # ─── OCR (Phase B.8 — port snap2earn/ocr-receipt Edge Functions) ─────
+  # Si api-key non défini, le service tombe en mode stub (réponse vide + log warn).
+  ocr:
+    space:
+      api-key: ${OCR_SPACE_API_KEY:}
+      endpoint: ${OCR_SPACE_ENDPOINT:https://api.ocr.space/parse/imageurl}
+      language: ${OCR_SPACE_LANGUAGE:fre}
+
+  # ─── FCM Push notifications (Phase B.8 — port send-*-push Edge Functions) ─
+  # Si service-account-json non défini, le service tombe en mode stub
+  # (log + retour { sent: 0, total: 0, message: "FCM not configured" }).
+  fcm:
+    project-id: ${FCM_PROJECT_ID:}
+    service-account-json: ${FCM_SERVICE_ACCOUNT_JSON:}
+
   storage:
     s3:
       endpoint: ${S3_ENDPOINT:http://localhost:9000}

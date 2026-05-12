@@ -10,6 +10,8 @@ import com.onesley.oneclick.modules.loyalty.api.GainRulePatchDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyAccountDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyEarnDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyTransactionDto;
+import com.onesley.oneclick.modules.loyalty.api.Snap2EarnDto;
+import com.onesley.oneclick.modules.loyalty.api.Snap2EarnResultDto;
 import com.onesley.oneclick.modules.loyalty.api.TierDto;
 import com.onesley.oneclick.shared.events.LoyaltyEarnedEvent;
 import com.onesley.oneclick.shared.events.LoyaltyRedeemedEvent;
@@ -20,6 +22,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 
 import java.util.List;
@@ -110,6 +114,78 @@ public class LoyaltyService {
         ));
 
         return tx.toDto();
+    }
+
+    /**
+     * Snap2Earn — orchestrateur (porté depuis l'Edge Function Supabase {@code snap2earn}).
+     *
+     * <p>Flow :
+     * <ol>
+     *   <li>Anti-doublon par ({@code restaurantId}, {@code ticketRef}) si fourni</li>
+     *   <li>Lookup {@link GainRule} du restaurant (fallback conversion {@code 0.10} si absent)</li>
+     *   <li>Calcul points = {@code floor(amount * conversionRate)} avec cap (capPerVisit)
+     *       et plancher (minAmount)</li>
+     *   <li>Délégation à {@link #earnPoints(LoyaltyEarnDto)} qui fait INSERT transaction +
+     *       UPDATE balance dans la même tx Spring + publie l'event {@link LoyaltyEarnedEvent}</li>
+     * </ol>
+     *
+     * <p>Le {@code ticketRef} est encodé dans {@code reason} sous forme
+     * {@code "snap2earn|<ticket_ref>|<photo_url?>"} pour permettre l'anti-doublon
+     * sans table {@code scanned_tickets} dédiée (cf. {@link LoyaltyTransactionRepository
+     * #existsSnap2EarnByRestaurantAndTicketRef}).
+     */
+    @Transactional
+    public Snap2EarnResultDto snap2earn(Snap2EarnDto dto) {
+        // 1. Anti-doublon (si ticketRef fourni)
+        if (dto.ticketRef() != null && !dto.ticketRef().isBlank()) {
+            String prefix = "snap2earn|" + dto.ticketRef() + "|%";
+            if (transactionRepository.existsSnap2EarnByRestaurantAndTicketRef(dto.restaurantId(), prefix)) {
+                throw new BadRequestException(
+                    "Doublon détecté : ce ticket a déjà été scanné pour ce restaurant"
+                );
+            }
+        }
+
+        // 2. Lookup gain rule (fallback : taux conversion 0.10, pas de cap, pas de min)
+        Optional<GainRule> rule = gainRuleRepository.findByRestaurantIdAndDeletedAtIsNull(dto.restaurantId());
+        BigDecimal conversionRate = rule.map(GainRule::getConversionRate)
+            .orElse(new BigDecimal("0.10"));
+        BigDecimal minAmount = rule.map(GainRule::getMinAmount).orElse(BigDecimal.ZERO);
+        Integer capPerVisit = rule.map(GainRule::getCapPerVisit).orElse(null);
+        String gainRuleApplied = rule.isPresent() ? "restaurant" : "default";
+
+        // 3. Calcul points : floor(amount * rate), cap, plancher min_amount
+        int points = 0;
+        if (dto.amount().compareTo(minAmount) >= 0) {
+            BigDecimal raw = dto.amount().multiply(conversionRate)
+                .setScale(0, RoundingMode.FLOOR);
+            points = raw.intValueExact();
+            if (capPerVisit != null && points > capPerVisit) {
+                points = capPerVisit;
+            }
+        }
+
+        if (points <= 0) {
+            // Pas de points crédités — on retourne le solde existant sans transaction
+            LoyaltyAccount account = findOrCreateInternal(dto.clientId(), dto.restaurantId());
+            return new Snap2EarnResultDto(0, account.getBalance(), null, gainRuleApplied);
+        }
+
+        // 4. Reason encodé : "snap2earn|<ticket_ref>|<photo_url?>"
+        String reason = "snap2earn|"
+            + (dto.ticketRef() != null ? dto.ticketRef() : "")
+            + "|"
+            + (dto.photoUrl() != null ? dto.photoUrl() : "");
+
+        // 5. Délégation à earnPoints — INSERT tx + UPDATE balance + publish event
+        LoyaltyEarnDto earnDto = new LoyaltyEarnDto(
+            dto.clientId(), dto.restaurantId(), points, dto.amount(), reason
+        );
+        LoyaltyTransactionDto tx = earnPoints(earnDto);
+
+        // 6. Solde courant après crédit (relecture car earnPoints retourne uniquement la tx)
+        LoyaltyAccount account = findOrCreateInternal(dto.clientId(), dto.restaurantId());
+        return new Snap2EarnResultDto(points, account.getBalance(), tx.id(), gainRuleApplied);
     }
 
     @Transactional

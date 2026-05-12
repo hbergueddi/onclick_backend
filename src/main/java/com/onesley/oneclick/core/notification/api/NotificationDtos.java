@@ -65,4 +65,59 @@ public final class NotificationDtos {
         @Pattern(regexp = "^(ios|android|web)$") String platform,
         String appId
     ) {}
+
+    // ─── Push notifications FCM (Phase B.8 — port send-*-push) ──────────────
+
+    /**
+     * Payload pour {@code POST /api/notifications/push/promo} — port
+     * de l'Edge Function Supabase {@code send-promo-push}.
+     *
+     * @param campaignId   UUID de la campagne (optionnel, pour audit)
+     * @param userIds      Users cibles (lookup {@code device_tokens} par userId)
+     * @param title        Titre de la notif
+     * @param body         Corps de la notif
+     * @param link         Lien deep-link (optionnel)
+     */
+    public record PushPromoDto(
+        UUID campaignId,
+        @NotNull java.util.List<UUID> userIds,
+        @NotBlank String title,
+        @NotBlank String body,
+        String link
+    ) {}
+
+    /**
+     * Payload pour {@code POST /api/notifications/push/reservation} — port
+     * de l'Edge Function Supabase {@code send-reservation-push}.
+     *
+     * @param reservationId  UUID de la réservation
+     * @param recipientUserId User cible (client OU staff selon le status)
+     * @param status         {@code confirmed} / {@code refused} / {@code counter_proposal} / {@code cancelled} / {@code new_reservation}
+     * @param title          Titre push
+     * @param body           Corps push
+     * @param link           Deep-link (optionnel)
+     */
+    public record PushReservationDto(
+        @NotNull UUID reservationId,
+        @NotNull UUID recipientUserId,
+        @NotBlank String status,
+        @NotBlank String title,
+        @NotBlank String body,
+        String link
+    ) {}
+
+    /**
+     * Résultat d'envoi push — agrégat du fan-out FCM.
+     *
+     * @param sent     Nombre de push envoyés avec succès
+     * @param total    Nombre de device_tokens cibles résolus
+     * @param failures Liste d'erreurs FCM (tokens invalides, etc.) — vide si stub mode
+     * @param message  Message info (ex: "FCM not configured" en stub mode)
+     */
+    public record PushResultDto(
+        int sent,
+        int total,
+        java.util.List<String> failures,
+        String message
+    ) {}
 }

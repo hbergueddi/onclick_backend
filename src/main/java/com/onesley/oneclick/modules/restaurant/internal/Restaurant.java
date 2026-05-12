@@ -10,9 +10,12 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.proxy.HibernateProxy;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.util.Objects;
@@ -63,6 +66,28 @@ public class Restaurant extends SoftDeletableAuditedEntity {
     @Column(name = "status", nullable = false)
     private String status = "active";
 
+    // ─── V16 — attributs éditoriaux Pocket ──────────────────────────────────
+    // Nullables pour rétro-compat avec les rows pré-V16.
+
+    @Pattern(regexp = "^(€|€€|€€€)$")
+    @Column(name = "budget")
+    private String budget;
+
+    /**
+     * Étiquettes thématiques libres (cuisine, ambiance, etc.).
+     * Mappé directement sur la colonne PostgreSQL {@code text[]}.
+     */
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Column(name = "tags", columnDefinition = "text[]")
+    private String[] tags;
+
+    @Min(0)
+    @Column(name = "lounge_pts", nullable = false)
+    private Integer loungePts = 0;
+
+    @Column(name = "image")
+    private String image;
+
     protected Restaurant() {
         // JPA
     }
@@ -93,11 +118,21 @@ public class Restaurant extends SoftDeletableAuditedEntity {
     public void setLongitude(BigDecimal longitude) { this.longitude = longitude; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    public String getBudget() { return budget; }
+    public void setBudget(String budget) { this.budget = budget; }
+    public String[] getTags() { return tags; }
+    public void setTags(String[] tags) { this.tags = tags; }
+    public Integer getLoungePts() { return loungePts; }
+    public void setLoungePts(Integer loungePts) { this.loungePts = loungePts; }
+    public String getImage() { return image; }
+    public void setImage(String image) { this.image = image; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public RestaurantDto toDto() {
         return new RestaurantDto(id, tenantId, name, description, phone, address, city,
-            latitude, longitude, status, getCreatedAt());
+            latitude, longitude, status, budget,
+            tags == null ? java.util.List.of() : java.util.List.of(tags),
+            loungePts == null ? 0 : loungePts, image, getCreatedAt());
     }
 
     @Override

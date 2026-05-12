@@ -48,4 +48,26 @@ public interface LoyaltyTransactionRepository extends JpaRepository<LoyaltyTrans
         ORDER BY t.createdAt DESC
         """)
     java.util.List<LoyaltyTransaction> findExpiredByClientId(@Param("clientId") UUID clientId);
+
+    /**
+     * Anti-doublon Snap2Earn — vrai si un ticket avec le même {@code ticket_ref}
+     * a déjà été scanné pour ce restaurant (toutes les transactions
+     * {@code reason} commencent par {@code "snap2earn|<ticket_ref>|..."}).
+     *
+     * <p>Pas de table {@code scanned_tickets} dédiée dans le greenfield Spring :
+     * on stocke le {@code ticket_ref} directement dans {@code reason} avec un
+     * séparateur {@code |} pour permettre {@code LIKE 'snap2earn|<ref>|%'}.
+     */
+    @Query("""
+        SELECT COUNT(t) > 0 FROM LoyaltyTransaction t
+        WHERE t.accountId IN (
+            SELECT a.id FROM LoyaltyAccount a WHERE a.restaurantId = :restaurantId
+        )
+        AND t.type = 'earn'
+        AND t.reason LIKE :reasonPrefix
+        """)
+    boolean existsSnap2EarnByRestaurantAndTicketRef(
+        @Param("restaurantId") UUID restaurantId,
+        @Param("reasonPrefix") String reasonPrefix
+    );
 }
