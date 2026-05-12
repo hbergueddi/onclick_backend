@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import com.onesley.oneclick.modules.social.internal.SocialService;
@@ -31,38 +32,49 @@ public class SocialController {
 
     @GetMapping("/friendships/by-user/{userId}")
     @Operation(summary = "Liste des amis acceptés d'un user")
+    @PreAuthorize("isAuthenticated()")
+    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public List<FriendshipDto> findFriendsOf(@PathVariable UUID userId) {
         return service.findFriendsOf(userId);
     }
 
     @PostMapping("/friendships")
     @Operation(summary = "Demande d'amitié (pending)")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<FriendshipDto> request(@Valid @RequestBody FriendshipCreateDto dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.request(dto));
     }
 
     @PatchMapping("/friendships/{id}/accept")
     @Operation(summary = "Accepte une demande d'amitié")
+    @PreAuthorize("isAuthenticated()")
+    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public FriendshipDto accept(@PathVariable UUID id) { return service.accept(id); }
 
     @PatchMapping("/friendships/{id}/decline")
     @Operation(summary = "Refuse une demande d'amitié")
+    @PreAuthorize("isAuthenticated()")
+    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public FriendshipDto decline(@PathVariable UUID id) { return service.decline(id); }
 
     // ─── Referrals ───────────────────────────────────────────────────────────
 
     @GetMapping("/referrals/by-referrer/{referrerId}")
+    @PreAuthorize("isAuthenticated()")
+    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public List<ReferralDto> findByReferrer(@PathVariable UUID referrerId) {
         return service.findByReferrer(referrerId);
     }
 
     @PostMapping("/referrals")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ReferralDto> create(@Valid @RequestBody ReferralCreateDto dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.create(dto));
     }
 
     @PatchMapping("/referrals/{id}/activate")
     @Operation(summary = "Active un parrainage (lors du signup du parrainé)")
+    @PreAuthorize("isAuthenticated()")
     public ReferralDto activate(@PathVariable UUID id, @RequestBody ActivateReferralDto body) {
         return service.activate(id, body.referredUserId());
     }

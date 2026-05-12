@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -34,12 +35,14 @@ public class LoyaltyController {
 
     @GetMapping("/accounts/{id}")
     @Operation(summary = "Détail d'un compte fidélité")
+    @PreAuthorize("isAuthenticated()")
     public LoyaltyAccountDto findAccount(@PathVariable UUID id) {
         return service.findAccount(id);
     }
 
     @GetMapping("/accounts")
     @Operation(summary = "Comptes fidélité d'un client (lookup ou création auto si besoin)")
+    @PreAuthorize("isAuthenticated()")
     public LoyaltyAccountDto findOrCreate(
         @RequestParam UUID clientId,
         @RequestParam UUID restaurantId
@@ -49,24 +52,31 @@ public class LoyaltyController {
 
     @GetMapping("/accounts/by-client/{clientId}")
     @Operation(summary = "Tous les comptes fidélité d'un client (1 par restaurant)")
+    @PreAuthorize("isAuthenticated()")
+    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public List<LoyaltyAccountDto> findByClient(@PathVariable UUID clientId) {
         return service.findByClient(clientId);
     }
 
     @GetMapping("/accounts/{accountId}/transactions")
     @Operation(summary = "Historique des mouvements d'un compte")
+    @PreAuthorize("isAuthenticated()")
+    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public List<LoyaltyTransactionDto> findTransactionsByAccount(@PathVariable UUID accountId) {
         return service.findTransactionsByAccount(accountId);
     }
 
     @PostMapping("/earn")
     @Operation(summary = "Crédite des points (Snap2Earn). INSERT transaction + UPDATE balance dans la même tx.")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
     public LoyaltyTransactionDto earn(@Valid @RequestBody LoyaltyEarnDto dto) {
         return service.earnPoints(dto);
     }
 
     @PostMapping("/spend")
     @Operation(summary = "Débite des points (Redemption). Refuse si solde insuffisant.")
+    @PreAuthorize("isAuthenticated()")
+    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public LoyaltyTransactionDto spend(@Valid @RequestBody SpendDto dto) {
         return service.spendPoints(dto.clientId(), dto.restaurantId(), dto.points(), dto.reason());
     }

@@ -1,6 +1,6 @@
 package com.onesley.oneclick.modules.analytics.internal;
 
-import com.onesley.oneclick.core.tenant.Tenant;
+import com.onesley.oneclick.core.tenant.internal.Tenant;
 import com.onesley.oneclick.exception.NotFoundException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;

@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -30,6 +31,7 @@ public class ResourceBookingController {
 
     @GetMapping("/resources")
     @Operation(summary = "Liste paginée de ressources — filtres tenantId / resourceType / enabledOnly")
+    @PreAuthorize("isAuthenticated()")
     public PageResponse<ResourceDto> findAllResources(
         @RequestParam(required = false) UUID tenantId,
         @RequestParam(required = false) String resourceType,
@@ -41,15 +43,18 @@ public class ResourceBookingController {
     }
 
     @GetMapping("/resources/{id}")
+    @PreAuthorize("isAuthenticated()")
     public ResourceDto findResourceById(@PathVariable UUID id) { return service.findResourceById(id); }
 
     @PostMapping("/resources")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
     public ResponseEntity<ResourceDto> createResource(@Valid @RequestBody ResourceCreateDto dto) {
         ResourceDto r = service.createResource(dto);
         return ResponseEntity.created(URI.create("/api/resource-bookings/resources/" + r.id())).body(r);
     }
 
     @DeleteMapping("/resources/{id}")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
     public ResponseEntity<Void> deleteResource(@PathVariable UUID id) {
         service.softDeleteResource(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
@@ -58,11 +63,13 @@ public class ResourceBookingController {
     // ─── Pricings ────────────────────────────────────────────────────────────
 
     @GetMapping("/resources/{resourceId}/pricings")
+    @PreAuthorize("isAuthenticated()")
     public List<PricingDto> findPricingsByResource(@PathVariable UUID resourceId) {
         return service.findPricingsByResource(resourceId);
     }
 
     @PostMapping("/pricings")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
     public ResponseEntity<PricingDto> createPricing(@Valid @RequestBody PricingCreateDto dto) {
         PricingDto p = service.createPricing(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(p);
@@ -72,6 +79,7 @@ public class ResourceBookingController {
 
     @GetMapping("/bookings")
     @Operation(summary = "Bookings paginés — filtres resourceId / organizerId / status")
+    @PreAuthorize("isAuthenticated()")
     public PageResponse<BookingDto> findAllBookings(
         @RequestParam(required = false) UUID resourceId,
         @RequestParam(required = false) UUID organizerId,
@@ -83,20 +91,27 @@ public class ResourceBookingController {
     }
 
     @GetMapping("/bookings/{id}")
+    @PreAuthorize("isAuthenticated()")
+    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public BookingDto findBookingById(@PathVariable UUID id) { return service.findBookingById(id); }
 
     @PostMapping("/bookings")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<BookingDto> createBooking(@Valid @RequestBody BookingCreateDto dto) {
         BookingDto b = service.createBooking(dto);
         return ResponseEntity.created(URI.create("/api/resource-bookings/bookings/" + b.id())).body(b);
     }
 
     @PatchMapping("/bookings/{id}")
+    @PreAuthorize("isAuthenticated()")
+    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public BookingDto updateBooking(@PathVariable UUID id, @Valid @RequestBody BookingUpdateDto dto) {
         return service.updateBooking(id, dto);
     }
 
     @DeleteMapping("/bookings/{id}")
+    @PreAuthorize("isAuthenticated()")
+    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public ResponseEntity<Void> deleteBooking(@PathVariable UUID id) {
         service.softDeleteBooking(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
@@ -105,11 +120,15 @@ public class ResourceBookingController {
     // ─── Guests ──────────────────────────────────────────────────────────────
 
     @GetMapping("/bookings/{bookingId}/guests")
+    @PreAuthorize("isAuthenticated()")
+    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public List<GuestDto> findGuestsByBooking(@PathVariable UUID bookingId) {
         return service.findGuestsByBooking(bookingId);
     }
 
     @PostMapping("/guests")
+    @PreAuthorize("isAuthenticated()")
+    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public ResponseEntity<GuestDto> addGuest(@Valid @RequestBody GuestCreateDto dto) {
         GuestDto g = service.addGuest(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(g);

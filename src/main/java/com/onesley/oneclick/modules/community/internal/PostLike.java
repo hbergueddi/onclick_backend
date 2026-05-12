@@ -1,6 +1,6 @@
 package com.onesley.oneclick.modules.community.internal;
 
-import com.onesley.oneclick.core.identity.User;
+import com.onesley.oneclick.core.identity.internal.User;
 import jakarta.persistence.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;

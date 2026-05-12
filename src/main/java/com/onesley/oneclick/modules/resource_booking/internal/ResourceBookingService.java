@@ -1,7 +1,7 @@
 package com.onesley.oneclick.modules.resource_booking.internal;
 
-import com.onesley.oneclick.core.identity.User;
-import com.onesley.oneclick.core.tenant.Tenant;
+import com.onesley.oneclick.core.identity.internal.User;
+import com.onesley.oneclick.core.tenant.internal.Tenant;
 import com.onesley.oneclick.exception.NotFoundException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;

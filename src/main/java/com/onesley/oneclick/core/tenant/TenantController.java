@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -37,26 +38,30 @@ public class TenantController {
     }
 
     @GetMapping
-    @Operation(summary = "Liste tous les tenants actifs")
+    @Operation(summary = "Liste tous les tenants actifs (SUPERADMIN only)")
+    @PreAuthorize("hasRole('SUPERADMIN')")
     public List<TenantDto> findAll() { return service.findAll(); }
 
     @GetMapping("/{id}")
     @Operation(summary = "Détail d'un tenant par UUID")
+    @PreAuthorize("isAuthenticated()")
     public TenantDto findById(@PathVariable UUID id) { return service.findById(id); }
 
     @GetMapping("/by-slug")
-    @Operation(summary = "Lookup tenant par slug (whitelabel routing)")
+    @Operation(summary = "Lookup tenant par slug (whitelabel routing — PUBLIC)")
     public TenantDto findBySlug(@RequestParam String slug) { return service.findBySlug(slug); }
 
     @PostMapping
-    @Operation(summary = "Crée un tenant")
+    @Operation(summary = "Crée un tenant (SUPERADMIN only)")
+    @PreAuthorize("hasRole('SUPERADMIN')")
     public ResponseEntity<TenantDto> create(@Valid @RequestBody TenantCreateDto dto) {
         TenantDto t = service.create(dto);
         return ResponseEntity.created(URI.create("/api/tenants/" + t.id())).body(t);
     }
 
     @PostMapping("/search")
-    @Operation(summary = "Recherche dynamique (Phase 4 §6.3) — 12 opérateurs + whitelist")
+    @Operation(summary = "Recherche dynamique (SUPERADMIN only)")
+    @PreAuthorize("hasRole('SUPERADMIN')")
     public PageResponse<TenantDto> search(@RequestBody SearchRequest req) {
         return PageResponse.from(
             Searchable.execute(tenantRepository, req, SEARCHABLE_FIELDS, TenantDto::from)

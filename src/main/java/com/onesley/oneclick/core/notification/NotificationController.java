@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -37,6 +38,7 @@ public class NotificationController {
 
     @GetMapping
     @Operation(summary = "Notifications paginées — filtres recipientUserId / unreadOnly")
+    @PreAuthorize("isAuthenticated()")
     public PageResponse<NotificationDto> findAll(
         @RequestParam(required = false) UUID recipientUserId,
         @RequestParam(required = false) Boolean unreadOnly,
@@ -47,6 +49,7 @@ public class NotificationController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
     public ResponseEntity<NotificationDto> create(@Valid @RequestBody NotificationCreateDto dto) {
         NotificationDto n = service.create(dto);
         return ResponseEntity.created(URI.create("/api/notifications/" + n.id())).body(n);
@@ -54,6 +57,8 @@ public class NotificationController {
 
     @PatchMapping("/{id}/read")
     @Operation(summary = "Marque la notification comme lue (read_at = now() si pas déjà lue)")
+    @PreAuthorize("isAuthenticated()")
+    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public NotificationDto markRead(@PathVariable UUID id) {
         return service.markRead(id);
     }
@@ -61,12 +66,14 @@ public class NotificationController {
     // ─── Campaigns ───────────────────────────────────────────────────────────
 
     @GetMapping("/campaigns/by-tenant/{tenantId}")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
     public List<CampaignDto> findCampaignsByTenant(@PathVariable UUID tenantId) {
         return service.findCampaignsByTenant(tenantId);
     }
 
     @PostMapping("/campaigns")
     @Operation(summary = "Crée une campagne marketing. scheduledAt non null → status=scheduled.")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
     public ResponseEntity<CampaignDto> createCampaign(@Valid @RequestBody CampaignCreateDto dto) {
         CampaignDto c = service.createCampaign(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(c);
@@ -75,18 +82,23 @@ public class NotificationController {
     // ─── Device tokens ───────────────────────────────────────────────────────
 
     @GetMapping("/tokens/by-user/{userId}")
+    @PreAuthorize("isAuthenticated()")
+    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public List<DeviceTokenDto> findTokensByUser(@PathVariable UUID userId) {
         return service.findTokensByUser(userId);
     }
 
     @PostMapping("/tokens")
     @Operation(summary = "Enregistre (ou retourne le token existant) — upsert idempotent par token.")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<DeviceTokenDto> registerToken(@Valid @RequestBody DeviceTokenCreateDto dto) {
         DeviceTokenDto t = service.registerToken(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(t);
     }
 
     @DeleteMapping("/tokens/{id}")
+    @PreAuthorize("isAuthenticated()")
+    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public ResponseEntity<Void> unregisterToken(@PathVariable UUID id) {
         service.unregisterToken(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();

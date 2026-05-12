@@ -118,45 +118,77 @@ GET {{base}}/api/financial/contracts
 Authorization: Bearer {{jwtAdmin}}
 
 ### ═══════════════════════════════════════════════════════════════
-### 4. Permissions par rôle — Phase 6.2 (TODO)
+### 4. Permissions par rôle — Spring Security @PreAuthorize (Phase 6.2)
 ###
-### ⚠️  Aucun @PreAuthorize n'est encore posé sur les controllers du
-###    monolithe. @EnableMethodSecurity est actif côté SecurityConfig
-###    mais aucune annotation au niveau handler → tout JWT valide
-###    accède à toutes les routes.
-###
-###    Ces tests sont gardés pour la Phase 6.2 (RBAC granulaire).
-###    Aujourd'hui ils retournent 200 partout — ne sont PAS lancés
-###    dans "All in api-tests" (commentés au niveau du verbe HTTP).
+### Matrice RBAC posée sur 19 controllers (138 annotations) :
+###   - PUBLIC : pas d'annotation (whitelist SecurityConfig)
+###   - AUTH   : @PreAuthorize("isAuthenticated()")
+###   - STAFF  : @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR')")
+###   - ADMIN  : @PreAuthorize("hasRole('SUPERADMIN')")
+###   - OWNER  : @PreAuthorize("isAuthenticated()") + check applicatif via SecurityHelper
 ### ═══════════════════════════════════════════════════════════════
 
-### [TODO Phase 6.2] admin → /api/tenants → 200 (admin a tenant.READ)
-# GET {{base}}/api/tenants
-# Authorization: Bearer {{jwtAdmin}}
+### admin → /api/tenants → 200 (SUPERADMIN a tenant.READ)
+GET {{base}}/api/tenants
+Authorization: Bearer {{jwtAdmin}}
 
-### [TODO Phase 6.2] client → /api/tenants → 403 (client n'a PAS tenant.READ)
-# GET {{base}}/api/tenants
-# Authorization: Bearer {{jwtClient}}
+### client → /api/tenants → 403 (CLIENT n'a PAS hasRole('SUPERADMIN'))
+###   Body : ProblemDetails RFC 7807 avec traceId
+GET {{base}}/api/tenants
+Authorization: Bearer {{jwtClient}}
 
-### [TODO Phase 6.2] restaurateur → /api/audit/logs → 403 (admin only)
-# GET {{base}}/api/audit/logs
-# Authorization: Bearer {{jwtRestaurateur}}
+### restaurateur → /api/audit/logs → 403 (admin only)
+GET {{base}}/api/audit/logs
+Authorization: Bearer {{jwtRestaurateur}}
 
-### [TODO Phase 6.2] admin → /api/audit/logs → 200
-# GET {{base}}/api/audit/logs
-# Authorization: Bearer {{jwtAdmin}}
+### admin → /api/audit/logs → 200
+GET {{base}}/api/audit/logs
+Authorization: Bearer {{jwtAdmin}}
 
-### client → /api/search/restaurants/by-city → 200 (route publique aux authentifiés)
+### client → /api/search/restaurants/by-city → 200 (route AUTH — tout authentifié)
 GET {{base}}/api/search/restaurants/by-city?city=Casablanca&limit=2
 Authorization: Bearer {{jwtClient}}
 
-### [TODO Phase 6.2] client → /api/financial/contracts → 403 (admin only)
-# GET {{base}}/api/financial/contracts
-# Authorization: Bearer {{jwtClient}}
+### client → /api/financial/contracts → 403 (STAFF only)
+GET {{base}}/api/financial/contracts
+Authorization: Bearer {{jwtClient}}
 
-### restaurateur → /api/loyalty/accounts → 200 (loyalty.READ accessible authentifié)
-GET {{base}}/api/loyalty/accounts?clientId={{adminUserId}}
+### restaurateur → /api/loyalty/accounts → 200 (AUTH)
+GET {{base}}/api/loyalty/accounts?clientId={{adminUserId}}&restaurantId=00000000-0000-0000-0000-000000000001
 Authorization: Bearer {{jwtRestaurateur}}
+
+### client → /api/loyalty/earn → 403 (STAFF only — Snap2Earn crédite côté restaurateur)
+POST {{base}}/api/loyalty/earn
+Authorization: Bearer {{jwtClient}}
+Content-Type: application/json
+
+{
+  "clientId": "{{adminUserId}}",
+  "restaurantId": "00000000-0000-0000-0000-000000000001",
+  "points": 10,
+  "reason": "test"
+}
+
+### restaurateur → /api/loyalty/earn → 200 (STAFF — Snap2Earn autorisé)
+POST {{base}}/api/loyalty/earn
+Authorization: Bearer {{jwtRestaurateur}}
+Content-Type: application/json
+
+{
+  "clientId": "{{adminUserId}}",
+  "restaurantId": "00000000-0000-0000-0000-000000000001",
+  "points": 10,
+  "reason": "smoke test"
+}
+
+### admin → /api/restaurants (POST) → 200 (ADMIN only pour création)
+###   (la GET liste reste AUTH ouverte)
+GET {{base}}/api/restaurants
+Authorization: Bearer {{jwtClient}}
+
+### client → /api/configuration/feature-flags → 403 (ADMIN only)
+GET {{base}}/api/configuration/feature-flags
+Authorization: Bearer {{jwtClient}}
 
 ### ═══════════════════════════════════════════════════════════════
 ### 5. Recherche dynamique (UserSearchCriteria, ReservationSearchCriteria, …)

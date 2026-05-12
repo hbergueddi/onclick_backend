@@ -1,6 +1,6 @@
 package com.onesley.oneclick.modules.resource_booking.internal;
 
-import com.onesley.oneclick.core.identity.User;
+import com.onesley.oneclick.core.identity.internal.User;
 import jakarta.persistence.*;
 import org.hibernate.proxy.HibernateProxy;
 import org.springframework.data.annotation.CreatedDate;

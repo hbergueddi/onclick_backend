@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -41,6 +42,7 @@ public class FinancialController {
 
     @GetMapping("/contracts")
     @Operation(summary = "Contrats paginés — filtres restaurantId / status")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
     public PageResponse<ContractDto> findAllContracts(
         @RequestParam(required = false) UUID restaurantId,
         @RequestParam(required = false) String status,
@@ -51,15 +53,20 @@ public class FinancialController {
     }
 
     @GetMapping("/contracts/{id}")
+    @PreAuthorize("isAuthenticated()")
+    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public ContractDto findContractById(@PathVariable UUID id) { return service.findContractById(id); }
 
     @PostMapping("/contracts")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
     public ResponseEntity<ContractDto> createContract(@Valid @RequestBody ContractCreateDto dto) {
         ContractDto c = service.createContract(dto);
         return ResponseEntity.created(URI.create("/api/financial/contracts/" + c.id())).body(c);
     }
 
     @PatchMapping("/contracts/{id}")
+    @PreAuthorize("isAuthenticated()")
+    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public ContractDto updateContract(@PathVariable UUID id, @Valid @RequestBody ContractUpdateDto dto) {
         return service.updateContract(id, dto);
     }
@@ -68,6 +75,7 @@ public class FinancialController {
 
     @GetMapping("/invoices")
     @Operation(summary = "Factures paginées — filtres restaurantId / status")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
     public PageResponse<InvoiceDto> findAllInvoices(
         @RequestParam(required = false) UUID restaurantId,
         @RequestParam(required = false) String status,
@@ -78,9 +86,12 @@ public class FinancialController {
     }
 
     @GetMapping("/invoices/{id}")
+    @PreAuthorize("isAuthenticated()")
+    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public InvoiceDto findInvoiceById(@PathVariable UUID id) { return service.findInvoiceById(id); }
 
     @PostMapping("/invoices")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
     public ResponseEntity<InvoiceDto> createInvoice(@Valid @RequestBody InvoiceCreateDto dto) {
         InvoiceDto i = service.createInvoice(dto);
         return ResponseEntity.created(URI.create("/api/financial/invoices/" + i.id())).body(i);
@@ -88,6 +99,8 @@ public class FinancialController {
 
     @PatchMapping("/invoices/{id}")
     @Operation(summary = "Mise à jour totaux / status. status=paid → paid_at automatique.")
+    @PreAuthorize("isAuthenticated()")
+    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public InvoiceDto updateInvoice(@PathVariable UUID id, @Valid @RequestBody InvoiceUpdateDto dto) {
         return service.updateInvoice(id, dto);
     }
@@ -96,11 +109,14 @@ public class FinancialController {
 
     @GetMapping("/invoices/{invoiceId}/lines")
     @Operation(summary = "Lignes d'une facture — line_total = quantity × unit_price (GENERATED).")
+    @PreAuthorize("isAuthenticated()")
+    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public List<InvoiceLineDto> findLinesByInvoice(@PathVariable UUID invoiceId) {
         return service.findLinesByInvoice(invoiceId);
     }
 
     @PostMapping("/lines")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
     public ResponseEntity<InvoiceLineDto> createLine(@Valid @RequestBody InvoiceLineCreateDto dto) {
         InvoiceLineDto l = service.createLine(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(l);
@@ -110,6 +126,7 @@ public class FinancialController {
 
     @GetMapping("/wallet-tx")
     @Operation(summary = "Mouvements wallet paginés — filtres restaurantId / type")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
     public PageResponse<WalletTxDto> findAllWalletTx(
         @RequestParam(required = false) UUID restaurantId,
         @RequestParam(required = false) String type,
@@ -120,6 +137,7 @@ public class FinancialController {
     }
 
     @PostMapping("/wallet-tx")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
     public ResponseEntity<WalletTxDto> createWalletTx(@Valid @RequestBody WalletTxCreateDto dto) {
         WalletTxDto t = service.createWalletTx(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(t);

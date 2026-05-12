@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -39,6 +40,7 @@ public class RestaurantController {
 
     @GetMapping
     @Operation(summary = "Liste paginée des restaurants — filtres city + tenantId optionnels")
+    @PreAuthorize("isAuthenticated()")
     public PageResponse<RestaurantDto> findAll(
         @RequestParam(required = false) String city,
         @RequestParam(required = false) UUID tenantId,
@@ -50,12 +52,14 @@ public class RestaurantController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Détail restaurant par UUID")
+    @PreAuthorize("isAuthenticated()")
     public RestaurantDto findById(@PathVariable UUID id) {
         return service.findById(id);
     }
 
     @PostMapping
     @Operation(summary = "Crée un restaurant")
+    @PreAuthorize("hasRole('SUPERADMIN')")
     public ResponseEntity<RestaurantDto> create(@Valid @RequestBody RestaurantCreateDto dto) {
         RestaurantDto r = service.create(dto);
         return ResponseEntity.created(URI.create("/api/restaurants/" + r.id())).body(r);
@@ -63,6 +67,7 @@ public class RestaurantController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Soft delete d'un restaurant")
+    @PreAuthorize("hasRole('SUPERADMIN')")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         service.softDelete(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
@@ -70,6 +75,7 @@ public class RestaurantController {
 
     @PostMapping("/search")
     @Operation(summary = "Recherche dynamique (Phase 4 §6.3) — 12 opérateurs + whitelist")
+    @PreAuthorize("isAuthenticated()")
     public PageResponse<RestaurantDto> search(@RequestBody SearchRequest req) {
         return PageResponse.from(
             Searchable.execute(restaurantRepository, req, SEARCHABLE_FIELDS, RestaurantDto::from)

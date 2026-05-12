@@ -14,6 +14,7 @@ import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -67,6 +68,7 @@ public class SearchController {
 
     @GetMapping("/restaurants")
     @Operation(summary = "Recherche restaurants par texte libre — ES primary, tsvector fallback")
+    @PreAuthorize("isAuthenticated()")
     public List<Map<String, Object>> searchRestaurants(
         @RequestParam("q") String query,
         @RequestParam(value = "city", required = false) String city,
@@ -149,6 +151,7 @@ public class SearchController {
 
     @GetMapping("/restaurants/by-city")
     @Operation(summary = "Liste rapide restaurants par ville (sans full-text)")
+    @PreAuthorize("isAuthenticated()")
     public List<Map<String, Object>> searchByCity(
         @RequestParam("city") String city,
         @RequestParam(defaultValue = "20") int limit
@@ -164,6 +167,7 @@ public class SearchController {
 
     @PostMapping("/admin/reindex")
     @Operation(summary = "Re-bulk-indexer toutes les restaurants vers Elasticsearch (admin)")
+    @PreAuthorize("hasRole('SUPERADMIN')")
     public Map<String, Object> reindex() {
         int count = syncService.bulkReindex();
         return Map.of("status", "ok", "indexed", count);

@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -43,6 +44,7 @@ public class UserController {
 
     @GetMapping
     @Operation(summary = "Liste paginée des users")
+    @PreAuthorize("hasRole('SUPERADMIN')")
     public PageResponse<UserDto> findAll(
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size
@@ -52,12 +54,15 @@ public class UserController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Détail d'un user par UUID")
+    @PreAuthorize("isAuthenticated()")
+    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public UserDto findById(@PathVariable UUID id) {
         return service.findById(id);
     }
 
     @GetMapping("/by-email")
     @Operation(summary = "Lookup user par email (login flow)")
+    @PreAuthorize("hasRole('SUPERADMIN')")
     public UserDto findByEmail(@RequestParam String email) {
         return service.findByEmail(email);
     }
@@ -71,12 +76,16 @@ public class UserController {
 
     @PatchMapping("/{id}")
     @Operation(summary = "Mise à jour partielle d'un user")
+    @PreAuthorize("isAuthenticated()")
+    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public UserDto patch(@PathVariable UUID id, @Valid @RequestBody UserUpdateDto dto) {
         return service.patch(id, dto);
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Soft delete d'un user")
+    @PreAuthorize("isAuthenticated()")
+    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         service.softDelete(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
@@ -84,6 +93,7 @@ public class UserController {
 
     @PostMapping("/search")
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    @PreAuthorize("hasRole('SUPERADMIN')")
     @Operation(
         summary = "Recherche dynamique (Phase 4 §6.3) — 12 opérateurs + whitelist",
         description = "Body : SearchRequest. Champs autorisés : email, phone, firstName, lastName, language, status, tenantId, roleId, lastLoginAt, createdAt, updatedAt, enabled."

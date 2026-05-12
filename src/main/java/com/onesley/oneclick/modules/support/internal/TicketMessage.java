@@ -1,6 +1,6 @@
 package com.onesley.oneclick.modules.support.internal;
 
-import com.onesley.oneclick.core.identity.User;
+import com.onesley.oneclick.core.identity.internal.User;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.data.annotation.CreatedDate;

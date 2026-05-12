@@ -1,7 +1,7 @@
 package com.onesley.oneclick.modules.resource_booking.internal;
 
 import com.onesley.oneclick.audit.SoftDeletableAuditedEntity;
-import com.onesley.oneclick.core.tenant.Tenant;
+import com.onesley.oneclick.core.tenant.internal.Tenant;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import org.hibernate.proxy.HibernateProxy;

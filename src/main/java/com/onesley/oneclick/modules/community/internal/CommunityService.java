@@ -1,6 +1,6 @@
 package com.onesley.oneclick.modules.community.internal;
 
-import com.onesley.oneclick.core.identity.User;
+import com.onesley.oneclick.core.identity.internal.User;
 import com.onesley.oneclick.exception.NotFoundException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;

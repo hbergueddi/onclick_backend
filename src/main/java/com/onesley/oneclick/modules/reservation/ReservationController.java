@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -40,6 +41,7 @@ public class ReservationController {
 
     @GetMapping
     @Operation(summary = "Liste paginée — filtres clientId / restaurantId / status optionnels")
+    @PreAuthorize("isAuthenticated()")
     public PageResponse<ReservationDto> findAll(
         @RequestParam(required = false) UUID clientId,
         @RequestParam(required = false) UUID restaurantId,
@@ -52,12 +54,15 @@ public class ReservationController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Détail réservation par UUID")
+    @PreAuthorize("isAuthenticated()")
+    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public ReservationDto findById(@PathVariable UUID id) {
         return service.findById(id);
     }
 
     @PostMapping
     @Operation(summary = "Crée une réservation (status initial: pending)")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ReservationDto> create(@Valid @RequestBody ReservationCreateDto dto) {
         ReservationDto r = service.create(dto);
         return ResponseEntity.created(URI.create("/api/reservations/" + r.id())).body(r);
@@ -65,12 +70,14 @@ public class ReservationController {
 
     @PatchMapping("/{id}/status")
     @Operation(summary = "Change le statut (workflow audit dans reservation_status_histories)")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
     public ReservationDto changeStatus(@PathVariable UUID id, @RequestBody StatusChangeDto body) {
         return service.changeStatus(id, body.status(), body.changedById(), body.reason());
     }
 
     @PostMapping("/search")
     @Operation(summary = "Recherche dynamique (Phase 4 §6.3) — 12 opérateurs + whitelist")
+    @PreAuthorize("isAuthenticated()")
     public PageResponse<ReservationDto> search(@RequestBody SearchRequest req) {
         return PageResponse.from(
             Searchable.execute(reservationRepository, req, SEARCHABLE_FIELDS, ReservationDto::from)

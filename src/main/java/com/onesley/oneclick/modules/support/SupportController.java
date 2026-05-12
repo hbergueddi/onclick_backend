@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -30,6 +31,7 @@ public class SupportController {
 
     @GetMapping("/tickets")
     @Operation(summary = "Tickets paginés — filtres openedById / assignedToId / status")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
     public PageResponse<TicketDto> findAll(
         @RequestParam(required = false) UUID openedById,
         @RequestParam(required = false) UUID assignedToId,
@@ -41,9 +43,12 @@ public class SupportController {
     }
 
     @GetMapping("/tickets/{id}")
+    @PreAuthorize("isAuthenticated()")
+    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public TicketDto findById(@PathVariable UUID id) { return service.findById(id); }
 
     @PostMapping("/tickets")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<TicketDto> create(@Valid @RequestBody TicketCreateDto dto) {
         TicketDto t = service.create(dto);
         return ResponseEntity.created(URI.create("/api/support/tickets/" + t.id())).body(t);
@@ -51,6 +56,8 @@ public class SupportController {
 
     @PatchMapping("/tickets/{id}")
     @Operation(summary = "Mise à jour status / priority / assignation. status=resolved → resolved_at, status=closed → closed_at.")
+    @PreAuthorize("isAuthenticated()")
+    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public TicketDto update(@PathVariable UUID id, @Valid @RequestBody TicketUpdateDto dto) {
         return service.update(id, dto);
     }
@@ -58,11 +65,15 @@ public class SupportController {
     // ─── Messages (thread) ───────────────────────────────────────────────────
 
     @GetMapping("/tickets/{ticketId}/messages")
+    @PreAuthorize("isAuthenticated()")
+    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public List<MessageDto> findMessages(@PathVariable UUID ticketId) {
         return service.findMessages(ticketId);
     }
 
     @PostMapping("/messages")
+    @PreAuthorize("isAuthenticated()")
+    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public ResponseEntity<MessageDto> postMessage(@Valid @RequestBody MessageCreateDto dto) {
         MessageDto m = service.postMessage(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(m);
@@ -71,11 +82,15 @@ public class SupportController {
     // ─── Attachments ─────────────────────────────────────────────────────────
 
     @GetMapping("/tickets/{ticketId}/attachments")
+    @PreAuthorize("isAuthenticated()")
+    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public List<AttachmentDto> findAttachments(@PathVariable UUID ticketId) {
         return service.findAttachments(ticketId);
     }
 
     @PostMapping("/attachments")
+    @PreAuthorize("isAuthenticated()")
+    // TODO RBAC : SecurityHelper.requireOwnerOrAdmin(...) à appeler en service
     public ResponseEntity<AttachmentDto> attach(@Valid @RequestBody AttachmentCreateDto dto) {
         AttachmentDto a = service.attach(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(a);

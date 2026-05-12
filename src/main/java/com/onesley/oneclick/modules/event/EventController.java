@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -33,6 +34,7 @@ public class EventController {
 
     @GetMapping
     @Operation(summary = "Liste paginée d'événements — filtres tenantId / restaurantId / upcomingOnly")
+    @PreAuthorize("isAuthenticated()")
     public PageResponse<EventDto> findAll(
         @RequestParam(required = false) UUID tenantId,
         @RequestParam(required = false) UUID restaurantId,
@@ -44,15 +46,18 @@ public class EventController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
     public EventDto findById(@PathVariable UUID id) { return service.findById(id); }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
     public ResponseEntity<EventDto> create(@Valid @RequestBody EventCreateDto dto) {
         EventDto e = service.create(dto);
         return ResponseEntity.created(URI.create("/api/events/" + e.id())).body(e);
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         service.softDelete(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
@@ -62,12 +67,14 @@ public class EventController {
 
     @GetMapping("/{eventId}/participations")
     @Operation(summary = "Liste des RSVP d'un événement")
+    @PreAuthorize("isAuthenticated()")
     public List<ParticipationDto> findParticipations(@PathVariable UUID eventId) {
         return service.findParticipations(eventId);
     }
 
     @PostMapping("/participations")
     @Operation(summary = "RSVP sur un événement (going|maybe|declined|attended)")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ParticipationDto> rsvp(@Valid @RequestBody ParticipationCreateDto dto) {
         ParticipationDto p = service.rsvp(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(p);

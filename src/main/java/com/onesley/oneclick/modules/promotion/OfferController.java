@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -39,6 +40,7 @@ public class OfferController {
 
     @GetMapping
     @Operation(summary = "Liste paginée — filtres restaurantId + activeOnly")
+    @PreAuthorize("isAuthenticated()")
     public PageResponse<OfferDto> findAll(
         @RequestParam(required = false) UUID restaurantId,
         @RequestParam(required = false) Boolean activeOnly,
@@ -50,10 +52,12 @@ public class OfferController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Détail offre par UUID")
+    @PreAuthorize("isAuthenticated()")
     public OfferDto findById(@PathVariable UUID id) { return service.findById(id); }
 
     @PostMapping
     @Operation(summary = "Crée une offre/promotion")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
     public ResponseEntity<OfferDto> create(@Valid @RequestBody OfferCreateDto dto) {
         OfferDto o = service.create(dto);
         return ResponseEntity.created(URI.create("/api/offers/" + o.id())).body(o);
@@ -61,6 +65,7 @@ public class OfferController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Soft delete d'une offre")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         service.softDelete(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
@@ -68,6 +73,7 @@ public class OfferController {
 
     @PostMapping("/search")
     @Operation(summary = "Recherche dynamique (Phase 4 §6.3) — 12 opérateurs + whitelist")
+    @PreAuthorize("isAuthenticated()")
     public PageResponse<OfferDto> search(@RequestBody SearchRequest req) {
         return PageResponse.from(
             Searchable.execute(offerRepository, req, SEARCHABLE_FIELDS, OfferDto::from)
