@@ -1,8 +1,8 @@
 package com.onesley.oneclick.modules.reservation.internal;
 
 import com.onesley.oneclick.audit.SoftDeletableAuditedEntity;
-import com.onesley.oneclick.core.identity.internal.User;
-import com.onesley.oneclick.core.tenant.internal.Tenant;
+import com.onesley.oneclick.core.identity.api.User;
+import com.onesley.oneclick.core.tenant.api.Tenant;
 import com.onesley.oneclick.modules.reservation.api.ReservationDto;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

@@ -1,6 +1,6 @@
 package com.onesley.oneclick.modules.social.internal;
 
-import com.onesley.oneclick.core.identity.internal.User;
+import com.onesley.oneclick.core.identity.api.User;
 import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.security.SecurityHelper;

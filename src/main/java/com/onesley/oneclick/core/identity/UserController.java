@@ -19,8 +19,8 @@ import java.util.UUID;
 import com.onesley.oneclick.core.identity.api.UserCreateDto;
 import com.onesley.oneclick.core.identity.api.UserDto;
 import com.onesley.oneclick.core.identity.api.UserUpdateDto;
-import com.onesley.oneclick.core.identity.internal.User;
-import com.onesley.oneclick.core.identity.internal.UserRepository;
+import com.onesley.oneclick.core.identity.api.User;
+import com.onesley.oneclick.core.identity.api.UserRepository;
 
 /**
  * REST controller {@code /api/users}.

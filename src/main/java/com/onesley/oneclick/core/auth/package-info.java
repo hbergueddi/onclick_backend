@@ -9,7 +9,7 @@
  * </ul>
  *
  * <h3>Dépendance</h3>
- * <p>Référence {@link com.onesley.oneclick.core.identity.internal.User} pour les FKs {@code user_id}.
+ * <p>Référence {@link com.onesley.oneclick.core.identity.api.User} pour les FKs {@code user_id}.
  */
 @ApplicationModule(
     type = org.springframework.modulith.ApplicationModule.Type.CLOSED,

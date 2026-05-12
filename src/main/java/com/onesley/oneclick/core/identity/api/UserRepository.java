@@ -1,4 +1,4 @@
-package com.onesley.oneclick.core.identity.internal;
+package com.onesley.oneclick.core.identity.api;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 import java.util.UUID;
+import com.onesley.oneclick.core.identity.api.User;
 
 /**
  * Repository {@link User} — accès CRUD + finders métier.

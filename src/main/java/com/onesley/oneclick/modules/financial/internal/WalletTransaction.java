@@ -1,6 +1,6 @@
 package com.onesley.oneclick.modules.financial.internal;
 
-import com.onesley.oneclick.core.identity.internal.User;
+import com.onesley.oneclick.core.identity.api.User;
 import com.onesley.oneclick.modules.financial.api.FinancialDtos.WalletTxDto;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;

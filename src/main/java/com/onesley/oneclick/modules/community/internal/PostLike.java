@@ -1,6 +1,6 @@
 package com.onesley.oneclick.modules.community.internal;
 
-import com.onesley.oneclick.core.identity.internal.User;
+import com.onesley.oneclick.core.identity.api.User;
 import com.onesley.oneclick.modules.community.api.CommunityDtos.PostLikeDto;
 import jakarta.persistence.*;
 import org.springframework.data.annotation.CreatedDate;

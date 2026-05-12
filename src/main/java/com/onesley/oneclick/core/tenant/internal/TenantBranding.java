@@ -13,6 +13,7 @@ import org.hibernate.proxy.HibernateProxy;
 
 import java.util.Objects;
 import java.util.UUID;
+import com.onesley.oneclick.core.tenant.api.Tenant;
 
 /**
  * Branding visuel d'un tenant — 1-1 avec Tenant via {@code @MapsId} (la PK est tenant_id).

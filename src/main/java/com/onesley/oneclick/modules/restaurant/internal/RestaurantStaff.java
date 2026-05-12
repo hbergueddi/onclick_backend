@@ -1,7 +1,7 @@
 package com.onesley.oneclick.modules.restaurant.internal;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
-import com.onesley.oneclick.core.identity.internal.User;
+import com.onesley.oneclick.core.identity.api.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;

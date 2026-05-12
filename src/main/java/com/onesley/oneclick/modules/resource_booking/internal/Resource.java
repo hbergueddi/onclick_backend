@@ -1,7 +1,7 @@
 package com.onesley.oneclick.modules.resource_booking.internal;
 
 import com.onesley.oneclick.audit.SoftDeletableAuditedEntity;
-import com.onesley.oneclick.core.tenant.internal.Tenant;
+import com.onesley.oneclick.core.tenant.api.Tenant;
 import com.onesley.oneclick.modules.resource_booking.api.ResourceBookingDtos.ResourceDto;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;

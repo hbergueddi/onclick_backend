@@ -1,7 +1,7 @@
 package com.onesley.oneclick.core.audit_log.internal;
 
-import com.onesley.oneclick.core.identity.internal.User;
-import com.onesley.oneclick.core.tenant.internal.Tenant;
+import com.onesley.oneclick.core.identity.api.User;
+import com.onesley.oneclick.core.tenant.api.Tenant;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.data.domain.Page;

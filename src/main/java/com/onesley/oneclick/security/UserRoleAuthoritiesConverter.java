@@ -1,7 +1,7 @@
 package com.onesley.oneclick.security;
 
-import com.onesley.oneclick.core.identity.internal.User;
-import com.onesley.oneclick.core.identity.internal.UserRepository;
+import com.onesley.oneclick.core.identity.api.User;
+import com.onesley.oneclick.core.identity.api.UserRepository;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;

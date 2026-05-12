@@ -16,6 +16,7 @@ import org.hibernate.proxy.HibernateProxy;
 import java.math.BigDecimal;
 import java.util.Objects;
 import java.util.UUID;
+import com.onesley.oneclick.core.tenant.api.Tenant;
 
 /**
  * Configuration légale et facturation par tenant (raison sociale, ICE, RIB, TVA).

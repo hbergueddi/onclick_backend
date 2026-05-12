@@ -1,7 +1,7 @@
 package com.onesley.oneclick.core.identity.internal;
 
 import com.onesley.oneclick.cache.CacheConfig;
-import com.onesley.oneclick.core.tenant.internal.Tenant;
+import com.onesley.oneclick.core.tenant.api.Tenant;
 import com.onesley.oneclick.exception.ConflictException;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.shared.events.UserRegisteredEvent;
@@ -22,6 +22,9 @@ import java.util.UUID;
 import com.onesley.oneclick.core.identity.api.UserCreateDto;
 import com.onesley.oneclick.core.identity.api.UserDto;
 import com.onesley.oneclick.core.identity.api.UserUpdateDto;
+import com.onesley.oneclick.core.identity.api.Role;
+import com.onesley.oneclick.core.identity.api.User;
+import com.onesley.oneclick.core.identity.api.UserRepository;
 
 /**
  * Service métier {@link User} — signup, lookup, update, soft delete.

@@ -1,6 +1,6 @@
 package com.onesley.oneclick.core.media.internal;
 
-import com.onesley.oneclick.core.identity.internal.User;
+import com.onesley.oneclick.core.identity.api.User;
 import com.onesley.oneclick.core.media.api.MediaDtos.FileDto;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

@@ -1,7 +1,7 @@
 package com.onesley.oneclick.core.auth.internal;
 
-import com.onesley.oneclick.core.identity.internal.User;
-import com.onesley.oneclick.core.identity.internal.UserRepository;
+import com.onesley.oneclick.core.identity.api.User;
+import com.onesley.oneclick.core.identity.api.UserRepository;
 import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.security.JwtIssuer;

@@ -1,4 +1,4 @@
-package com.onesley.oneclick.core.identity.internal;
+package com.onesley.oneclick.core.identity.api;
 
 import com.onesley.oneclick.audit.SoftDeletableAuditedEntity;
 import com.onesley.oneclick.core.identity.api.UserDto;
@@ -46,7 +46,7 @@ public class User extends SoftDeletableAuditedEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tenant_id")
-    private com.onesley.oneclick.core.tenant.internal.Tenant tenant;
+    private com.onesley.oneclick.core.tenant.api.Tenant tenant;
 
     // ─── Rôle (1 seul, RBAC simplifié) ───────────────────────────────────────
     @Column(name = "role_id", nullable = false, insertable = false, updatable = false)
@@ -122,8 +122,8 @@ public class User extends SoftDeletableAuditedEntity {
     // ─── Getters ─────────────────────────────────────────────────────────────
     public UUID getId() { return id; }
     public UUID getTenantId() { return tenantId; }
-    public com.onesley.oneclick.core.tenant.internal.Tenant getTenant() { return tenant; }
-    public void setTenant(com.onesley.oneclick.core.tenant.internal.Tenant tenant) { this.tenant = tenant; }
+    public com.onesley.oneclick.core.tenant.api.Tenant getTenant() { return tenant; }
+    public void setTenant(com.onesley.oneclick.core.tenant.api.Tenant tenant) { this.tenant = tenant; }
     public UUID getRoleId() { return roleId; }
     public Role getRole() { return role; }
     public void setRole(Role role) { this.role = role; }

@@ -1,7 +1,7 @@
 package com.onesley.oneclick.modules.event.internal;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
-import com.onesley.oneclick.core.identity.internal.User;
+import com.onesley.oneclick.core.identity.api.User;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Pattern;
 

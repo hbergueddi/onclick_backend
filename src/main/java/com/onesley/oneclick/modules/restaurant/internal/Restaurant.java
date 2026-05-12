@@ -1,7 +1,7 @@
 package com.onesley.oneclick.modules.restaurant.internal;
 
 import com.onesley.oneclick.audit.SoftDeletableAuditedEntity;
-import com.onesley.oneclick.core.tenant.internal.Tenant;
+import com.onesley.oneclick.core.tenant.api.Tenant;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantDto;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

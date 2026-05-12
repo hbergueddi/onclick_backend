@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.UUID;
 import com.onesley.oneclick.core.tenant.api.TenantCreateDto;
 import com.onesley.oneclick.core.tenant.api.TenantDto;
+import com.onesley.oneclick.core.tenant.api.Tenant;
 
 @Service
 @Transactional(readOnly = true)

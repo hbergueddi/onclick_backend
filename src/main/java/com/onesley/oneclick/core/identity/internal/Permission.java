@@ -16,6 +16,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
+import com.onesley.oneclick.core.identity.api.Role;
 
 /**
  * Junction {@code role × (menu | action)} — la liste des choses qu'un rôle peut faire/voir.

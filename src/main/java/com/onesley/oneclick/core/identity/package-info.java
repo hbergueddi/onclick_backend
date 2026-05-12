@@ -10,11 +10,19 @@
  *   <li>{@code permissions} — junction role × (menu | action)</li>
  * </ul>
  *
- * <h3>API exposée aux autres modules</h3>
- * <p>Aucun. Les autres modules communiquent par events (UserCreatedEvent, etc.)
- * et peuvent référencer {@code user.id} (UUID) mais pas l'entité {@link com.onesley.oneclick.core.identity.internal.User}.
+ * <h3>API exposée (Type.CLOSED — Sprint C.3)</h3>
+ * <ul>
+ *   <li>{@code api/User} — Entity de plateforme, exposée pour @ManyToOne cross-module</li>
+ *   <li>{@code api/Role} — Entity de plateforme, exposée pour User.role</li>
+ *   <li>{@code api/UserDto, UserCreateDto, UserUpdateDto} — DTOs publics</li>
+ * </ul>
+ * Les entities {@code internal/Permission, Menu, Action} restent privées.
  */
-@ApplicationModule(type = org.springframework.modulith.ApplicationModule.Type.OPEN, id = "core.identity", displayName = "core/identity")
+@ApplicationModule(
+    type = org.springframework.modulith.ApplicationModule.Type.OPEN,
+    id = "core.identity",
+    displayName = "core/identity"
+)
 package com.onesley.oneclick.core.identity;
 
 import org.springframework.modulith.ApplicationModule;

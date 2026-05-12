@@ -1,7 +1,7 @@
 package com.onesley.oneclick.modules.event.api;
 
 import com.onesley.oneclick.audit.SoftDeletableAuditedEntity;
-import com.onesley.oneclick.core.tenant.internal.Tenant;
+import com.onesley.oneclick.core.tenant.api.Tenant;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

@@ -1,8 +1,8 @@
 package com.onesley.oneclick.core.audit_log.internal;
 
 import com.onesley.oneclick.core.audit_log.api.AuditLogDtos.AuditLogDto;
-import com.onesley.oneclick.core.identity.internal.User;
-import com.onesley.oneclick.core.tenant.internal.Tenant;
+import com.onesley.oneclick.core.identity.api.User;
+import com.onesley.oneclick.core.tenant.api.Tenant;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;

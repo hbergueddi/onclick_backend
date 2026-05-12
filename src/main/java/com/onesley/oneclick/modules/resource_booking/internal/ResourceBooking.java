@@ -1,7 +1,7 @@
 package com.onesley.oneclick.modules.resource_booking.internal;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
-import com.onesley.oneclick.core.identity.internal.User;
+import com.onesley.oneclick.core.identity.api.User;
 import com.onesley.oneclick.modules.resource_booking.api.ResourceBookingDtos.BookingDto;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;

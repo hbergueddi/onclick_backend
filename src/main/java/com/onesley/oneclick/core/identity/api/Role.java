@@ -1,64 +1,55 @@
-package com.onesley.oneclick.core.tenant.internal;
+package com.onesley.oneclick.core.identity.api;
 
-import com.onesley.oneclick.audit.SoftDeletableAuditedEntity;
-import com.onesley.oneclick.core.tenant.api.TenantDto;
+import com.onesley.oneclick.audit.TimestampedEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Racine multi-tenant. 1 ligne par marque whitelabel.
+ * Rôle applicatif — RBAC simplifié, 1 user = 1 role.
+ *
+ * <p>Codes attendus : {@code ADMIN}, {@code RESTAURATEUR}, {@code STAFF},
+ * {@code CLIENT}, {@code TENANT_ADMIN}, ...
  */
 @Entity
-@Table(name = "tenants")
-public class Tenant extends SoftDeletableAuditedEntity {
+@Table(name = "roles")
+public class Role extends TimestampedEntity {
 
     @Id
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
     @NotBlank
+    @Size(max = 64)
+    @Column(name = "code", nullable = false, unique = true)
+    private String code;
+
+    @NotBlank
+    @Size(max = 128)
     @Column(name = "name", nullable = false)
     private String name;
 
-    @NotBlank
-    @Pattern(regexp = "^[a-z0-9_-]+$", message = "slug doit être lowercase alphanumeric (a-z 0-9 _ -)")
-    @Column(name = "slug", nullable = false, unique = true)
-    private String slug;
-
-    @NotBlank
-    @Pattern(regexp = "^(active|paused|archived)$")
-    @Column(name = "status", nullable = false)
-    private String status = "active";
-
-    protected Tenant() {
+    protected Role() {
         // JPA
     }
 
-    public Tenant(UUID id, String name, String slug) {
+    public Role(UUID id, String code, String name) {
         this.id = id;
+        this.code = code;
         this.name = name;
-        this.slug = slug;
     }
 
     public UUID getId() { return id; }
+    public String getCode() { return code; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
-    public String getSlug() { return slug; }
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
-
-    /** Mapping vers le DTO public exposé hors du module. */
-    public TenantDto toDto() {
-        return new TenantDto(id, name, slug, status, getCreatedAt());
-    }
 
     @Override
     public boolean equals(Object o) {
@@ -67,7 +58,7 @@ public class Tenant extends SoftDeletableAuditedEntity {
         Class<?> oEffective = o instanceof HibernateProxy p ? p.getHibernateLazyInitializer().getPersistentClass() : o.getClass();
         Class<?> thisEffective = this instanceof HibernateProxy p ? p.getHibernateLazyInitializer().getPersistentClass() : this.getClass();
         if (thisEffective != oEffective) return false;
-        Tenant that = (Tenant) o;
+        Role that = (Role) o;
         return id != null && Objects.equals(id, that.id);
     }
 

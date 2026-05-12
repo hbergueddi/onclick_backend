@@ -17,7 +17,7 @@ import java.util.Set;
 import java.util.UUID;
 import com.onesley.oneclick.core.tenant.api.TenantCreateDto;
 import com.onesley.oneclick.core.tenant.api.TenantDto;
-import com.onesley.oneclick.core.tenant.internal.Tenant;
+import com.onesley.oneclick.core.tenant.api.Tenant;
 import com.onesley.oneclick.core.tenant.internal.TenantRepository;
 
 @RestController

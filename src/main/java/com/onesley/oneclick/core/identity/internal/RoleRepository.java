@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 import java.util.UUID;
+import com.onesley.oneclick.core.identity.api.Role;
 
 /**
  * Repository {@link Role} — accès CRUD + finders dérivés.

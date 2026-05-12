@@ -1,6 +1,6 @@
 package com.onesley.oneclick.modules.resource_booking.internal;
 
-import com.onesley.oneclick.core.identity.internal.User;
+import com.onesley.oneclick.core.identity.api.User;
 import com.onesley.oneclick.modules.resource_booking.api.ResourceBookingDtos.GuestDto;
 import jakarta.persistence.*;
 import org.hibernate.proxy.HibernateProxy;

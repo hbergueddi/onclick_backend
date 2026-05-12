@@ -1,7 +1,7 @@
 package com.onesley.oneclick.modules.restaurant.internal;
 
 import com.onesley.oneclick.cache.CacheConfig;
-import com.onesley.oneclick.core.tenant.internal.Tenant;
+import com.onesley.oneclick.core.tenant.api.Tenant;
 import com.onesley.oneclick.exception.NotFoundException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
