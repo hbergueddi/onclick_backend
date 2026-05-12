@@ -13,6 +13,11 @@
 #   6379  → redis
 #   8082  → adminer (uniquement avec --profile tools)
 #
+# DBs auto-créées au premier `docker compose up -d` (init scripts) :
+#   - oneclick_local       (legacy Supabase dump, ETL source, owner = hh)
+#   - oneclick_enterprise  (greenfield monolith, profil `enterprise`,
+#                           owner = oneclick_app, Flyway-managed)
+#
 # ⚠️  Conflit avec brew services :
 #   Si tu as `brew services start postgresql@17` ou `redis` qui tournent,
 #   ils squattent les mêmes ports. Fais d'abord :
@@ -22,8 +27,8 @@
 #
 # Premier setup d'une fresh DB :
 #   1. docker compose up -d
-#   2. ./scripts/db-docker-restore.sh    # importe le dump prod
-#   3. ./run.sh                           # boot Spring contre cette DB
+#   2. ./scripts/db-docker-restore.sh    # importe le dump prod (oneclick_local)
+#   3. ./run.sh                           # boot monolith contre oneclick_enterprise
 
 services:
 

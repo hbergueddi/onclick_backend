@@ -80,7 +80,7 @@ echo "user_id : ${USER_ID} ${ROLE_INFO}"
 echo "JWT     : ${JWT}"
 echo
 echo "Usage curl :"
-echo "  curl -H \"Authorization: Bearer \${JWT}\" http://localhost:8081/api/tenants"
+echo "  curl -H \"Authorization: Bearer \${JWT}\" http://localhost:8083/api/tenants"
 echo
 echo "Export shell :"
 echo "  export JWT='${JWT}'"

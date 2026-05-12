@@ -1,15 +1,18 @@
 #!/usr/bin/env bash
 # test-e2e.sh — lance une batterie de tests E2E sur tout ce que le backend
-# expose actuellement. Suppose que Spring tourne en mode --oauth2.
+# expose actuellement. Suppose que le monolithe tourne en --secure (OAuth2).
 #
 # Usage :
-#   ./run.sh --oauth2 &                  # terminal 1
+#   ./run.sh --secure &                  # terminal 1 (port 8083 par défaut)
 #   ./scripts/test-e2e.sh                # terminal 2
+#
+# Pour cibler un autre port :
+#   BASE=http://localhost:8081 ./scripts/test-e2e.sh    # legacy dev profile
 
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
-BASE=http://localhost:8081
+BASE=${BASE:-http://localhost:8083}
 PASS=0
 FAIL=0
 
