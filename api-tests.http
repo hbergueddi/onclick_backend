@@ -89,8 +89,12 @@ Content-Type: application/json
   "size": 10
 }
 
-### Loyalty — comptes d'un client
+### Loyalty — comptes d'un client (path-param)
 GET {{base}}/api/loyalty/accounts/by-client/{{adminUserId}}
+Authorization: Bearer {{jwtAdmin}}
+
+### Loyalty — racine (query-param obligatoire clientId)
+GET {{base}}/api/loyalty/accounts?clientId={{adminUserId}}
 Authorization: Bearer {{jwtAdmin}}
 
 ### Notifications in-app (40k+ rows en prod)
@@ -114,36 +118,44 @@ GET {{base}}/api/financial/contracts
 Authorization: Bearer {{jwtAdmin}}
 
 ### ═══════════════════════════════════════════════════════════════
-### 4. Permissions par rôle — Spring Security @PreAuthorize
+### 4. Permissions par rôle — Phase 6.2 (TODO)
+###
+### ⚠️  Aucun @PreAuthorize n'est encore posé sur les controllers du
+###    monolithe. @EnableMethodSecurity est actif côté SecurityConfig
+###    mais aucune annotation au niveau handler → tout JWT valide
+###    accède à toutes les routes.
+###
+###    Ces tests sont gardés pour la Phase 6.2 (RBAC granulaire).
+###    Aujourd'hui ils retournent 200 partout — ne sont PAS lancés
+###    dans "All in api-tests" (commentés au niveau du verbe HTTP).
 ### ═══════════════════════════════════════════════════════════════
 
-### admin → /api/tenants → 200 (admin a tenant.READ)
-GET {{base}}/api/tenants
-Authorization: Bearer {{jwtAdmin}}
+### [TODO Phase 6.2] admin → /api/tenants → 200 (admin a tenant.READ)
+# GET {{base}}/api/tenants
+# Authorization: Bearer {{jwtAdmin}}
 
-### client → /api/tenants → 403 (client n'a PAS tenant.READ)
-###   Body : ProblemDetails RFC 7807 avec traceId
-GET {{base}}/api/tenants
-Authorization: Bearer {{jwtClient}}
+### [TODO Phase 6.2] client → /api/tenants → 403 (client n'a PAS tenant.READ)
+# GET {{base}}/api/tenants
+# Authorization: Bearer {{jwtClient}}
 
-### restaurateur → /api/audit/logs → 403 (admin only)
-GET {{base}}/api/audit/logs
-Authorization: Bearer {{jwtRestaurateur}}
+### [TODO Phase 6.2] restaurateur → /api/audit/logs → 403 (admin only)
+# GET {{base}}/api/audit/logs
+# Authorization: Bearer {{jwtRestaurateur}}
 
-### admin → /api/audit/logs → 200
-GET {{base}}/api/audit/logs
-Authorization: Bearer {{jwtAdmin}}
+### [TODO Phase 6.2] admin → /api/audit/logs → 200
+# GET {{base}}/api/audit/logs
+# Authorization: Bearer {{jwtAdmin}}
 
-### client → /api/search/restaurants/by-city → 200 (client a restaurant.READ)
+### client → /api/search/restaurants/by-city → 200 (route publique aux authentifiés)
 GET {{base}}/api/search/restaurants/by-city?city=Casablanca&limit=2
 Authorization: Bearer {{jwtClient}}
 
-### client → /api/financial/contracts → 403 (admin only)
-GET {{base}}/api/financial/contracts
-Authorization: Bearer {{jwtClient}}
+### [TODO Phase 6.2] client → /api/financial/contracts → 403 (admin only)
+# GET {{base}}/api/financial/contracts
+# Authorization: Bearer {{jwtClient}}
 
-### restaurateur → /api/loyalty/accounts → 200 (restaurateur a loyalty.READ)
-GET {{base}}/api/loyalty/accounts
+### restaurateur → /api/loyalty/accounts → 200 (loyalty.READ accessible authentifié)
+GET {{base}}/api/loyalty/accounts?clientId={{adminUserId}}
 Authorization: Bearer {{jwtRestaurateur}}
 
 ### ═══════════════════════════════════════════════════════════════
