@@ -59,7 +59,7 @@ public class ReservationService {
         if (restaurantId != null) spec = spec.and((root, q, cb) -> cb.equal(root.get("restaurantId"), restaurantId));
         if (status != null) spec = spec.and((root, q, cb) -> cb.equal(root.get("status"), status));
         return repository.findAll(spec, PageRequest.of(page, size, Sort.by("reservationAt").descending()))
-            .map(ReservationDto::from);
+            .map(Reservation::toDto);
     }
 
     public ReservationDto findById(UUID id) {
@@ -67,7 +67,7 @@ public class ReservationService {
             .filter(x -> x.getDeletedAt() == null)
             .orElseThrow(() -> new NotFoundException("Reservation", id));
         SecurityHelper.requireOwnerOrAdmin(r.getClientId());
-        return ReservationDto.from(r);
+        return r.toDto();
     }
 
     @Transactional
@@ -112,7 +112,7 @@ public class ReservationService {
             saved.getStatus()
         ));
 
-        return ReservationDto.from(saved);
+        return saved.toDto();
     }
 
     @Transactional
@@ -125,7 +125,7 @@ public class ReservationService {
             .orElseThrow(() -> new NotFoundException("Reservation", id));
         String oldStatus = r.getStatus();
         if (oldStatus.equals(newStatus)) {
-            return ReservationDto.from(r); // no-op
+            return r.toDto(); // no-op
         }
         r.setStatus(newStatus);
         User actor = changedById != null ? entityManager.getReference(User.class, changedById) : null;
@@ -146,6 +146,6 @@ public class ReservationService {
             java.time.Instant.now()
         ));
 
-        return ReservationDto.from(saved);
+        return saved.toDto();
     }
 }

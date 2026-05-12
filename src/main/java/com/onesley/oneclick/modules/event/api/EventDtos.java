@@ -6,20 +6,21 @@ import jakarta.validation.constraints.Pattern;
 
 import java.time.Instant;
 import java.util.UUID;
-import com.onesley.oneclick.modules.event.internal.EventParticipation;
 
+/**
+ * DTOs publics du module event.
+ *
+ * <p>Pas de méthode de mapping ici : la conversion Entity → DTO se fait via
+ * {@code Entity.toDto()} (dépendance internal → api autorisée en Modulith
+ * CLOSED ; {@code Event} étant exposé via api/, son {@code toDto()} reste
+ * local au package).</p>
+ */
 public final class EventDtos {
 
     private EventDtos() {}
 
     public record EventDto(UUID id, UUID tenantId, UUID restaurantId, String title, String description,
-                           String eventType, Instant eventAt, Integer capacity, Instant createdAt) {
-        public static EventDto from(Event e) {
-            return new EventDto(e.getId(), e.getTenantId(), e.getRestaurantId(),
-                e.getTitle(), e.getDescription(), e.getEventType(),
-                e.getEventAt(), e.getCapacity(), e.getCreatedAt());
-        }
-    }
+                           String eventType, Instant eventAt, Integer capacity, Instant createdAt) {}
 
     public record EventCreateDto(
         @NotNull UUID tenantId,
@@ -31,11 +32,7 @@ public final class EventDtos {
         Integer capacity
     ) {}
 
-    public record ParticipationDto(UUID id, UUID eventId, UUID userId, String status, Instant createdAt) {
-        public static ParticipationDto from(EventParticipation p) {
-            return new ParticipationDto(p.getId(), p.getEventId(), p.getUserId(), p.getStatus(), p.getCreatedAt());
-        }
-    }
+    public record ParticipationDto(UUID id, UUID eventId, UUID userId, String status, Instant createdAt) {}
 
     public record ParticipationCreateDto(
         @NotNull UUID eventId,

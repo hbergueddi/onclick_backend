@@ -1,6 +1,7 @@
 package com.onesley.oneclick.core.notification.internal;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
+import com.onesley.oneclick.core.notification.api.NotificationDtos.CampaignDto;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -81,6 +82,12 @@ public class NotificationCampaign extends TimestampedEntity {
     public void setStatus(String status) { this.status = status; }
     public UUID getCreatedById() { return createdById; }
     public void setCreatedById(UUID createdById) { this.createdById = createdById; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public CampaignDto toDto() {
+        return new CampaignDto(id, tenantId, title, message, targetSegment, scheduledAt, sentAt,
+            status, createdById, getCreatedAt());
+    }
 
     @Override
     public boolean equals(Object o) {

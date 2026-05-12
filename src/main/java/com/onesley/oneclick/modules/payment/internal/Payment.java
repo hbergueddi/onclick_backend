@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.payment.internal;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
+import com.onesley.oneclick.modules.payment.api.PaymentDtos.PaymentDto;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 
@@ -48,6 +49,12 @@ public class Payment extends TimestampedEntity {
     public void setReferenceId(UUID referenceId) { this.referenceId = referenceId; }
     public Instant getCompletedAt() { return completedAt; }
     public void markCompleted() { this.completedAt = Instant.now(); this.status = "succeeded"; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public PaymentDto toDto() {
+        return new PaymentDto(id, userId, paymentMethodId, amount, currency, status, provider, transactionRef,
+            referenceType, referenceId, completedAt, getCreatedAt());
+    }
 
     @Override
     public boolean equals(Object o) {

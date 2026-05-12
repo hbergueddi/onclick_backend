@@ -48,7 +48,7 @@ public class RestaurantCatalogService {
         if (tenantId != null) {
             spec = spec.and((root, q, cb) -> cb.equal(root.get("tenantId"), tenantId));
         }
-        return repository.findAll(spec, PageRequest.of(page, size, Sort.by("name"))).map(RestaurantDto::from);
+        return repository.findAll(spec, PageRequest.of(page, size, Sort.by("name"))).map(Restaurant::toDto);
     }
 
     @Cacheable(value = CacheConfig.CACHE_RESTAURANTS, key = "#id")
@@ -56,7 +56,7 @@ public class RestaurantCatalogService {
         Restaurant r = repository.findById(id)
             .filter(x -> x.getDeletedAt() == null)
             .orElseThrow(() -> new NotFoundException("Restaurant", id));
-        return RestaurantDto.from(r);
+        return r.toDto();
     }
 
     @Transactional
@@ -69,7 +69,7 @@ public class RestaurantCatalogService {
         r.setAddress(dto.address());
         r.setLatitude(dto.latitude());
         r.setLongitude(dto.longitude());
-        return RestaurantDto.from(repository.save(r));
+        return repository.save(r).toDto();
     }
 
     @Transactional

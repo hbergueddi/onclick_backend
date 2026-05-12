@@ -65,7 +65,7 @@ public class AuditLogService {
         if (entityType != null) spec = spec.and((root, q, cb) -> cb.equal(root.get("entityType"), entityType));
         if (entityId != null)   spec = spec.and((root, q, cb) -> cb.equal(root.get("entityId"), entityId));
         return auditRepo.findAll(spec, PageRequest.of(page, size, Sort.by("createdAt").descending()))
-            .map(AuditLogDto::from);
+            .map(AuditLog::toDto);
     }
 
     @Transactional
@@ -78,7 +78,7 @@ public class AuditLogService {
         if (dto.diff() != null) a.getDiff().putAll(dto.diff());
         if (dto.ipAddress() != null) a.setIpAddress(dto.ipAddress());
         if (dto.userAgent() != null) a.setUserAgent(dto.userAgent());
-        return AuditLogDto.from(auditRepo.save(a));
+        return auditRepo.save(a).toDto();
     }
 
     // ─── SystemEvent ─────────────────────────────────────────────────────────
@@ -90,14 +90,14 @@ public class AuditLogService {
             spec = spec.and((root, q, cb) -> cb.isNull(root.get("processedAt")));
         }
         return eventRepo.findAll(spec, PageRequest.of(page, size, Sort.by("createdAt").descending()))
-            .map(SystemEventDto::from);
+            .map(SystemEvent::toDto);
     }
 
     @Transactional
     public SystemEventDto publishEvent(SystemEventCreateDto dto) {
         Map<String, Object> payload = dto.payload() != null ? dto.payload() : Map.of();
         SystemEvent e = new SystemEvent(UUID.randomUUID(), dto.type(), payload);
-        return SystemEventDto.from(eventRepo.save(e));
+        return eventRepo.save(e).toDto();
     }
 
     // ─── ErrorLog ────────────────────────────────────────────────────────────
@@ -107,7 +107,7 @@ public class AuditLogService {
         if (serviceName != null) spec = spec.and((root, q, cb) -> cb.equal(root.get("serviceName"), serviceName));
         if (severity != null)    spec = spec.and((root, q, cb) -> cb.equal(root.get("severity"), severity));
         return errorRepo.findAll(spec, PageRequest.of(page, size, Sort.by("createdAt").descending()))
-            .map(ErrorLogDto::from);
+            .map(ErrorLog::toDto);
     }
 
     @Transactional
@@ -115,7 +115,7 @@ public class AuditLogService {
         String sev = dto.severity() != null ? dto.severity() : "error";
         ErrorLog e = new ErrorLog(UUID.randomUUID(), dto.serviceName(), dto.message(), sev);
         if (dto.stacktrace() != null) e.setStacktrace(dto.stacktrace());
-        return ErrorLogDto.from(errorRepo.save(e));
+        return errorRepo.save(e).toDto();
     }
 
     // ─── JobExecution (lecture seule via REST — écrite par les jobs eux-mêmes) ─
@@ -125,6 +125,6 @@ public class AuditLogService {
         if (jobName != null) spec = spec.and((root, q, cb) -> cb.equal(root.get("jobName"), jobName));
         if (status != null)  spec = spec.and((root, q, cb) -> cb.equal(root.get("status"), status));
         return jobRepo.findAll(spec, PageRequest.of(page, size, Sort.by("startedAt").descending()))
-            .map(JobExecutionDto::from);
+            .map(JobExecution::toDto);
     }
 }

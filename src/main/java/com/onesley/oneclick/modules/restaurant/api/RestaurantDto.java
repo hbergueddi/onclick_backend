@@ -3,8 +3,14 @@ package com.onesley.oneclick.modules.restaurant.api;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
-import com.onesley.oneclick.modules.restaurant.internal.Restaurant;
 
+/**
+ * DTO public d'un restaurant.
+ *
+ * <p>Pas de méthode de mapping ici : la conversion Entity → DTO se fait via
+ * {@code Restaurant.toDto()} dans le package {@code internal} (dépendance
+ * internal → api autorisée en Modulith CLOSED).</p>
+ */
 public record RestaurantDto(
     UUID id,
     UUID tenantId,
@@ -18,12 +24,4 @@ public record RestaurantDto(
     String status,
     Instant createdAt
 ) {
-    public static RestaurantDto from(Restaurant r) {
-        return new RestaurantDto(
-            r.getId(), r.getTenantId(), r.getName(), r.getDescription(),
-            r.getPhone(), r.getAddress(), r.getCity(),
-            r.getLatitude(), r.getLongitude(),
-            r.getStatus(), r.getCreatedAt()
-        );
-    }
 }

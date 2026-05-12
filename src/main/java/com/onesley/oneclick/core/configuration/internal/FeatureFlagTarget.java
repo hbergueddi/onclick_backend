@@ -1,5 +1,6 @@
 package com.onesley.oneclick.core.configuration.internal;
 
+import com.onesley.oneclick.core.configuration.api.ConfigurationDtos.FeatureFlagTargetDto;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -80,6 +81,11 @@ public class FeatureFlagTarget {
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
     public Instant getCreatedAt() { return createdAt; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public FeatureFlagTargetDto toDto() {
+        return new FeatureFlagTargetDto(id, featureFlagId, targetType, targetId, enabled, createdAt);
+    }
 
     @Override
     public boolean equals(Object o) {

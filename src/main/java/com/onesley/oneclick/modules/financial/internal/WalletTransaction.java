@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.financial.internal;
 
 import com.onesley.oneclick.core.identity.internal.User;
+import com.onesley.oneclick.modules.financial.api.FinancialDtos.WalletTxDto;
 import com.onesley.oneclick.modules.restaurant.internal.Restaurant;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
@@ -88,6 +89,12 @@ public class WalletTransaction {
     public void setReferenceType(String referenceType) { this.referenceType = referenceType; }
     public Instant getCreatedAt() { return createdAt; }
     public UUID getCreatedById() { return createdById; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public WalletTxDto toDto() {
+        return new WalletTxDto(id, restaurantId, type, amount, balanceAfter, reason,
+            referenceId, referenceType, createdAt, createdById);
+    }
 
     @Override
     public boolean equals(Object o) {

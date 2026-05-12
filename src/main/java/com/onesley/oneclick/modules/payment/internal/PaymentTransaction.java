@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.payment.internal;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.onesley.oneclick.modules.payment.api.PaymentDtos.TransactionDto;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -36,6 +37,11 @@ public class PaymentTransaction {
     public Map<String, Object> getProviderResponse() { return providerResponse; }
     public String getEventType() { return eventType; }
     public Instant getCreatedAt() { return createdAt; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public TransactionDto toDto() {
+        return new TransactionDto(id, paymentId, eventType, providerResponse, createdAt);
+    }
 
     @Override
     public boolean equals(Object o) {

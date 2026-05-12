@@ -54,7 +54,7 @@ public class AnalyticsService {
         Specification<ApiClient> spec = (root, q, cb) -> cb.conjunction();
         if (tenantId != null) spec = spec.and((root, q, cb) -> cb.equal(root.get("tenantId"), tenantId));
         return apiClientRepo.findAll(spec, PageRequest.of(page, size, Sort.by("createdAt").descending()))
-            .map(ApiClientDto::from);
+            .map(ApiClient::toDto);
     }
 
     public ApiClientDto findClientById(UUID id) {
@@ -63,7 +63,7 @@ public class AnalyticsService {
         // TODO check ownership — ApiClient n'a pas de createdBy direct, fallback tenantId
         // (effectivement admin-only car tenantId != userId courant)
         SecurityHelper.requireOwnerOrAdmin(c.getTenantId());
-        return ApiClientDto.from(c);
+        return c.toDto();
     }
 
     @Transactional
@@ -73,7 +73,7 @@ public class AnalyticsService {
         if (dto.tenantId() != null) {
             c.setTenant(entityManager.getReference(Tenant.class, dto.tenantId()));
         }
-        return ApiClientDto.from(apiClientRepo.save(c));
+        return apiClientRepo.save(c).toDto();
     }
 
     // ─── API keys ────────────────────────────────────────────────────────────
@@ -83,7 +83,7 @@ public class AnalyticsService {
             .orElseThrow(() -> new NotFoundException("ApiClient", apiClientId));
         // TODO check ownership — ApiClient n'a pas de createdBy direct, fallback tenantId
         SecurityHelper.requireOwnerOrAdmin(c.getTenantId());
-        return apiKeyRepo.findAllByApiClientId(apiClientId).stream().map(ApiKeyDto::from).toList();
+        return apiKeyRepo.findAllByApiClientId(apiClientId).stream().map(ApiKey::toDto).toList();
     }
 
     @Transactional
@@ -91,7 +91,7 @@ public class AnalyticsService {
         ApiClient clientRef = entityManager.getReference(ApiClient.class, dto.apiClientId());
         ApiKey k = new ApiKey(UUID.randomUUID(), clientRef, dto.keyHash(), dto.keyPrefix());
         if (dto.expiresAt() != null) k.setExpiresAt(dto.expiresAt());
-        return ApiKeyDto.from(apiKeyRepo.save(k));
+        return apiKeyRepo.save(k).toDto();
     }
 
     @Transactional
@@ -113,7 +113,7 @@ public class AnalyticsService {
             .orElseThrow(() -> new NotFoundException("ApiClient", apiClientId));
         // TODO check ownership — ApiClient n'a pas de createdBy direct, fallback tenantId
         SecurityHelper.requireOwnerOrAdmin(c.getTenantId());
-        return webhookRepo.findAllByApiClientId(apiClientId).stream().map(WebhookDto::from).toList();
+        return webhookRepo.findAllByApiClientId(apiClientId).stream().map(Webhook::toDto).toList();
     }
 
     @Transactional
@@ -121,7 +121,7 @@ public class AnalyticsService {
         ApiClient clientRef = entityManager.getReference(ApiClient.class, dto.apiClientId());
         Webhook w = new Webhook(UUID.randomUUID(), clientRef, dto.url());
         if (dto.secret() != null) w.setSecret(dto.secret());
-        return WebhookDto.from(webhookRepo.save(w));
+        return webhookRepo.save(w).toDto();
     }
 
     @Transactional
@@ -146,13 +146,13 @@ public class AnalyticsService {
         SecurityHelper.requireOwnerOrAdmin(parent.getTenantId());
         Specification<WebhookDelivery> spec = (root, q, cb) -> cb.equal(root.get("webhookId"), webhookId);
         return deliveryRepo.findAll(spec, PageRequest.of(page, size, Sort.by("createdAt").descending()))
-            .map(WebhookDeliveryDto::from);
+            .map(WebhookDelivery::toDto);
     }
 
     @Transactional
     public WebhookDeliveryDto recordDelivery(WebhookDeliveryCreateDto dto) {
         Webhook webhookRef = entityManager.getReference(Webhook.class, dto.webhookId());
         WebhookDelivery d = new WebhookDelivery(UUID.randomUUID(), webhookRef, dto.eventType(), dto.payload());
-        return WebhookDeliveryDto.from(deliveryRepo.save(d));
+        return deliveryRepo.save(d).toDto();
     }
 }

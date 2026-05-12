@@ -17,6 +17,7 @@ import java.util.Set;
 import java.util.UUID;
 import com.onesley.oneclick.core.tenant.api.TenantCreateDto;
 import com.onesley.oneclick.core.tenant.api.TenantDto;
+import com.onesley.oneclick.core.tenant.internal.Tenant;
 import com.onesley.oneclick.core.tenant.internal.TenantRepository;
 
 @RestController
@@ -64,7 +65,7 @@ public class TenantController {
     @PreAuthorize("hasRole('SUPERADMIN')")
     public PageResponse<TenantDto> search(@RequestBody SearchRequest req) {
         return PageResponse.from(
-            Searchable.execute(tenantRepository, req, SEARCHABLE_FIELDS, TenantDto::from)
+            Searchable.execute(tenantRepository, req, SEARCHABLE_FIELDS, Tenant::toDto)
         );
     }
 }

@@ -7,10 +7,14 @@ import jakarta.validation.constraints.Pattern;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
-import com.onesley.oneclick.core.notification.internal.DeviceToken;
-import com.onesley.oneclick.core.notification.internal.Notification;
-import com.onesley.oneclick.core.notification.internal.NotificationCampaign;
 
+/**
+ * DTOs publics du module notification.
+ *
+ * <p>Pas de méthode de mapping ici : la conversion Entity → DTO se fait via
+ * {@code Entity.toDto()} dans le package {@code internal} (dépendance
+ * internal → api autorisée en Modulith CLOSED).</p>
+ */
 public final class NotificationDtos {
 
     private NotificationDtos() {}
@@ -19,12 +23,7 @@ public final class NotificationDtos {
 
     public record NotificationDto(UUID id, UUID recipientUserId, String type, String channel, String title,
                                   String body, String link, Map<String, Object> metadata, Instant readAt,
-                                  Instant createdAt) {
-        public static NotificationDto from(Notification n) {
-            return new NotificationDto(n.getId(), n.getRecipientUserId(), n.getType(), n.getChannel(),
-                n.getTitle(), n.getBody(), n.getLink(), n.getMetadata(), n.getReadAt(), n.getCreatedAt());
-        }
-    }
+                                  Instant createdAt) {}
 
     public record NotificationCreateDto(
         @NotNull UUID recipientUserId,
@@ -39,13 +38,7 @@ public final class NotificationDtos {
 
     public record CampaignDto(UUID id, UUID tenantId, String title, String message, String targetSegment,
                               Instant scheduledAt, Instant sentAt, String status, UUID createdById,
-                              Instant createdAt) {
-        public static CampaignDto from(NotificationCampaign c) {
-            return new CampaignDto(c.getId(), c.getTenantId(), c.getTitle(), c.getMessage(),
-                c.getTargetSegment(), c.getScheduledAt(), c.getSentAt(), c.getStatus(),
-                c.getCreatedById(), c.getCreatedAt());
-        }
-    }
+                              Instant createdAt) {}
 
     public record CampaignCreateDto(
         @NotNull UUID tenantId,
@@ -58,12 +51,7 @@ public final class NotificationDtos {
     // ─── DeviceToken ─────────────────────────────────────────────────────────
 
     public record DeviceTokenDto(UUID id, UUID userId, String token, String platform, String appId,
-                                 Instant lastUsedAt, Instant createdAt) {
-        public static DeviceTokenDto from(DeviceToken t) {
-            return new DeviceTokenDto(t.getId(), t.getUserId(), t.getToken(), t.getPlatform(),
-                t.getAppId(), t.getLastUsedAt(), t.getCreatedAt());
-        }
-    }
+                                 Instant lastUsedAt, Instant createdAt) {}
 
     public record DeviceTokenCreateDto(
         @NotNull UUID userId,

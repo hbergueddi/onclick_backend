@@ -1,5 +1,6 @@
 package com.onesley.oneclick.modules.analytics.internal;
 
+import com.onesley.oneclick.modules.analytics.api.AnalyticsDtos.WebhookDeliveryDto;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -53,6 +54,12 @@ public class WebhookDelivery {
     public Instant getFailedAt() { return failedAt; }
     public void markFailed() { this.failedAt = Instant.now(); }
     public Instant getCreatedAt() { return createdAt; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public WebhookDeliveryDto toDto() {
+        return new WebhookDeliveryDto(id, webhookId, eventType, payload, statusCode, attempts,
+            succeededAt, failedAt, createdAt);
+    }
 
     @Override
     public boolean equals(Object o) {

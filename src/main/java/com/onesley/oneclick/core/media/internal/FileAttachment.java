@@ -1,6 +1,7 @@
 package com.onesley.oneclick.core.media.internal;
 
 import com.onesley.oneclick.core.identity.internal.User;
+import com.onesley.oneclick.core.media.api.MediaDtos.FileDto;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -96,6 +97,11 @@ public class FileAttachment {
     public void markDeleted() { this.deletedAt = Instant.now(); }
     public UUID getCreatedById() { return createdById; }
     public User getCreatedBy() { return createdBy; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public FileDto toDto() {
+        return new FileDto(id, entityType, entityId, path, mimeType, sizeBytes, originalName, createdAt, createdById);
+    }
 
     @Override
     public boolean equals(Object o) {

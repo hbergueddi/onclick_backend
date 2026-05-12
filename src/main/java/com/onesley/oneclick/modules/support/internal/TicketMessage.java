@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.support.internal;
 
 import com.onesley.oneclick.core.identity.internal.User;
+import com.onesley.oneclick.modules.support.api.SupportDtos.MessageDto;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.data.annotation.CreatedDate;
@@ -35,6 +36,11 @@ public class TicketMessage {
     public User getAuthor() { return author; }
     public String getMessage() { return message; }
     public Instant getCreatedAt() { return createdAt; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public MessageDto toDto() {
+        return new MessageDto(id, ticketId, authorId, message, createdAt);
+    }
 
     @Override
     public boolean equals(Object o) {

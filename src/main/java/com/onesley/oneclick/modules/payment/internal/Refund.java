@@ -1,5 +1,6 @@
 package com.onesley.oneclick.modules.payment.internal;
 
+import com.onesley.oneclick.modules.payment.api.PaymentDtos.RefundDto;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import org.springframework.data.annotation.CreatedBy;
@@ -40,6 +41,11 @@ public class Refund {
     public Instant getProcessedAt() { return processedAt; }
     public void markProcessed() { this.processedAt = Instant.now(); }
     public UUID getCreatedById() { return createdById; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public RefundDto toDto() {
+        return new RefundDto(id, paymentId, amount, reason, status, createdAt, processedAt, createdById);
+    }
 
     @Override
     public boolean equals(Object o) {

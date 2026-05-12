@@ -53,7 +53,7 @@ public class UserService {
         User user = repository.findById(id)
             .filter(u -> u.getDeletedAt() == null)
             .orElseThrow(() -> new NotFoundException("User", id));
-        return UserDto.from(user);
+        return user.toDto();
     }
 
     @Cacheable(value = CacheConfig.CACHE_USERS_BY_EMAIL, key = "#email.toLowerCase()")
@@ -61,11 +61,11 @@ public class UserService {
         User user = repository.findByEmailIgnoreCase(email)
             .filter(u -> u.getDeletedAt() == null)
             .orElseThrow(() -> new NotFoundException("User by email: " + email));
-        return UserDto.from(user);
+        return user.toDto();
     }
 
     public Page<UserDto> findAll(int page, int size) {
-        return repository.findAll(PageRequest.of(page, size)).map(UserDto::from);
+        return repository.findAll(PageRequest.of(page, size)).map(User::toDto);
     }
 
     @Transactional
@@ -103,7 +103,7 @@ public class UserService {
             Instant.now()
         ));
 
-        return UserDto.from(saved);
+        return saved.toDto();
     }
 
     @Transactional
@@ -123,7 +123,7 @@ public class UserService {
         }
         if (dto.avatarUrl() != null) user.setAvatarUrl(dto.avatarUrl());
         if (dto.language() != null) user.setLanguage(dto.language());
-        return UserDto.from(repository.save(user));
+        return repository.save(user).toDto();
     }
 
     @Transactional

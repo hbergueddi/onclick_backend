@@ -16,6 +16,7 @@ import java.util.Set;
 import java.util.UUID;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantCreateDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantDto;
+import com.onesley.oneclick.modules.restaurant.internal.Restaurant;
 import com.onesley.oneclick.modules.restaurant.internal.RestaurantCatalogService;
 import com.onesley.oneclick.modules.restaurant.internal.RestaurantRepository;
 
@@ -78,7 +79,7 @@ public class RestaurantController {
     @PreAuthorize("isAuthenticated()")
     public PageResponse<RestaurantDto> search(@RequestBody SearchRequest req) {
         return PageResponse.from(
-            Searchable.execute(restaurantRepository, req, SEARCHABLE_FIELDS, RestaurantDto::from)
+            Searchable.execute(restaurantRepository, req, SEARCHABLE_FIELDS, Restaurant::toDto)
         );
     }
 }

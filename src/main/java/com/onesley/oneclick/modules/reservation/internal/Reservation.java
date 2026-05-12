@@ -4,6 +4,7 @@ import com.onesley.oneclick.audit.SoftDeletableAuditedEntity;
 import com.onesley.oneclick.core.identity.internal.User;
 import com.onesley.oneclick.core.tenant.internal.Tenant;
 import com.onesley.oneclick.modules.restaurant.internal.Restaurant;
+import com.onesley.oneclick.modules.reservation.api.ReservationDto;
 import com.onesley.oneclick.modules.restaurant.internal.MealService;
 import com.onesley.oneclick.modules.restaurant.internal.RestaurantTable;
 import jakarta.persistence.Column;
@@ -122,6 +123,12 @@ public class Reservation extends SoftDeletableAuditedEntity {
     public void setStatus(String status) { this.status = status; }
     public String getNotes() { return notes; }
     public void setNotes(String notes) { this.notes = notes; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public ReservationDto toDto() {
+        return new ReservationDto(id, tenantId, clientId, restaurantId, tableId, serviceId,
+            reservationAt, guestCount, status, notes, getCreatedAt());
+    }
 
     @Override
     public boolean equals(Object o) {

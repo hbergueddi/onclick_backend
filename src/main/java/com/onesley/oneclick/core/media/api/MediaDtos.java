@@ -7,9 +7,14 @@ import jakarta.validation.constraints.Pattern;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
-import com.onesley.oneclick.core.media.internal.FileAttachment;
-import com.onesley.oneclick.core.media.internal.Media;
 
+/**
+ * DTOs publics du module media.
+ *
+ * <p>Pas de méthode de mapping ici : la conversion Entity → DTO se fait via
+ * {@code Entity.toDto()} dans le package {@code internal} (dépendance
+ * internal → api autorisée en Modulith CLOSED).</p>
+ */
 public final class MediaDtos {
 
     private MediaDtos() {}
@@ -18,13 +23,7 @@ public final class MediaDtos {
 
     public record MediaDto(UUID id, String entityType, UUID entityId, String url, String mediaType,
                            String mimeType, Long sizeBytes, Integer sortOrder, Map<String, Object> metadata,
-                           Instant createdAt) {
-        public static MediaDto from(Media m) {
-            return new MediaDto(m.getId(), m.getEntityType(), m.getEntityId(), m.getUrl(),
-                m.getMediaType(), m.getMimeType(), m.getSizeBytes(), m.getSortOrder(),
-                m.getMetadata(), m.getCreatedAt());
-        }
-    }
+                           Instant createdAt) {}
 
     public record MediaCreateDto(
         @NotBlank String entityType,
@@ -39,12 +38,7 @@ public final class MediaDtos {
     // ─── FileAttachment ──────────────────────────────────────────────────────
 
     public record FileDto(UUID id, String entityType, UUID entityId, String path, String mimeType,
-                          Long sizeBytes, String originalName, Instant createdAt, UUID createdById) {
-        public static FileDto from(FileAttachment f) {
-            return new FileDto(f.getId(), f.getEntityType(), f.getEntityId(), f.getPath(),
-                f.getMimeType(), f.getSizeBytes(), f.getOriginalName(), f.getCreatedAt(), f.getCreatedById());
-        }
-    }
+                          Long sizeBytes, String originalName, Instant createdAt, UUID createdById) {}
 
     public record FileCreateDto(
         @NotBlank String entityType,

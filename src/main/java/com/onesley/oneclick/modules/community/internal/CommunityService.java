@@ -47,13 +47,14 @@ public class CommunityService {
         Specification<Post> spec = (root, q, cb) -> cb.isNull(root.get("deletedAt"));
         if (authorId != null) spec = spec.and((root, q, cb) -> cb.equal(root.get("authorId"), authorId));
         return postRepo.findAll(spec, PageRequest.of(page, size, Sort.by("createdAt").descending()))
-            .map(PostDto::from);
+            .map(Post::toDto);
     }
 
     public PostDto findPostById(UUID id) {
-        return PostDto.from(postRepo.findById(id)
+        return postRepo.findById(id)
             .filter(p -> p.getDeletedAt() == null)
-            .orElseThrow(() -> new NotFoundException("Post", id)));
+            .orElseThrow(() -> new NotFoundException("Post", id))
+            .toDto();
     }
 
     @Transactional
@@ -61,7 +62,7 @@ public class CommunityService {
         User authorRef = entityManager.getReference(User.class, dto.authorId());
         Post p = new Post(UUID.randomUUID(), authorRef, dto.content());
         if (dto.visibility() != null) p.setVisibility(dto.visibility());
-        return PostDto.from(postRepo.save(p));
+        return postRepo.save(p).toDto();
     }
 
     @Transactional
@@ -79,7 +80,7 @@ public class CommunityService {
     public List<CommentDto> findCommentsByPost(UUID postId) {
         return commentRepo.findAllByPostId(postId).stream()
             .filter(c -> c.getDeletedAt() == null)
-            .map(CommentDto::from)
+            .map(Comment::toDto)
             .toList();
     }
 
@@ -88,13 +89,13 @@ public class CommunityService {
         Post postRef = entityManager.getReference(Post.class, dto.postId());
         User authorRef = entityManager.getReference(User.class, dto.authorId());
         Comment c = new Comment(UUID.randomUUID(), postRef, authorRef, dto.content());
-        return CommentDto.from(commentRepo.save(c));
+        return commentRepo.save(c).toDto();
     }
 
     // ─── Likes ───────────────────────────────────────────────────────────────
 
     public List<PostLikeDto> findLikesByPost(UUID postId) {
-        return likeRepo.findAllByPostId(postId).stream().map(PostLikeDto::from).toList();
+        return likeRepo.findAllByPostId(postId).stream().map(PostLike::toDto).toList();
     }
 
     @Transactional
@@ -102,6 +103,6 @@ public class CommunityService {
         Post postRef = entityManager.getReference(Post.class, dto.postId());
         User userRef = entityManager.getReference(User.class, dto.userId());
         PostLike l = new PostLike(UUID.randomUUID(), postRef, userRef);
-        return PostLikeDto.from(likeRepo.save(l));
+        return likeRepo.save(l).toDto();
     }
 }

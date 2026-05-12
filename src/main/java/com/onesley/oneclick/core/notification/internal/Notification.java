@@ -1,5 +1,6 @@
 package com.onesley.oneclick.core.notification.internal;
 
+import com.onesley.oneclick.core.notification.api.NotificationDtos.NotificationDto;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -98,6 +99,11 @@ public class Notification {
     public boolean isRead() { return readAt != null; }
     public void markRead() { this.readAt = Instant.now(); }
     public Instant getCreatedAt() { return createdAt; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public NotificationDto toDto() {
+        return new NotificationDto(id, recipientUserId, type, channel, title, body, link, metadata, readAt, createdAt);
+    }
 
     @Override
     public boolean equals(Object o) {

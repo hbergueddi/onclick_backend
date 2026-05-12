@@ -1,5 +1,6 @@
 package com.onesley.oneclick.modules.financial.internal;
 
+import com.onesley.oneclick.modules.financial.api.FinancialDtos.InvoiceLineDto;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
@@ -65,6 +66,11 @@ public class InvoiceLine {
     public BigDecimal getLineTotal() { return lineTotal; }
     public Integer getSortOrder() { return sortOrder; }
     public void setSortOrder(Integer sortOrder) { this.sortOrder = sortOrder; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public InvoiceLineDto toDto() {
+        return new InvoiceLineDto(id, invoiceId, label, quantity, unitPrice, lineTotal, sortOrder);
+    }
 
     @Override
     public boolean equals(Object o) {

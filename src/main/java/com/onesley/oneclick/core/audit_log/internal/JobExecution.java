@@ -1,5 +1,6 @@
 package com.onesley.oneclick.core.audit_log.internal;
 
+import com.onesley.oneclick.core.audit_log.api.AuditLogDtos.JobExecutionDto;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -79,6 +80,11 @@ public class JobExecution {
     public void markCancelled() {
         this.status = "cancelled";
         this.finishedAt = Instant.now();
+    }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public JobExecutionDto toDto() {
+        return new JobExecutionDto(id, jobName, status, startedAt, finishedAt, result, errorMessage);
     }
 
     @Override

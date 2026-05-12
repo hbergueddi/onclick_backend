@@ -2,6 +2,7 @@ package com.onesley.oneclick.modules.social.internal;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
 import com.onesley.oneclick.core.identity.internal.User;
+import com.onesley.oneclick.modules.social.api.SocialDtos.ReferralDto;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -39,6 +40,11 @@ public class Referral extends TimestampedEntity {
     public void setStatus(String status) { this.status = status; }
     public Instant getActivatedAt() { return activatedAt; }
     public void markActivated() { this.activatedAt = Instant.now(); this.status = "activated"; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public ReferralDto toDto() {
+        return new ReferralDto(id, referrerId, referredUserId, referralCode, status, activatedAt, getCreatedAt());
+    }
 
     @Override
     public boolean equals(Object o) {

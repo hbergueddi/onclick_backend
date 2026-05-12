@@ -2,6 +2,7 @@ package com.onesley.oneclick.modules.support.internal;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
 import com.onesley.oneclick.core.identity.internal.User;
+import com.onesley.oneclick.modules.support.api.SupportDtos.TicketDto;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -48,6 +49,12 @@ public class SupportTicket extends TimestampedEntity {
     public UUID getAssignedToId() { return assignedToId; }
     public User getAssignedTo() { return assignedTo; }
     public void setAssignedTo(User assignedTo) { this.assignedTo = assignedTo; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public TicketDto toDto() {
+        return new TicketDto(id, openedById, category, priority, status, subject, resolvedAt, closedAt,
+            assignedToId, getCreatedAt(), getUpdatedAt());
+    }
 
     @Override
     public boolean equals(Object o) {

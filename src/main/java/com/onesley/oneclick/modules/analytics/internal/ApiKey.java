@@ -1,5 +1,6 @@
 package com.onesley.oneclick.modules.analytics.internal;
 
+import com.onesley.oneclick.modules.analytics.api.AnalyticsDtos.ApiKeyDto;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -50,6 +51,11 @@ public class ApiKey {
     public Instant getCreatedAt() { return createdAt; }
     public Instant getRevokedAt() { return revokedAt; }
     public void revoke() { this.revokedAt = Instant.now(); }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public ApiKeyDto toDto() {
+        return new ApiKeyDto(id, apiClientId, keyPrefix, scopes, enabled, lastUsedAt, expiresAt, createdAt, revokedAt);
+    }
 
     @Override
     public boolean equals(Object o) {

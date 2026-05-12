@@ -49,7 +49,7 @@ public class PaymentService {
     public List<PaymentMethodDto> findMethodsByUser(UUID userId) {
         return methodRepo.findAllByUserId(userId).stream()
             .filter(m -> m.getDeletedAt() == null)
-            .map(PaymentMethodDto::from)
+            .map(PaymentMethod::toDto)
             .toList();
     }
 
@@ -61,7 +61,7 @@ public class PaymentService {
         if (dto.providerToken() != null) m.setProviderToken(dto.providerToken());
         if (dto.expiresAt() != null)     m.setExpiresAt(dto.expiresAt());
         if (Boolean.TRUE.equals(dto.isDefault())) m.setDefault(true);
-        return PaymentMethodDto.from(methodRepo.save(m));
+        return methodRepo.save(m).toDto();
     }
 
     @Transactional
@@ -81,14 +81,14 @@ public class PaymentService {
         if (userId != null) spec = spec.and((root, q, cb) -> cb.equal(root.get("userId"), userId));
         if (status != null) spec = spec.and((root, q, cb) -> cb.equal(root.get("status"), status));
         return paymentRepo.findAll(spec, PageRequest.of(page, size, Sort.by("createdAt").descending()))
-            .map(PaymentDto::from);
+            .map(Payment::toDto);
     }
 
     public PaymentDto findPaymentById(UUID id) {
         Payment p = paymentRepo.findById(id)
             .orElseThrow(() -> new NotFoundException("Payment", id));
         SecurityHelper.requireOwnerOrAdmin(p.getUserId());
-        return PaymentDto.from(p);
+        return p.toDto();
     }
 
     @Transactional
@@ -102,7 +102,7 @@ public class PaymentService {
         if (dto.transactionRef() != null) p.setTransactionRef(dto.transactionRef());
         if (dto.referenceType() != null)  p.setReferenceType(dto.referenceType());
         if (dto.referenceId() != null)    p.setReferenceId(dto.referenceId());
-        return PaymentDto.from(paymentRepo.save(p));
+        return paymentRepo.save(p).toDto();
     }
 
     @Transactional
@@ -115,7 +115,7 @@ public class PaymentService {
             else p.setStatus(dto.status());
         }
         if (dto.transactionRef() != null) p.setTransactionRef(dto.transactionRef());
-        return PaymentDto.from(paymentRepo.save(p));
+        return paymentRepo.save(p).toDto();
     }
 
     // ─── Refunds ─────────────────────────────────────────────────────────────
@@ -124,7 +124,7 @@ public class PaymentService {
         Payment p = paymentRepo.findById(paymentId)
             .orElseThrow(() -> new NotFoundException("Payment", paymentId));
         SecurityHelper.requireOwnerOrAdmin(p.getUserId());
-        return refundRepo.findAllByPaymentId(paymentId).stream().map(RefundDto::from).toList();
+        return refundRepo.findAllByPaymentId(paymentId).stream().map(Refund::toDto).toList();
     }
 
     @Transactional
@@ -134,7 +134,7 @@ public class PaymentService {
         SecurityHelper.requireOwnerOrAdmin(p.getUserId());
         Refund r = new Refund(UUID.randomUUID(), dto.paymentId(), dto.amount());
         if (dto.reason() != null) r.setReason(dto.reason());
-        return RefundDto.from(refundRepo.save(r));
+        return refundRepo.save(r).toDto();
     }
 
     @Transactional
@@ -151,7 +151,7 @@ public class PaymentService {
                 r.markProcessed();
             }
         }
-        return RefundDto.from(refundRepo.save(r));
+        return refundRepo.save(r).toDto();
     }
 
     // ─── Provider transactions log ───────────────────────────────────────────
@@ -160,7 +160,7 @@ public class PaymentService {
         Payment p = paymentRepo.findById(paymentId)
             .orElseThrow(() -> new NotFoundException("Payment", paymentId));
         SecurityHelper.requireOwnerOrAdmin(p.getUserId());
-        return txRepo.findAllByPaymentId(paymentId).stream().map(TransactionDto::from).toList();
+        return txRepo.findAllByPaymentId(paymentId).stream().map(PaymentTransaction::toDto).toList();
     }
 
     @Transactional
@@ -168,6 +168,6 @@ public class PaymentService {
         
         PaymentTransaction t = new PaymentTransaction(UUID.randomUUID(), dto.paymentId(),
             dto.eventType(), dto.providerResponse());
-        return TransactionDto.from(txRepo.save(t));
+        return txRepo.save(t).toDto();
     }
 }

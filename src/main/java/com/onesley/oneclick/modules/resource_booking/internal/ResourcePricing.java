@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.resource_booking.internal;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
+import com.onesley.oneclick.modules.resource_booking.api.ResourceBookingDtos.PricingDto;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
@@ -61,6 +62,11 @@ public class ResourcePricing extends TimestampedEntity {
     public void setDurationMinutes(Integer durationMinutes) { this.durationMinutes = durationMinutes; }
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public PricingDto toDto() {
+        return new PricingDto(id, resourceId, name, price, durationMinutes, enabled, getCreatedAt());
+    }
 
     @Override
     public boolean equals(Object o) {

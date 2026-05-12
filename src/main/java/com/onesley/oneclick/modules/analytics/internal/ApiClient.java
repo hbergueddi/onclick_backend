@@ -2,6 +2,7 @@ package com.onesley.oneclick.modules.analytics.internal;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
 import com.onesley.oneclick.core.tenant.internal.Tenant;
+import com.onesley.oneclick.modules.analytics.api.AnalyticsDtos.ApiClientDto;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 
@@ -32,6 +33,11 @@ public class ApiClient extends TimestampedEntity {
     public void setDescription(String description) { this.description = description; }
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public ApiClientDto toDto() {
+        return new ApiClientDto(id, tenantId, name, description, enabled, getCreatedAt());
+    }
 
     @Override
     public boolean equals(Object o) {

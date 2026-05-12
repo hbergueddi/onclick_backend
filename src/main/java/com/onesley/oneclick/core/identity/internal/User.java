@@ -1,6 +1,7 @@
 package com.onesley.oneclick.core.identity.internal;
 
 import com.onesley.oneclick.audit.SoftDeletableAuditedEntity;
+import com.onesley.oneclick.core.identity.api.UserDto;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -148,6 +149,17 @@ public class User extends SoftDeletableAuditedEntity {
     public boolean isEnabled() { return enabled; }
     public Instant getLastLoginAt() { return lastLoginAt; }
     public void setLastLoginAt(Instant lastLoginAt) { this.lastLoginAt = lastLoginAt; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public UserDto toDto() {
+        return new UserDto(
+            id, tenantId, roleId,
+            role != null ? role.getCode() : null,
+            email, phone, firstName, lastName, avatarUrl, language, status,
+            accountNonExpired, accountNonLocked, credentialsNonExpired, enabled,
+            lastLoginAt, getCreatedAt()
+        );
+    }
 
     // ─── equals / hashCode anti-proxy LAZY ───────────────────────────────────
     @Override

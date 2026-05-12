@@ -2,12 +2,15 @@ package com.onesley.oneclick.core.identity.api;
 
 import java.time.Instant;
 import java.util.UUID;
-import com.onesley.oneclick.core.identity.internal.User;
 
 /**
  * DTO de lecture pour User — exposé via l'API REST.
  *
  * <p>{@code passwordHash} jamais exposé (sécurité).
+ *
+ * <p>Pas de méthode de mapping ici : la conversion Entity → DTO se fait via
+ * {@code User.toDto()} dans le package {@code internal} (dépendance
+ * internal → api autorisée en Modulith CLOSED).
  */
 public record UserDto(
     UUID id,
@@ -28,25 +31,4 @@ public record UserDto(
     Instant lastLoginAt,
     Instant createdAt
 ) {
-    public static UserDto from(User user) {
-        return new UserDto(
-            user.getId(),
-            user.getTenantId(),
-            user.getRoleId(),
-            user.getRole() != null ? user.getRole().getCode() : null,
-            user.getEmail(),
-            user.getPhone(),
-            user.getFirstName(),
-            user.getLastName(),
-            user.getAvatarUrl(),
-            user.getLanguage(),
-            user.getStatus(),
-            user.isAccountNonExpired(),
-            user.isAccountNonLocked(),
-            user.isCredentialsNonExpired(),
-            user.isEnabled(),
-            user.getLastLoginAt(),
-            user.getCreatedAt()
-        );
-    }
 }

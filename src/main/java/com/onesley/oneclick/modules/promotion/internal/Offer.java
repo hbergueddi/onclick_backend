@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.promotion.internal;
 
 import com.onesley.oneclick.audit.SoftDeletableAuditedEntity;
+import com.onesley.oneclick.modules.promotion.api.OfferDto;
 import com.onesley.oneclick.modules.restaurant.internal.Restaurant;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMax;
@@ -48,6 +49,12 @@ public class Offer extends SoftDeletableAuditedEntity {
     public void setDiscountAmount(BigDecimal discountAmount) { this.discountAmount = discountAmount; }
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public OfferDto toDto() {
+        return new OfferDto(id, restaurantId, title, description, startsAt, expiresAt,
+            discountPct, discountAmount, enabled, getCreatedAt());
+    }
 
     @Override
     public boolean equals(Object o) {

@@ -2,6 +2,7 @@ package com.onesley.oneclick.modules.social.internal;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
 import com.onesley.oneclick.core.identity.internal.User;
+import com.onesley.oneclick.modules.social.api.SocialDtos.FriendshipDto;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Pattern;
 
@@ -38,6 +39,11 @@ public class Friendship extends TimestampedEntity {
     public void setStatus(String status) { this.status = status; }
     public Instant getAcceptedAt() { return acceptedAt; }
     public void markAccepted() { this.acceptedAt = Instant.now(); this.status = "accepted"; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public FriendshipDto toDto() {
+        return new FriendshipDto(id, user1Id, user2Id, status, acceptedAt, getCreatedAt());
+    }
 
     @Override
     public boolean equals(Object o) {

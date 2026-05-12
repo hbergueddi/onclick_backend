@@ -8,10 +8,14 @@ import jakarta.validation.constraints.Pattern;
 
 import java.time.Instant;
 import java.util.UUID;
-import com.onesley.oneclick.core.configuration.internal.CacheConfiguration;
-import com.onesley.oneclick.core.configuration.internal.FeatureFlag;
-import com.onesley.oneclick.core.configuration.internal.FeatureFlagTarget;
 
+/**
+ * DTOs publics du module configuration.
+ *
+ * <p>Pas de méthode de mapping ici : la conversion Entity → DTO se fait via
+ * {@code Entity.toDto()} dans le package {@code internal} (dépendance
+ * internal → api autorisée en Modulith CLOSED).</p>
+ */
 public final class ConfigurationDtos {
 
     private ConfigurationDtos() {}
@@ -19,12 +23,7 @@ public final class ConfigurationDtos {
     // ─── FeatureFlag ─────────────────────────────────────────────────────────
 
     public record FeatureFlagDto(UUID id, String code, String name, String description, boolean enabled,
-                                 Integer rolloutPct, Instant createdAt) {
-        public static FeatureFlagDto from(FeatureFlag f) {
-            return new FeatureFlagDto(f.getId(), f.getCode(), f.getName(), f.getDescription(),
-                f.isEnabled(), f.getRolloutPct(), f.getCreatedAt());
-        }
-    }
+                                 Integer rolloutPct, Instant createdAt) {}
 
     public record FeatureFlagCreateDto(
         @NotBlank String code,
@@ -43,12 +42,7 @@ public final class ConfigurationDtos {
     // ─── FeatureFlagTarget ───────────────────────────────────────────────────
 
     public record FeatureFlagTargetDto(UUID id, UUID featureFlagId, String targetType, UUID targetId,
-                                       boolean enabled, Instant createdAt) {
-        public static FeatureFlagTargetDto from(FeatureFlagTarget t) {
-            return new FeatureFlagTargetDto(t.getId(), t.getFeatureFlagId(), t.getTargetType(),
-                t.getTargetId(), t.isEnabled(), t.getCreatedAt());
-        }
-    }
+                                       boolean enabled, Instant createdAt) {}
 
     public record FeatureFlagTargetCreateDto(
         @NotNull UUID featureFlagId,
@@ -60,12 +54,7 @@ public final class ConfigurationDtos {
     // ─── CacheConfiguration ──────────────────────────────────────────────────
 
     public record CacheConfigDto(UUID id, String cacheName, Integer ttlSeconds, Integer maxEntries,
-                                 boolean enabled, Instant createdAt) {
-        public static CacheConfigDto from(CacheConfiguration c) {
-            return new CacheConfigDto(c.getId(), c.getCacheName(), c.getTtlSeconds(),
-                c.getMaxEntries(), c.isEnabled(), c.getCreatedAt());
-        }
-    }
+                                 boolean enabled, Instant createdAt) {}
 
     public record CacheConfigCreateDto(
         @NotBlank String cacheName,

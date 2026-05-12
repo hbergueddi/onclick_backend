@@ -2,6 +2,7 @@ package com.onesley.oneclick.modules.community.internal;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
 import com.onesley.oneclick.core.identity.internal.User;
+import com.onesley.oneclick.modules.community.api.CommunityDtos.PostDto;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -33,6 +34,11 @@ public class Post extends TimestampedEntity {
     public void setVisibility(String visibility) { this.visibility = visibility; }
     public Instant getDeletedAt() { return deletedAt; }
     public void markDeleted() { this.deletedAt = Instant.now(); }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public PostDto toDto() {
+        return new PostDto(id, authorId, content, visibility, getCreatedAt());
+    }
 
     @Override
     public boolean equals(Object o) {

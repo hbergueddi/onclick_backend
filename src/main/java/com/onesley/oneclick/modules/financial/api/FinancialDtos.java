@@ -10,11 +10,14 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
-import com.onesley.oneclick.modules.financial.internal.Contract;
-import com.onesley.oneclick.modules.financial.internal.Invoice;
-import com.onesley.oneclick.modules.financial.internal.InvoiceLine;
-import com.onesley.oneclick.modules.financial.internal.WalletTransaction;
 
+/**
+ * DTOs publics du module financial.
+ *
+ * <p>Pas de méthode de mapping ici : la conversion Entity → DTO se fait via
+ * {@code Entity.toDto()} dans le package {@code internal} (dépendance
+ * internal → api autorisée en Modulith CLOSED).</p>
+ */
 public final class FinancialDtos {
 
     private FinancialDtos() {}
@@ -22,12 +25,7 @@ public final class FinancialDtos {
     // ─── Contract ────────────────────────────────────────────────────────────
 
     public record ContractDto(UUID id, UUID restaurantId, String contractNumber, BigDecimal commissionRate,
-                              LocalDate startsAt, LocalDate endsAt, String status, Instant createdAt) {
-        public static ContractDto from(Contract c) {
-            return new ContractDto(c.getId(), c.getRestaurantId(), c.getContractNumber(),
-                c.getCommissionRate(), c.getStartsAt(), c.getEndsAt(), c.getStatus(), c.getCreatedAt());
-        }
-    }
+                              LocalDate startsAt, LocalDate endsAt, String status, Instant createdAt) {}
 
     public record ContractCreateDto(
         @NotNull UUID restaurantId,
@@ -47,13 +45,7 @@ public final class FinancialDtos {
 
     public record InvoiceDto(UUID id, UUID restaurantId, String invoiceNumber, LocalDate periodStart,
                              LocalDate periodEnd, BigDecimal subtotal, BigDecimal tvaAmount, BigDecimal totalTtc,
-                             String status, LocalDate issuedAt, LocalDate dueAt, Instant paidAt, Instant createdAt) {
-        public static InvoiceDto from(Invoice i) {
-            return new InvoiceDto(i.getId(), i.getRestaurantId(), i.getInvoiceNumber(),
-                i.getPeriodStart(), i.getPeriodEnd(), i.getSubtotal(), i.getTvaAmount(), i.getTotalTtc(),
-                i.getStatus(), i.getIssuedAt(), i.getDueAt(), i.getPaidAt(), i.getCreatedAt());
-        }
-    }
+                             String status, LocalDate issuedAt, LocalDate dueAt, Instant paidAt, Instant createdAt) {}
 
     public record InvoiceCreateDto(
         @NotNull UUID restaurantId,
@@ -74,12 +66,7 @@ public final class FinancialDtos {
     // ─── InvoiceLine ─────────────────────────────────────────────────────────
 
     public record InvoiceLineDto(UUID id, UUID invoiceId, String label, BigDecimal quantity,
-                                 BigDecimal unitPrice, BigDecimal lineTotal, Integer sortOrder) {
-        public static InvoiceLineDto from(InvoiceLine l) {
-            return new InvoiceLineDto(l.getId(), l.getInvoiceId(), l.getLabel(), l.getQuantity(),
-                l.getUnitPrice(), l.getLineTotal(), l.getSortOrder());
-        }
-    }
+                                 BigDecimal unitPrice, BigDecimal lineTotal, Integer sortOrder) {}
 
     public record InvoiceLineCreateDto(
         @NotNull UUID invoiceId,
@@ -93,13 +80,7 @@ public final class FinancialDtos {
 
     public record WalletTxDto(UUID id, UUID restaurantId, String type, BigDecimal amount,
                               BigDecimal balanceAfter, String reason, UUID referenceId, String referenceType,
-                              Instant createdAt, UUID createdById) {
-        public static WalletTxDto from(WalletTransaction t) {
-            return new WalletTxDto(t.getId(), t.getRestaurantId(), t.getType(), t.getAmount(),
-                t.getBalanceAfter(), t.getReason(), t.getReferenceId(), t.getReferenceType(),
-                t.getCreatedAt(), t.getCreatedById());
-        }
-    }
+                              Instant createdAt, UUID createdById) {}
 
     public record WalletTxCreateDto(
         @NotNull UUID restaurantId,

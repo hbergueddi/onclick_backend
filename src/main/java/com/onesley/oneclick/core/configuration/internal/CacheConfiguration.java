@@ -1,6 +1,7 @@
 package com.onesley.oneclick.core.configuration.internal;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
+import com.onesley.oneclick.core.configuration.api.ConfigurationDtos.CacheConfigDto;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -56,6 +57,11 @@ public class CacheConfiguration extends TimestampedEntity {
     public void setMaxEntries(Integer maxEntries) { this.maxEntries = maxEntries; }
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public CacheConfigDto toDto() {
+        return new CacheConfigDto(id, cacheName, ttlSeconds, maxEntries, enabled, getCreatedAt());
+    }
 
     @Override
     public boolean equals(Object o) {

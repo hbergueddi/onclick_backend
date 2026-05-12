@@ -52,14 +52,14 @@ public class SupportService {
         if (assignedToId != null) spec = spec.and((root, q, cb) -> cb.equal(root.get("assignedToId"), assignedToId));
         if (status != null)       spec = spec.and((root, q, cb) -> cb.equal(root.get("status"), status));
         return ticketRepo.findAll(spec, PageRequest.of(page, size, Sort.by("createdAt").descending()))
-            .map(TicketDto::from);
+            .map(SupportTicket::toDto);
     }
 
     public TicketDto findById(UUID id) {
         SupportTicket t = ticketRepo.findById(id)
             .orElseThrow(() -> new NotFoundException("SupportTicket", id));
         SecurityHelper.requireOwnerOrAdmin(t.getOpenedById());
-        return TicketDto.from(t);
+        return t.toDto();
     }
 
     @Transactional
@@ -67,7 +67,7 @@ public class SupportService {
         User openerRef = entityManager.getReference(User.class, dto.openedById());
         SupportTicket t = new SupportTicket(UUID.randomUUID(), openerRef, dto.category(), dto.subject());
         if (dto.priority() != null) t.setPriority(dto.priority());
-        return TicketDto.from(ticketRepo.save(t));
+        return ticketRepo.save(t).toDto();
     }
 
     @Transactional
@@ -84,7 +84,7 @@ public class SupportService {
         if (dto.assignedToId() != null) {
             t.setAssignedTo(entityManager.getReference(User.class, dto.assignedToId()));
         }
-        return TicketDto.from(ticketRepo.save(t));
+        return ticketRepo.save(t).toDto();
     }
 
     // ─── Messages ────────────────────────────────────────────────────────────
@@ -93,7 +93,7 @@ public class SupportService {
         SupportTicket t = ticketRepo.findById(ticketId)
             .orElseThrow(() -> new NotFoundException("SupportTicket", ticketId));
         SecurityHelper.requireOwnerOrAdmin(t.getOpenedById());
-        return messageRepo.findAllByTicketId(ticketId).stream().map(MessageDto::from).toList();
+        return messageRepo.findAllByTicketId(ticketId).stream().map(TicketMessage::toDto).toList();
     }
 
     @Transactional
@@ -104,7 +104,7 @@ public class SupportService {
         SupportTicket ticketRef = entityManager.getReference(SupportTicket.class, dto.ticketId());
         User authorRef = entityManager.getReference(User.class, dto.authorId());
         TicketMessage m = new TicketMessage(UUID.randomUUID(), ticketRef, authorRef, dto.message());
-        return MessageDto.from(messageRepo.save(m));
+        return messageRepo.save(m).toDto();
     }
 
     // ─── Attachments ─────────────────────────────────────────────────────────
@@ -113,7 +113,7 @@ public class SupportService {
         SupportTicket t = ticketRepo.findById(ticketId)
             .orElseThrow(() -> new NotFoundException("SupportTicket", ticketId));
         SecurityHelper.requireOwnerOrAdmin(t.getOpenedById());
-        return attachmentRepo.findAllByTicketId(ticketId).stream().map(AttachmentDto::from).toList();
+        return attachmentRepo.findAllByTicketId(ticketId).stream().map(TicketAttachment::toDto).toList();
     }
 
     @Transactional
@@ -125,6 +125,6 @@ public class SupportService {
         TicketAttachment a = new TicketAttachment(UUID.randomUUID(), ticketRef, dto.url());
         if (dto.fileName() != null) a.setFileName(dto.fileName());
         if (dto.mimeType() != null) a.setMimeType(dto.mimeType());
-        return AttachmentDto.from(attachmentRepo.save(a));
+        return attachmentRepo.save(a).toDto();
     }
 }

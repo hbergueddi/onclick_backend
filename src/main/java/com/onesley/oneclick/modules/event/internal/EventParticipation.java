@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Pattern;
 
 import java.util.UUID;
 import com.onesley.oneclick.modules.event.api.Event;
+import com.onesley.oneclick.modules.event.api.EventDtos.ParticipationDto;
 
 /** RSVP sur un Event. */
 @Entity
@@ -32,6 +33,11 @@ public class EventParticipation extends TimestampedEntity {
     public User getUser() { return user; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public ParticipationDto toDto() {
+        return new ParticipationDto(id, eventId, userId, status, getCreatedAt());
+    }
 
     @Override
     public boolean equals(Object o) {

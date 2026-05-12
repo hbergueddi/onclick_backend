@@ -15,6 +15,7 @@ import java.util.Set;
 import java.util.UUID;
 import com.onesley.oneclick.modules.reservation.api.ReservationCreateDto;
 import com.onesley.oneclick.modules.reservation.api.ReservationDto;
+import com.onesley.oneclick.modules.reservation.internal.Reservation;
 import com.onesley.oneclick.modules.reservation.internal.ReservationRepository;
 import com.onesley.oneclick.modules.reservation.internal.ReservationService;
 
@@ -79,7 +80,7 @@ public class ReservationController {
     @PreAuthorize("isAuthenticated()")
     public PageResponse<ReservationDto> search(@RequestBody SearchRequest req) {
         return PageResponse.from(
-            Searchable.execute(reservationRepository, req, SEARCHABLE_FIELDS, ReservationDto::from)
+            Searchable.execute(reservationRepository, req, SEARCHABLE_FIELDS, Reservation::toDto)
         );
     }
 }

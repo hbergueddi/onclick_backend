@@ -60,13 +60,14 @@ public class ResourceBookingService {
             spec = spec.and((root, q, cb) -> cb.isTrue(root.get("enabled")));
         }
         return resourceRepo.findAll(spec, PageRequest.of(page, size, Sort.by("name").ascending()))
-            .map(ResourceDto::from);
+            .map(Resource::toDto);
     }
 
     public ResourceDto findResourceById(UUID id) {
-        return ResourceDto.from(resourceRepo.findById(id)
+        return resourceRepo.findById(id)
             .filter(r -> r.getDeletedAt() == null)
-            .orElseThrow(() -> new NotFoundException("Resource", id)));
+            .orElseThrow(() -> new NotFoundException("Resource", id))
+            .toDto();
     }
 
     @Transactional
@@ -75,7 +76,7 @@ public class ResourceBookingService {
         Resource r = new Resource(UUID.randomUUID(), tenantRef, dto.resourceType(), dto.name());
         if (dto.description() != null) r.setDescription(dto.description());
         if (dto.capacity() != null)    r.setCapacity(dto.capacity());
-        return ResourceDto.from(resourceRepo.save(r));
+        return resourceRepo.save(r).toDto();
     }
 
     @Transactional
@@ -90,7 +91,7 @@ public class ResourceBookingService {
     // ─── Pricings ────────────────────────────────────────────────────────────
 
     public List<PricingDto> findPricingsByResource(UUID resourceId) {
-        return pricingRepo.findAllByResourceId(resourceId).stream().map(PricingDto::from).toList();
+        return pricingRepo.findAllByResourceId(resourceId).stream().map(ResourcePricing::toDto).toList();
     }
 
     @Transactional
@@ -98,7 +99,7 @@ public class ResourceBookingService {
         Resource resourceRef = entityManager.getReference(Resource.class, dto.resourceId());
         ResourcePricing p = new ResourcePricing(UUID.randomUUID(), resourceRef, dto.name(), dto.price());
         if (dto.durationMinutes() != null) p.setDurationMinutes(dto.durationMinutes());
-        return PricingDto.from(pricingRepo.save(p));
+        return pricingRepo.save(p).toDto();
     }
 
     // ─── Bookings ────────────────────────────────────────────────────────────
@@ -109,7 +110,7 @@ public class ResourceBookingService {
         if (organizerId != null) spec = spec.and((root, q, cb) -> cb.equal(root.get("organizerId"), organizerId));
         if (status != null)      spec = spec.and((root, q, cb) -> cb.equal(root.get("status"), status));
         return bookingRepo.findAll(spec, PageRequest.of(page, size, Sort.by("startAt").descending()))
-            .map(BookingDto::from);
+            .map(ResourceBooking::toDto);
     }
 
     public BookingDto findBookingById(UUID id) {
@@ -117,7 +118,7 @@ public class ResourceBookingService {
             .filter(x -> x.getDeletedAt() == null)
             .orElseThrow(() -> new NotFoundException("ResourceBooking", id));
         SecurityHelper.requireOwnerOrAdmin(b.getOrganizerId());
-        return BookingDto.from(b);
+        return b.toDto();
     }
 
     @Transactional
@@ -130,7 +131,7 @@ public class ResourceBookingService {
         }
         if (dto.status() != null) b.setStatus(dto.status());
         if (dto.notes() != null)  b.setNotes(dto.notes());
-        return BookingDto.from(bookingRepo.save(b));
+        return bookingRepo.save(b).toDto();
     }
 
     @Transactional
@@ -141,7 +142,7 @@ public class ResourceBookingService {
         SecurityHelper.requireOwnerOrAdmin(b.getOrganizerId());
         if (dto.status() != null) b.setStatus(dto.status());
         if (dto.notes() != null)  b.setNotes(dto.notes());
-        return BookingDto.from(bookingRepo.save(b));
+        return bookingRepo.save(b).toDto();
     }
 
     @Transactional
@@ -161,7 +162,7 @@ public class ResourceBookingService {
             .filter(x -> x.getDeletedAt() == null)
             .orElseThrow(() -> new NotFoundException("ResourceBooking", bookingId));
         SecurityHelper.requireOwnerOrAdmin(b.getOrganizerId());
-        return guestRepo.findAllByBookingId(bookingId).stream().map(GuestDto::from).toList();
+        return guestRepo.findAllByBookingId(bookingId).stream().map(ResourceBookingGuest::toDto).toList();
     }
 
     @Transactional
@@ -175,6 +176,6 @@ public class ResourceBookingService {
             ? entityManager.getReference(User.class, dto.guestUserId())
             : null;
         ResourceBookingGuest g = new ResourceBookingGuest(UUID.randomUUID(), bookingRef, guestUserRef, dto.guestName());
-        return GuestDto.from(guestRepo.save(g));
+        return guestRepo.save(g).toDto();
     }
 }

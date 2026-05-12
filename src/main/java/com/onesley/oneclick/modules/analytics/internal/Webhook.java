@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.analytics.internal;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
+import com.onesley.oneclick.modules.analytics.api.AnalyticsDtos.WebhookDto;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -38,6 +39,11 @@ public class Webhook extends TimestampedEntity {
     public List<String> getEventTypes() { return eventTypes; }
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public WebhookDto toDto() {
+        return new WebhookDto(id, apiClientId, url, eventTypes, enabled, getCreatedAt());
+    }
 
     @Override
     public boolean equals(Object o) {

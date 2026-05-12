@@ -50,13 +50,14 @@ public class EventService {
             spec = spec.and((root, q, cb) -> cb.greaterThanOrEqualTo(root.get("eventAt"), Instant.now()));
         }
         return eventRepo.findAll(spec, PageRequest.of(page, size, Sort.by("eventAt").ascending()))
-            .map(EventDto::from);
+            .map(Event::toDto);
     }
 
     public EventDto findById(UUID id) {
-        return EventDto.from(eventRepo.findById(id)
+        return eventRepo.findById(id)
             .filter(e -> e.getDeletedAt() == null)
-            .orElseThrow(() -> new NotFoundException("Event", id)));
+            .orElseThrow(() -> new NotFoundException("Event", id))
+            .toDto();
     }
 
     @Transactional
@@ -69,7 +70,7 @@ public class EventService {
         if (dto.description() != null) e.setDescription(dto.description());
         if (dto.eventType() != null)   e.setEventType(dto.eventType());
         if (dto.capacity() != null)    e.setCapacity(dto.capacity());
-        return EventDto.from(eventRepo.save(e));
+        return eventRepo.save(e).toDto();
     }
 
     @Transactional
@@ -85,7 +86,7 @@ public class EventService {
 
     public List<ParticipationDto> findParticipations(UUID eventId) {
         return participationRepo.findAllByEventId(eventId).stream()
-            .map(ParticipationDto::from)
+            .map(EventParticipation::toDto)
             .toList();
     }
 
@@ -95,6 +96,6 @@ public class EventService {
         User userRef = entityManager.getReference(User.class, dto.userId());
         String status = dto.status() != null ? dto.status() : "going";
         EventParticipation p = new EventParticipation(UUID.randomUUID(), eventRef, userRef, status);
-        return ParticipationDto.from(participationRepo.save(p));
+        return participationRepo.save(p).toDto();
     }
 }

@@ -57,7 +57,7 @@ public class FinancialService {
         if (restaurantId != null) spec = spec.and((root, q, cb) -> cb.equal(root.get("restaurantId"), restaurantId));
         if (status != null)       spec = spec.and((root, q, cb) -> cb.equal(root.get("status"), status));
         return contractRepo.findAll(spec, PageRequest.of(page, size, Sort.by("createdAt").descending()))
-            .map(ContractDto::from);
+            .map(Contract::toDto);
     }
 
     public ContractDto findContractById(UUID id) {
@@ -65,7 +65,7 @@ public class FinancialService {
             .filter(x -> x.getDeletedAt() == null)
             .orElseThrow(() -> new NotFoundException("Contract", id));
         SecurityHelper.requireOwnerOrAdmin(c.getCreatedBy());
-        return ContractDto.from(c);
+        return c.toDto();
     }
 
     @Transactional
@@ -74,7 +74,7 @@ public class FinancialService {
         Contract c = new Contract(UUID.randomUUID(), restaurantRef, dto.contractNumber(),
             dto.commissionRate(), dto.startsAt());
         if (dto.endsAt() != null) c.setEndsAt(dto.endsAt());
-        return ContractDto.from(contractRepo.save(c));
+        return contractRepo.save(c).toDto();
     }
 
     @Transactional
@@ -86,7 +86,7 @@ public class FinancialService {
         if (dto.commissionRate() != null) c.setCommissionRate(dto.commissionRate());
         if (dto.endsAt() != null)         c.setEndsAt(dto.endsAt());
         if (dto.status() != null)         c.setStatus(dto.status());
-        return ContractDto.from(contractRepo.save(c));
+        return contractRepo.save(c).toDto();
     }
 
     // ─── Invoices ────────────────────────────────────────────────────────────
@@ -96,7 +96,7 @@ public class FinancialService {
         if (restaurantId != null) spec = spec.and((root, q, cb) -> cb.equal(root.get("restaurantId"), restaurantId));
         if (status != null)       spec = spec.and((root, q, cb) -> cb.equal(root.get("status"), status));
         return invoiceRepo.findAll(spec, PageRequest.of(page, size, Sort.by("periodStart").descending()))
-            .map(InvoiceDto::from);
+            .map(Invoice::toDto);
     }
 
     public InvoiceDto findInvoiceById(UUID id) {
@@ -105,7 +105,7 @@ public class FinancialService {
         // TODO check ownership — Invoice n'a pas de createdBy direct, fallback restaurantId
         // (effectivement admin-only car restaurantId != userId courant)
         SecurityHelper.requireOwnerOrAdmin(i.getRestaurantId());
-        return InvoiceDto.from(i);
+        return i.toDto();
     }
 
     @Transactional
@@ -113,7 +113,7 @@ public class FinancialService {
         Restaurant restaurantRef = entityManager.getReference(Restaurant.class, dto.restaurantId());
         Invoice i = new Invoice(UUID.randomUUID(), restaurantRef, dto.invoiceNumber(),
             dto.periodStart(), dto.periodEnd());
-        return InvoiceDto.from(invoiceRepo.save(i));
+        return invoiceRepo.save(i).toDto();
     }
 
     @Transactional
@@ -131,7 +131,7 @@ public class FinancialService {
             if ("paid".equals(dto.status())) i.markPaid();
             else i.setStatus(dto.status());
         }
-        return InvoiceDto.from(invoiceRepo.save(i));
+        return invoiceRepo.save(i).toDto();
     }
 
     // ─── Invoice lines ───────────────────────────────────────────────────────
@@ -141,7 +141,7 @@ public class FinancialService {
             .orElseThrow(() -> new NotFoundException("Invoice", invoiceId));
         // TODO check ownership — Invoice n'a pas de createdBy direct, fallback restaurantId
         SecurityHelper.requireOwnerOrAdmin(i.getRestaurantId());
-        return lineRepo.findAllByInvoiceId(invoiceId).stream().map(InvoiceLineDto::from).toList();
+        return lineRepo.findAllByInvoiceId(invoiceId).stream().map(InvoiceLine::toDto).toList();
     }
 
     @Transactional
@@ -149,7 +149,7 @@ public class FinancialService {
         Invoice invoiceRef = entityManager.getReference(Invoice.class, dto.invoiceId());
         InvoiceLine l = new InvoiceLine(UUID.randomUUID(), invoiceRef, dto.label(), dto.quantity(), dto.unitPrice());
         if (dto.sortOrder() != null) l.setSortOrder(dto.sortOrder());
-        return InvoiceLineDto.from(lineRepo.save(l));
+        return lineRepo.save(l).toDto();
     }
 
     // ─── Wallet transactions ─────────────────────────────────────────────────
@@ -159,7 +159,7 @@ public class FinancialService {
         if (restaurantId != null) spec = spec.and((root, q, cb) -> cb.equal(root.get("restaurantId"), restaurantId));
         if (type != null)         spec = spec.and((root, q, cb) -> cb.equal(root.get("type"), type));
         return walletRepo.findAll(spec, PageRequest.of(page, size, Sort.by("createdAt").descending()))
-            .map(WalletTxDto::from);
+            .map(WalletTransaction::toDto);
     }
 
     @Transactional
@@ -169,6 +169,6 @@ public class FinancialService {
             dto.type(), dto.amount(), dto.reason());
         if (dto.referenceId() != null)   t.setReferenceId(dto.referenceId());
         if (dto.referenceType() != null) t.setReferenceType(dto.referenceType());
-        return WalletTxDto.from(walletRepo.save(t));
+        return walletRepo.save(t).toDto();
     }
 }

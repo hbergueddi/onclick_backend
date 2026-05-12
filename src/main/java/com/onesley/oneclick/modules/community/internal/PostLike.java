@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.community.internal;
 
 import com.onesley.oneclick.core.identity.internal.User;
+import com.onesley.oneclick.modules.community.api.CommunityDtos.PostLikeDto;
 import jakarta.persistence.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -30,6 +31,11 @@ public class PostLike {
     public UUID getUserId() { return userId; }
     public User getUser() { return user; }
     public Instant getCreatedAt() { return createdAt; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public PostLikeDto toDto() {
+        return new PostLikeDto(id, postId, userId, createdAt);
+    }
 
     @Override
     public boolean equals(Object o) {

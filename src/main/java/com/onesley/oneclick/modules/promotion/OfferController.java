@@ -16,6 +16,7 @@ import java.util.Set;
 import java.util.UUID;
 import com.onesley.oneclick.modules.promotion.api.OfferCreateDto;
 import com.onesley.oneclick.modules.promotion.api.OfferDto;
+import com.onesley.oneclick.modules.promotion.internal.Offer;
 import com.onesley.oneclick.modules.promotion.internal.OfferRepository;
 import com.onesley.oneclick.modules.promotion.internal.OfferService;
 
@@ -76,7 +77,7 @@ public class OfferController {
     @PreAuthorize("isAuthenticated()")
     public PageResponse<OfferDto> search(@RequestBody SearchRequest req) {
         return PageResponse.from(
-            Searchable.execute(offerRepository, req, SEARCHABLE_FIELDS, OfferDto::from)
+            Searchable.execute(offerRepository, req, SEARCHABLE_FIELDS, Offer::toDto)
         );
     }
 }

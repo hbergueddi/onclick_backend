@@ -38,7 +38,7 @@ public class MediaService {
         if (entityId != null)   spec = spec.and((root, q, cb) -> cb.equal(root.get("entityId"), entityId));
         if (mediaType != null)  spec = spec.and((root, q, cb) -> cb.equal(root.get("mediaType"), mediaType));
         return mediaRepo.findAll(spec, PageRequest.of(page, size, Sort.by("sortOrder", "createdAt")))
-            .map(MediaDto::from);
+            .map(Media::toDto);
     }
 
     @Transactional
@@ -47,7 +47,7 @@ public class MediaService {
         if (dto.mimeType() != null)  m.setMimeType(dto.mimeType());
         if (dto.sizeBytes() != null) m.setSizeBytes(dto.sizeBytes());
         if (dto.sortOrder() != null) m.setSortOrder(dto.sortOrder());
-        return MediaDto.from(mediaRepo.save(m));
+        return mediaRepo.save(m).toDto();
     }
 
     @Transactional
@@ -67,7 +67,7 @@ public class MediaService {
         if (entityType != null) spec = spec.and((root, q, cb) -> cb.equal(root.get("entityType"), entityType));
         if (entityId != null)   spec = spec.and((root, q, cb) -> cb.equal(root.get("entityId"), entityId));
         return fileRepo.findAll(spec, PageRequest.of(page, size, Sort.by("createdAt").descending()))
-            .map(FileDto::from);
+            .map(FileAttachment::toDto);
     }
 
     @Transactional
@@ -76,7 +76,7 @@ public class MediaService {
             dto.path(), dto.mimeType());
         if (dto.sizeBytes() != null)    f.setSizeBytes(dto.sizeBytes());
         if (dto.originalName() != null) f.setOriginalName(dto.originalName());
-        return FileDto.from(fileRepo.save(f));
+        return fileRepo.save(f).toDto();
     }
 
     @Transactional

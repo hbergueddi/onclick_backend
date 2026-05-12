@@ -55,7 +55,7 @@ public class NotificationService {
             spec = spec.and((root, q, cb) -> cb.isNull(root.get("readAt")));
         }
         return notifRepo.findAll(spec, PageRequest.of(page, size, Sort.by("createdAt").descending()))
-            .map(NotificationDto::from);
+            .map(Notification::toDto);
     }
 
     @Transactional
@@ -64,7 +64,7 @@ public class NotificationService {
         Notification n = new Notification(UUID.randomUUID(), dto.recipientUserId(), dto.type(), channel,
             dto.title(), dto.body());
         if (dto.link() != null) n.setLink(dto.link());
-        return NotificationDto.from(notifRepo.save(n));
+        return notifRepo.save(n).toDto();
     }
 
     @Transactional
@@ -73,13 +73,13 @@ public class NotificationService {
             .orElseThrow(() -> new NotFoundException("Notification", id));
         SecurityHelper.requireOwnerOrAdmin(n.getRecipientUserId());
         if (n.getReadAt() == null) n.markRead();
-        return NotificationDto.from(notifRepo.save(n));
+        return notifRepo.save(n).toDto();
     }
 
     // ─── Campaigns ───────────────────────────────────────────────────────────
 
     public List<CampaignDto> findCampaignsByTenant(UUID tenantId) {
-        return campaignRepo.findAllByTenantId(tenantId).stream().map(CampaignDto::from).toList();
+        return campaignRepo.findAllByTenantId(tenantId).stream().map(NotificationCampaign::toDto).toList();
     }
 
     @Transactional
@@ -90,23 +90,23 @@ public class NotificationService {
             c.setScheduledAt(dto.scheduledAt());
             c.setStatus("scheduled");
         }
-        return CampaignDto.from(campaignRepo.save(c));
+        return campaignRepo.save(c).toDto();
     }
 
     // ─── Device tokens ───────────────────────────────────────────────────────
 
     public List<DeviceTokenDto> findTokensByUser(UUID userId) {
-        return tokenRepo.findAllByUserId(userId).stream().map(DeviceTokenDto::from).toList();
+        return tokenRepo.findAllByUserId(userId).stream().map(DeviceToken::toDto).toList();
     }
 
     @Transactional
     public DeviceTokenDto registerToken(DeviceTokenCreateDto dto) {
         return tokenRepo.findByToken(dto.token())
-            .map(DeviceTokenDto::from)
+            .map(DeviceToken::toDto)
             .orElseGet(() -> {
                 DeviceToken t = new DeviceToken(UUID.randomUUID(), dto.userId(), dto.token(), dto.platform());
                 if (dto.appId() != null) t.setAppId(dto.appId());
-                return DeviceTokenDto.from(tokenRepo.save(t));
+                return tokenRepo.save(t).toDto();
             });
     }
 

@@ -1,5 +1,6 @@
 package com.onesley.oneclick.core.audit_log.internal;
 
+import com.onesley.oneclick.core.audit_log.api.AuditLogDtos.ErrorLogDto;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -73,6 +74,11 @@ public class ErrorLog {
     public String getSeverity() { return severity; }
     public Map<String, Object> getMetadata() { return metadata; }
     public Instant getCreatedAt() { return createdAt; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public ErrorLogDto toDto() {
+        return new ErrorLogDto(id, serviceName, message, stacktrace, severity, metadata, createdAt);
+    }
 
     @Override
     public boolean equals(Object o) {

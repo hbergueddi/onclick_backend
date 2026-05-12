@@ -1,6 +1,7 @@
 package com.onesley.oneclick.core.notification.internal;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
+import com.onesley.oneclick.core.notification.api.NotificationDtos.DeviceTokenDto;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -64,6 +65,11 @@ public class DeviceToken extends TimestampedEntity {
     public void setAppId(String appId) { this.appId = appId; }
     public Instant getLastUsedAt() { return lastUsedAt; }
     public void markUsed() { this.lastUsedAt = Instant.now(); }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public DeviceTokenDto toDto() {
+        return new DeviceTokenDto(id, userId, token, platform, appId, lastUsedAt, getCreatedAt());
+    }
 
     @Override
     public boolean equals(Object o) {

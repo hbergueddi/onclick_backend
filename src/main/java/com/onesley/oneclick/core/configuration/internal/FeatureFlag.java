@@ -1,6 +1,7 @@
 package com.onesley.oneclick.core.configuration.internal;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
+import com.onesley.oneclick.core.configuration.api.ConfigurationDtos.FeatureFlagDto;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -65,6 +66,11 @@ public class FeatureFlag extends TimestampedEntity {
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
     public Integer getRolloutPct() { return rolloutPct; }
     public void setRolloutPct(Integer rolloutPct) { this.rolloutPct = rolloutPct; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public FeatureFlagDto toDto() {
+        return new FeatureFlagDto(id, code, name, description, enabled, rolloutPct, getCreatedAt());
+    }
 
     @Override
     public boolean equals(Object o) {

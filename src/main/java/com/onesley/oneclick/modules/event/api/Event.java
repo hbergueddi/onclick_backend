@@ -47,6 +47,12 @@ public class Event extends SoftDeletableAuditedEntity {
     public Integer getCapacity() { return capacity; }
     public void setCapacity(Integer capacity) { this.capacity = capacity; }
 
+    /** Mapping vers le DTO public exposé hors du module. */
+    public EventDtos.EventDto toDto() {
+        return new EventDtos.EventDto(id, tenantId, restaurantId, title, description, eventType,
+            eventAt, capacity, getCreatedAt());
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

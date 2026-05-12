@@ -8,11 +8,14 @@ import jakarta.validation.constraints.Pattern;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
-import com.onesley.oneclick.modules.resource_booking.internal.Resource;
-import com.onesley.oneclick.modules.resource_booking.internal.ResourceBooking;
-import com.onesley.oneclick.modules.resource_booking.internal.ResourceBookingGuest;
-import com.onesley.oneclick.modules.resource_booking.internal.ResourcePricing;
 
+/**
+ * DTOs publics du module resource_booking.
+ *
+ * <p>Pas de méthode de mapping ici : la conversion Entity → DTO se fait via
+ * {@code Entity.toDto()} dans le package {@code internal} (dépendance
+ * internal → api autorisée en Modulith CLOSED).</p>
+ */
 public final class ResourceBookingDtos {
 
     private ResourceBookingDtos() {}
@@ -20,12 +23,7 @@ public final class ResourceBookingDtos {
     // ─── Resource ────────────────────────────────────────────────────────────
 
     public record ResourceDto(UUID id, UUID tenantId, String resourceType, String name, String description,
-                              Integer capacity, boolean enabled, Instant createdAt) {
-        public static ResourceDto from(Resource r) {
-            return new ResourceDto(r.getId(), r.getTenantId(), r.getResourceType(), r.getName(),
-                r.getDescription(), r.getCapacity(), r.isEnabled(), r.getCreatedAt());
-        }
-    }
+                              Integer capacity, boolean enabled, Instant createdAt) {}
 
     public record ResourceCreateDto(
         @NotNull UUID tenantId,
@@ -38,12 +36,7 @@ public final class ResourceBookingDtos {
     // ─── Pricing ─────────────────────────────────────────────────────────────
 
     public record PricingDto(UUID id, UUID resourceId, String name, BigDecimal price, Integer durationMinutes,
-                             boolean enabled, Instant createdAt) {
-        public static PricingDto from(ResourcePricing p) {
-            return new PricingDto(p.getId(), p.getResourceId(), p.getName(), p.getPrice(),
-                p.getDurationMinutes(), p.isEnabled(), p.getCreatedAt());
-        }
-    }
+                             boolean enabled, Instant createdAt) {}
 
     public record PricingCreateDto(
         @NotNull UUID resourceId,
@@ -55,12 +48,7 @@ public final class ResourceBookingDtos {
     // ─── Booking ─────────────────────────────────────────────────────────────
 
     public record BookingDto(UUID id, UUID resourceId, UUID organizerId, UUID pricingId, Instant startAt,
-                             Instant endAt, String status, String notes, Instant createdAt) {
-        public static BookingDto from(ResourceBooking b) {
-            return new BookingDto(b.getId(), b.getResourceId(), b.getOrganizerId(), b.getPricingId(),
-                b.getStartAt(), b.getEndAt(), b.getStatus(), b.getNotes(), b.getCreatedAt());
-        }
-    }
+                             Instant endAt, String status, String notes, Instant createdAt) {}
 
     public record BookingCreateDto(
         @NotNull UUID resourceId,
@@ -79,11 +67,7 @@ public final class ResourceBookingDtos {
 
     // ─── Guest ───────────────────────────────────────────────────────────────
 
-    public record GuestDto(UUID id, UUID bookingId, UUID guestUserId, String guestName, Instant createdAt) {
-        public static GuestDto from(ResourceBookingGuest g) {
-            return new GuestDto(g.getId(), g.getBookingId(), g.getGuestUserId(), g.getGuestName(), g.getCreatedAt());
-        }
-    }
+    public record GuestDto(UUID id, UUID bookingId, UUID guestUserId, String guestName, Instant createdAt) {}
 
     public record GuestCreateDto(
         @NotNull UUID bookingId,

@@ -1,5 +1,6 @@
 package com.onesley.oneclick.modules.support.internal;
 
+import com.onesley.oneclick.modules.support.api.SupportDtos.AttachmentDto;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.data.annotation.CreatedDate;
@@ -36,6 +37,11 @@ public class TicketAttachment {
     public String getMimeType() { return mimeType; }
     public void setMimeType(String mimeType) { this.mimeType = mimeType; }
     public Instant getCreatedAt() { return createdAt; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public AttachmentDto toDto() {
+        return new AttachmentDto(id, ticketId, url, fileName, mimeType, createdAt);
+    }
 
     @Override
     public boolean equals(Object o) {

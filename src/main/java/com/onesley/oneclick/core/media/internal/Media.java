@@ -1,6 +1,7 @@
 package com.onesley.oneclick.core.media.internal;
 
 import com.onesley.oneclick.audit.SoftDeletableAuditedEntity;
+import com.onesley.oneclick.core.media.api.MediaDtos.MediaDto;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -85,6 +86,12 @@ public class Media extends SoftDeletableAuditedEntity {
     public Integer getSortOrder() { return sortOrder; }
     public void setSortOrder(Integer sortOrder) { this.sortOrder = sortOrder; }
     public Map<String, Object> getMetadata() { return metadata; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public MediaDto toDto() {
+        return new MediaDto(id, entityType, entityId, url, mediaType, mimeType, sizeBytes, sortOrder,
+            metadata, getCreatedAt());
+    }
 
     @Override
     public boolean equals(Object o) {

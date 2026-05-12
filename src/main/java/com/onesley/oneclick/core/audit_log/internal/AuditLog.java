@@ -1,5 +1,6 @@
 package com.onesley.oneclick.core.audit_log.internal;
 
+import com.onesley.oneclick.core.audit_log.api.AuditLogDtos.AuditLogDto;
 import com.onesley.oneclick.core.identity.internal.User;
 import com.onesley.oneclick.core.tenant.internal.Tenant;
 import jakarta.persistence.Column;
@@ -105,6 +106,12 @@ public class AuditLog {
     public String getUserAgent() { return userAgent; }
     public void setUserAgent(String userAgent) { this.userAgent = userAgent; }
     public Instant getCreatedAt() { return createdAt; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public AuditLogDto toDto() {
+        return new AuditLogDto(id, userId, tenantId, entityType, entityId, action, diff,
+            ipAddress, userAgent, createdAt);
+    }
 
     @Override
     public boolean equals(Object o) {

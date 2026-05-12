@@ -2,6 +2,7 @@ package com.onesley.oneclick.modules.community.internal;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
 import com.onesley.oneclick.core.identity.internal.User;
+import com.onesley.oneclick.modules.community.api.CommunityDtos.CommentDto;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 
@@ -35,6 +36,11 @@ public class Comment extends TimestampedEntity {
     public void setContent(String content) { this.content = content; }
     public Instant getDeletedAt() { return deletedAt; }
     public void markDeleted() { this.deletedAt = Instant.now(); }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public CommentDto toDto() {
+        return new CommentDto(id, postId, authorId, content, getCreatedAt());
+    }
 
     @Override
     public boolean equals(Object o) {

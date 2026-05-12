@@ -2,6 +2,7 @@ package com.onesley.oneclick.modules.resource_booking.internal;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
 import com.onesley.oneclick.core.identity.internal.User;
+import com.onesley.oneclick.modules.resource_booking.api.ResourceBookingDtos.BookingDto;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -86,6 +87,11 @@ public class ResourceBooking extends TimestampedEntity {
     public Instant getDeletedAt() { return deletedAt; }
     public boolean isDeleted() { return deletedAt != null; }
     public void markDeleted() { this.deletedAt = Instant.now(); }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public BookingDto toDto() {
+        return new BookingDto(id, resourceId, organizerId, pricingId, startAt, endAt, status, notes, getCreatedAt());
+    }
 
     @Override
     public boolean equals(Object o) {

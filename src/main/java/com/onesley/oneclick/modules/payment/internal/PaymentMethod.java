@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.payment.internal;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
+import com.onesley.oneclick.modules.payment.api.PaymentDtos.PaymentMethodDto;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Pattern;
 
@@ -41,6 +42,11 @@ public class PaymentMethod extends TimestampedEntity {
     public void setExpiresAt(LocalDate expiresAt) { this.expiresAt = expiresAt; }
     public Instant getDeletedAt() { return deletedAt; }
     public void markDeleted() { this.deletedAt = Instant.now(); }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public PaymentMethodDto toDto() {
+        return new PaymentMethodDto(id, userId, type, last4, provider, isDefault, expiresAt, getCreatedAt());
+    }
 
     @Override
     public boolean equals(Object o) {

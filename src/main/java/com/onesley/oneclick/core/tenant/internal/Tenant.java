@@ -1,6 +1,7 @@
 package com.onesley.oneclick.core.tenant.internal;
 
 import com.onesley.oneclick.audit.SoftDeletableAuditedEntity;
+import com.onesley.oneclick.core.tenant.api.TenantDto;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -53,6 +54,11 @@ public class Tenant extends SoftDeletableAuditedEntity {
     public String getSlug() { return slug; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public TenantDto toDto() {
+        return new TenantDto(id, name, slug, status, getCreatedAt());
+    }
 
     @Override
     public boolean equals(Object o) {

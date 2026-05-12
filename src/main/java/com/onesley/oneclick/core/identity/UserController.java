@@ -19,6 +19,7 @@ import java.util.UUID;
 import com.onesley.oneclick.core.identity.api.UserCreateDto;
 import com.onesley.oneclick.core.identity.api.UserDto;
 import com.onesley.oneclick.core.identity.api.UserUpdateDto;
+import com.onesley.oneclick.core.identity.internal.User;
 import com.onesley.oneclick.core.identity.internal.UserRepository;
 
 /**
@@ -101,9 +102,9 @@ public class UserController {
     )
     public PageResponse<UserDto> search(@RequestBody SearchRequest req) {
         // @Transactional ouvre une session Hibernate qui couvre l'accès lazy à User.role
-        // → évite LazyInitializationException quand UserDto.from() appelle user.getRole().getCode()
+        // → évite LazyInitializationException quand User.toDto() appelle user.getRole().getCode()
         return PageResponse.from(
-            Searchable.execute(userRepository, req, SEARCHABLE_FIELDS, UserDto::from)
+            Searchable.execute(userRepository, req, SEARCHABLE_FIELDS, User::toDto)
         );
     }
 }

@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.financial.internal;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
+import com.onesley.oneclick.modules.financial.api.FinancialDtos.InvoiceDto;
 import com.onesley.oneclick.modules.restaurant.internal.Restaurant;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
@@ -94,6 +95,12 @@ public class Invoice extends TimestampedEntity {
     public void setDueAt(LocalDate dueAt) { this.dueAt = dueAt; }
     public Instant getPaidAt() { return paidAt; }
     public void markPaid() { this.paidAt = Instant.now(); this.status = "paid"; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public InvoiceDto toDto() {
+        return new InvoiceDto(id, restaurantId, invoiceNumber, periodStart, periodEnd, subtotal,
+            tvaAmount, totalTtc, status, issuedAt, dueAt, paidAt, getCreatedAt());
+    }
 
     @Override
     public boolean equals(Object o) {

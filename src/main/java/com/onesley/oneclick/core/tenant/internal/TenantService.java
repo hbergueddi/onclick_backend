@@ -26,7 +26,7 @@ public class TenantService {
     public List<TenantDto> findAll() {
         return repository.findAll().stream()
             .filter(t -> t.getDeletedAt() == null)
-            .map(TenantDto::from)
+            .map(Tenant::toDto)
             .toList();
     }
 
@@ -34,7 +34,7 @@ public class TenantService {
         Tenant t = repository.findById(id)
             .filter(x -> x.getDeletedAt() == null)
             .orElseThrow(() -> new NotFoundException("Tenant", id));
-        return TenantDto.from(t);
+        return t.toDto();
     }
 
     @Cacheable(value = CacheConfig.CACHE_TENANTS_BY_SLUG, key = "#slug")
@@ -42,7 +42,7 @@ public class TenantService {
         Tenant t = repository.findBySlug(slug)
             .filter(x -> x.getDeletedAt() == null)
             .orElseThrow(() -> new NotFoundException("Tenant by slug: " + slug));
-        return TenantDto.from(t);
+        return t.toDto();
     }
 
     @Transactional
@@ -52,6 +52,6 @@ public class TenantService {
             throw new ConflictException("Slug déjà utilisé : " + dto.slug());
         }
         Tenant t = new Tenant(UUID.randomUUID(), dto.name(), dto.slug());
-        return TenantDto.from(repository.save(t));
+        return repository.save(t).toDto();
     }
 }

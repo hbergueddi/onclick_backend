@@ -2,6 +2,7 @@ package com.onesley.oneclick.modules.restaurant.internal;
 
 import com.onesley.oneclick.audit.SoftDeletableAuditedEntity;
 import com.onesley.oneclick.core.tenant.internal.Tenant;
+import com.onesley.oneclick.modules.restaurant.api.RestaurantDto;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -92,6 +93,12 @@ public class Restaurant extends SoftDeletableAuditedEntity {
     public void setLongitude(BigDecimal longitude) { this.longitude = longitude; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public RestaurantDto toDto() {
+        return new RestaurantDto(id, tenantId, name, description, phone, address, city,
+            latitude, longitude, status, getCreatedAt());
+    }
 
     @Override
     public boolean equals(Object o) {

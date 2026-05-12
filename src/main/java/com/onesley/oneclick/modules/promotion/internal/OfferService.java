@@ -45,13 +45,14 @@ public class OfferService {
                 .and((root, q, cb) -> cb.greaterThan(root.get("expiresAt"), now));
         }
         return repository.findAll(spec, PageRequest.of(page, size, Sort.by("startsAt").descending()))
-            .map(OfferDto::from);
+            .map(Offer::toDto);
     }
 
     public OfferDto findById(UUID id) {
-        return OfferDto.from(repository.findById(id)
+        return repository.findById(id)
             .filter(o -> o.getDeletedAt() == null)
-            .orElseThrow(() -> new NotFoundException("Offer", id)));
+            .orElseThrow(() -> new NotFoundException("Offer", id))
+            .toDto();
     }
 
     @Transactional
@@ -79,7 +80,7 @@ public class OfferService {
             dto.discountPct(), dto.discountAmount()
         ));
 
-        return OfferDto.from(saved);
+        return saved.toDto();
     }
 
     @Transactional

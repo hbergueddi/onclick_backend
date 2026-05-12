@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.resource_booking.internal;
 
 import com.onesley.oneclick.core.identity.internal.User;
+import com.onesley.oneclick.modules.resource_booking.api.ResourceBookingDtos.GuestDto;
 import jakarta.persistence.*;
 import org.hibernate.proxy.HibernateProxy;
 import org.springframework.data.annotation.CreatedDate;
@@ -57,6 +58,11 @@ public class ResourceBookingGuest {
     public User getGuestUser() { return guestUser; }
     public String getGuestName() { return guestName; }
     public Instant getCreatedAt() { return createdAt; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public GuestDto toDto() {
+        return new GuestDto(id, bookingId, guestUserId, guestName, createdAt);
+    }
 
     @Override
     public boolean equals(Object o) {

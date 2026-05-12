@@ -46,7 +46,7 @@ public class SocialService {
             friendshipRepo.findAllByUser1Id(userId).stream(),
             friendshipRepo.findAllByUser2Id(userId).stream()
         ).filter(f -> "accepted".equals(f.getStatus()))
-         .map(FriendshipDto::from)
+         .map(Friendship::toDto)
          .toList();
     }
 
@@ -67,7 +67,7 @@ public class SocialService {
         User u1 = entityManager.getReference(User.class, a);
         User u2 = entityManager.getReference(User.class, b);
         Friendship f = new Friendship(UUID.randomUUID(), u1, u2);
-        return FriendshipDto.from(friendshipRepo.save(f));
+        return friendshipRepo.save(f).toDto();
     }
 
     @Transactional
@@ -78,7 +78,7 @@ public class SocialService {
         // (ou admin). Faute de getReceiverUserId, on accepte user1 OU user2.
         requireFriendshipPartyOrAdmin(f);
         f.markAccepted();
-        return FriendshipDto.from(friendshipRepo.save(f));
+        return friendshipRepo.save(f).toDto();
     }
 
     @Transactional
@@ -87,7 +87,7 @@ public class SocialService {
             .orElseThrow(() -> new NotFoundException("Friendship", friendshipId));
         requireFriendshipPartyOrAdmin(f);
         f.setStatus("declined");
-        return FriendshipDto.from(friendshipRepo.save(f));
+        return friendshipRepo.save(f).toDto();
     }
 
     /**
@@ -107,14 +107,14 @@ public class SocialService {
     // ─── Referrals ───────────────────────────────────────────────────────────
 
     public List<ReferralDto> findByReferrer(UUID referrerId) {
-        return referralRepo.findAllByReferrerId(referrerId).stream().map(ReferralDto::from).toList();
+        return referralRepo.findAllByReferrerId(referrerId).stream().map(Referral::toDto).toList();
     }
 
     @Transactional
     public ReferralDto create(ReferralCreateDto dto) {
         User referrer = entityManager.getReference(User.class, dto.referrerId());
         Referral r = new Referral(UUID.randomUUID(), referrer, dto.referralCode());
-        return ReferralDto.from(referralRepo.save(r));
+        return referralRepo.save(r).toDto();
     }
 
     @Transactional
@@ -123,6 +123,6 @@ public class SocialService {
             .orElseThrow(() -> new NotFoundException("Referral", referralId));
         r.setReferredUser(entityManager.getReference(User.class, referredUserId));
         r.markActivated();
-        return ReferralDto.from(referralRepo.save(r));
+        return referralRepo.save(r).toDto();
     }
 }

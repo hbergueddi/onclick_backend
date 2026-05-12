@@ -6,10 +6,14 @@ import jakarta.validation.constraints.Pattern;
 
 import java.time.Instant;
 import java.util.UUID;
-import com.onesley.oneclick.modules.support.internal.SupportTicket;
-import com.onesley.oneclick.modules.support.internal.TicketAttachment;
-import com.onesley.oneclick.modules.support.internal.TicketMessage;
 
+/**
+ * DTOs publics du module support.
+ *
+ * <p>Pas de méthode de mapping ici : la conversion Entity → DTO se fait via
+ * {@code Entity.toDto()} dans le package {@code internal} (dépendance
+ * internal → api autorisée en Modulith CLOSED).</p>
+ */
 public final class SupportDtos {
 
     private SupportDtos() {}
@@ -18,13 +22,7 @@ public final class SupportDtos {
 
     public record TicketDto(UUID id, UUID openedById, String category, String priority, String status,
                             String subject, Instant resolvedAt, Instant closedAt, UUID assignedToId,
-                            Instant createdAt, Instant updatedAt) {
-        public static TicketDto from(SupportTicket t) {
-            return new TicketDto(t.getId(), t.getOpenedById(), t.getCategory(), t.getPriority(),
-                t.getStatus(), t.getSubject(), t.getResolvedAt(), t.getClosedAt(), t.getAssignedToId(),
-                t.getCreatedAt(), t.getUpdatedAt());
-        }
-    }
+                            Instant createdAt, Instant updatedAt) {}
 
     public record TicketCreateDto(
         @NotNull UUID openedById,
@@ -41,11 +39,7 @@ public final class SupportDtos {
 
     // ─── Message ─────────────────────────────────────────────────────────────
 
-    public record MessageDto(UUID id, UUID ticketId, UUID authorId, String message, Instant createdAt) {
-        public static MessageDto from(TicketMessage m) {
-            return new MessageDto(m.getId(), m.getTicketId(), m.getAuthorId(), m.getMessage(), m.getCreatedAt());
-        }
-    }
+    public record MessageDto(UUID id, UUID ticketId, UUID authorId, String message, Instant createdAt) {}
 
     public record MessageCreateDto(
         @NotNull UUID ticketId,
@@ -55,11 +49,7 @@ public final class SupportDtos {
 
     // ─── Attachment ──────────────────────────────────────────────────────────
 
-    public record AttachmentDto(UUID id, UUID ticketId, String url, String fileName, String mimeType, Instant createdAt) {
-        public static AttachmentDto from(TicketAttachment a) {
-            return new AttachmentDto(a.getId(), a.getTicketId(), a.getUrl(), a.getFileName(), a.getMimeType(), a.getCreatedAt());
-        }
-    }
+    public record AttachmentDto(UUID id, UUID ticketId, String url, String fileName, String mimeType, Instant createdAt) {}
 
     public record AttachmentCreateDto(
         @NotNull UUID ticketId,

@@ -45,13 +45,14 @@ public class ConfigurationService {
     // ─── Feature flags ───────────────────────────────────────────────────────
 
     public List<FeatureFlagDto> findAllFlags() {
-        return flagRepo.findAll().stream().map(FeatureFlagDto::from).toList();
+        return flagRepo.findAll().stream().map(FeatureFlag::toDto).toList();
     }
 
     @Cacheable(value = CacheConfig.CACHE_FEATURE_FLAGS, key = "#code")
     public FeatureFlagDto findFlagByCode(String code) {
-        return FeatureFlagDto.from(flagRepo.findByCode(code)
-            .orElseThrow(() -> new NotFoundException("FeatureFlag by code: " + code)));
+        return flagRepo.findByCode(code)
+            .orElseThrow(() -> new NotFoundException("FeatureFlag by code: " + code))
+            .toDto();
     }
 
     @Transactional
@@ -64,7 +65,7 @@ public class ConfigurationService {
         if (dto.description() != null) f.setDescription(dto.description());
         if (dto.enabled() != null)     f.setEnabled(dto.enabled());
         if (dto.rolloutPct() != null)  f.setRolloutPct(dto.rolloutPct());
-        return FeatureFlagDto.from(flagRepo.save(f));
+        return flagRepo.save(f).toDto();
     }
 
     @Transactional
@@ -75,14 +76,14 @@ public class ConfigurationService {
         if (dto.enabled() != null)     f.setEnabled(dto.enabled());
         if (dto.rolloutPct() != null)  f.setRolloutPct(dto.rolloutPct());
         if (dto.description() != null) f.setDescription(dto.description());
-        return FeatureFlagDto.from(flagRepo.save(f));
+        return flagRepo.save(f).toDto();
     }
 
     // ─── Feature flag targets ────────────────────────────────────────────────
 
     public List<FeatureFlagTargetDto> findTargetsByFlag(UUID featureFlagId) {
         return targetRepo.findAllByFeatureFlagId(featureFlagId).stream()
-            .map(FeatureFlagTargetDto::from)
+            .map(FeatureFlagTarget::toDto)
             .toList();
     }
 
@@ -93,13 +94,13 @@ public class ConfigurationService {
         boolean enabled = dto.enabled() == null || dto.enabled();
         FeatureFlagTarget t = new FeatureFlagTarget(UUID.randomUUID(), flagRef, dto.targetType(),
             dto.targetId(), enabled);
-        return FeatureFlagTargetDto.from(targetRepo.save(t));
+        return targetRepo.save(t).toDto();
     }
 
     // ─── Cache configurations ────────────────────────────────────────────────
 
     public List<CacheConfigDto> findAllCacheConfigs() {
-        return cacheRepo.findAll().stream().map(CacheConfigDto::from).toList();
+        return cacheRepo.findAll().stream().map(CacheConfiguration::toDto).toList();
     }
 
     @Transactional
@@ -109,6 +110,6 @@ public class ConfigurationService {
         }
         CacheConfiguration c = new CacheConfiguration(UUID.randomUUID(), dto.cacheName(), dto.ttlSeconds());
         if (dto.maxEntries() != null) c.setMaxEntries(dto.maxEntries());
-        return CacheConfigDto.from(cacheRepo.save(c));
+        return cacheRepo.save(c).toDto();
     }
 }

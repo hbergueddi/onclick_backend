@@ -67,6 +67,11 @@ public class SystemEvent {
     public void markProcessed() { this.processedAt = Instant.now(); }
     public Instant getCreatedAt() { return createdAt; }
 
+    /** Mapping vers le DTO public exposé hors du module. */
+    public AuditLogDtos.SystemEventDto toDto() {
+        return new AuditLogDtos.SystemEventDto(id, type, payload, processedAt, createdAt);
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

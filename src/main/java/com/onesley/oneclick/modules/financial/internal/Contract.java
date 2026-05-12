@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.financial.internal;
 
 import com.onesley.oneclick.audit.SoftDeletableAuditedEntity;
+import com.onesley.oneclick.modules.financial.api.FinancialDtos.ContractDto;
 import com.onesley.oneclick.modules.restaurant.internal.Restaurant;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
@@ -68,6 +69,11 @@ public class Contract extends SoftDeletableAuditedEntity {
     public void setEndsAt(LocalDate endsAt) { this.endsAt = endsAt; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public ContractDto toDto() {
+        return new ContractDto(id, restaurantId, contractNumber, commissionRate, startsAt, endsAt, status, getCreatedAt());
+    }
 
     @Override
     public boolean equals(Object o) {
