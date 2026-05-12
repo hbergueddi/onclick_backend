@@ -1,4 +1,4 @@
-package com.onesley.oneclick.modules.loyalty;
+package com.onesley.oneclick.modules.loyalty.internal;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

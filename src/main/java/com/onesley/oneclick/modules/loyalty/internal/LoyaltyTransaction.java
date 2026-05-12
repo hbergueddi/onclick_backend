@@ -1,5 +1,6 @@
-package com.onesley.oneclick.modules.loyalty;
+package com.onesley.oneclick.modules.loyalty.internal;
 
+import com.onesley.oneclick.modules.loyalty.api.LoyaltyTransactionDto;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -91,6 +92,11 @@ public class LoyaltyTransaction {
     public void setExpiresAt(Instant expiresAt) { this.expiresAt = expiresAt; }
     public Instant getCreatedAt() { return createdAt; }
     public UUID getCreatedById() { return createdById; }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public LoyaltyTransactionDto toDto() {
+        return new LoyaltyTransactionDto(id, accountId, type, points, amount, reason, expiresAt, createdAt, createdById);
+    }
 
     @Override
     public boolean equals(Object o) {

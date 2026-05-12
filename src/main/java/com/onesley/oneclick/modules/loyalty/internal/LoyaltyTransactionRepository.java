@@ -1,4 +1,4 @@
-package com.onesley.oneclick.modules.loyalty;
+package com.onesley.oneclick.modules.loyalty.internal;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -7,13 +7,14 @@ import org.springframework.stereotype.Repository;
 import java.util.UUID;
 
 /**
- * Repository {@link Tier} — accès CRUD + finders dérivés.
+ * Repository {@link LoyaltyTransaction} — accès CRUD + finders dérivés.
  *
  * <p>Soft delete (si applicable) : filtrer {@code WHERE deleted_at IS NULL} dans les
  * services. Les méthodes JpaRepository standard ne filtrent pas — utilisation
  * directe à éviter pour les entités avec soft delete.
  */
 @Repository
-public interface TierRepository extends JpaRepository<Tier, UUID>, JpaSpecificationExecutor<Tier> {
-    java.util.List<Tier> findAllByTenantId(java.util.UUID tenantId);
+public interface LoyaltyTransactionRepository extends JpaRepository<LoyaltyTransaction, UUID>, JpaSpecificationExecutor<LoyaltyTransaction> {
+    java.util.List<LoyaltyTransaction> findAllByAccountId(java.util.UUID accountId);
+    java.util.List<LoyaltyTransaction> findAllByCreatedById(java.util.UUID createdBy);
 }

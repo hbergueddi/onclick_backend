@@ -1,6 +1,7 @@
-package com.onesley.oneclick.modules.loyalty;
+package com.onesley.oneclick.modules.loyalty.internal;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
+import com.onesley.oneclick.modules.loyalty.api.LoyaltyAccountDto;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -68,6 +69,11 @@ public class LoyaltyAccount extends TimestampedEntity {
     public void setBalance(Integer balance) { this.balance = balance; }
     public void addPoints(int points) { this.balance = Math.max(0, this.balance + points); }
     public void deductPoints(int points) { this.balance = Math.max(0, this.balance - points); }
+
+    /** Mapping vers le DTO public exposé hors du module. */
+    public LoyaltyAccountDto toDto() {
+        return new LoyaltyAccountDto(id, clientId, restaurantId, tierId, balance, getCreatedAt());
+    }
 
     @Override
     public boolean equals(Object o) {

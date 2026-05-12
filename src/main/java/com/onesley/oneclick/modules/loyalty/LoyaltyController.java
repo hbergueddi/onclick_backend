@@ -1,5 +1,9 @@
 package com.onesley.oneclick.modules.loyalty;
 
+import com.onesley.oneclick.modules.loyalty.api.LoyaltyAccountDto;
+import com.onesley.oneclick.modules.loyalty.api.LoyaltyEarnDto;
+import com.onesley.oneclick.modules.loyalty.api.LoyaltyTransactionDto;
+import com.onesley.oneclick.modules.loyalty.internal.LoyaltyService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

@@ -1,7 +1,10 @@
-package com.onesley.oneclick.modules.loyalty;
+package com.onesley.oneclick.modules.loyalty.internal;
 
 import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.NotFoundException;
+import com.onesley.oneclick.modules.loyalty.api.LoyaltyAccountDto;
+import com.onesley.oneclick.modules.loyalty.api.LoyaltyEarnDto;
+import com.onesley.oneclick.modules.loyalty.api.LoyaltyTransactionDto;
 import com.onesley.oneclick.shared.events.LoyaltyEarnedEvent;
 import com.onesley.oneclick.shared.events.LoyaltyRedeemedEvent;
 import jakarta.persistence.EntityManager;
@@ -49,23 +52,23 @@ public class LoyaltyService {
     public LoyaltyAccountDto findAccount(UUID accountId) {
         LoyaltyAccount a = accountRepository.findById(accountId)
             .orElseThrow(() -> new NotFoundException("LoyaltyAccount", accountId));
-        return LoyaltyAccountDto.from(a);
+        return a.toDto();
     }
 
     public LoyaltyAccountDto findOrCreate(UUID clientId, UUID restaurantId) {
         LoyaltyAccount account = findOrCreateInternal(clientId, restaurantId);
-        return LoyaltyAccountDto.from(account);
+        return account.toDto();
     }
 
     public List<LoyaltyAccountDto> findByClient(UUID clientId) {
         return accountRepository.findAllByClientId(clientId).stream()
-            .map(LoyaltyAccountDto::from)
+            .map(LoyaltyAccount::toDto)
             .toList();
     }
 
     public List<LoyaltyTransactionDto> findTransactionsByAccount(UUID accountId) {
         return transactionRepository.findAllByAccountId(accountId).stream()
-            .map(LoyaltyTransactionDto::from)
+            .map(LoyaltyTransaction::toDto)
             .toList();
     }
 
@@ -90,7 +93,7 @@ public class LoyaltyService {
             Instant.now()
         ));
 
-        return LoyaltyTransactionDto.from(tx);
+        return tx.toDto();
     }
 
     @Transactional
@@ -117,7 +120,7 @@ public class LoyaltyService {
             Instant.now()
         ));
 
-        return LoyaltyTransactionDto.from(tx);
+        return tx.toDto();
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
