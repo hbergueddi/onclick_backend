@@ -1,32 +1,36 @@
-### OneClick Backend — IntelliJ HTTP Client tests
+### OneClick Backend — IntelliJ HTTP Client tests (monolithe consolidé)
 ###
 ### ════════════════════════════════════════════════════════════════
 ###  Setup
 ### ════════════════════════════════════════════════════════════════
 ###
-### 1. Lance Spring : Run config "OneClick (oauth2)" → ▶
+### 1. Lance Spring : Run config "OneClick Monolith (enterprise+secure)" → ▶
+###    (le profil `enterprise` seul désactive OAuth2 → toutes les routes
+###    protégées retournent 403. Le profil `enterprise,secure` est nécessaire
+###    pour passer les JWT.)
 ### 2. Régénère les JWT (durée 1h) :
-###       ./scripts/regen-jwt-env.sh
-###    Ce script écrit 4 JWT signés (admin/client/restaurateur/tenant_admin)
-###    dans http-client.private.env.json (gitignored).
+###       ./scripts/regen-jwt-env-enterprise.sh
+###    Ce script pioche 4 users (SUPERADMIN/GROUP_ADMIN/RESTAURATEUR/CLIENT)
+###    dans oneclick_enterprise et écrit 4 JWT signés dans
+###    http-client.private.env.json (gitignored).
 ### 3. Sélecteur d'environnement (top right de ce fichier) → "oauth2"
 ### 4. Clique le ▶ vert à côté de chaque ###.
 ###
-### Si une requête retourne 401, ton JWT a expiré → re-lance regen-jwt-env.sh.
+### Si une requête retourne 401, ton JWT a expiré → re-lance regen-jwt-env-enterprise.sh.
 ###
 ### Variables disponibles dans {{ }} :
-###   {{base}}                URL base (http://localhost:8081)
-###   {{jwtAdmin}}            JWT signé pour un user admin
-###   {{jwtClient}}           JWT signé pour un user client
-###   {{jwtRestaurateur}}     JWT signé pour un user restaurateur
-###   {{jwtTenantAdmin}}      JWT signé pour un user tenant_admin
-###   {{adminUserId}}         UUID de l'admin (utile dans des PATCH ciblés)
+###   {{base}}                URL base (http://localhost:8083 — monolith)
+###   {{jwtAdmin}}            JWT signé pour un user SUPERADMIN
+###   {{jwtClient}}           JWT signé pour un user CLIENT
+###   {{jwtRestaurateur}}     JWT signé pour un user RESTAURATEUR
+###   {{jwtTenantAdmin}}      JWT signé pour un user GROUP_ADMIN
+###   {{adminUserId}}         UUID du SUPERADMIN (utile dans des PATCH ciblés)
 
 ### ═══════════════════════════════════════════════════════════════
 ### 1. Health & infra (publics — pas de JWT requis)
 ### ═══════════════════════════════════════════════════════════════
 
-### Health check
+### Health check (status + détails par composant)
 GET {{base}}/actuator/health
 
 ### Info build/git
@@ -39,7 +43,7 @@ GET {{base}}/v3/api-docs
 GET {{base}}/swagger-ui/index.html
 
 ### ═══════════════════════════════════════════════════════════════
-### 2. Sécurité — sans JWT, on doit avoir 401
+### 2. Sécurité — sans JWT, on doit avoir 401 (profil secure actif)
 ### ═══════════════════════════════════════════════════════════════
 
 ### Pas de header Authorization → 401
@@ -50,49 +54,67 @@ GET {{base}}/api/tenants
 Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0In0.fake-signature
 
 ### ═══════════════════════════════════════════════════════════════
-### 3. Endpoints sécurisés — JWT admin
+### 3. Endpoints sécurisés — JWT admin (SUPERADMIN)
 ### ═══════════════════════════════════════════════════════════════
 
 ### Liste des tenants (admin only)
 GET {{base}}/api/tenants
 Authorization: Bearer {{jwtAdmin}}
 
-### Tenant par slug
-GET {{base}}/api/tenants/by-slug/palmeraie
+### Tenant par slug (query param)
+GET {{base}}/api/tenants/by-slug?slug=palmeraie
 Authorization: Bearer {{jwtAdmin}}
 
-### Liste paginée des restaurants à Casablanca (vue read-only optimisée)
-GET {{base}}/api/restaurants/core/by-city?city=Casablanca&page=0&size=5
+### Restaurants paginés par ville (module search)
+GET {{base}}/api/search/restaurants/by-city?city=Casablanca&limit=5
 Authorization: Bearer {{jwtAdmin}}
 
-### Détail d'un restaurant complet (33 colonnes — JSONB opening_hours visible)
-GET {{base}}/api/restaurants/8ad6e68c-2a69-496d-b9b0-33110c4722ce
+### Recherche full-text restaurants
+GET {{base}}/api/search/restaurants?q=cafe
 Authorization: Bearer {{jwtAdmin}}
 
-### Réservations par status "demandée" (note l'URL-encoding %C3%A9 = é)
-GET {{base}}/api/reservations/by-status?status=demand%C3%A9e
+### Liste plate des restaurants (core)
+GET {{base}}/api/restaurants
 Authorization: Bearer {{jwtAdmin}}
 
-### Loyalty points (FIFO système)
-GET {{base}}/api/loyalty-points
+### Réservations — recherche dynamique (POST avec critères)
+POST {{base}}/api/reservations/search
+Authorization: Bearer {{jwtAdmin}}
+Content-Type: application/json
+
+{
+  "criteria": [
+    {"field": "status", "op": "EQ", "value": "demandée"}
+  ],
+  "size": 10
+}
+
+### Loyalty — comptes d'un client
+GET {{base}}/api/loyalty/accounts/by-client/{{adminUserId}}
 Authorization: Bearer {{jwtAdmin}}
 
-### Notifications in-app (40k+ rows)
+### Notifications in-app (40k+ rows en prod)
 GET {{base}}/api/notifications
 Authorization: Bearer {{jwtAdmin}}
 
-### Bookable resources PCC (Padel/Spa/Golf)
-GET {{base}}/api/bookable-resources
+### Bookable resources PCC (Padel/Spa/Golf/Coiffeur/Palm Gym)
+GET {{base}}/api/resource-bookings/resources
 Authorization: Bearer {{jwtAdmin}}
 
-### Vue audit log (read-only @Immutable)
-GET {{base}}/api/views/admin-audit-logs
+### Audit log (immutable, append-only)
+GET {{base}}/api/audit/logs
+Authorization: Bearer {{jwtAdmin}}
+
+### Audit — événements module (Spring Modulith event_publication)
+GET {{base}}/api/audit/events
+Authorization: Bearer {{jwtAdmin}}
+
+### Contrats partenaires (module financial)
+GET {{base}}/api/financial/contracts
 Authorization: Bearer {{jwtAdmin}}
 
 ### ═══════════════════════════════════════════════════════════════
-### 4. Permissions par rôle (Phase 6.2)
-###    Voir comment le filtre @PreAuthorize + @RequirePermission applique
-###    différents accès selon le JWT utilisé.
+### 4. Permissions par rôle — Spring Security @PreAuthorize
 ### ═══════════════════════════════════════════════════════════════
 
 ### admin → /api/tenants → 200 (admin a tenant.READ)
@@ -104,32 +126,32 @@ Authorization: Bearer {{jwtAdmin}}
 GET {{base}}/api/tenants
 Authorization: Bearer {{jwtClient}}
 
-### restaurateur → /api/admin-audit-logs → 403 (admin only)
-GET {{base}}/api/admin-audit-logs
+### restaurateur → /api/audit/logs → 403 (admin only)
+GET {{base}}/api/audit/logs
 Authorization: Bearer {{jwtRestaurateur}}
 
-### admin → /api/admin-audit-logs → 200
-GET {{base}}/api/admin-audit-logs
+### admin → /api/audit/logs → 200
+GET {{base}}/api/audit/logs
 Authorization: Bearer {{jwtAdmin}}
 
-### client → /api/restaurants/core/by-city → 200 (client a restaurant.READ)
-GET {{base}}/api/restaurants/core/by-city?city=Casablanca&size=2
+### client → /api/search/restaurants/by-city → 200 (client a restaurant.READ)
+GET {{base}}/api/search/restaurants/by-city?city=Casablanca&limit=2
 Authorization: Bearer {{jwtClient}}
 
-### client → /api/partner-contracts → 403 (admin only)
-GET {{base}}/api/partner-contracts
+### client → /api/financial/contracts → 403 (admin only)
+GET {{base}}/api/financial/contracts
 Authorization: Bearer {{jwtClient}}
 
-### restaurateur → /api/loyalty-points → 200
-GET {{base}}/api/loyalty-points
+### restaurateur → /api/loyalty/accounts → 200 (restaurateur a loyalty.READ)
+GET {{base}}/api/loyalty/accounts
 Authorization: Bearer {{jwtRestaurateur}}
 
 ### ═══════════════════════════════════════════════════════════════
-### 5. Recherche dynamique (Phase 6.3)
+### 5. Recherche dynamique (UserSearchCriteria, ReservationSearchCriteria, …)
 ### ═══════════════════════════════════════════════════════════════
 
-### Recherche : profils dont prénom commence par "You"
-POST {{base}}/api/profiles/search
+### Recherche : users dont prénom commence par "You"
+POST {{base}}/api/users/search
 Authorization: Bearer {{jwtAdmin}}
 Content-Type: application/json
 
@@ -140,23 +162,22 @@ Content-Type: application/json
   "size": 5
 }
 
-### Recherche combinée : prénom ILIKE + score GTE + tri desc
-POST {{base}}/api/profiles/search
+### Recherche combinée : prénom ILIKE + tri créé desc
+POST {{base}}/api/users/search
 Authorization: Bearer {{jwtAdmin}}
 Content-Type: application/json
 
 {
   "criteria": [
-    {"field": "firstName", "op": "ILIKE", "value": "You%"},
-    {"field": "reliabilityScore", "op": "GTE", "value": 3.5}
+    {"field": "firstName", "op": "ILIKE", "value": "You%"}
   ],
-  "sort": "reliabilityScore,desc",
+  "sort": "createdAt,desc",
   "page": 0,
   "size": 10
 }
 
 ### Recherche IN sur city
-POST {{base}}/api/profiles/search
+POST {{base}}/api/users/search
 Authorization: Bearer {{jwtAdmin}}
 Content-Type: application/json
 
@@ -167,22 +188,20 @@ Content-Type: application/json
   "size": 5
 }
 
-### Recherche IS_NOT_NULL sur reliabilityScore
-POST {{base}}/api/profiles/search
+### Recherche IS_NOT_NULL sur phone
+POST {{base}}/api/users/search
 Authorization: Bearer {{jwtAdmin}}
 Content-Type: application/json
 
 {
   "criteria": [
-    {"field": "reliabilityScore", "op": "IS_NOT_NULL", "value": null}
+    {"field": "phone", "op": "IS_NOT_NULL", "value": null}
   ],
-  "sort": "reliabilityScore,desc",
   "size": 5
 }
 
-### Tentative avec field non whitelisté → 400 + ProblemDetails RFC 7807
-###   Body retourné liste les champs autorisés
-POST {{base}}/api/profiles/search
+### Field non whitelisté → 400 + ProblemDetails RFC 7807
+POST {{base}}/api/users/search
 Authorization: Bearer {{jwtAdmin}}
 Content-Type: application/json
 
@@ -193,11 +212,11 @@ Content-Type: application/json
 }
 
 ### ═══════════════════════════════════════════════════════════════
-### 6. Validation Bean (Phase 6.1) + Exception handler RFC 7807 (Phase 5.0)
+### 6. Validation Bean + Exception handler RFC 7807
 ### ═══════════════════════════════════════════════════════════════
 
-### Profil par UUID inexistant → 404 + ProblemDetails not-found
-GET {{base}}/api/profiles/00000000-0000-0000-0000-000000000099
+### User par UUID inexistant → 404 + ProblemDetails not-found
+GET {{base}}/api/users/00000000-0000-0000-0000-000000000099
 Authorization: Bearer {{jwtAdmin}}
 
 ### UUID malformé → 400 + ProblemDetails type-mismatch
@@ -205,7 +224,7 @@ GET {{base}}/api/reservations/not-a-valid-uuid
 Authorization: Bearer {{jwtAdmin}}
 
 ### PATCH valide → 200 + entité modifiée + log [AUDIT] côté Spring
-PATCH {{base}}/api/profiles/{{adminUserId}}
+PATCH {{base}}/api/users/{{adminUserId}}
 Authorization: Bearer {{jwtAdmin}}
 Content-Type: application/json
 
@@ -215,7 +234,7 @@ Content-Type: application/json
 }
 
 ### PATCH avec phone format invalid → 400 + fieldErrors
-PATCH {{base}}/api/profiles/{{adminUserId}}
+PATCH {{base}}/api/users/{{adminUserId}}
 Authorization: Bearer {{jwtAdmin}}
 Content-Type: application/json
 
@@ -227,18 +246,14 @@ Content-Type: application/json
 GET {{base}}/api/foo-bar-baz
 Authorization: Bearer {{jwtAdmin}}
 
-### Missing query param → 400 + ProblemDetails missing-parameter
-GET {{base}}/api/user-roles
-Authorization: Bearer {{jwtAdmin}}
-
 ### ═══════════════════════════════════════════════════════════════
 ### 7. Côté DB — vérifications utiles dans le Database tool window
 ###    (View → Tool Windows → Database)
 ### ═══════════════════════════════════════════════════════════════
 
 # SELECT id, first_name, last_name, city, language, updated_at
-# FROM profiles WHERE id = '<adminUserId>';
+# FROM users WHERE id = '<adminUserId>';
 
-# SELECT count(*) FROM app_permissions;       -- doit être 116
-# SELECT * FROM flyway_schema_history;        -- V1, V3, V4 success=t
-# SELECT * FROM monitor_logs ORDER BY created_at DESC LIMIT 10;
+# SELECT COUNT(*) FROM users;                          -- 17221 (167 CLIENT + 17050 RESTAURATEUR + 3 GROUP_ADMIN + 1 SUPERADMIN)
+# SELECT * FROM flyway_schema_history;                 -- V1..V12 success=t
+# SELECT * FROM event_publication WHERE completion_date IS NULL;   -- events Modulith en attente (0 si tout OK)

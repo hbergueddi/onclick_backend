@@ -56,6 +56,15 @@ logging:
     # org.hibernate.SQL: DEBUG
     # org.hibernate.orm.jdbc.bind: TRACE
 
+# ─── Actuator — dev local : détail complet du /actuator/health ────────
+# show-details=always (override le defaut when-authorized de application.yml)
+# Permet d'identifier quel HealthIndicator est DOWN sans avoir à s'auth.
+management:
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+
 # ─── Spring Modulith (in-process events, PAS Kafka — monolithe §21) ──
 spring.modulith:
   events:
