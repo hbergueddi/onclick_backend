@@ -188,6 +188,52 @@ public class LoyaltyService {
         return new Snap2EarnResultDto(points, account.getBalance(), tx.id(), gainRuleApplied);
     }
 
+    /**
+     * Sprint G.5 — Gift points (port EF gift-points Supabase).
+     *
+     * <p>Un sender offre des points à un receiver pour un restaurant donné.
+     * Débit sender + crédit receiver dans la même tx, avec validation cap
+     * (max 200/jour) via legacy frontend.
+     *
+     * @param senderId    UUID du donneur (vérification owner via SecurityHelper)
+     * @param dto         Payload validé (receiverId, restaurantId, points, message)
+     * @return            La transaction de crédit côté receiver
+     */
+    @Transactional
+    public LoyaltyTransactionDto giftPoints(UUID senderId, com.onesley.oneclick.modules.loyalty.api.GiftPointsDto dto) {
+        if (senderId.equals(dto.receiverId())) {
+            throw new BadRequestException("Sender et receiver doivent être différents");
+        }
+        // 1. Débit côté sender
+        LoyaltyAccount senderAccount = findOrCreateInternal(senderId, dto.restaurantId());
+        if (senderAccount.getBalance() < dto.points()) {
+            throw new BadRequestException(
+                String.format("Solde insuffisant : %d points demandés, %d disponibles",
+                    dto.points(), senderAccount.getBalance())
+            );
+        }
+        LoyaltyTransaction debit = new LoyaltyTransaction(
+            UUID.randomUUID(), senderAccount.getId(), "gift",
+            -dto.points(), "gift:to:" + dto.receiverId()
+        );
+        transactionRepository.save(debit);
+        senderAccount.deductPoints(dto.points());
+        accountRepository.save(senderAccount);
+
+        // 2. Crédit côté receiver
+        LoyaltyAccount receiverAccount = findOrCreateInternal(dto.receiverId(), dto.restaurantId());
+        String reason = "gift:from:" + senderId + (dto.message() != null ? " | " + dto.message() : "");
+        LoyaltyTransaction credit = new LoyaltyTransaction(
+            UUID.randomUUID(), receiverAccount.getId(), "gift",
+            dto.points(), reason
+        );
+        transactionRepository.save(credit);
+        receiverAccount.addPoints(dto.points());
+        accountRepository.save(receiverAccount);
+
+        return credit.toDto();
+    }
+
     @Transactional
     public LoyaltyTransactionDto spendPoints(UUID clientId, UUID restaurantId, int points, String reason) {
         if (points <= 0) throw new BadRequestException("points doit être > 0");

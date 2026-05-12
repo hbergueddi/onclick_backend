@@ -5,6 +5,7 @@ import com.onesley.oneclick.modules.loyalty.api.GainRuleCreateDto;
 import com.onesley.oneclick.modules.loyalty.api.GainRuleDto;
 import com.onesley.oneclick.modules.loyalty.api.GainRulePatchDto;
 import com.onesley.oneclick.modules.loyalty.api.GainRuleRequestDto;
+import com.onesley.oneclick.modules.loyalty.api.GiftPointsDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyAccountDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyEarnDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyTransactionDto;
@@ -112,6 +113,18 @@ public class LoyaltyController {
     public LoyaltyTransactionDto spend(@Valid @RequestBody SpendDto dto) {
         SecurityHelper.requireOwnerOrAdmin(dto.clientId());
         return service.spendPoints(dto.clientId(), dto.restaurantId(), dto.points(), dto.reason());
+    }
+
+    @PostMapping("/gift")
+    @Operation(
+        summary = "Sprint G.5 — Gift points (port EF gift-points)",
+        description = "Le user authentifié offre des points à un ami pour un restaurant. " +
+                      "Débit sender + crédit receiver atomique."
+    )
+    @PreAuthorize("isAuthenticated()")
+    public LoyaltyTransactionDto giftPoints(@Valid @RequestBody GiftPointsDto dto) {
+        UUID senderId = SecurityHelper.currentUserId();
+        return service.giftPoints(senderId, dto);
     }
 
     // ─── Gain rules (par-restaurant) ─────────────────────────────────────────

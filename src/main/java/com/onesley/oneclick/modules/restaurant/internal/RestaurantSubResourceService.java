@@ -112,6 +112,105 @@ public class RestaurantSubResourceService {
         staffRepository.save(staff);
     }
 
+    /**
+     * Sprint G.5 — Transfer staff (port EF transfer-staff Supabase).
+     *
+     * <p>Soft delete sur le source resto + INSERT sur le target resto, dans la
+     * même transaction. Préserve le rôle. Si le target a déjà ce user en staff
+     * actif, ConflictException.
+     */
+    @Transactional
+    public RestaurantStaffDto transferStaff(
+        UUID staffId, UUID sourceRestaurantId, UUID targetRestaurantId
+    ) {
+        if (sourceRestaurantId.equals(targetRestaurantId)) {
+            throw new com.onesley.oneclick.exception.BadRequestException(
+                "Restaurant source et target identiques");
+        }
+        // 1. Récupère le staff source
+        RestaurantStaff source = staffRepository.findById(staffId)
+            .filter(s -> !s.isDeleted())
+            .orElseThrow(() -> new NotFoundException("RestaurantStaff", staffId));
+        if (!source.getRestaurant().getId().equals(sourceRestaurantId)) {
+            throw new com.onesley.oneclick.exception.BadRequestException(
+                "Staff ne correspond pas au restaurant source");
+        }
+
+        // 2. Vérif anti-doublon sur target
+        Restaurant target = requireRestaurant(targetRestaurantId);
+        boolean alreadyStaff = staffRepository.findAllByRestaurantId(targetRestaurantId).stream()
+            .anyMatch(s -> !s.isDeleted() && s.getUser().getId().equals(source.getUser().getId()));
+        if (alreadyStaff) {
+            throw new com.onesley.oneclick.exception.ConflictException(
+                "User déjà staff actif sur le restaurant target");
+        }
+
+        // 3. Soft delete source + insert target (atomique)
+        String roleCode = source.getRoleCode();
+        User user = source.getUser();
+        source.markDeleted();
+        staffRepository.save(source);
+
+        RestaurantStaff newStaff = new RestaurantStaff(UUID.randomUUID(), target, user, roleCode);
+        return staffRepository.save(newStaff).toDto();
+    }
+
+    /**
+     * Sprint G.5 — Invite team member (port EF invite-team-member Supabase).
+     *
+     * <p>Workflow :
+     * <ol>
+     *   <li>Lookup user par email OU phone via UserRepository</li>
+     *   <li>Si user existe → ajout staff direct (cf addStaff)</li>
+     *   <li>Si user n'existe pas → marqué pour invitation (V2 : envoyer email
+     *     via Resend, créer un compte placeholder). Pour V1 retourne userExists=false.</li>
+     * </ol>
+     */
+    @Transactional
+    public com.onesley.oneclick.modules.restaurant.api.StaffTransferDto.InviteResultDto inviteStaff(
+        com.onesley.oneclick.modules.restaurant.api.StaffTransferDto.InviteDto dto,
+        com.onesley.oneclick.core.identity.api.UserRepository userRepo
+    ) {
+        if (dto.email() == null && dto.phone() == null) {
+            throw new com.onesley.oneclick.exception.BadRequestException(
+                "Email ou phone requis pour inviter");
+        }
+
+        // 1. Lookup user existant
+        User candidate = null;
+        if (dto.email() != null) {
+            candidate = userRepo.findByEmailIgnoreCase(dto.email())
+                .filter(u -> u.getDeletedAt() == null).orElse(null);
+        }
+        if (candidate == null && dto.phone() != null) {
+            candidate = userRepo.findByPhone(dto.phone())
+                .filter(u -> u.getDeletedAt() == null).orElse(null);
+        }
+
+        if (candidate == null) {
+            // V2 backend : créer placeholder + envoyer email Resend
+            return new com.onesley.oneclick.modules.restaurant.api.StaffTransferDto.InviteResultDto(
+                false, null, "User non trouvé — invitation par email (V2 backend)"
+            );
+        }
+
+        // 2. User trouvé → addStaff direct (avec vérif anti-doublon)
+        final User found = candidate;
+        boolean alreadyStaff = staffRepository.findAllByRestaurantId(dto.restaurantId()).stream()
+            .anyMatch(s -> !s.isDeleted() && s.getUser().getId().equals(found.getId()));
+        if (alreadyStaff) {
+            throw new com.onesley.oneclick.exception.ConflictException(
+                "User déjà staff actif sur ce restaurant");
+        }
+
+        Restaurant restaurant = requireRestaurant(dto.restaurantId());
+        RestaurantStaff staff = new RestaurantStaff(UUID.randomUUID(), restaurant, found, dto.roleCode());
+        RestaurantStaff saved = staffRepository.save(staff);
+        return new com.onesley.oneclick.modules.restaurant.api.StaffTransferDto.InviteResultDto(
+            true, saved.getId(), "User ajouté comme staff"
+        );
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     //  MealServices (créneaux brunch/déjeuner/dîner)
     // ═══════════════════════════════════════════════════════════════════════

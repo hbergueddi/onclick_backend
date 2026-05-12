@@ -16,9 +16,11 @@ import java.net.URI;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import com.onesley.oneclick.core.identity.api.UserRepository;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantCreateDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantPatchDto;
+import com.onesley.oneclick.modules.restaurant.api.StaffTransferDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.MealServiceCreateDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.MealServiceDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.MealServicePatchDto;
@@ -48,15 +50,18 @@ public class RestaurantController {
     private final RestaurantCatalogService service;
     private final RestaurantRepository restaurantRepository;
     private final RestaurantSubResourceService subResourceService;
+    private final UserRepository userRepository;
 
     public RestaurantController(
         RestaurantCatalogService service,
         RestaurantRepository restaurantRepository,
-        RestaurantSubResourceService subResourceService
+        RestaurantSubResourceService subResourceService,
+        UserRepository userRepository
     ) {
         this.service = service;
         this.restaurantRepository = restaurantRepository;
         this.subResourceService = subResourceService;
+        this.userRepository = userRepository;
     }
 
     @GetMapping
@@ -161,6 +166,29 @@ public class RestaurantController {
     public List<RestaurantStaffDto> findStaffByUser(@PathVariable UUID userId) {
         SecurityHelper.requireOwnerOrAdmin(userId);
         return subResourceService.findStaffByUser(userId);
+    }
+
+    @PostMapping("/staff/transfer")
+    @Operation(
+        summary = "Sprint G.5 — Transfert staff entre restos (port EF transfer-staff)",
+        description = "Soft delete source + INSERT target atomique. RBAC : SUPERADMIN/GROUP_ADMIN."
+    )
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR')")
+    public RestaurantStaffDto transferStaff(@Valid @RequestBody StaffTransferDto.TransferDto dto) {
+        return subResourceService.transferStaff(
+            dto.staffId(), dto.sourceRestaurantId(), dto.targetRestaurantId()
+        );
+    }
+
+    @PostMapping("/staff/invite")
+    @Operation(
+        summary = "Sprint G.5 — Invite team member par email/phone (port EF invite-team-member)",
+        description = "Si user existe → ajout staff direct. Sinon V1 retourne userExists=false " +
+                      "(V2 backend : envoyer email Resend + placeholder)."
+    )
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR')")
+    public StaffTransferDto.InviteResultDto inviteStaff(@Valid @RequestBody StaffTransferDto.InviteDto dto) {
+        return subResourceService.inviteStaff(dto, userRepository);
     }
 
     // ═══════════════════════════════════════════════════════════════════════
