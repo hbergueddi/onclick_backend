@@ -97,19 +97,10 @@ public class AdminStatsFullService {
             prevRange,
             "type = 'earn'");
 
-        // 5. Cuisine distribution (top 5)
-        @SuppressWarnings("unchecked")
-        List<Object[]> cuisines = em.createNativeQuery("""
-            SELECT cuisine, COUNT(*)
-              FROM restaurants
-             WHERE deleted_at IS NULL AND cuisine IS NOT NULL
-             GROUP BY cuisine
-             ORDER BY COUNT(*) DESC
-             LIMIT 5
-            """).getResultList();
-        List<CuisineDistribDto> cuisineDistribution = cuisines.stream()
-            .map(r -> new CuisineDistribDto((String) r[0], ((Number) r[1]).longValue()))
-            .toList();
+        // 5. Cuisine distribution — V2 backend ne stocke pas cuisine sur public.restaurants
+        // (whitelabel/legacy uniquement). On retourne une liste vide pour le frontend
+        // qui adapte gracieusement (cuisineDistribution.length === 0 → masque la chart).
+        List<CuisineDistribDto> cuisineDistribution = java.util.List.of();
 
         // 6. Daily trend (last 30 days)
         @SuppressWarnings("unchecked")
@@ -207,7 +198,7 @@ public class AdminStatsFullService {
               (SELECT COUNT(*) FROM offers WHERE deleted_at IS NULL),
               (SELECT COUNT(*) FROM offers WHERE deleted_at IS NULL AND enabled = true AND (expires_at IS NULL OR expires_at > NOW())),
               (SELECT COALESCE(SUM(balance), 0) FROM loyalty_accounts WHERE deleted_at IS NULL),
-              (SELECT AVG(rating) FROM restaurants WHERE deleted_at IS NULL AND rating > 0)
+              (SELECT AVG(google_rating) FROM restaurants WHERE deleted_at IS NULL AND google_rating > 0)
             """);
         return q;
     }

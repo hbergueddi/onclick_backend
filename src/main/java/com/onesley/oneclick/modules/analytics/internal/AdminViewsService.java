@@ -63,8 +63,16 @@ public class AdminViewsService {
             row[7] != null ? ((Number) row[7]).intValue() : 0,
             row[8] != null ? ((Number) row[8]).longValue() : 0L,
             row[9] != null ? ((Number) row[9]).longValue() : 0L,
-            row[10] != null ? ((java.sql.Timestamp) row[10]).toInstant() : null
+            row[10] != null ? toInstant(row[10]) : null
         )).toList();
+    }
+
+    private static java.time.Instant toInstant(Object o) {
+        if (o == null) return null;
+        if (o instanceof java.time.Instant i) return i;
+        if (o instanceof java.sql.Timestamp ts) return ts.toInstant();
+        if (o instanceof java.time.OffsetDateTime odt) return odt.toInstant();
+        return java.time.Instant.parse(o.toString());
     }
 
     public AdminWalletSummaryDto walletSummary() {
@@ -113,7 +121,7 @@ public class AdminViewsService {
             toBd(r[3]),
             (String) r[4],
             (String) r[5],
-            r[6] != null ? ((java.sql.Timestamp) r[6]).toInstant() : null
+            r[6] != null ? toInstant(r[6]) : null
         )).toList();
     }
 

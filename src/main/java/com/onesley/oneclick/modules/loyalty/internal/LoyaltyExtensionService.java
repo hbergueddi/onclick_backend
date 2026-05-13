@@ -157,10 +157,18 @@ public class LoyaltyExtensionService {
             row[0] != null ? (UUID) row[0] : null,
             (String) row[1],
             row[2] != null ? ((Number) row[2]).intValue() : 0,
-            row[3] != null ? ((java.sql.Timestamp) row[3]).toInstant() : null,
+            row[3] != null ? toInstant(row[3]) : null,
             row[4] != null ? (UUID) row[4] : null,
             (String) row[5]
         )).toList();
+    }
+
+    private static java.time.Instant toInstant(Object o) {
+        if (o == null) return null;
+        if (o instanceof java.time.Instant i) return i;
+        if (o instanceof java.sql.Timestamp ts) return ts.toInstant();
+        if (o instanceof java.time.OffsetDateTime odt) return odt.toInstant();
+        return java.time.Instant.parse(o.toString());
     }
 
     @SuppressWarnings("unchecked")
@@ -190,7 +198,7 @@ public class LoyaltyExtensionService {
             row[2] != null ? (UUID) row[2] : null,
             row[3] != null ? ((Number) row[3]).intValue() : 0,
             (String) row[4],
-            row[5] != null ? ((java.sql.Timestamp) row[5]).toInstant() : null
+            row[5] != null ? toInstant(row[5]) : null
         )).toList();
     }
 }

@@ -16,6 +16,15 @@ import java.util.UUID;
 @Transactional
 public class OneClickHIService {
 
+    private static java.time.Instant toInstant(Object o) {
+        if (o == null) return null;
+        if (o instanceof java.time.Instant i) return i;
+        if (o instanceof java.sql.Timestamp ts) return ts.toInstant();
+        if (o instanceof java.time.OffsetDateTime odt) return odt.toInstant();
+        return java.time.Instant.parse(o.toString());
+    }
+
+
     private final OneClickHIInvoiceRepository invoiceRepo;
 
     @PersistenceContext
@@ -110,7 +119,7 @@ public class OneClickHIService {
             (BigDecimal) row[1],
             (BigDecimal) row[2],
             (BigDecimal) row[3],
-            row[4] != null ? ((java.sql.Timestamp) row[4]).toInstant() : null
+            row[4] != null ? toInstant(row[4]) : null
         );
     }
 
