@@ -19,8 +19,14 @@ public final class EventDtos {
 
     private EventDtos() {}
 
-    public record EventDto(UUID id, UUID tenantId, UUID restaurantId, String title, String description,
-                           String eventType, Instant eventAt, Integer capacity, Instant createdAt) {}
+    /** Sprint D — EventDto enrichi avec Elite fields (V20 schema). */
+    public record EventDto(
+        UUID id, UUID tenantId, UUID restaurantId, String title, String description,
+        String eventType, Instant eventAt, Instant eventEnd,
+        Integer capacity, Integer placesTaken,
+        String minTier, String imageUrl, String locationName, boolean isActive,
+        Instant createdAt
+    ) {}
 
     public record EventCreateDto(
         @NotNull UUID tenantId,
@@ -29,14 +35,37 @@ public final class EventDtos {
         String description,
         String eventType,
         @NotNull Instant eventAt,
-        Integer capacity
+        Instant eventEnd,
+        Integer capacity,
+        // V20 — Elite fields (optionnels)
+        @Pattern(regexp = "^(Ruby|Sapphire|Émeraude|Black)$") String minTier,
+        String imageUrl,
+        String locationName,
+        Boolean isActive
     ) {}
 
-    public record ParticipationDto(UUID id, UUID eventId, UUID userId, String status, Instant createdAt) {}
+    public record EventPatchDto(
+        String title,
+        String description,
+        String eventType,
+        Instant eventAt,
+        Instant eventEnd,
+        Integer capacity,
+        @Pattern(regexp = "^(Ruby|Sapphire|Émeraude|Black)$") String minTier,
+        String imageUrl,
+        String locationName,
+        Boolean isActive
+    ) {}
+
+    public record ParticipationDto(
+        UUID id, UUID eventId, UUID userId, String status,
+        String plusOneName, Instant createdAt
+    ) {}
 
     public record ParticipationCreateDto(
         @NotNull UUID eventId,
         @NotNull UUID userId,
-        @Pattern(regexp = "^(going|maybe|declined|attended)$") String status
+        @Pattern(regexp = "^(going|maybe|declined|attended)$") String status,
+        String plusOneName
     ) {}
 }

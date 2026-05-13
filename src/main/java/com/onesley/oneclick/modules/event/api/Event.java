@@ -24,6 +24,14 @@ public class Event extends SoftDeletableAuditedEntity {
     @NotNull @Column(name = "event_at", nullable = false) private Instant eventAt;
     @Column(name = "capacity") private Integer capacity;
 
+    // ─── V20 — Sprint D Elite enrich ────────────────────────────────────
+    @Column(name = "min_tier") private String minTier;
+    @Column(name = "places_taken", nullable = false) private Integer placesTaken = 0;
+    @Column(name = "image_url") private String imageUrl;
+    @Column(name = "location_name") private String locationName;
+    @Column(name = "is_active", nullable = false) private boolean isActive = true;
+    @Column(name = "event_end") private Instant eventEnd;
+
     protected Event() {}
     public Event(UUID id, Tenant tenant, String title, Instant eventAt) {
         this.id = id; this.tenant = tenant; this.title = title; this.eventAt = eventAt;
@@ -41,13 +49,42 @@ public class Event extends SoftDeletableAuditedEntity {
     public String getEventType() { return eventType; }
     public void setEventType(String eventType) { this.eventType = eventType; }
     public Instant getEventAt() { return eventAt; }
+    public void setEventAt(Instant eventAt) { this.eventAt = eventAt; }
     public Integer getCapacity() { return capacity; }
     public void setCapacity(Integer capacity) { this.capacity = capacity; }
 
+    // V20 getters/setters
+    public String getMinTier() { return minTier; }
+    public void setMinTier(String minTier) { this.minTier = minTier; }
+    public Integer getPlacesTaken() { return placesTaken; }
+    public void setPlacesTaken(Integer placesTaken) { this.placesTaken = placesTaken; }
+    public String getImageUrl() { return imageUrl; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+    public String getLocationName() { return locationName; }
+    public void setLocationName(String locationName) { this.locationName = locationName; }
+    public boolean isActive() { return isActive; }
+    public void setActive(boolean active) { this.isActive = active; }
+    public Instant getEventEnd() { return eventEnd; }
+    public void setEventEnd(Instant eventEnd) { this.eventEnd = eventEnd; }
+
+    /** Helpers métier Elite. */
+    public boolean hasCapacity() {
+        return capacity == null || (placesTaken == null ? 0 : placesTaken) < capacity;
+    }
+    public void incrementPlacesTaken() {
+        this.placesTaken = (this.placesTaken == null ? 0 : this.placesTaken) + 1;
+    }
+    public void decrementPlacesTaken() {
+        this.placesTaken = Math.max(0, (this.placesTaken == null ? 0 : this.placesTaken) - 1);
+    }
+
     /** Mapping vers le DTO public exposé hors du module. */
     public EventDtos.EventDto toDto() {
-        return new EventDtos.EventDto(id, tenantId, restaurantId, title, description, eventType,
-            eventAt, capacity, getCreatedAt());
+        return new EventDtos.EventDto(
+            id, tenantId, restaurantId, title, description, eventType,
+            eventAt, eventEnd, capacity, placesTaken, minTier, imageUrl,
+            locationName, isActive, getCreatedAt()
+        );
     }
 
     @Override

@@ -21,6 +21,9 @@ public class EventParticipation extends TimestampedEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "user_id", nullable = false) private User user;
     @Pattern(regexp = "^(going|maybe|declined|attended)$") @Column(name = "status", nullable = false) private String status = "going";
 
+    // V20 — Sprint D : Elite +1 invité
+    @Column(name = "plus_one_name") private String plusOneName;
+
     protected EventParticipation() {}
     public EventParticipation(UUID id, Event event, User user, String status) {
         this.id = id; this.event = event; this.user = user; this.status = status;
@@ -33,10 +36,12 @@ public class EventParticipation extends TimestampedEntity {
     public User getUser() { return user; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    public String getPlusOneName() { return plusOneName; }
+    public void setPlusOneName(String plusOneName) { this.plusOneName = plusOneName; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public ParticipationDto toDto() {
-        return new ParticipationDto(id, eventId, userId, status, getCreatedAt());
+        return new ParticipationDto(id, eventId, userId, status, plusOneName, getCreatedAt());
     }
 
     @Override

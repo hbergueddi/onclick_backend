@@ -2,6 +2,8 @@ package com.onesley.oneclick.modules.event.internal;
 
 import com.onesley.oneclick.core.identity.api.User;
 import com.onesley.oneclick.core.tenant.api.Tenant;
+import com.onesley.oneclick.exception.BadRequestException;
+import com.onesley.oneclick.exception.ConflictException;
 import com.onesley.oneclick.exception.NotFoundException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -69,6 +71,33 @@ public class EventService {
         if (dto.description() != null) e.setDescription(dto.description());
         if (dto.eventType() != null)   e.setEventType(dto.eventType());
         if (dto.capacity() != null)    e.setCapacity(dto.capacity());
+        // V20 — Sprint D Elite fields
+        if (dto.eventEnd() != null)    e.setEventEnd(dto.eventEnd());
+        if (dto.minTier() != null)     e.setMinTier(dto.minTier());
+        if (dto.imageUrl() != null)    e.setImageUrl(dto.imageUrl());
+        if (dto.locationName() != null) e.setLocationName(dto.locationName());
+        if (dto.isActive() != null)    e.setActive(dto.isActive());
+        return eventRepo.save(e).toDto();
+    }
+
+    /**
+     * Sprint D — Patch partiel d'un event (admin Elite).
+     */
+    @Transactional
+    public EventDto patch(UUID id, com.onesley.oneclick.modules.event.api.EventDtos.EventPatchDto dto) {
+        Event e = eventRepo.findById(id)
+            .filter(x -> x.getDeletedAt() == null)
+            .orElseThrow(() -> new NotFoundException("Event", id));
+        if (dto.title() != null)        e.setTitle(dto.title());
+        if (dto.description() != null)  e.setDescription(dto.description());
+        if (dto.eventType() != null)    e.setEventType(dto.eventType());
+        if (dto.eventAt() != null)      e.setEventAt(dto.eventAt());
+        if (dto.eventEnd() != null)     e.setEventEnd(dto.eventEnd());
+        if (dto.capacity() != null)     e.setCapacity(dto.capacity());
+        if (dto.minTier() != null)      e.setMinTier(dto.minTier());
+        if (dto.imageUrl() != null)     e.setImageUrl(dto.imageUrl());
+        if (dto.locationName() != null) e.setLocationName(dto.locationName());
+        if (dto.isActive() != null)     e.setActive(dto.isActive());
         return eventRepo.save(e).toDto();
     }
 
@@ -89,12 +118,84 @@ public class EventService {
             .toList();
     }
 
+    /** Sprint D — RSVPs d'un user (Pocket "Mes événements"). */
+    public List<ParticipationDto> findParticipationsByUser(UUID userId) {
+        return participationRepo.findAllByUserId(userId).stream()
+            .map(EventParticipation::toDto)
+            .toList();
+    }
+
     @Transactional
     public ParticipationDto rsvp(ParticipationCreateDto dto) {
+        // Sprint D — Vérifs Elite : capacity + duplicates
+        Event event = eventRepo.findById(dto.eventId())
+            .filter(e -> e.getDeletedAt() == null)
+            .orElseThrow(() -> new NotFoundException("Event", dto.eventId()));
+
+        // Anti-doublon : 1 RSVP par user par event (UNIQUE constraint DB)
+        participationRepo.findByEventIdAndUserId(dto.eventId(), dto.userId())
+            .ifPresent(p -> {
+                throw new ConflictException("User déjà RSVP sur cet event");
+            });
+
+        String status = dto.status() != null ? dto.status() : "going";
+
+        // Si going + capacity : vérif places dispo + increment compteur
+        if ("going".equals(status) && !event.hasCapacity()) {
+            throw new BadRequestException("Event complet (places_taken >= capacity)");
+        }
+
         Event eventRef = entityManager.getReference(Event.class, dto.eventId());
         User userRef = entityManager.getReference(User.class, dto.userId());
-        String status = dto.status() != null ? dto.status() : "going";
         EventParticipation p = new EventParticipation(UUID.randomUUID(), eventRef, userRef, status);
-        return participationRepo.save(p).toDto();
+        if (dto.plusOneName() != null) p.setPlusOneName(dto.plusOneName());
+
+        EventParticipation saved = participationRepo.save(p);
+
+        // Atomique : increment places_taken (denormalisé pour fast read)
+        if ("going".equals(status)) {
+            event.incrementPlacesTaken();
+            eventRepo.save(event);
+        }
+
+        return saved.toDto();
+    }
+
+    /**
+     * Sprint D — Cancel RSVP user's own event (Pocket EliteClub).
+     * Decrement places_taken si status était going.
+     */
+    @Transactional
+    public void cancelRsvp(UUID eventId, UUID userId) {
+        EventParticipation p = participationRepo.findByEventIdAndUserId(eventId, userId)
+            .orElseThrow(() -> new NotFoundException("EventParticipation for user " + userId, eventId));
+
+        boolean wasGoing = "going".equals(p.getStatus());
+        participationRepo.delete(p);
+
+        // Décrémenter places_taken si user était going
+        if (wasGoing) {
+            Event event = eventRepo.findById(eventId).orElse(null);
+            if (event != null) {
+                event.decrementPlacesTaken();
+                eventRepo.save(event);
+            }
+        }
+    }
+
+    // ─── Elite-specific (Sprint D) ──────────────────────────────────────────
+
+    /** Events Elite actifs futurs (Pocket EliteClub). */
+    public List<EventDto> findEliteActiveUpcoming() {
+        return eventRepo.findEliteActiveUpcoming().stream()
+            .map(Event::toDto)
+            .toList();
+    }
+
+    /** Tous les events Elite admin (dashboard Forge). */
+    public List<EventDto> findAllElite() {
+        return eventRepo.findAllElite().stream()
+            .map(Event::toDto)
+            .toList();
     }
 }

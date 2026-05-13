@@ -17,4 +17,6 @@ import java.util.UUID;
 public interface EventParticipationRepository extends JpaRepository<EventParticipation, UUID>, JpaSpecificationExecutor<EventParticipation> {
     java.util.List<EventParticipation> findAllByEventId(java.util.UUID eventId);
     java.util.List<EventParticipation> findAllByUserId(java.util.UUID userId);
+
+    java.util.Optional<EventParticipation> findByEventIdAndUserId(java.util.UUID eventId, java.util.UUID userId);
 }

@@ -17,6 +17,7 @@ import static com.onesley.oneclick.modules.event.api.EventDtos.*;
 import com.onesley.oneclick.modules.event.api.EventDtos;
 import com.onesley.oneclick.modules.event.api.EventDtos.EventCreateDto;
 import com.onesley.oneclick.modules.event.api.EventDtos.EventDto;
+import com.onesley.oneclick.modules.event.api.EventDtos.EventPatchDto;
 import com.onesley.oneclick.modules.event.api.EventDtos.ParticipationCreateDto;
 import com.onesley.oneclick.modules.event.api.EventDtos.ParticipationDto;
 import com.onesley.oneclick.modules.event.internal.EventService;
@@ -78,5 +79,51 @@ public class EventController {
     public ResponseEntity<ParticipationDto> rsvp(@Valid @RequestBody ParticipationCreateDto dto) {
         ParticipationDto p = service.rsvp(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(p);
+    }
+
+    @DeleteMapping("/participations/by-event/{eventId}/user/{userId}")
+    @Operation(summary = "Sprint D — Cancel RSVP (decrement places_taken si going)")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> cancelRsvp(@PathVariable UUID eventId, @PathVariable UUID userId) {
+        service.cancelRsvp(eventId, userId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/participations/by-user/{userId}")
+    @Operation(summary = "Sprint D — RSVPs d'un user (Pocket Mes événements)")
+    @PreAuthorize("isAuthenticated()")
+    public List<ParticipationDto> findParticipationsByUser(@PathVariable UUID userId) {
+        return service.findParticipationsByUser(userId);
+    }
+
+    @PatchMapping("/{id}")
+    @Operation(summary = "Sprint D — Patch partiel d'un event (admin Elite)")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR')")
+    public EventDto patch(@PathVariable UUID id, @Valid @RequestBody EventPatchDto dto) {
+        return service.patch(id, dto);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  Elite club endpoints (Sprint D)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    @GetMapping("/elite/active")
+    @Operation(
+        summary = "Sprint D — Events Elite actifs futurs (Pocket EliteClub)",
+        description = "Filtre is_active=true + event_at > NOW. Sort event_at ASC."
+    )
+    @PreAuthorize("isAuthenticated()")
+    public List<EventDto> findEliteActive() {
+        return service.findEliteActiveUpcoming();
+    }
+
+    @GetMapping("/elite/all")
+    @Operation(
+        summary = "Sprint D — Tous les events Elite (admin Forge dashboard)",
+        description = "Sort event_at DESC. Inclut inactifs."
+    )
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN')")
+    public List<EventDto> findAllElite() {
+        return service.findAllElite();
     }
 }
