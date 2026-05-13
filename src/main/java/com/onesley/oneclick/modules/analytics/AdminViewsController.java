@@ -1,6 +1,8 @@
 package com.onesley.oneclick.modules.analytics;
 
+import com.onesley.oneclick.modules.analytics.api.AdminStatsFullDto;
 import com.onesley.oneclick.modules.analytics.api.AdminViewsDtos.*;
+import com.onesley.oneclick.modules.analytics.internal.AdminStatsFullService;
 import com.onesley.oneclick.modules.analytics.internal.AdminViewsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -16,9 +18,18 @@ import java.util.UUID;
 public class AdminViewsController {
 
     private final AdminViewsService service;
+    private final AdminStatsFullService statsFullService;
 
-    public AdminViewsController(AdminViewsService service) {
+    public AdminViewsController(AdminViewsService service, AdminStatsFullService statsFullService) {
         this.service = service;
+        this.statsFullService = statsFullService;
+    }
+
+    @GetMapping("/admin-stats-full")
+    @Operation(summary = "Admin stats enrichi (compatible legacy useAdminStats — KPIs + deltas + trends + charts)")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN')")
+    public AdminStatsFullDto adminStatsFull(@RequestParam(required = false) String period) {
+        return statsFullService.compute(period);
     }
 
     @GetMapping("/admin-users")

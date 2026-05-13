@@ -35,9 +35,11 @@ public class AdminViewsService {
             SELECT u.id, u.first_name, u.last_name, u.email, u.phone,
                    r.code,
                    u.tenant_id,
-                   COALESCE((SELECT SUM(balance) FROM loyalty_accounts la WHERE la.user_id = u.id AND la.deleted_at IS NULL), 0) AS pts,
-                   (SELECT COUNT(*) FROM reservations WHERE user_id = u.id AND deleted_at IS NULL) AS resa,
-                   (SELECT COUNT(*) FROM loyalty_transactions lt WHERE lt.user_id = u.id AND lt.reason = 'snap2earn') AS tickets,
+                   COALESCE((SELECT SUM(balance) FROM loyalty_accounts la WHERE la.client_id = u.id AND la.deleted_at IS NULL), 0) AS pts,
+                   (SELECT COUNT(*) FROM reservations WHERE client_id = u.id AND deleted_at IS NULL) AS resa,
+                   (SELECT COUNT(*) FROM loyalty_transactions lt
+                      JOIN loyalty_accounts la ON la.id = lt.account_id
+                     WHERE la.client_id = u.id AND lt.type = 'earn') AS tickets,
                    u.created_at
               FROM users u
               LEFT JOIN roles r ON r.id = u.role_id

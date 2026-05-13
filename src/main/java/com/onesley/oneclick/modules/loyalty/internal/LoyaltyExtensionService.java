@@ -135,15 +135,17 @@ public class LoyaltyExtensionService {
     @SuppressWarnings("unchecked")
     @Transactional(readOnly = true)
     public List<ExpiredPointsAdminDto> findExpiredPointsAdmin(UUID restaurantId, int limit) {
+        // LoyaltyTransaction n'a pas user_id/restaurant_id directs — JOIN via loyalty_accounts
         String sql = """
-            SELECT lt.user_id, COALESCE(u.first_name || ' ' || u.last_name, 'Unknown'),
-                   lt.amount * -1 AS pts, lt.created_at,
-                   lt.restaurant_id, r.name
+            SELECT la.client_id, COALESCE(u.first_name || ' ' || u.last_name, 'Unknown'),
+                   ABS(lt.points) AS pts, lt.created_at,
+                   la.restaurant_id, r.name
               FROM loyalty_transactions lt
-              LEFT JOIN users u ON u.id = lt.user_id
-              LEFT JOIN restaurants r ON r.id = lt.restaurant_id
-             WHERE lt.reason = 'expired'
-             """ + (restaurantId != null ? " AND lt.restaurant_id = :restaurantId " : "") + """
+              JOIN loyalty_accounts la ON la.id = lt.account_id
+              LEFT JOIN users u ON u.id = la.client_id
+              LEFT JOIN restaurants r ON r.id = la.restaurant_id
+             WHERE lt.type = 'expire'
+             """ + (restaurantId != null ? " AND la.restaurant_id = :restaurantId " : "") + """
              ORDER BY lt.created_at DESC
              LIMIT :limit
             """;
@@ -164,15 +166,17 @@ public class LoyaltyExtensionService {
     @SuppressWarnings("unchecked")
     @Transactional(readOnly = true)
     public List<PointDistributionDto> findPointDistributions(UUID restaurantId, UUID userId, int limit) {
+        // LoyaltyTransaction n'a pas user_id/restaurant_id directs — JOIN via loyalty_accounts
         String filter = "";
-        if (restaurantId != null) filter += " AND restaurant_id = :restaurantId ";
-        if (userId != null)        filter += " AND user_id = :userId ";
+        if (restaurantId != null) filter += " AND la.restaurant_id = :restaurantId ";
+        if (userId != null)        filter += " AND la.client_id = :userId ";
         String sql = """
-            SELECT id, user_id, restaurant_id, amount, reason, created_at
-              FROM loyalty_transactions
-             WHERE amount > 0
+            SELECT lt.id, la.client_id, la.restaurant_id, lt.points, lt.reason, lt.created_at
+              FROM loyalty_transactions lt
+              JOIN loyalty_accounts la ON la.id = lt.account_id
+             WHERE lt.points > 0
              """ + filter + """
-             ORDER BY created_at DESC
+             ORDER BY lt.created_at DESC
              LIMIT :limit
             """;
         var q = em.createNativeQuery(sql);
