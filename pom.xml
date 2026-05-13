@@ -123,19 +123,6 @@
             <artifactId>commons-pool2</artifactId>
         </dependency>
 
-        <!-- ─── HashiCorp Vault — gestion centralisée des secrets (Sprint I.8) ─ -->
-        <!-- spring-vault-core (low-level Spring Vault) au lieu de Spring Cloud
-             Vault Config : Spring Cloud 4.x ne supporte pas encore Spring Boot 4
-             (WebServerInitializedEvent renommé). On utilise un
-             EnvironmentPostProcessor maison qui injecte les secrets Vault dans
-             le Spring Environment au boot — équivalent fonctionnel mais
-             compatible Spring Boot 4. -->
-        <dependency>
-            <groupId>org.springframework.vault</groupId>
-            <artifactId>spring-vault-core</artifactId>
-            <version>3.2.0</version>
-        </dependency>
-
         <!-- ─── Security + OAuth2 JWT ───────────────────────────────────────── -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -1,7 +1,0 @@
-# Sprint I.8 — Auto-discovery du EnvironmentPostProcessor Vault.
-#
-# Spring Boot 4 a déplacé l'interface de org.springframework.boot.env.EnvironmentPostProcessor
-# vers org.springframework.boot.EnvironmentPostProcessor (sans `.env.`). On enregistre
-# notre PostProcessor sous la NOUVELLE clé.
-org.springframework.boot.EnvironmentPostProcessor=\
-  com.onesley.oneclick.security.vault.VaultSecretsEnvironmentPostProcessor
