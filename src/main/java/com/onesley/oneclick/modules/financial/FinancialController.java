@@ -28,6 +28,7 @@ import com.onesley.oneclick.modules.financial.api.FinancialDtos.WalletTxDto;
 import com.onesley.oneclick.modules.financial.api.FinancialDtos.ContractTemplateCreateDto;
 import com.onesley.oneclick.modules.financial.api.FinancialDtos.ContractTemplateDto;
 import com.onesley.oneclick.modules.financial.api.FinancialDtos.ContractTemplatePatchDto;
+import com.onesley.oneclick.modules.financial.internal.FinancialCronJobs;
 import com.onesley.oneclick.modules.financial.internal.FinancialService;
 
 @RestController
@@ -36,9 +37,33 @@ import com.onesley.oneclick.modules.financial.internal.FinancialService;
 public class FinancialController {
 
     private final FinancialService service;
+    private final FinancialCronJobs cronJobs;
 
-    public FinancialController(FinancialService service) {
+    public FinancialController(FinancialService service, FinancialCronJobs cronJobs) {
         this.service = service;
+        this.cronJobs = cronJobs;
+    }
+
+    /**
+     * Trigger manuel de la génération mensuelle des factures — Sprint I.3.
+     *
+     * <p>Port EF {@code generate-invoices}. Le cron `generateMonthlyInvoicesCron`
+     * s'exécute automatiquement le 1er du mois à 3h UTC ; cet endpoint permet
+     * à l'admin de re-générer manuellement (idempotent : skip restos déjà facturés).
+     *
+     * @param periodMonth format "yyyy-MM" (ex: "2026-04" pour avril 2026)
+     * @return nombre de factures générées
+     */
+    @PostMapping("/invoices/generate-monthly")
+    @Operation(summary = "Sprint I.3 — Trigger manuel cron génération factures mensuelles")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN')")
+    public java.util.Map<String, Object> generateMonthlyInvoices(@RequestParam String periodMonth) {
+        int generated = cronJobs.generateInvoicesForPeriod(periodMonth);
+        return java.util.Map.of(
+            "periodMonth", periodMonth,
+            "generated", generated,
+            "message", generated + " factures générées pour " + periodMonth
+        );
     }
 
     // ─── Contracts ───────────────────────────────────────────────────────────

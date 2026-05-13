@@ -101,6 +101,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/restaurants", "/api/restaurants/*").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/search/restaurants", "/api/search/restaurants/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/tenants/by-slug").permitAll()  // whitelabel routing avant login
+                .requestMatchers(HttpMethod.POST, "/api/store/onboarding").permitAll()  // Sprint I.3 — formulaire public soumission resto
+                .requestMatchers(HttpMethod.POST, "/api/audit/telemetry").permitAll()  // Sprint I.3 — ingestion telemetry sans auth
+                .requestMatchers(HttpMethod.GET, "/api/restaurants/featured").permitAll()  // Sprint H — curation publique Explore
                 // Preflight CORS
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 // Tout le reste demande un JWT valide
