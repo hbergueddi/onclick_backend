@@ -106,6 +106,19 @@ app:
       - path: /api/loyalty/ocr-receipt
         capacity: 20
         refill-period: PT1H
+      # AI Groq (cap tokens) : différenciation par usage
+      - path: /api/ai/care-chat
+        capacity: 30
+        refill-period: PT1H
+      - path: /api/ai/assistant
+        capacity: 15
+        refill-period: PT1H
+      - path: /api/ai/elite-review
+        capacity: 10
+        refill-period: PT1H
+      - path: /api/ai/plan
+        capacity: 5
+        refill-period: PT1H
 
   # ─── OCR (Phase B.8 — port snap2earn/ocr-receipt Edge Functions) ─────
   # Si api-key non défini, le service tombe en mode stub (réponse vide + log warn).
@@ -121,6 +134,14 @@ app:
   fcm:
     project-id: ${FCM_PROJECT_ID:}
     service-account-json: ${FCM_SERVICE_ACCOUNT_JSON:}
+
+  # ─── AI Groq (Sprint B.1 G.4-bis — port 4 EFs : care-chat, ai-assistant, elite-review, generate-plan) ──
+  # Si api-key non défini : GroqClient bascule en stub mode (réponse factice + log warn).
+  ai:
+    groq:
+      api-key: ${GROQ_API_KEY:}
+      endpoint: ${GROQ_ENDPOINT:https://api.groq.com/openai/v1/chat/completions}
+      model: ${GROQ_MODEL:llama-3.3-70b-versatile}
 
   storage:
     s3:
