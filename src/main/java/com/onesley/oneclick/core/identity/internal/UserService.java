@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 
+import java.util.List;
 import java.util.UUID;
 import com.onesley.oneclick.core.identity.api.UserCreateDto;
 import com.onesley.oneclick.core.identity.api.UserDto;
@@ -194,6 +195,28 @@ public class UserService {
     public Page<UserDto> findByRole(String roleCode, UUID tenantId, int page, int size) {
         return repository.findByRoleCode(roleCode, tenantId, PageRequest.of(page, size))
             .map(User::toDto);
+    }
+
+    /**
+     * Distribution des utilisateurs par rôle — dashboard admin {@code GestionRoles}.
+     *
+     * <p>{@code LEFT JOIN} pour que les rôles à zéro utilisateur apparaissent quand
+     * même ({@code count = 0}). Native SQL : agrégation {@code roles × users}
+     * sans import cross-module (les deux tables vivent dans {@code core/identity}).
+     */
+    @SuppressWarnings("unchecked")
+    public List<com.onesley.oneclick.core.identity.api.RoleDistributionDto> rolesDistribution() {
+        List<Object[]> rows = entityManager.createNativeQuery("""
+            SELECT r.code, COUNT(u.id)
+              FROM roles r
+              LEFT JOIN users u ON u.role_id = r.id AND u.deleted_at IS NULL
+             GROUP BY r.code
+             ORDER BY r.code
+            """).getResultList();
+        return rows.stream()
+            .map(row -> new com.onesley.oneclick.core.identity.api.RoleDistributionDto(
+                (String) row[0], ((Number) row[1]).longValue()))
+            .toList();
     }
 
     /**

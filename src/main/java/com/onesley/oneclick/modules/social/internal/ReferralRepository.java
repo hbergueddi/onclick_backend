@@ -1,7 +1,10 @@
 package com.onesley.oneclick.modules.social.internal;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.UUID;
@@ -17,4 +20,8 @@ import java.util.UUID;
 public interface ReferralRepository extends JpaRepository<Referral, UUID>, JpaSpecificationExecutor<Referral> {
     java.util.List<Referral> findAllByReferrerId(java.util.UUID referrerId);
     java.util.List<Referral> findAllByReferredUserId(java.util.UUID referredUserId);
+
+    /** Liste paginée platform-wide — admin (TableauxPulse). */
+    @Query("SELECT r FROM Referral r ORDER BY r.createdAt DESC")
+    Page<Referral> findAllOrdered(Pageable pageable);
 }

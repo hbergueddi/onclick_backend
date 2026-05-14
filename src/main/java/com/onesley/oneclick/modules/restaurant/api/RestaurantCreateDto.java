@@ -14,6 +14,9 @@ public record RestaurantCreateDto(
     String address,
     @NotBlank String city,
     BigDecimal latitude,
-    BigDecimal longitude
+    BigDecimal longitude,
+    String cuisine,
+    Integer maxStaff,
+    UUID groupId
 ) {
 }

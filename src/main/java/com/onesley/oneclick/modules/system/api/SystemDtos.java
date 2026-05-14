@@ -1,11 +1,16 @@
 package com.onesley.oneclick.modules.system.api;
 
+import com.onesley.oneclick.modules.system.internal.AppDocument;
+import com.onesley.oneclick.modules.system.internal.CustomRole;
+import com.onesley.oneclick.modules.system.internal.DocumentVersion;
 import com.onesley.oneclick.modules.system.internal.QuotaChangeLog;
 import com.onesley.oneclick.modules.system.internal.SystemAlert;
 import com.onesley.oneclick.modules.system.internal.SystemAlertRule;
 import com.onesley.oneclick.modules.system.internal.SystemHealthCheck;
+import jakarta.validation.constraints.NotBlank;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -50,4 +55,50 @@ public final class SystemDtos {
                 q.getReason(), q.getCreatedAt());
         }
     }
+
+    // ─── V24 — Sprint K : documentation interne (DocumentExport) ─────────────
+
+    public record AppDocumentDto(
+        String id, String content, String version,
+        Instant updatedAt, UUID updatedBy, Instant createdAt
+    ) {
+        public static AppDocumentDto from(AppDocument d) {
+            return new AppDocumentDto(d.getId(), d.getContent(), d.getVersion(),
+                d.getUpdatedAt(), d.getUpdatedBy(), d.getCreatedAt());
+        }
+    }
+
+    /** Body PUT — upsert partiel du document courant. */
+    public record AppDocumentUpsertDto(String content, String version) {}
+
+    public record DocumentVersionDto(
+        UUID id, String documentId, String version, String content,
+        String notes, UUID createdBy, Instant createdAt
+    ) {
+        public static DocumentVersionDto from(DocumentVersion v) {
+            return new DocumentVersionDto(v.getId(), v.getDocumentId(), v.getVersion(),
+                v.getContent(), v.getNotes(), v.getCreatedBy(), v.getCreatedAt());
+        }
+    }
+
+    public record DocumentVersionCreateDto(
+        @NotBlank String version, String content, String notes
+    ) {}
+
+    // ─── V24 — Sprint K : rôles personnalisés admin (GestionRoles) ──────────
+
+    public record CustomRoleDto(
+        UUID id, String name, String description, List<String> permissions,
+        UUID createdBy, Instant createdAt, Instant updatedAt
+    ) {
+        public static CustomRoleDto from(CustomRole r) {
+            return new CustomRoleDto(r.getId(), r.getName(), r.getDescription(),
+                r.getPermissions() == null ? List.of() : List.of(r.getPermissions()),
+                r.getCreatedBy(), r.getCreatedAt(), r.getUpdatedAt());
+        }
+    }
+
+    public record CustomRoleCreateDto(
+        @NotBlank String name, String description, List<String> permissions
+    ) {}
 }

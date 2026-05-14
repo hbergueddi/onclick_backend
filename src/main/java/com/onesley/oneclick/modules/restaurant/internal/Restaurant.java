@@ -88,6 +88,21 @@ public class Restaurant extends SoftDeletableAuditedEntity {
     @Column(name = "image")
     private String image;
 
+    // ─── V24 — Sprint K : champs exploités par l'admin (RestaurantFormDialog) ──
+
+    /** Type de cuisine éditorial (Marocain, Italien, …). */
+    @Column(name = "cuisine")
+    private String cuisine;
+
+    /** Plafond de staff actifs — workflow demande d'augmentation (Journal). */
+    @Min(0)
+    @Column(name = "max_staff")
+    private Integer maxStaff;
+
+    /** Groupe propriétaire (chaîne multi-restaurants) — nullable si indépendant. */
+    @Column(name = "group_id")
+    private UUID groupId;
+
     protected Restaurant() {
         // JPA
     }
@@ -126,13 +141,19 @@ public class Restaurant extends SoftDeletableAuditedEntity {
     public void setLoungePts(Integer loungePts) { this.loungePts = loungePts; }
     public String getImage() { return image; }
     public void setImage(String image) { this.image = image; }
+    public String getCuisine() { return cuisine; }
+    public void setCuisine(String cuisine) { this.cuisine = cuisine; }
+    public Integer getMaxStaff() { return maxStaff; }
+    public void setMaxStaff(Integer maxStaff) { this.maxStaff = maxStaff; }
+    public UUID getGroupId() { return groupId; }
+    public void setGroupId(UUID groupId) { this.groupId = groupId; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public RestaurantDto toDto() {
         return new RestaurantDto(id, tenantId, name, description, phone, address, city,
             latitude, longitude, status, budget,
             tags == null ? java.util.List.of() : java.util.List.of(tags),
-            loungePts == null ? 0 : loungePts, image, getCreatedAt());
+            loungePts == null ? 0 : loungePts, image, cuisine, maxStaff, groupId, getCreatedAt());
     }
 
     @Override

@@ -3,6 +3,7 @@ package com.onesley.oneclick.modules.promotion.api;
 import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 public record OfferCreateDto(
@@ -14,6 +15,9 @@ public record OfferCreateDto(
     @DecimalMin("0.00") @DecimalMax("100.00") BigDecimal discountPct,
     @DecimalMin("0.00") BigDecimal discountAmount,
     @Pattern(regexp = "^(promo|bonus|reco)$") String type,
-    @Positive Integer pts
+    @Positive Integer pts,
+    Boolean pushNotify,
+    String image,
+    List<String> segments
 ) {
 }

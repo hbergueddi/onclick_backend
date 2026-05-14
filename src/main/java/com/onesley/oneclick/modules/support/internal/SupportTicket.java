@@ -36,6 +36,9 @@ public class SupportTicket extends TimestampedEntity {
     @Column(name = "ai_handled", nullable = false) private boolean aiHandled = false;
     @Column(name = "ai_summary") private String aiSummary;
 
+    // ─── V24 — Sprint K : corps initial du ticket (legacy parity) ────────────
+    @Column(name = "message") private String message;
+
     protected SupportTicket() {}
     public SupportTicket(UUID id, User openedBy, String category, String subject) {
         this.id = id; this.openedBy = openedBy; this.category = category; this.subject = subject;
@@ -74,6 +77,8 @@ public class SupportTicket extends TimestampedEntity {
     public void setAiHandled(boolean aiHandled) { this.aiHandled = aiHandled; }
     public String getAiSummary() { return aiSummary; }
     public void setAiSummary(String aiSummary) { this.aiSummary = aiSummary; }
+    public String getMessage() { return message; }
+    public void setMessage(String message) { this.message = message; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public TicketDto toDto() {
@@ -81,7 +86,7 @@ public class SupportTicket extends TimestampedEntity {
             assignedToId,
             restaurantId,
             photos != null ? java.util.Arrays.asList(photos) : java.util.List.of(),
-            internal, escalatedToAdmin, lastReply, aiHandled, aiSummary,
+            internal, escalatedToAdmin, lastReply, aiHandled, aiSummary, message,
             getCreatedAt(), getUpdatedAt());
     }
 

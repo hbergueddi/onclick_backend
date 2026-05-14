@@ -74,6 +74,9 @@ public class OfferService {
         o.setDiscountAmount(dto.discountAmount());
         o.setType(type);
         o.setPts(dto.pts());
+        if (dto.pushNotify() != null) o.setPushNotify(dto.pushNotify());
+        o.setImage(dto.image());
+        if (dto.segments() != null) o.setSegments(dto.segments().toArray(new String[0]));
         Offer saved = repository.save(o);
 
         // Publish event for downstream consumers (notification campaign trigger, etc.)
@@ -115,6 +118,9 @@ public class OfferService {
             o.setType(dto.type());
         }
         if (dto.pts() != null) o.setPts(dto.pts());
+        if (dto.pushNotify() != null) o.setPushNotify(dto.pushNotify());
+        if (dto.image() != null) o.setImage(dto.image());
+        if (dto.segments() != null) o.setSegments(dto.segments().toArray(new String[0]));
 
         // Invariants finaux (post-merge)
         if (o.getExpiresAt().isBefore(o.getStartsAt())) {

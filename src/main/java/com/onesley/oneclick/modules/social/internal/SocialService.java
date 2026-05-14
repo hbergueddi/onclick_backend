@@ -130,6 +130,12 @@ public class SocialService {
         return referralRepo.findAllByReferrerId(referrerId).stream().map(Referral::toDto).toList();
     }
 
+    /** Liste paginée platform-wide — admin (TableauxPulse). */
+    public org.springframework.data.domain.Page<ReferralDto> findAllReferrals(int page, int size) {
+        return referralRepo.findAllOrdered(org.springframework.data.domain.PageRequest.of(page, size))
+            .map(Referral::toDto);
+    }
+
     @Transactional
     public ReferralDto create(ReferralCreateDto dto) {
         User referrer = entityManager.getReference(User.class, dto.referrerId());

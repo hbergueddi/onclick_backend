@@ -38,9 +38,18 @@ public final class RestaurantSubResourceDtos {
         @NotBlank String roleCode
     ) {}
 
-    /** Patch partiel — seul {@code roleCode} est modifiable (le user_id est immuable). */
+    /**
+     * Patch partiel d'un staff.
+     *
+     * <ul>
+     *   <li>{@code roleCode} — change le rôle applicatif (le user_id reste immuable).</li>
+     *   <li>{@code active} — réactive ({@code true}) ou désactive ({@code false}) le
+     *       staff via le soft-delete {@code deleted_at}. {@code null} = pas de changement.</li>
+     * </ul>
+     */
     public record RestaurantStaffPatchDto(
-        String roleCode
+        String roleCode,
+        Boolean active
     ) {}
 
     // ─── MealService (créneau brunch/déjeuner/dîner) ─────────────────────────

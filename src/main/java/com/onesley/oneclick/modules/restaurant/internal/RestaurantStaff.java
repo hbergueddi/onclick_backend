@@ -76,6 +76,8 @@ public class RestaurantStaff extends TimestampedEntity {
     public Instant getDeletedAt() { return deletedAt; }
     public boolean isDeleted() { return deletedAt != null; }
     public void markDeleted() { this.deletedAt = Instant.now(); }
+    /** Réactive un staff précédemment désactivé (soft-delete → actif). */
+    public void reactivate() { this.deletedAt = null; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public RestaurantStaffDto toDto() {

@@ -2,6 +2,7 @@ package com.onesley.oneclick.modules.promotion.api;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -20,6 +21,8 @@ import java.util.UUID;
 public record OfferDto(
     UUID id, UUID restaurantId, String title, String description,
     Instant startsAt, Instant expiresAt, BigDecimal discountPct, BigDecimal discountAmount,
-    boolean enabled, String type, Integer pts, Instant createdAt
+    boolean enabled, String type, Integer pts,
+    boolean pushNotify, String image, List<String> segments,
+    Instant createdAt
 ) {
 }

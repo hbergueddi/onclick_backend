@@ -112,4 +112,60 @@ public class SystemController {
         q.setReason(dto.reason());
         return ResponseEntity.status(HttpStatus.CREATED).body(service.recordQuotaChange(q));
     }
+
+    // ─── V24 — Sprint K : documentation interne (DocumentExport) ────────────
+
+    @GetMapping("/documents/{id}")
+    @Operation(summary = "Document interne courant (admin)")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN')")
+    public AppDocumentDto findDocument(@PathVariable String id) {
+        return service.findDocument(id);
+    }
+
+    @PutMapping("/documents/{id}")
+    @Operation(summary = "Upsert du document interne courant (admin)")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN')")
+    public AppDocumentDto upsertDocument(@PathVariable String id, @RequestBody AppDocumentUpsertDto dto) {
+        return service.upsertDocument(id, dto);
+    }
+
+    @GetMapping("/documents/{id}/versions")
+    @Operation(summary = "Historique des révisions d'un document (admin)")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN')")
+    public List<DocumentVersionDto> findDocumentVersions(@PathVariable String id) {
+        return service.findDocumentVersions(id);
+    }
+
+    @PostMapping("/documents/{id}/versions")
+    @Operation(summary = "Archive une révision d'un document (admin)")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN')")
+    public ResponseEntity<DocumentVersionDto> addDocumentVersion(
+        @PathVariable String id, @RequestBody @jakarta.validation.Valid DocumentVersionCreateDto dto
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.addDocumentVersion(id, dto));
+    }
+
+    // ─── V24 — Sprint K : rôles personnalisés admin (GestionRoles) ──────────
+
+    @GetMapping("/custom-roles")
+    @Operation(summary = "Liste des rôles personnalisés (admin)")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN')")
+    public List<CustomRoleDto> findCustomRoles() {
+        return service.findCustomRoles();
+    }
+
+    @PostMapping("/custom-roles")
+    @Operation(summary = "Crée un rôle personnalisé (admin)")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN')")
+    public ResponseEntity<CustomRoleDto> createCustomRole(@RequestBody @jakarta.validation.Valid CustomRoleCreateDto dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.createCustomRole(dto));
+    }
+
+    @DeleteMapping("/custom-roles/{id}")
+    @Operation(summary = "Supprime un rôle personnalisé (admin)")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN')")
+    public ResponseEntity<Void> deleteCustomRole(@PathVariable UUID id) {
+        service.deleteCustomRole(id);
+        return ResponseEntity.noContent().build();
+    }
 }

@@ -9,9 +9,12 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 /** Offre / promotion par restaurant. */
@@ -38,6 +41,18 @@ public class Offer extends SoftDeletableAuditedEntity {
     @Positive
     @Column(name = "pts") private Integer pts;
 
+    // ─── V24 — Sprint K : champs exploités par l'admin (PromotionsLounge / OfferJet) ──
+
+    /** Déclenche une push notification de masse à la publication. */
+    @Column(name = "push_notify", nullable = false) private boolean pushNotify = false;
+
+    /** URL de la bannière promo. */
+    @Column(name = "image") private String image;
+
+    /** Segments clients ciblés (tous, fideles, nouveaux, inactifs, ruby, …). */
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Column(name = "segments", columnDefinition = "text[]") private String[] segments;
+
     protected Offer() {}
     public Offer(UUID id, UUID restaurantId, String title, Instant startsAt, Instant expiresAt) {
         this.id = id; this.restaurantId = restaurantId; this.title = title; this.startsAt = startsAt; this.expiresAt = expiresAt;
@@ -63,11 +78,19 @@ public class Offer extends SoftDeletableAuditedEntity {
     public void setType(String type) { this.type = type; }
     public Integer getPts() { return pts; }
     public void setPts(Integer pts) { this.pts = pts; }
+    public boolean isPushNotify() { return pushNotify; }
+    public void setPushNotify(boolean pushNotify) { this.pushNotify = pushNotify; }
+    public String getImage() { return image; }
+    public void setImage(String image) { this.image = image; }
+    public String[] getSegments() { return segments; }
+    public void setSegments(String[] segments) { this.segments = segments; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public OfferDto toDto() {
         return new OfferDto(id, restaurantId, title, description, startsAt, expiresAt,
-            discountPct, discountAmount, enabled, type, pts, getCreatedAt());
+            discountPct, discountAmount, enabled, type, pts,
+            pushNotify, image, segments == null ? List.of() : List.of(segments),
+            getCreatedAt());
     }
 
     @Override

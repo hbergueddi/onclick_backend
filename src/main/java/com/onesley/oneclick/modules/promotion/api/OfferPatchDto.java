@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Positive;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 
 /**
  * DTO de mise à jour partielle d'une offre.
@@ -35,6 +36,9 @@ public record OfferPatchDto(
     @DecimalMin("0.00") BigDecimal discountAmount,
     Boolean enabled,
     @Pattern(regexp = "^(promo|bonus|reco)$") String type,
-    @Positive Integer pts
+    @Positive Integer pts,
+    Boolean pushNotify,
+    String image,
+    List<String> segments
 ) {
 }

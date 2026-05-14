@@ -94,11 +94,15 @@ public class RestaurantSubResourceService {
 
     @Transactional
     public RestaurantStaffDto patchStaff(UUID id, RestaurantStaffPatchDto dto) {
+        // NB : pas de filtre isDeleted() ici — la réactivation cible un staff désactivé.
         RestaurantStaff staff = staffRepository.findById(id)
-            .filter(s -> !s.isDeleted())
             .orElseThrow(() -> new NotFoundException("RestaurantStaff", id));
         if (dto.roleCode() != null && !dto.roleCode().isBlank()) {
             staff.setRoleCode(dto.roleCode());
+        }
+        if (dto.active() != null) {
+            if (dto.active() && staff.isDeleted())        staff.reactivate();
+            else if (!dto.active() && !staff.isDeleted()) staff.markDeleted();
         }
         return staffRepository.save(staff).toDto();
     }

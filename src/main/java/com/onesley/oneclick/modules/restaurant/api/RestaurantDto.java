@@ -32,6 +32,9 @@ public record RestaurantDto(
     List<String> tags,
     Integer loungePts,
     String image,
+    String cuisine,
+    Integer maxStaff,
+    UUID groupId,
     Instant createdAt
 ) {
 }

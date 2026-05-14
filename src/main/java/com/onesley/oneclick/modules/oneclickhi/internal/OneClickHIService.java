@@ -55,6 +55,7 @@ public class OneClickHIService {
         i.setTotalAmount(dto.totalAmount() == null ? BigDecimal.ZERO : dto.totalAmount());
         i.setVatAmount(dto.vatAmount() == null ? BigDecimal.ZERO : dto.vatAmount());
         i.setPdfUrl(dto.pdfUrl());
+        i.setCredit3pct(dto.credit3pct());
         return OneClickHIInvoiceDto.from(invoiceRepo.save(i));
     }
 
@@ -64,6 +65,11 @@ public class OneClickHIService {
         if (dto.totalAmount() != null) i.setTotalAmount(dto.totalAmount());
         if (dto.vatAmount() != null) i.setVatAmount(dto.vatAmount());
         if (dto.pdfUrl() != null) i.setPdfUrl(dto.pdfUrl());
+        if (dto.credit3pct() != null) i.setCredit3pct(dto.credit3pct());
+        if (dto.validatedAt() != null) i.setValidatedAt(dto.validatedAt());
+        if (dto.validatedBy() != null) i.setValidatedBy(dto.validatedBy());
+        if (dto.sentAt() != null) i.setSentAt(dto.sentAt());
+        if (dto.pdfPath() != null) i.setPdfPath(dto.pdfPath());
         return OneClickHIInvoiceDto.from(invoiceRepo.save(i));
     }
 

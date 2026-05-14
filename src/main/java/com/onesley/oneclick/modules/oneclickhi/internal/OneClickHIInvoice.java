@@ -43,6 +43,23 @@ public class OneClickHIInvoice extends TimestampedEntity {
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
+    // ─── V24 — Sprint K : workflow validation / envoi facture ────────────────
+
+    @Column(name = "credit_3pct", precision = 12, scale = 2)
+    private BigDecimal credit3pct;
+
+    @Column(name = "validated_at")
+    private Instant validatedAt;
+
+    @Column(name = "validated_by")
+    private UUID validatedBy;
+
+    @Column(name = "sent_at")
+    private Instant sentAt;
+
+    @Column(name = "pdf_path")
+    private String pdfPath;
+
     public UUID getId() { return id; }
     public UUID getTenantId() { return tenantId; }
     public void setTenantId(UUID v) { this.tenantId = v; }
@@ -62,4 +79,14 @@ public class OneClickHIInvoice extends TimestampedEntity {
     public void setPdfUrl(String v) { this.pdfUrl = v; }
     public Instant getDeletedAt() { return deletedAt; }
     public void setDeletedAt(Instant v) { this.deletedAt = v; }
+    public BigDecimal getCredit3pct() { return credit3pct; }
+    public void setCredit3pct(BigDecimal v) { this.credit3pct = v; }
+    public Instant getValidatedAt() { return validatedAt; }
+    public void setValidatedAt(Instant v) { this.validatedAt = v; }
+    public UUID getValidatedBy() { return validatedBy; }
+    public void setValidatedBy(UUID v) { this.validatedBy = v; }
+    public Instant getSentAt() { return sentAt; }
+    public void setSentAt(Instant v) { this.sentAt = v; }
+    public String getPdfPath() { return pdfPath; }
+    public void setPdfPath(String v) { this.pdfPath = v; }
 }

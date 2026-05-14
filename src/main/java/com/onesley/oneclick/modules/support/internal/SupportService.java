@@ -67,6 +67,9 @@ public class SupportService {
         User openerRef = entityManager.getReference(User.class, dto.openedById());
         SupportTicket t = new SupportTicket(UUID.randomUUID(), openerRef, dto.category(), dto.subject());
         if (dto.priority() != null) t.setPriority(dto.priority());
+        if (dto.message() != null) t.setMessage(dto.message());
+        if (dto.restaurantId() != null) t.setRestaurantId(dto.restaurantId());
+        if (dto.status() != null) t.setStatus(dto.status());
         return ticketRepo.save(t).toDto();
     }
 
@@ -84,6 +87,7 @@ public class SupportService {
         if (dto.assignedToId() != null) {
             t.setAssignedTo(entityManager.getReference(User.class, dto.assignedToId()));
         }
+        if (dto.lastReply() != null)  t.setLastReply(dto.lastReply());
         return ticketRepo.save(t).toDto();
     }
 

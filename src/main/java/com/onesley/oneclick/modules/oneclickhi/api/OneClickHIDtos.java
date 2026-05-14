@@ -20,6 +20,11 @@ public final class OneClickHIDtos {
         BigDecimal vatAmount,
         String status,
         String pdfUrl,
+        BigDecimal credit3pct,
+        Instant validatedAt,
+        UUID validatedBy,
+        Instant sentAt,
+        String pdfPath,
         Instant createdAt
     ) {
         public static OneClickHIInvoiceDto from(OneClickHIInvoice i) {
@@ -27,7 +32,10 @@ public final class OneClickHIDtos {
                 i.getId(), i.getTenantId(), i.getRestaurantId(),
                 i.getInvoiceNumber(), i.getPeriodMonth(),
                 i.getTotalAmount(), i.getVatAmount(), i.getStatus(),
-                i.getPdfUrl(), i.getCreatedAt()
+                i.getPdfUrl(),
+                i.getCredit3pct(), i.getValidatedAt(), i.getValidatedBy(),
+                i.getSentAt(), i.getPdfPath(),
+                i.getCreatedAt()
             );
         }
     }
@@ -39,14 +47,20 @@ public final class OneClickHIDtos {
         String periodMonth,
         BigDecimal totalAmount,
         BigDecimal vatAmount,
-        String pdfUrl
+        String pdfUrl,
+        BigDecimal credit3pct
     ) {}
 
     public record OneClickHIInvoicePatchDto(
         String status,
         BigDecimal totalAmount,
         BigDecimal vatAmount,
-        String pdfUrl
+        String pdfUrl,
+        BigDecimal credit3pct,
+        Instant validatedAt,
+        UUID validatedBy,
+        Instant sentAt,
+        String pdfPath
     ) {}
 
     public record OneClickHICockpitDto(

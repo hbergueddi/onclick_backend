@@ -70,6 +70,9 @@ public class RestaurantCatalogService {
         r.setAddress(dto.address());
         r.setLatitude(dto.latitude());
         r.setLongitude(dto.longitude());
+        r.setCuisine(dto.cuisine());
+        r.setMaxStaff(dto.maxStaff());
+        r.setGroupId(dto.groupId());
         return repository.save(r).toDto();
     }
 
@@ -111,6 +114,9 @@ public class RestaurantCatalogService {
         if (dto.tags() != null)        r.setTags(dto.tags().toArray(new String[0]));
         if (dto.loungePts() != null)   r.setLoungePts(dto.loungePts());
         if (dto.image() != null)       r.setImage(dto.image());
+        if (dto.cuisine() != null)     r.setCuisine(dto.cuisine());
+        if (dto.maxStaff() != null)    r.setMaxStaff(dto.maxStaff());
+        if (dto.groupId() != null)     r.setGroupId(dto.groupId());
 
         return repository.save(r).toDto();
     }

@@ -58,6 +58,16 @@ public class SocialController {
 
     // ─── Referrals ───────────────────────────────────────────────────────────
 
+    @GetMapping("/referrals")
+    @Operation(summary = "Liste paginée de tous les parrainages (admin platform-wide)")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN')")
+    public org.springframework.data.domain.Page<ReferralDto> findAllReferrals(
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size
+    ) {
+        return service.findAllReferrals(page, size);
+    }
+
     @GetMapping("/referrals/by-referrer/{referrerId}")
     @PreAuthorize("isAuthenticated()")
     public List<ReferralDto> findByReferrer(@PathVariable UUID referrerId) {

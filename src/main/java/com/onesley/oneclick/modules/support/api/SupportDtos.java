@@ -30,19 +30,27 @@ public final class SupportDtos {
                             String lastReply,
                             boolean aiHandled,
                             String aiSummary,
+                            // V24 — Sprint K
+                            String message,
                             Instant createdAt, Instant updatedAt) {}
 
     public record TicketCreateDto(
         @NotNull UUID openedById,
         @NotBlank String category,
         @NotBlank String subject,
-        @Pattern(regexp = "^(low|normal|high|urgent)$") String priority
+        @Pattern(regexp = "^(low|normal|high|urgent)$") String priority,
+        // V24 — Sprint K : corps + rattachement resto + statut initial optionnels
+        String message,
+        UUID restaurantId,
+        @Pattern(regexp = "^(open|in_progress|resolved|closed)$") String status
     ) {}
 
     public record TicketUpdateDto(
         @Pattern(regexp = "^(open|in_progress|resolved|closed)$") String status,
         @Pattern(regexp = "^(low|normal|high|urgent)$") String priority,
-        UUID assignedToId
+        UUID assignedToId,
+        // V24 — Sprint K : dernière réponse staff
+        String lastReply
     ) {}
 
     // ─── Message ─────────────────────────────────────────────────────────────

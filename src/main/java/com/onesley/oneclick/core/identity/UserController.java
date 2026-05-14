@@ -102,6 +102,13 @@ public class UserController {
         return PageResponse.from(service.findByRole(role, tenantId, page, size));
     }
 
+    @GetMapping("/roles-distribution")
+    @Operation(summary = "Nombre d'utilisateurs par rôle — dashboard admin GestionRoles")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN')")
+    public java.util.List<com.onesley.oneclick.core.identity.api.RoleDistributionDto> rolesDistribution() {
+        return service.rolesDistribution();
+    }
+
     @PostMapping
     @Operation(summary = "Crée un user (signup ou création admin)")
     public ResponseEntity<UserDto> create(@Valid @RequestBody UserCreateDto dto) {

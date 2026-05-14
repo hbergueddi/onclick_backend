@@ -1,9 +1,11 @@
 package com.onesley.oneclick.modules.restaurant.api;
 
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Patch partiel d'un Restaurant — Sprint G.2.2 (PATCH /api/restaurants/{id}).
@@ -30,6 +32,9 @@ public record RestaurantPatchDto(
     @Pattern(regexp = "^(€|€€|€€€)$") String budget,
     List<String> tags,
     Integer loungePts,
-    String image
+    String image,
+    String cuisine,
+    @Min(0) Integer maxStaff,
+    UUID groupId
 ) {
 }
