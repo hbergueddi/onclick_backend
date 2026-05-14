@@ -41,11 +41,14 @@ public class ReservationCronJobs {
     @Transactional
     public void expireUnansweredReservations() {
         log.info("[cron] expireUnansweredReservations starting...");
+        // NB : la table `reservations` n'a ni `cancelled_at` ni `cancellation_reason`
+        // (schéma greenfield Spring — seul `status` trace l'annulation). On met
+        // `updated_at` à jour explicitement car l'UPDATE natif court-circuite le
+        // listener JPA @LastModifiedDate.
         int updated = em.createNativeQuery("""
                 UPDATE reservations
                 SET status = 'cancelled',
-                    cancelled_at = NOW(),
-                    cancellation_reason = 'auto:unanswered_h2'
+                    updated_at = NOW()
                 WHERE status = 'pending'
                   AND deleted_at IS NULL
                   AND reservation_at <= NOW() + INTERVAL '2 hours'
