@@ -202,6 +202,24 @@ public class UserService {
     }
 
     /**
+     * Batch lookup par liste d'UUIDs — anti N+1.
+     *
+     * <p>Remplace l'usage abusif de {@code POST /api/users/search} avec
+     * {@code op:"IN"} (SUPERADMIN-only) pour les hooks qui enrichissent une
+     * liste avec les profils correspondants (useFriendships, useTeamMembers,
+     * useSupportTickets). Exposé en {@code isAuthenticated()} — l'appelant
+     * doit déjà connaître les UUIDs (pas de leak global).
+     *
+     * <p>Conserve l'ordre d'entrée (utile pour les UIs qui mappent par index).
+     */
+    public java.util.List<UserDto> findAllByIds(java.util.Collection<UUID> ids) {
+        if (ids == null || ids.isEmpty()) return java.util.List.of();
+        return repository.findAllByIds(ids).stream()
+            .map(User::toDto)
+            .toList();
+    }
+
+    /**
      * Liste paginée des users d'un rôle (code), avec filtrage tenant optionnel.
      *
      * <p>Utilisé par le picker frontend (Login client/staff) pour récupérer la

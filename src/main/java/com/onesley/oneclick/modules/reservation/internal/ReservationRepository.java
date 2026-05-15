@@ -85,6 +85,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID>,
           AND (CAST(:clientId     AS uuid) IS NULL OR r.client_id     = CAST(:clientId     AS uuid))
           AND (CAST(:restaurantId AS uuid) IS NULL OR r.restaurant_id = CAST(:restaurantId AS uuid))
           AND (:status IS NULL OR r.status = :status)
+        ORDER BY r.reservation_at DESC
         """,
         countQuery = """
         SELECT COUNT(*)

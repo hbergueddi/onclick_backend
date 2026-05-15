@@ -52,11 +52,13 @@ public class ReservationService {
     public Page<ReservationDto> findAll(UUID clientId, UUID restaurantId, String status,
                                         int page, int size) {
         // Native query joints (anti N+1) — voir ReservationRepository.findAllWithJoins.
-        // Tri figé par reservation_at DESC : aligné avec le tri historique
-        // (Specification précédente) et avec l'index idx_reservations_at.
+        // Tri figé `ORDER BY r.reservation_at DESC` dans la query native (NE PAS
+        // passer de Sort dans le PageRequest : Hibernate l'injecte mal sur les
+        // native queries — concatène `, r.reservation_at desc` après le WHERE,
+        // sans le keyword ORDER BY → syntax error PostgreSQL).
         return repository.findAllWithJoins(
                 clientId, restaurantId, status,
-                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "reservation_at")))
+                PageRequest.of(page, size))
             .map(ReservationService::toDto);
     }
 

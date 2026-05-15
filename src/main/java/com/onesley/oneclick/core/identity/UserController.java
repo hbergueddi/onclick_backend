@@ -94,6 +94,18 @@ public class UserController {
         return service.findByReferralCode(referralCode);
     }
 
+    @PostMapping("/by-ids")
+    @Operation(
+        summary = "Batch lookup par liste d'UUIDs — anti N+1",
+        description = "Remplace POST /search avec op:IN pour les hooks d'enrichissement "
+                    + "(useFriendships, useTeamMembers, useSupportTickets). Exposé en "
+                    + "isAuthenticated() — l'appelant doit déjà connaître les UUIDs."
+    )
+    @PreAuthorize("isAuthenticated()")
+    public java.util.List<UserDto> findByIds(@RequestBody java.util.List<java.util.UUID> ids) {
+        return service.findAllByIds(ids);
+    }
+
     @GetMapping("/by-role")
     @Operation(
         summary = "Liste paginée des users d'un rôle — SUPERADMIN ou STAFF (picker Login)",
