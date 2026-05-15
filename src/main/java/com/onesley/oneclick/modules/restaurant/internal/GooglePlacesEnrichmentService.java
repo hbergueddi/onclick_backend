@@ -40,10 +40,20 @@ public class GooglePlacesEnrichmentService {
     private String apiKey;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final RestClient restClient = RestClient.builder().build();
+    /**
+     * RestClient construit depuis le {@code Builder} Spring auto-configuré :
+     * il inclut {@code MappingJackson2HttpMessageConverter} avec l'ObjectMapper
+     * global → désérialisation native JsonNode OK. Un {@code RestClient.builder()}
+     * standalone n'a aucun converter → bug "Type definition error: JsonNode".
+     */
+    private final RestClient restClient;
 
     @PersistenceContext
     private EntityManager em;
+
+    public GooglePlacesEnrichmentService(RestClient.Builder restClientBuilder) {
+        this.restClient = restClientBuilder.build();
+    }
 
     /**
      * Enrichit un restaurant à partir de Google Places.
