@@ -85,16 +85,22 @@ public class GooglePlacesEnrichmentService {
 
         try {
             // 1. Text search → place_id
+            //
+            // NB : on récupère le body en String puis on parse avec l'ObjectMapper
+            // local — sans dépendre des HttpMessageConverters du RestClient (qui
+            // déclenchent "Type definition error: JsonNode" en Spring Boot 4
+            // quand le Builder n'est pas explicitement configuré avec Jackson).
             String query = name + (city != null && !city.isBlank() ? " " + city + " Maroc" : "");
-            JsonNode searchResp = restClient.post()
+            String searchBody = restClient.post()
                 .uri(PLACES_TEXT_SEARCH)
                 .header("X-Goog-Api-Key", apiKey)
                 .header("X-Goog-FieldMask", "places.id,places.displayName")
                 .header("Content-Type", "application/json")
-                .body(Map.of("textQuery", query, "languageCode", "fr"))
+                .body(objectMapper.writeValueAsString(Map.of("textQuery", query, "languageCode", "fr")))
                 .retrieve()
-                .body(JsonNode.class);
+                .body(String.class);
 
+            JsonNode searchResp = searchBody == null ? null : objectMapper.readTree(searchBody);
             if (searchResp == null || !searchResp.has("places") || searchResp.get("places").isEmpty()) {
                 log.info("[places] no match for {}", query);
                 return Map.of("enriched", false, "skipped", true, "reason", "no_match");
@@ -103,15 +109,16 @@ public class GooglePlacesEnrichmentService {
             String placeId = searchResp.get("places").get(0).get("id").asText();
 
             // 2. Place details → hours, rating, GPS, phone, address
-            JsonNode details = restClient.get()
+            String detailsBody = restClient.get()
                 .uri(PLACES_DETAILS + placeId)
                 .header("X-Goog-Api-Key", apiKey)
                 .header("X-Goog-FieldMask",
                     "id,displayName,formattedAddress,nationalPhoneNumber,location," +
                     "rating,userRatingCount,regularOpeningHours,websiteUri,types")
                 .retrieve()
-                .body(JsonNode.class);
+                .body(String.class);
 
+            JsonNode details = detailsBody == null ? null : objectMapper.readTree(detailsBody);
             if (details == null) {
                 return Map.of("enriched", false, "skipped", true, "reason", "no_details");
             }
