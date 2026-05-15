@@ -178,11 +178,26 @@ public class UserService {
     //  Lookups
     // ───────────────────────────────────────────────────────────────────────
 
-    /** Lookup par téléphone — admins uniquement (cf {@link com.onesley.oneclick.core.identity.UserController}). */
+    /** Lookup par téléphone — utilisé par les flows d'invitation d'amis (Pocket). */
     public UserDto findByPhone(String phone) {
         User user = repository.findByPhone(phone)
             .filter(u -> u.getDeletedAt() == null)
             .orElseThrow(() -> new NotFoundException("User by phone: " + phone));
+        return user.toDto();
+    }
+
+    /**
+     * Lookup par code de parrainage — résolution d'un code ami (OC-XXXXXX).
+     *
+     * <p>Utilisé par useCareChat/useAIAssistant côté Pocket pour résoudre un
+     * code parrain saisi par l'utilisateur en UserDto cible (pour créer la
+     * friendship). Endpoint exposé en {@code isAuthenticated()} — pas de leak
+     * de données sensibles : seuls les champs publics du UserDto sont retournés.
+     */
+    public UserDto findByReferralCode(String referralCode) {
+        User user = repository.findByReferralCode(referralCode)
+            .filter(u -> u.getDeletedAt() == null)
+            .orElseThrow(() -> new NotFoundException("User by referralCode: " + referralCode));
         return user.toDto();
     }
 

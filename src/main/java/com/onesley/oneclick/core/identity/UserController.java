@@ -81,10 +81,17 @@ public class UserController {
     }
 
     @GetMapping("/by-phone")
-    @Operation(summary = "Lookup user par téléphone — SUPERADMIN uniquement")
-    @PreAuthorize("hasRole('SUPERADMIN')")
+    @Operation(summary = "Lookup user par téléphone — flow invitation ami (Pocket)")
+    @PreAuthorize("isAuthenticated()")
     public UserDto findByPhone(@RequestParam String phone) {
         return service.findByPhone(phone);
+    }
+
+    @GetMapping("/by-referral-code")
+    @Operation(summary = "Lookup user par code parrain (OC-XXXXXX) — résolution code ami Pocket")
+    @PreAuthorize("isAuthenticated()")
+    public UserDto findByReferralCode(@RequestParam("code") String referralCode) {
+        return service.findByReferralCode(referralCode);
     }
 
     @GetMapping("/by-role")

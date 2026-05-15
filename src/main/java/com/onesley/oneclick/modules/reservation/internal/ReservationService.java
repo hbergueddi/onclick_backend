@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import com.onesley.oneclick.modules.reservation.api.ReservationCreateDto;
@@ -93,8 +94,69 @@ public class ReservationService {
         Reservation r = repository.findById(id)
             .filter(x -> x.getDeletedAt() == null)
             .orElseThrow(() -> new NotFoundException("Reservation", id));
-        SecurityHelper.requireOwnerOrAdmin(r.getClientId());
+        requireReservationAccess(r);
         return r.toDto();
+    }
+
+    /**
+     * Lookup batch : retourne uniquement les résas accessibles à l'appelant.
+     * Élimine le N+1 frontend ({@code useReservationGuests} + {@code useReservations})
+     * qui appelait {@link #findById} pour chaque invitation. Les rows non
+     * accessibles sont silencieusement omises (pas de 403 partiel).
+     */
+    public List<ReservationDto> findAccessibleByIds(List<UUID> ids) {
+        if (ids == null || ids.isEmpty()) return List.of();
+        return repository.findAllById(ids).stream()
+            .filter(r -> r.getDeletedAt() == null)
+            .filter(this::canAccess)
+            .map(Reservation::toDto)
+            .toList();
+    }
+
+    /** Variante non-throwing de {@link #requireReservationAccess(Reservation)} — pour batch. */
+    private boolean canAccess(Reservation r) {
+        UUID current = SecurityHelper.currentUserId();
+        if (current == null) return false;
+        if (current.equals(r.getClientId())) return true;
+        if (SecurityHelper.isAdmin()) return true;
+        Number staffCount = (Number) entityManager.createNativeQuery("""
+            SELECT COUNT(*) FROM restaurant_staffs
+             WHERE user_id = :uid AND restaurant_id = :rid AND deleted_at IS NULL
+            """)
+            .setParameter("uid", current)
+            .setParameter("rid", r.getRestaurantId())
+            .getSingleResult();
+        if (staffCount.intValue() > 0) return true;
+        Number guestCount = (Number) entityManager.createNativeQuery("""
+            SELECT COUNT(*) FROM reservation_guests
+             WHERE reservation_id = :resaId AND guest_user_id = :uid
+            """)
+            .setParameter("resaId", r.getId())
+            .setParameter("uid", current)
+            .getSingleResult();
+        return guestCount.intValue() > 0;
+    }
+
+    /**
+     * Politique d'accès à une réservation — 4 rôles légitimes :
+     * <ul>
+     *   <li>Le <b>client</b> de la résa (l'a créée)</li>
+     *   <li>Un <b>admin</b> (SUPERADMIN / GROUP_ADMIN)</li>
+     *   <li>Le <b>staff actif</b> du restaurant où la résa a lieu (workflow ProDesk)</li>
+     *   <li>Un <b>guest invité</b> à la résa (workflow invitations Pocket)</li>
+     * </ul>
+     * <p>Variante throwing utilisée par {@link #findById} (renvoie 403 si interdit).
+     * Pour la variante non-throwing utilisée par le batch, voir {@link #canAccess}.
+     */
+    private void requireReservationAccess(Reservation r) {
+        if (SecurityHelper.currentUserId() == null) {
+            throw new com.onesley.oneclick.exception.ForbiddenException("Authentification requise");
+        }
+        if (!canAccess(r)) {
+            throw new com.onesley.oneclick.exception.ForbiddenException(
+                "Accès interdit : vous n'êtes ni le client, ni un guest, ni staff de ce restaurant"
+            );
+        }
     }
 
     @Transactional

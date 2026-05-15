@@ -29,6 +29,9 @@ public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificat
     /** Lookup par téléphone (login OTP, recherche client par phone). */
     Optional<User> findByPhone(String phone);
 
+    /** Lookup par code de parrainage — résolution code ami (useCareChat / useAIAssistant). */
+    Optional<User> findByReferralCode(String referralCode);
+
     /** Existence rapide par email (signup uniqueness check). */
     boolean existsByEmailIgnoreCase(String email);
 

@@ -77,6 +77,18 @@ public class ReservationController {
         return service.findById(id);
     }
 
+    @PostMapping("/batch")
+    @Operation(
+        summary = "Lookup multiple réservations par UUIDs — anti N+1 (Pocket invitations)",
+        description = "Retourne UNIQUEMENT les résas accessibles à l'appelant (client/admin/staff/guest). "
+                    + "Les UUIDs sans droit d'accès ou inexistants sont simplement omis du résultat — "
+                    + "pas de 403 en cas d'accès partiel."
+    )
+    @PreAuthorize("isAuthenticated()")
+    public List<ReservationDto> findByIds(@RequestBody List<UUID> ids) {
+        return service.findAccessibleByIds(ids);
+    }
+
     @PostMapping
     @Operation(summary = "Crée une réservation (status initial: pending)")
     @PreAuthorize("isAuthenticated()")
