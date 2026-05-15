@@ -52,6 +52,15 @@ spring:
 server:
   port: 8083
 
+# ─── Google Places API — clé dev locale ────────────────────────────────
+# Surcharge possible via env var GOOGLE_PLACES_API_KEY (recommandé en CI/prod).
+# Clé locale ci-dessous : projet places-491117, contact@onesley.com (cf CLAUDE.md).
+# Utilisée par GooglePlacesEnrichmentService pour POST /api/restaurants/{id}/enrich-google-places.
+app:
+  google:
+    places:
+      api-key: ${GOOGLE_PLACES_API_KEY:AIzaSyDazJrl-4y4vceQw9XhRuKQgMe4eDtBiM8}
+
 logging:
   level:
     com.onesley.oneclick: DEBUG
