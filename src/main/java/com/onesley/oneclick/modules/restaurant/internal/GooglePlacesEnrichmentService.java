@@ -140,7 +140,7 @@ public class GooglePlacesEnrichmentService {
                    SET google_place_id = :placeId,
                        google_rating = COALESCE(:rating, google_rating),
                        google_reviews_count = COALESCE(:reviews, google_reviews_count),
-                       opening_hours = COALESCE(:hours::jsonb, opening_hours),
+                       opening_hours = COALESCE(CAST(:hours AS jsonb), opening_hours),
                        website_url = COALESCE(:website, website_url),
                        latitude = COALESCE(:lat, latitude),
                        longitude = COALESCE(:lng, longitude),
