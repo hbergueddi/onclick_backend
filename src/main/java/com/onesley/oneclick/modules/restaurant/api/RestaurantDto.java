@@ -35,6 +35,14 @@ public record RestaurantDto(
     String cuisine,
     Integer maxStaff,
     UUID groupId,
+    // ─── Google Places enrichment (cols V23, service GooglePlacesEnrichmentService) ──
+    String googlePlaceId,
+    BigDecimal googleRating,
+    Integer googleReviewsCount,
+    String websiteUrl,
+    /** JSON brut de regularOpeningHours Google — frontend désérialise. */
+    String openingHours,
+    Instant googleUpdatedAt,
     Instant createdAt
 ) {
 }

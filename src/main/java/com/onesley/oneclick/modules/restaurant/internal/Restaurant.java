@@ -103,6 +103,38 @@ public class Restaurant extends SoftDeletableAuditedEntity {
     @Column(name = "group_id")
     private UUID groupId;
 
+    // ─── Google Places enrichment (cols V23 + service GooglePlacesEnrichmentService) ──
+    // Avant ce mapping JPA : colonnes peuplées en native SQL mais invisibles dans
+    // les responses /api/restaurants → frontend OneClickCompass affichait des
+    // ratings/hours toujours null malgré DB enrichie à 99.9%.
+
+    /** Google Place ID (identifiant unique Google). */
+    @Column(name = "google_place_id")
+    private String googlePlaceId;
+
+    /** Note Google (0.0-5.0). */
+    @Column(name = "google_rating", precision = 2, scale = 1)
+    private BigDecimal googleRating;
+
+    /** Nombre de reviews Google. */
+    @Column(name = "google_reviews_count")
+    private Integer googleReviewsCount;
+
+    /** Site web officiel récupéré via Google Places. */
+    @Column(name = "website_url")
+    private String websiteUrl;
+
+    /**
+     * Horaires d'ouverture (JSONB structure regularOpeningHours Google).
+     * Mappé en String brut — le frontend désérialise.
+     */
+    @Column(name = "opening_hours", columnDefinition = "jsonb")
+    private String openingHours;
+
+    /** Timestamp dernier appel Google Places (utilisé pour skip enrichments idempotents). */
+    @Column(name = "google_updated_at")
+    private java.time.Instant googleUpdatedAt;
+
     protected Restaurant() {
         // JPA
     }
@@ -147,13 +179,21 @@ public class Restaurant extends SoftDeletableAuditedEntity {
     public void setMaxStaff(Integer maxStaff) { this.maxStaff = maxStaff; }
     public UUID getGroupId() { return groupId; }
     public void setGroupId(UUID groupId) { this.groupId = groupId; }
+    public String getGooglePlaceId() { return googlePlaceId; }
+    public BigDecimal getGoogleRating() { return googleRating; }
+    public Integer getGoogleReviewsCount() { return googleReviewsCount; }
+    public String getWebsiteUrl() { return websiteUrl; }
+    public String getOpeningHours() { return openingHours; }
+    public java.time.Instant getGoogleUpdatedAt() { return googleUpdatedAt; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public RestaurantDto toDto() {
         return new RestaurantDto(id, tenantId, name, description, phone, address, city,
             latitude, longitude, status, budget,
             tags == null ? java.util.List.of() : java.util.List.of(tags),
-            loungePts == null ? 0 : loungePts, image, cuisine, maxStaff, groupId, getCreatedAt());
+            loungePts == null ? 0 : loungePts, image, cuisine, maxStaff, groupId,
+            googlePlaceId, googleRating, googleReviewsCount, websiteUrl, openingHours, googleUpdatedAt,
+            getCreatedAt());
     }
 
     @Override
