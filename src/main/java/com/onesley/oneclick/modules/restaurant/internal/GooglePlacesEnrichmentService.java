@@ -15,6 +15,8 @@ import org.springframework.web.client.RestClient;
 import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -35,6 +37,88 @@ public class GooglePlacesEnrichmentService {
     private static final Logger log = LoggerFactory.getLogger(GooglePlacesEnrichmentService.class);
     private static final String PLACES_TEXT_SEARCH = "https://places.googleapis.com/v1/places:searchText";
     private static final String PLACES_DETAILS = "https://places.googleapis.com/v1/places/";
+
+    /**
+     * Mapping Google Places `types[]` → cuisine FR éditoriale.
+     *
+     * <p>Pattern senior : table read-only en mémoire (pas de table DB pour ça, c'est
+     * un référentiel statique éditorial — ajouter une table = over-engineering YAGNI).
+     * Si Google ajoute un type, on le mappe ici (1 ligne). Ordre = priorité quand
+     * un resto a plusieurs types (le 1er match gagne).
+     */
+    private static final Map<String, String> TYPE_TO_CUISINE = new LinkedHashMap<>();
+    static {
+        TYPE_TO_CUISINE.put("moroccan_restaurant", "Marocaine");
+        TYPE_TO_CUISINE.put("french_restaurant", "Française");
+        TYPE_TO_CUISINE.put("italian_restaurant", "Italienne");
+        TYPE_TO_CUISINE.put("japanese_restaurant", "Japonaise");
+        TYPE_TO_CUISINE.put("chinese_restaurant", "Chinoise");
+        TYPE_TO_CUISINE.put("indian_restaurant", "Indienne");
+        TYPE_TO_CUISINE.put("thai_restaurant", "Thaïlandaise");
+        TYPE_TO_CUISINE.put("lebanese_restaurant", "Libanaise");
+        TYPE_TO_CUISINE.put("mediterranean_restaurant", "Méditerranéenne");
+        TYPE_TO_CUISINE.put("spanish_restaurant", "Espagnole");
+        TYPE_TO_CUISINE.put("greek_restaurant", "Grecque");
+        TYPE_TO_CUISINE.put("turkish_restaurant", "Turque");
+        TYPE_TO_CUISINE.put("american_restaurant", "Américaine");
+        TYPE_TO_CUISINE.put("mexican_restaurant", "Mexicaine");
+        TYPE_TO_CUISINE.put("vietnamese_restaurant", "Vietnamienne");
+        TYPE_TO_CUISINE.put("korean_restaurant", "Coréenne");
+        TYPE_TO_CUISINE.put("brazilian_restaurant", "Brésilienne");
+        TYPE_TO_CUISINE.put("seafood_restaurant", "Poissons");
+        TYPE_TO_CUISINE.put("sushi_restaurant", "Sushi");
+        TYPE_TO_CUISINE.put("steak_house", "Grillades");
+        TYPE_TO_CUISINE.put("pizza_restaurant", "Pizzeria");
+        TYPE_TO_CUISINE.put("hamburger_restaurant", "Burger");
+        TYPE_TO_CUISINE.put("fast_food_restaurant", "Fast Food");
+        TYPE_TO_CUISINE.put("vegan_restaurant", "Végane");
+        TYPE_TO_CUISINE.put("vegetarian_restaurant", "Végétarienne");
+        TYPE_TO_CUISINE.put("breakfast_restaurant", "Petit-déj");
+        TYPE_TO_CUISINE.put("brunch_restaurant", "Brunch");
+        TYPE_TO_CUISINE.put("bakery", "Boulangerie");
+        TYPE_TO_CUISINE.put("cafe", "Café");
+        TYPE_TO_CUISINE.put("coffee_shop", "Café");
+        TYPE_TO_CUISINE.put("bar", "Bar");
+        TYPE_TO_CUISINE.put("ice_cream_shop", "Glacier");
+        TYPE_TO_CUISINE.put("dessert_shop", "Desserts");
+        TYPE_TO_CUISINE.put("restaurant", "Restaurant"); // fallback générique
+    }
+
+    /** Google `priceLevel` enum → notation €/€€/€€€/€€€€ (UX standard). */
+    private static String mapPriceLevel(String priceLevel) {
+        if (priceLevel == null) return null;
+        return switch (priceLevel) {
+            case "PRICE_LEVEL_FREE", "PRICE_LEVEL_INEXPENSIVE" -> "€";
+            case "PRICE_LEVEL_MODERATE" -> "€€";
+            case "PRICE_LEVEL_EXPENSIVE" -> "€€€";
+            case "PRICE_LEVEL_VERY_EXPENSIVE" -> "€€€€";
+            default -> null;
+        };
+    }
+
+    /**
+     * Réduit le tableau `types[]` Google à la cuisine principale FR + une liste
+     * de tags secondaires (max 3, sans la cuisine principale).
+     *
+     * @return [cuisine, tags[]]
+     */
+    private static Object[] extractCuisineAndTags(JsonNode types) {
+        if (types == null || !types.isArray() || types.isEmpty()) return new Object[]{null, new String[0]};
+        String cuisine = null;
+        List<String> tagsFR = new ArrayList<>();
+        // Ordre TYPE_TO_CUISINE = priorité éditoriale (Marocaine > Française > Italienne > … > Restaurant générique)
+        outer:
+        for (Map.Entry<String, String> entry : TYPE_TO_CUISINE.entrySet()) {
+            for (JsonNode t : types) {
+                if (entry.getKey().equals(t.asText())) {
+                    if (cuisine == null) cuisine = entry.getValue();
+                    else if (tagsFR.size() < 3 && !tagsFR.contains(entry.getValue())) tagsFR.add(entry.getValue());
+                    continue outer;
+                }
+            }
+        }
+        return new Object[]{cuisine, tagsFR.toArray(new String[0])};
+    }
 
     @Value("${app.google.places.api-key:}")
     private String apiKey;
@@ -64,7 +148,7 @@ public class GooglePlacesEnrichmentService {
      */
     public Map<String, Object> enrichRestaurant(UUID restaurantId, boolean force) {
         Object[] resto = (Object[]) em.createNativeQuery("""
-            SELECT id, name, city, google_updated_at
+            SELECT id, name, city, google_updated_at, google_place_id
               FROM restaurants
              WHERE id = :id AND deleted_at IS NULL
             """).setParameter("id", restaurantId).getSingleResult();
@@ -72,6 +156,7 @@ public class GooglePlacesEnrichmentService {
         String name = (String) resto[1];
         String city = (String) resto[2];
         Object lastUpdate = resto[3];
+        String existingPlaceId = (String) resto[4];
 
         if (!force && lastUpdate != null) {
             log.info("[places] skip {} — already enriched at {}", name, lastUpdate);
@@ -86,35 +171,49 @@ public class GooglePlacesEnrichmentService {
         try {
             // 1. Text search → place_id
             //
+            // OPTIMISATION : skip si on a déjà google_place_id en DB (cas backfill
+            // --force sur restos déjà matchés). Économise ~50% du coût Google
+            // (searchText = ~$0.032/call vs details = ~$0.017/call). En +force on
+            // re-fetch UNIQUEMENT les details (data fraîches) sans refaire le match.
+            //
             // NB : on récupère le body en String puis on parse avec l'ObjectMapper
             // local — sans dépendre des HttpMessageConverters du RestClient (qui
             // déclenchent "Type definition error: JsonNode" en Spring Boot 4
             // quand le Builder n'est pas explicitement configuré avec Jackson).
-            String query = name + (city != null && !city.isBlank() ? " " + city + " Maroc" : "");
-            String searchBody = restClient.post()
-                .uri(PLACES_TEXT_SEARCH)
-                .header("X-Goog-Api-Key", apiKey)
-                .header("X-Goog-FieldMask", "places.id,places.displayName")
-                .header("Content-Type", "application/json")
-                .body(objectMapper.writeValueAsString(Map.of("textQuery", query, "languageCode", "fr")))
-                .retrieve()
-                .body(String.class);
+            String placeId;
+            if (existingPlaceId != null && !existingPlaceId.isBlank()) {
+                placeId = existingPlaceId;
+                log.info("[places] reuse existing place_id for {} ({})", name, placeId);
+            } else {
+                String query = name + (city != null && !city.isBlank() ? " " + city + " Maroc" : "");
+                String searchBody = restClient.post()
+                    .uri(PLACES_TEXT_SEARCH)
+                    .header("X-Goog-Api-Key", apiKey)
+                    .header("X-Goog-FieldMask", "places.id,places.displayName")
+                    .header("Content-Type", "application/json")
+                    .body(objectMapper.writeValueAsString(Map.of("textQuery", query, "languageCode", "fr")))
+                    .retrieve()
+                    .body(String.class);
 
-            JsonNode searchResp = searchBody == null ? null : objectMapper.readTree(searchBody);
-            if (searchResp == null || !searchResp.has("places") || searchResp.get("places").isEmpty()) {
-                log.info("[places] no match for {}", query);
-                return Map.of("enriched", false, "skipped", true, "reason", "no_match");
+                JsonNode searchResp = searchBody == null ? null : objectMapper.readTree(searchBody);
+                if (searchResp == null || !searchResp.has("places") || searchResp.get("places").isEmpty()) {
+                    log.info("[places] no match for {}", query);
+                    return Map.of("enriched", false, "skipped", true, "reason", "no_match");
+                }
+
+                placeId = searchResp.get("places").get(0).get("id").asText();
             }
 
-            String placeId = searchResp.get("places").get(0).get("id").asText();
-
-            // 2. Place details → hours, rating, GPS, phone, address
+            // 2. Place details → hours, rating, GPS, phone, address, cuisine, budget
+            //
+            // FieldMask : `priceLevel` ajouté (mapping budget €/€€/€€€/€€€€), `types`
+            // déjà présent — extraction cuisine FR + tags via TYPE_TO_CUISINE.
             String detailsBody = restClient.get()
                 .uri(PLACES_DETAILS + placeId)
                 .header("X-Goog-Api-Key", apiKey)
                 .header("X-Goog-FieldMask",
                     "id,displayName,formattedAddress,nationalPhoneNumber,location," +
-                    "rating,userRatingCount,regularOpeningHours,websiteUri,types")
+                    "rating,userRatingCount,regularOpeningHours,websiteUri,types,priceLevel")
                 .retrieve()
                 .body(String.class);
 
@@ -135,6 +234,14 @@ public class GooglePlacesEnrichmentService {
                 ? details.get("regularOpeningHours").toString()
                 : null;
 
+            // Cuisine + tags depuis `types[]`, budget depuis `priceLevel`. COALESCE en SQL
+            // pour ne pas écraser une valeur éditoriale déjà saisie manuellement par un
+            // owner (les chips PCC custom par ex.).
+            Object[] cuisineAndTags = extractCuisineAndTags(details.get("types"));
+            String cuisine = (String) cuisineAndTags[0];
+            String[] tags = (String[]) cuisineAndTags[1];
+            String budget = mapPriceLevel(details.has("priceLevel") ? details.get("priceLevel").asText() : null);
+
             em.createNativeQuery("""
                 UPDATE restaurants
                    SET google_place_id = :placeId,
@@ -144,6 +251,9 @@ public class GooglePlacesEnrichmentService {
                        website_url = COALESCE(:website, website_url),
                        latitude = COALESCE(:lat, latitude),
                        longitude = COALESCE(:lng, longitude),
+                       cuisine = COALESCE(cuisine, :cuisine),
+                       budget = COALESCE(budget, :budget),
+                       tags = COALESCE(NULLIF(tags, '{}'), :tags),
                        google_updated_at = NOW(),
                        updated_at = NOW()
                  WHERE id = :id
@@ -155,17 +265,22 @@ public class GooglePlacesEnrichmentService {
                 .setParameter("website", website)
                 .setParameter("lat", lat)
                 .setParameter("lng", lng)
+                .setParameter("cuisine", cuisine)
+                .setParameter("budget", budget)
+                .setParameter("tags", tags)
                 .setParameter("id", restaurantId)
                 .executeUpdate();
 
-            log.info("[places] enriched {} place={} rating={} reviews={}",
-                name, placeId, rating, reviewsCount);
+            log.info("[places] enriched {} place={} rating={} reviews={} cuisine={} budget={} tags={}",
+                name, placeId, rating, reviewsCount, cuisine, budget, tags.length);
             return Map.of(
                 "enriched", true,
                 "skipped", false,
                 "placeId", placeId,
                 "rating", rating != null ? rating : "n/a",
-                "reviewsCount", reviewsCount != null ? reviewsCount : 0
+                "reviewsCount", reviewsCount != null ? reviewsCount : 0,
+                "cuisine", cuisine != null ? cuisine : "n/a",
+                "budget", budget != null ? budget : "n/a"
             );
 
         } catch (Exception e) {
