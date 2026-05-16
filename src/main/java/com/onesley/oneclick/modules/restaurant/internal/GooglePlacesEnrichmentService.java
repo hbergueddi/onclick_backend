@@ -96,9 +96,22 @@ public class GooglePlacesEnrichmentService {
         };
     }
 
+    /** Tag/cuisine générique Google sans valeur éditoriale — exclu des tags + cuisine si rien d'autre. */
+    private static final String GENERIC_TYPE = "restaurant";
+    private static final String GENERIC_LABEL_FR = "Restaurant";
+
     /**
      * Réduit le tableau `types[]` Google à la cuisine principale FR + une liste
      * de tags secondaires (max 3, sans la cuisine principale).
+     *
+     * <p>Règles métier :
+     * <ul>
+     *   <li><b>Type {@code "restaurant"} générique</b> : JAMAIS ajouté aux tags
+     *       (doublon noise — "Restaurant" comme tag sur un resto = aucun signal).</li>
+     *   <li><b>Cuisine</b> : si seul match = {@code "restaurant"} générique, retourne
+     *       {@code null} → le frontend masque la ligne (cf cosmetic fix Compass).
+     *       Évite d'écrire "Restaurant" comme cuisine dans la DB (revu V25).</li>
+     * </ul>
      *
      * @return [cuisine, tags[]]
      */
@@ -106,17 +119,25 @@ public class GooglePlacesEnrichmentService {
         if (types == null || !types.isArray() || types.isEmpty()) return new Object[]{null, new String[0]};
         String cuisine = null;
         List<String> tagsFR = new ArrayList<>();
-        // Ordre TYPE_TO_CUISINE = priorité éditoriale (Marocaine > Française > Italienne > … > Restaurant générique)
+        // Ordre TYPE_TO_CUISINE = priorité éditoriale (Marocaine > Française > … > Restaurant générique)
         outer:
         for (Map.Entry<String, String> entry : TYPE_TO_CUISINE.entrySet()) {
             for (JsonNode t : types) {
                 if (entry.getKey().equals(t.asText())) {
-                    if (cuisine == null) cuisine = entry.getValue();
-                    else if (tagsFR.size() < 3 && !tagsFR.contains(entry.getValue())) tagsFR.add(entry.getValue());
+                    if (cuisine == null) {
+                        cuisine = entry.getValue();
+                    } else if (tagsFR.size() < 3
+                            && !tagsFR.contains(entry.getValue())
+                            && !GENERIC_LABEL_FR.equals(entry.getValue())) {
+                        // Ne jamais ajouter "Restaurant" aux tags — noise pur.
+                        tagsFR.add(entry.getValue());
+                    }
                     continue outer;
                 }
             }
         }
+        // Cuisine = "Restaurant" générique seul ⇒ NULL (front masque).
+        if (GENERIC_LABEL_FR.equals(cuisine)) cuisine = null;
         return new Object[]{cuisine, tagsFR.toArray(new String[0])};
     }
 
