@@ -90,12 +90,14 @@ WHERE="status='active' AND deleted_at IS NULL"
 [[ -z "$FORCE" ]] && WHERE="$WHERE AND google_place_id IS NULL"
 [[ -n "$CITY_FILTER" ]] && WHERE="$WHERE AND city=\$\$$CITY_FILTER\$\$"
 
-mapfile -t RESTAURANTS < <(PGPASSWORD="$PG_PASSWORD" psql -h "$PG_HOST" -U "$PG_USER" -d "$PG_DB" -At -F'|' \
-  -c "SELECT id, name, city FROM restaurants WHERE $WHERE ORDER BY city, name;")
-TOTAL=${#RESTAURANTS[@]}
+RESTAURANTS_FILE=$(mktemp)
+PGPASSWORD="$PG_PASSWORD" psql -h "$PG_HOST" -U "$PG_USER" -d "$PG_DB" -At -F'|' \
+  -c "SELECT id, name, city FROM restaurants WHERE $WHERE ORDER BY city, name;" > "$RESTAURANTS_FILE"
+TOTAL=$(wc -l < "$RESTAURANTS_FILE" | tr -d ' ')
 
 if [[ $TOTAL -eq 0 ]]; then
   echo "Rien à enrichir (tous déjà OK ou aucun match)."
+  rm -f "$RESTAURANTS_FILE"
   exit 0
 fi
 echo "→ $TOTAL restaurants à enrichir"
@@ -105,7 +107,7 @@ echo
 ENRICHED=0 ; SKIPPED=0 ; NOTFOUND=0 ; ERRORED=0 ; I=0
 START=$(date +%s)
 
-for row in "${RESTAURANTS[@]}"; do
+while IFS= read -r row; do
   I=$((I+1))
   IFS='|' read -r ID NAME CITY <<<"$row"
   PROGRESS=$(printf "[%4d/%4d]" "$I" "$TOTAL")
@@ -132,9 +134,10 @@ except: print('PARSE_FAIL')
     *) ERRORED=$((ERRORED+1)) ; echo "$PROGRESS ✗ $NAME ($CITY) → $STATUS" ;;
   esac
 
-  # Throttle (sleep en secondes float)
-  sleep "$(echo "scale=3; $THROTTLE_MS/1000" | bc)"
-done
+  # Throttle (sleep en secondes float — python pour éviter dépendance bc)
+  sleep "$(python3 -c "print($THROTTLE_MS / 1000)")"
+done < "$RESTAURANTS_FILE"
+rm -f "$RESTAURANTS_FILE"
 
 # ─── 6. Stats finales ────────────────────────────────────────────────
 END=$(date +%s) ; DURATION=$((END-START))

@@ -29,7 +29,10 @@ public class OfferController {
     /** Whitelist Phase 4 §6.3 — champs filtrables/sortables. */
     private static final Set<String> SEARCHABLE_FIELDS = Set.of(
         "tenantId", "restaurantId", "title", "type",
-        "startsAt", "expiresAt", "createdAt", "updatedAt"
+        "startsAt", "expiresAt", "createdAt", "updatedAt",
+        // Boolean toggle "actif/inactif" — utilisé par Pocket (Spotlight,
+        // Promos) pour filtrer les offres actives (enabled=true + expiresAt>now).
+        "enabled"
     );
 
     private final OfferService service;
