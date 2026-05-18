@@ -83,6 +83,24 @@ public class LoyaltyService {
             .toList();
     }
 
+    /**
+     * Bug 28 — Tous les comptes fidélité d'un restaurant (PulsePro Dashboard
+     * Client a besoin de la balance par client pour le KPI 'Solde Disponible'
+     * et la colonne SOLDE du classement Top 10).
+     *
+     * <p>Pourquoi ne pas réutiliser {@link #findTransactionsByRestaurant} ?
+     * Parce que {@code SUM(transactions.points)} != {@code SUM(accounts.balance)}
+     * sur les données seedées (les accounts.balance ont été remplis directement
+     * sans transactions miroir équivalentes). Le solde live = balance.
+     *
+     * <p>RBAC : owner du restaurant ou admin (cf controller @PreAuthorize).
+     */
+    public List<LoyaltyAccountDto> findAccountsByRestaurant(UUID restaurantId) {
+        return accountRepository.findAllByRestaurantId(restaurantId).stream()
+            .map(LoyaltyAccount::toDto)
+            .toList();
+    }
+
     public List<LoyaltyTransactionDto> findTransactionsByAccount(UUID accountId) {
         LoyaltyAccount a = accountRepository.findById(accountId)
             .orElseThrow(() -> new NotFoundException("LoyaltyAccount", accountId));
@@ -352,12 +370,16 @@ public class LoyaltyService {
      * <p>Utilisé par ProDesk ClientSummary/StaffSummary qui aggrègent les points
      * crédités/consommés au niveau restaurant. Pas de filtre client_id.
      *
+     * <p>Bug 28 — Délègue au repo enrichi {@code findAllByRestaurantIdEnriched}
+     * qui JOIN {@link LoyaltyAccount} et expose {@code clientId} + {@code restaurantId}
+     * directement dans le DTO (besoin PulsePro Dashboard Client pour agréger par
+     * client sans N+1 lookup). Backward-compat : les autres consommateurs (ClientSummary,
+     * StaffSummary) ignorent simplement les 2 nouveaux champs.
+     *
      * <p>RBAC : owner du restaurant ou admin (cf controller @PreAuthorize).
      */
     public List<LoyaltyTransactionDto> findTransactionsByRestaurant(UUID restaurantId, int limit) {
-        return transactionRepository.findAllByRestaurantId(restaurantId, PageRequest.of(0, limit)).stream()
-            .map(LoyaltyTransaction::toDto)
-            .toList();
+        return transactionRepository.findAllByRestaurantIdEnriched(restaurantId, PageRequest.of(0, limit));
     }
 
     /** Résumé des points expirés d'un client (cross-comptes). */

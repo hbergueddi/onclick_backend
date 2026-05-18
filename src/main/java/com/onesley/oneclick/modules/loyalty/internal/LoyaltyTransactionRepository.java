@@ -1,5 +1,6 @@
 package com.onesley.oneclick.modules.loyalty.internal;
 
+import com.onesley.oneclick.modules.loyalty.api.LoyaltyTransactionDto;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -84,6 +85,34 @@ public interface LoyaltyTransactionRepository extends JpaRepository<LoyaltyTrans
         ORDER BY t.createdAt DESC
         """)
     java.util.List<LoyaltyTransaction> findAllByRestaurantId(
+        @Param("restaurantId") UUID restaurantId,
+        Pageable pageable
+    );
+
+    /**
+     * Bug 28 — Toutes les transactions d'un restaurant ENRICHIES avec
+     * {@code clientId} + {@code restaurantId} (anti-N+1 pour PulsePro
+     * Dashboard Client qui agrège par client).
+     *
+     * <p>Diff vs {@link #findAllByRestaurantId} : projection JPQL via constructor
+     * expression qui JOIN {@link LoyaltyAccount} et passe les fields enrichis
+     * directement dans {@link LoyaltyTransactionDto} — pas de second roundtrip
+     * Hibernate, pas de N+1, pas de modification du chemin standard {@code toDto()}.
+     *
+     * <p>Tri {@code created_at DESC}, {@link Pageable} pour limiter.
+     */
+    @Query("""
+        SELECT new com.onesley.oneclick.modules.loyalty.api.LoyaltyTransactionDto(
+            t.id, t.accountId, t.type, t.points, t.amount, t.reason,
+            t.expiresAt, t.createdAt, t.createdById,
+            a.clientId, a.restaurantId
+        )
+        FROM LoyaltyTransaction t
+        JOIN LoyaltyAccount a ON a.id = t.accountId
+        WHERE a.restaurantId = :restaurantId
+        ORDER BY t.createdAt DESC
+        """)
+    java.util.List<LoyaltyTransactionDto> findAllByRestaurantIdEnriched(
         @Param("restaurantId") UUID restaurantId,
         Pageable pageable
     );

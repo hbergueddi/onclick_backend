@@ -79,6 +79,18 @@ public class LoyaltyController {
         return service.findByClient(clientId);
     }
 
+    @GetMapping("/accounts/by-restaurant/{restaurantId}")
+    @Operation(
+        summary = "Bug 28 — Tous les comptes fidélité d'un restaurant (1 par client fréquentant).",
+        description = "Utilisé par PulsePro Dashboard Client pour le KPI 'Solde Disponible' " +
+                      "et la colonne SOLDE du Top 10 — la balance live ne peut pas être dérivée des " +
+                      "seules transactions car les seeds ont rempli accounts.balance directement."
+    )
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR')")
+    public List<LoyaltyAccountDto> findAccountsByRestaurant(@PathVariable UUID restaurantId) {
+        return service.findAccountsByRestaurant(restaurantId);
+    }
+
     @GetMapping("/accounts/{accountId}/transactions")
     @Operation(summary = "Historique des mouvements d'un compte")
     @PreAuthorize("isAuthenticated()")
