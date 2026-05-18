@@ -74,8 +74,11 @@ public class UserController {
     }
 
     @GetMapping("/by-email")
-    @Operation(summary = "Lookup user par email (login flow)")
-    @PreAuthorize("hasRole('SUPERADMIN')")
+    @Operation(summary = "Lookup user par email — login flow + flow Inscrire membre (staff resto)")
+    // Aligné sur findByPhone (isAuthenticated). Justif privacy : returns 404
+    // ou UserDto basique — un staff qui veut enrôler un client par email a
+    // un besoin légitime. Pas d'enum protection nécessaire au-delà de l'auth.
+    @PreAuthorize("isAuthenticated()")
     public UserDto findByEmail(@RequestParam String email) {
         return service.findByEmail(email);
     }
