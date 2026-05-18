@@ -69,7 +69,21 @@ public final class SpecificationBuilder {
                 case NEQ       -> cb.notEqual(path, coerce(value, path.getJavaType()));
                 case LIKE      -> cb.like(asString(path), String.valueOf(value));
                 case ILIKE     -> cb.like(cb.lower(asString(path)), String.valueOf(value).toLowerCase());
-                case IN        -> path.in((List<?>) value);
+                case IN        -> {
+                    // Bug fix : sans coercion, IN sur une colonne UUID/Enum/Instant
+                    // recevait une List<String> (JSON deserialization) → JPA
+                    // ClassCastException runtime → 500. On coerce chaque élément
+                    // vers le type Java de la colonne (path.getJavaType()) avant
+                    // le path.in(...). Idem fix qu'EQ/NEQ qui passent déjà par coerce().
+                    if (!(value instanceof List<?> raw)) {
+                        throw new BadRequestException("IN expects a list value, got: " + value);
+                    }
+                    Class<?> targetType = path.getJavaType();
+                    List<Object> coerced = raw.stream()
+                        .map(v -> coerce(v, targetType))
+                        .toList();
+                    yield path.in(coerced);
+                }
                 case BETWEEN   -> {
                     List<?> range = (List<?>) value;
                     if (range.size() != 2) {
