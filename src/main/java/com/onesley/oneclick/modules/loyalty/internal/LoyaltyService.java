@@ -263,11 +263,18 @@ public class LoyaltyService {
 
     // ─── Gain rules (par-restaurant) ─────────────────────────────────────────
 
-    /** Récupère la règle de gain active d'un restaurant (404 si aucune). */
+    /**
+     * Récupère la règle de gain active d'un restaurant.
+     *
+     * <p>Retourne {@code null} si aucune règle n'existe — un resto sans gain
+     * rule est un état NORMAL (pas encore configuré). 404 serait sémantiquement
+     * faux : ressource "restaurant" existe, juste pas de child "rule". Le
+     * front affiche "Règle non configurée" gracieusement.
+     */
     public GainRuleDto findGainRuleByRestaurant(UUID restaurantId) {
         return gainRuleRepository.findByRestaurantIdAndDeletedAtIsNull(restaurantId)
             .map(GainRule::toDto)
-            .orElseThrow(() -> new NotFoundException("GainRule (restaurant)", restaurantId));
+            .orElse(null);
     }
 
     /**
