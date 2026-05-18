@@ -36,7 +36,9 @@ public class AdminStatsService {
                                           "WHERE u.deleted_at IS NULL AND r.code = 'RESTAURATEUR' " + tenantFilter.replace("tenant_id", "u.tenant_id"), tenantId);
         long totalStaff          = count("SELECT COUNT(*) FROM restaurant_staff " + tenantFilterNoAnd, tenantId);
         long totalRestaurants    = count("SELECT COUNT(*) FROM restaurants WHERE deleted_at IS NULL " + tenantFilter, tenantId);
-        long activeRestaurants   = count("SELECT COUNT(*) FROM restaurants WHERE deleted_at IS NULL AND status = 'actif' " + tenantFilter, tenantId);
+        // Bug 29 — Spring DB stocke status='active' (anglais) ; le legacy
+        // Supabase utilisait 'actif' (français). Cf AdminStatsFullService idem.
+        long activeRestaurants   = count("SELECT COUNT(*) FROM restaurants WHERE deleted_at IS NULL AND status = 'active' " + tenantFilter, tenantId);
         long totalReservations   = count("SELECT COUNT(*) FROM reservations WHERE deleted_at IS NULL " + tenantFilter, tenantId);
         long pendingReservations = count("SELECT COUNT(*) FROM reservations WHERE deleted_at IS NULL AND status = 'pending' " + tenantFilter, tenantId);
         long confirmedReservations = count("SELECT COUNT(*) FROM reservations WHERE deleted_at IS NULL AND status = 'confirmed' " + tenantFilter, tenantId);

@@ -92,7 +92,10 @@ public class FinancialCronJobs {
                  AND lt.created_at <  :periodEnd
               LEFT JOIN contracts c ON c.restaurant_id = r.id AND c.status = 'active' AND c.deleted_at IS NULL
              WHERE r.deleted_at IS NULL
-               AND r.status = 'actif'
+               -- Bug 29 — Spring DB = 'active' (EN), legacy Supabase = 'actif' (FR).
+               -- Sans ce fix, le cron mensuel de facturation ne génère AUCUNE
+               -- facture (0 restaurants matchent → 0 lignes).
+               AND r.status = 'active'
                AND NOT EXISTS (
                  SELECT 1 FROM oneclick_hi_invoices i
                   WHERE i.restaurant_id = r.id

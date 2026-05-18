@@ -191,7 +191,11 @@ public class AdminStatsFullService {
             SELECT
               (SELECT COUNT(*) FROM restaurant_groups WHERE deleted_at IS NULL),
               (SELECT COUNT(*) FROM restaurants WHERE deleted_at IS NULL),
-              (SELECT COUNT(*) FROM restaurants WHERE deleted_at IS NULL AND status = 'actif'),
+              -- Bug 29 — DB Spring stocke status='active' (anglais) ; le legacy
+              -- Supabase utilisait 'actif' (français). On filtre sur la valeur
+              -- canonique enterprise actuelle, sinon activeRestaurants=0 alors
+              -- que totalRestaurants=1042 → ratio cassé sur Vue Exécutive.
+              (SELECT COUNT(*) FROM restaurants WHERE deleted_at IS NULL AND status = 'active'),
               (SELECT COUNT(*) FROM users WHERE deleted_at IS NULL),
               (SELECT COUNT(u.*) FROM users u JOIN roles r ON r.id = u.role_id WHERE u.deleted_at IS NULL AND r.code = 'CLIENT'),
               (SELECT COUNT(*) FROM restaurant_staffs WHERE deleted_at IS NULL),
