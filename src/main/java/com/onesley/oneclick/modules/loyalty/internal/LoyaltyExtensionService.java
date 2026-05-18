@@ -1,7 +1,10 @@
 package com.onesley.oneclick.modules.loyalty.internal;
 
+import com.onesley.oneclick.exception.BadRequestException;
+import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyExtensionDtos.*;
+import com.onesley.oneclick.security.SecurityHelper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Service;
@@ -132,9 +135,38 @@ public class LoyaltyExtensionService {
     }
 
     // ─── Expired points admin views (via native SQL) ─────────────────
+
+    /**
+     * RBAC : admin (SUPERADMIN/GROUP_ADMIN) → tout ; RESTAURATEUR/STAFF → uniquement
+     * leur propre restaurant (restaurantId obligatoire + check staff actif).
+     * Sans cette logique, le frontend Facturation (OneClickHIPro) 403 systématique.
+     */
+    private void requireAdminOrStaffOf(UUID restaurantId) {
+        if (SecurityHelper.isAdmin()) return;
+        UUID callerId = SecurityHelper.currentUserId();
+        if (callerId == null) throw new ForbiddenException("Non authentifié");
+        if (restaurantId == null) {
+            throw new BadRequestException(
+                "restaurantId obligatoire pour staff non-admin (filtrage scope tenant)"
+            );
+        }
+        Number count = (Number) em.createNativeQuery("""
+            SELECT COUNT(*) FROM restaurant_staffs
+             WHERE user_id = :userId AND restaurant_id = :restaurantId
+               AND deleted_at IS NULL
+            """)
+            .setParameter("userId", callerId)
+            .setParameter("restaurantId", restaurantId)
+            .getSingleResult();
+        if (count.longValue() == 0) {
+            throw new ForbiddenException("Accès refusé : vous n'êtes pas staff de ce restaurant");
+        }
+    }
+
     @SuppressWarnings("unchecked")
     @Transactional(readOnly = true)
     public List<ExpiredPointsAdminDto> findExpiredPointsAdmin(UUID restaurantId, int limit) {
+        requireAdminOrStaffOf(restaurantId);
         // LoyaltyTransaction n'a pas user_id/restaurant_id directs — JOIN via loyalty_accounts
         String sql = """
             SELECT la.client_id, COALESCE(u.first_name || ' ' || u.last_name, 'Unknown'),

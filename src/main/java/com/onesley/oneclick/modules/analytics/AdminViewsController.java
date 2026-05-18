@@ -52,8 +52,13 @@ public class AdminViewsController {
     }
 
     @GetMapping("/admin-wallet/transactions")
-    @Operation(summary = "Transactions wallet (filtres user/restaurant)")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN')")
+    @Operation(
+        summary = "Transactions wallet (filtres user/restaurant)",
+        description = "RBAC : SUPERADMIN/GROUP_ADMIN voient tout. RESTAURATEUR/STAFF "
+                    + "peuvent voir UNIQUEMENT leur propre restaurant (restaurantId "
+                    + "obligatoire + check staff actif dans le service)."
+    )
+    @PreAuthorize("isAuthenticated()")
     public List<AdminWalletTransactionDto> walletTransactions(
         @RequestParam(required = false) UUID userId,
         @RequestParam(required = false) UUID restaurantId,

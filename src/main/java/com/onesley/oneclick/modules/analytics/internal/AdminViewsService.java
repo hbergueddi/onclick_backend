@@ -1,6 +1,9 @@
 package com.onesley.oneclick.modules.analytics.internal;
 
+import com.onesley.oneclick.exception.BadRequestException;
+import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.modules.analytics.api.AdminViewsDtos.*;
+import com.onesley.oneclick.security.SecurityHelper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Service;
@@ -95,8 +98,36 @@ public class AdminViewsService {
         );
     }
 
+    /**
+     * RBAC : admin → tout ; RESTAURATEUR/STAFF → uniquement leur restaurant
+     * (restaurantId obligatoire + check staff actif). Sans cette logique, le
+     * frontend Facturation (OneClickHIPro) 403 systématique.
+     */
+    private void requireAdminOrStaffOf(UUID restaurantId) {
+        if (SecurityHelper.isAdmin()) return;
+        UUID callerId = SecurityHelper.currentUserId();
+        if (callerId == null) throw new ForbiddenException("Non authentifié");
+        if (restaurantId == null) {
+            throw new BadRequestException(
+                "restaurantId obligatoire pour staff non-admin (filtrage scope tenant)"
+            );
+        }
+        Number count = (Number) em.createNativeQuery("""
+            SELECT COUNT(*) FROM restaurant_staffs
+             WHERE user_id = :userId AND restaurant_id = :restaurantId
+               AND deleted_at IS NULL
+            """)
+            .setParameter("userId", callerId)
+            .setParameter("restaurantId", restaurantId)
+            .getSingleResult();
+        if (count.longValue() == 0) {
+            throw new ForbiddenException("Accès refusé : vous n'êtes pas staff de ce restaurant");
+        }
+    }
+
     @SuppressWarnings("unchecked")
     public List<AdminWalletTransactionDto> walletTransactions(UUID userId, UUID restaurantId, int limit) {
+        requireAdminOrStaffOf(restaurantId);
         // wallet_transactions has restaurant_id (not user_id directly) — userId param maps to created_by
         StringBuilder where = new StringBuilder(" WHERE deleted_at IS NULL ");
         if (userId != null) where.append(" AND created_by = :userId ");

@@ -96,8 +96,13 @@ public class LoyaltyExtensionController {
 
     // ─── Expired points admin view ───────────────────────────────────────
     @GetMapping("/expired-points/admin")
-    @Operation(summary = "Vue admin des points expirés (filter optionnel par resto)")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN')")
+    @Operation(
+        summary = "Vue admin des points expirés (filter optionnel par resto)",
+        description = "RBAC : SUPERADMIN/GROUP_ADMIN voient tout. RESTAURATEUR/STAFF "
+                    + "peuvent voir UNIQUEMENT leur propre restaurant (restaurantId "
+                    + "obligatoire + check staff actif dans le service)."
+    )
+    @PreAuthorize("isAuthenticated()")
     public List<ExpiredPointsAdminDto> findExpiredPointsAdmin(
         @RequestParam(required = false) UUID restaurantId,
         @RequestParam(defaultValue = "200") int limit
