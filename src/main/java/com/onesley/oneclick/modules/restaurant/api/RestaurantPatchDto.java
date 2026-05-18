@@ -17,7 +17,7 @@ import java.util.UUID;
  * <p>RBAC côté controller : owner du restaurant (staff_role=owner) ou
  * SUPERADMIN/GROUP_ADMIN.
  *
- * <p>{@code status} validé via regex : {@code actif | inactif | suspendu | archive}.
+ * <p>{@code status} validé via regex : {@code active | paused | archived}.
  * {@code budget} : {@code €} | {@code €€} | {@code €€€} (V16).
  */
 public record RestaurantPatchDto(
@@ -28,7 +28,13 @@ public record RestaurantPatchDto(
     String city,
     BigDecimal latitude,
     BigDecimal longitude,
-    @Pattern(regexp = "^(actif|inactif|suspendu|archive)$") String status,
+    // Bug 30 — Aligné sur la canonique DB EN du Restaurant entity
+    // (@Pattern("^(active|paused|archived)$") ligne 65). Le legacy Supabase
+    // utilisait 'actif|inactif|suspendu|archive' (FR) — toute PATCH avec ces
+    // valeurs passait la validation DTO puis échouait silencieusement sur
+    // l'entity Hibernate (500). Le frontend doit envoyer la valeur EN
+    // canonique (cf translateStatusToBackend côté RestaurantActionsMenu).
+    @Pattern(regexp = "^(active|paused|archived)$") String status,
     @Pattern(regexp = "^(€|€€|€€€)$") String budget,
     List<String> tags,
     Integer loungePts,
