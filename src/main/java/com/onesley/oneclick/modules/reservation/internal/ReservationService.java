@@ -81,6 +81,7 @@ public class ReservationService {
             v.getCreatedAt(),
             v.getClientFirstName(),
             v.getClientLastName(),
+            v.getClientPhone(),
             v.getRestaurantName(),
             v.getRestaurantCity(),
             v.getRestaurantImage(),

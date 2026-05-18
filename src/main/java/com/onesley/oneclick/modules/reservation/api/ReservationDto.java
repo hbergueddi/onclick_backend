@@ -39,6 +39,7 @@ public record ReservationDto(
     // ─── Joins frontend (anti N+1) — null pour les lectures unitaires ──────
     String clientFirstName,
     String clientLastName,
+    String clientPhone,
     String restaurantName,
     String restaurantCity,
     String restaurantImage,
@@ -56,6 +57,6 @@ public record ReservationDto(
     ) {
         this(id, tenantId, clientId, restaurantId, tableId, serviceId,
             reservationAt, guestCount, status, notes, createdAt,
-            null, null, null, null, null, null, null, null, null, null);
+            null, null, null, null, null, null, null, null, null, null, null);
     }
 }

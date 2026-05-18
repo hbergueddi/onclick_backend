@@ -36,6 +36,7 @@ public interface ReservationWithJoinsView {
     // ─── Joins ─────────────────────────────────────────────────────────────
     String getClientFirstName();
     String getClientLastName();
+    String getClientPhone();
     String getRestaurantName();
     String getRestaurantCity();
     String getRestaurantImage();
