@@ -19,6 +19,10 @@ public record GainRuleDto(
     Integer capPerMonth,
     BigDecimal minAmount,
     boolean isActive,
+    /** Bonus de bienvenue par défaut crédité à l'inscription (cf V28 + EnrollmentService). */
+    int welcomePointsDefault,
+    /** Plafond du bonus de bienvenue (anti-abus staff). */
+    int welcomePointsMax,
     Instant createdAt
 ) {
 }

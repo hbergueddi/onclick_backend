@@ -17,6 +17,10 @@ public record GainRulePatchDto(
     @Min(1) Integer capPerVisit,
     @Min(1) Integer capPerMonth,
     @DecimalMin("0.00") BigDecimal minAmount,
-    Boolean isActive
+    Boolean isActive,
+    /** Bonus bienvenue par défaut. CHECK DB : welcomePointsMax >= welcomePointsDefault. */
+    @Min(0) Integer welcomePointsDefault,
+    /** Plafond bonus bienvenue (anti-abus). */
+    @Min(0) Integer welcomePointsMax
 ) {
 }

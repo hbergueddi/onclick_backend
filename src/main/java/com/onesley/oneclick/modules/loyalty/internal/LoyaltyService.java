@@ -312,6 +312,15 @@ public class LoyaltyService {
         if (dto.capPerMonth() != null) rule.setCapPerMonth(dto.capPerMonth());
         if (dto.minAmount() != null) rule.setMinAmount(dto.minAmount());
         if (dto.isActive() != null) rule.setActive(dto.isActive());
+        if (dto.welcomePointsDefault() != null) rule.setWelcomePointsDefault(dto.welcomePointsDefault());
+        if (dto.welcomePointsMax() != null) rule.setWelcomePointsMax(dto.welcomePointsMax());
+        // Garde-fou applicatif redondant avec CHECK DB — meilleur message d'erreur.
+        if (rule.getWelcomePointsMax() < rule.getWelcomePointsDefault()) {
+            throw new BadRequestException(
+                "welcomePointsMax (" + rule.getWelcomePointsMax() + ") doit être >= welcomePointsDefault ("
+                + rule.getWelcomePointsDefault() + ")"
+            );
+        }
         return gainRuleRepository.save(rule).toDto();
     }
 

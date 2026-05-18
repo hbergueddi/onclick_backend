@@ -74,6 +74,22 @@ public class GainRule extends SoftDeletableAuditedEntity {
     @Column(name = "is_active", nullable = false)
     private boolean isActive = true;
 
+    /**
+     * Bonus de bienvenue par défaut crédité à l'inscription d'un nouveau membre
+     * (cf. V28 + EnrollmentService). Pré-rempli dans le formulaire EnrollMember.
+     */
+    @Min(0)
+    @Column(name = "welcome_points_default", nullable = false)
+    private int welcomePointsDefault = 100;
+
+    /**
+     * Plafond du bonus de bienvenue. EnrollmentService rejette toute demande
+     * &gt; welcomePointsMax (anti-abus staff). DB CHECK garantit max &gt;= default.
+     */
+    @Min(0)
+    @Column(name = "welcome_points_max", nullable = false)
+    private int welcomePointsMax = 500;
+
     protected GainRule() {
         // JPA
     }
@@ -97,13 +113,17 @@ public class GainRule extends SoftDeletableAuditedEntity {
     public void setMinAmount(BigDecimal minAmount) { this.minAmount = minAmount; }
     public boolean isActive() { return isActive; }
     public void setActive(boolean active) { this.isActive = active; }
+    public int getWelcomePointsDefault() { return welcomePointsDefault; }
+    public void setWelcomePointsDefault(int v) { this.welcomePointsDefault = v; }
+    public int getWelcomePointsMax() { return welcomePointsMax; }
+    public void setWelcomePointsMax(int v) { this.welcomePointsMax = v; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public GainRuleDto toDto() {
         return new GainRuleDto(
             id, restaurantId, conversionRate,
             capPerVisit, capPerMonth, minAmount,
-            isActive, getCreatedAt()
+            isActive, welcomePointsDefault, welcomePointsMax, getCreatedAt()
         );
     }
 
