@@ -143,8 +143,30 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("*"));
+        // OPTIONS retiré : c'est le verbe du preflight CORS lui-même, géré
+        // automatiquement par Spring CorsFilter avant le SecurityFilterChain
+        // — pas besoin de l'exposer en méthode "business" autorisée.
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE"));
+        // Allowlist explicite des en-têtes que le frontend envoie réellement.
+        // Best practice CORS senior : pas de wildcard "*" qui accepte toute
+        // requête custom (vecteur d'attaque CSRF / header injection en cas de
+        // mauvaise config downstream).
+        //
+        // Audit frontend OneClick (axios) :
+        //  - Authorization     → JWT bearer (intercepteur api/client.ts)
+        //  - Content-Type      → application/json sur POST/PATCH/PUT
+        //  - Accept            → content negotiation
+        //  - X-Requested-With  → défensif (legacy axios / libs tierces)
+        //
+        // Les en-têtes browser-managed (Origin, Cookie, Referer, User-Agent,
+        // Host) ne sont PAS dans cette liste — ils sont gérés implicitement
+        // par le navigateur et ne passent pas par le filtre CORS allowedHeaders.
+        config.setAllowedHeaders(List.of(
+            "Authorization",
+            "Content-Type",
+            "Accept",
+            "X-Requested-With"
+        ));
         config.setExposedHeaders(List.of("Authorization", "Content-Type", "X-Total-Count"));
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);
