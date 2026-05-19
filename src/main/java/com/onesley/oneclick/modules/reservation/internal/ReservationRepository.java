@@ -111,24 +111,24 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID>,
      *
      * <p>Pattern volontairement minimal : retourne {@code List<Object[]>} (raw)
      * pour éviter de créer un DTO dédié à un simple KPI. Le service mappe vers
-     * {@code Map<String, Long>} avant exposition — même style que
+     * {@code Map<UUID, Long>} avant exposition — même style que
      * {@code AdminStatsFullService.reservationsByStatus} et autres agrégats
      * existants.
      *
-     * <p>Filtres optionnels {@code since} (null = all-time) et {@code status}
-     * (null = tous statuts EN canonique). Tri {@code COUNT DESC} pour rendre
-     * un éventuel LIMIT naturel — actuellement la widget consomme la liste
-     * entière (≤ 1042 lignes en prod, ~30 KB JSON, scaling-safe).
+     * <p>Native SQL avec {@code CAST(:param AS type) IS NULL OR ...} (même
+     * convention que {@link #findAllWithJoins}) : sans le CAST explicite,
+     * PostgreSQL n'arrive pas à inférer le type d'un placeholder bind à null
+     * et renvoie "could not determine data type of parameter $X" (500).
      */
-    @Query("""
-        SELECT r.restaurantId, COUNT(r)
-        FROM Reservation r
-        WHERE r.deletedAt IS NULL
-          AND (:since IS NULL OR r.createdAt >= :since)
-          AND (:status IS NULL OR r.status = :status)
-        GROUP BY r.restaurantId
-        ORDER BY COUNT(r) DESC
-        """)
+    @Query(value = """
+        SELECT restaurant_id, COUNT(*)
+        FROM reservations
+        WHERE deleted_at IS NULL
+          AND (CAST(:since  AS timestamp) IS NULL OR created_at >= CAST(:since  AS timestamp))
+          AND (CAST(:status AS text)      IS NULL OR status      = CAST(:status AS text))
+        GROUP BY restaurant_id
+        ORDER BY COUNT(*) DESC
+        """, nativeQuery = true)
     java.util.List<Object[]> countByRestaurantGrouped(
         @Param("since") Instant since,
         @Param("status") String status
