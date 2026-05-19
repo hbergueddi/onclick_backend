@@ -13,6 +13,10 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Bug 32 (Batch D RBAC v2) — RESOURCE COMMUNITY pour Elite apps,
+ * RESTAURANTS pour Restaurant groups (Galaxy = grouping de restos).
+ */
 @RestController
 @Tag(name = "Social extensions", description = "Sprint H — Elite applications + Restaurant groups (Galaxy)")
 public class SocialExtensionController {
@@ -26,28 +30,28 @@ public class SocialExtensionController {
     // ─── Elite applications ─────────────────────────────────────────────
     @GetMapping("/api/social/elite-applications")
     @Operation(summary = "Liste des demandes Elite (admin Forge)")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN') or hasAuthority('VIEW:COMMUNITY')")
     public List<EliteApplicationDto> findAll(@RequestParam(required = false) String status) {
         return status != null ? service.findApplicationsByStatus(status) : service.findAllApplications();
     }
 
     @GetMapping("/api/social/elite-applications/by-user/{userId}")
     @Operation(summary = "Demandes Elite d'un user (Pocket profile)")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:COMMUNITY')")
     public List<EliteApplicationDto> findByUser(@PathVariable UUID userId) {
         return service.findUserApplications(userId);
     }
 
     @PostMapping("/api/social/elite-applications")
     @Operation(summary = "Soumet une demande Elite")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('CREATE:COMMUNITY')")
     public ResponseEntity<EliteApplicationDto> create(@Valid @RequestBody EliteApplicationCreateDto dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.createApplication(dto));
     }
 
     @PatchMapping("/api/social/elite-applications/{id}/review")
     @Operation(summary = "Approuve/refuse une demande Elite (admin)")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN') or hasAuthority('UPDATE:COMMUNITY')")
     public EliteApplicationDto review(@PathVariable UUID id, @Valid @RequestBody EliteApplicationReviewDto dto) {
         return service.reviewApplication(id, dto);
     }
@@ -55,31 +59,31 @@ public class SocialExtensionController {
     // ─── Restaurant groups (Galaxy concept) ─────────────────────────────
     @GetMapping("/api/restaurant-groups")
     @Operation(summary = "Liste des groupes de restaurants")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:RESTAURANTS')")
     public List<RestaurantGroupDto> findAllGroups(@RequestParam(required = false) UUID ownerId) {
         return ownerId != null ? service.findOwnerGroups(ownerId) : service.findAllGroups();
     }
 
     @GetMapping("/api/restaurant-groups/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:RESTAURANTS')")
     public RestaurantGroupDto findGroup(@PathVariable UUID id) {
         return service.findGroup(id);
     }
 
     @PostMapping("/api/restaurant-groups")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN') or hasAuthority('CREATE:RESTAURANTS')")
     public ResponseEntity<RestaurantGroupDto> createGroup(@Valid @RequestBody RestaurantGroupCreateDto dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.createGroup(dto));
     }
 
     @PatchMapping("/api/restaurant-groups/{id}")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN') or hasAuthority('UPDATE:RESTAURANTS')")
     public RestaurantGroupDto updateGroup(@PathVariable UUID id, @Valid @RequestBody RestaurantGroupCreateDto dto) {
         return service.updateGroup(id, dto);
     }
 
     @DeleteMapping("/api/restaurant-groups/{id}")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN') or hasAuthority('DELETE:RESTAURANTS')")
     public ResponseEntity<Void> deleteGroup(@PathVariable UUID id) {
         service.deleteGroup(id);
         return ResponseEntity.noContent().build();

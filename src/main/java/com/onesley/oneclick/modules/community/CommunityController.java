@@ -16,6 +16,9 @@ import java.util.UUID;
 
 import static com.onesley.oneclick.modules.community.api.CommunityDtos.*;
 
+/**
+ * Bug 32 (Batch D RBAC v2) — double-binding isAuthenticated() or hasAuthority('VERB:COMMUNITY')
+ */
 @RestController
 @RequestMapping("/api/community")
 @Tag(name = "Community", description = "Posts + commentaires + likes (§8)")
@@ -31,7 +34,7 @@ public class CommunityController {
 
     @GetMapping("/posts")
     @Operation(summary = "Feed paginé — filtre authorId optionnel")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:COMMUNITY')")
     public PageResponse<PostDto> findAllPosts(
         @RequestParam(required = false) UUID authorId,
         @RequestParam(defaultValue = "0") int page,
@@ -41,18 +44,18 @@ public class CommunityController {
     }
 
     @GetMapping("/posts/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:COMMUNITY')")
     public PostDto findPostById(@PathVariable UUID id) { return service.findPostById(id); }
 
     @PostMapping("/posts")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('CREATE:COMMUNITY')")
     public ResponseEntity<PostDto> createPost(@Valid @RequestBody PostCreateDto dto) {
         PostDto p = service.createPost(dto);
         return ResponseEntity.created(URI.create("/api/community/posts/" + p.id())).body(p);
     }
 
     @DeleteMapping("/posts/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('DELETE:COMMUNITY')")
     public ResponseEntity<Void> deletePost(@PathVariable UUID id) {
         service.softDeletePost(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
@@ -61,13 +64,13 @@ public class CommunityController {
     // ─── Comments ────────────────────────────────────────────────────────────
 
     @GetMapping("/posts/{postId}/comments")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:COMMUNITY')")
     public List<CommentDto> findCommentsByPost(@PathVariable UUID postId) {
         return service.findCommentsByPost(postId);
     }
 
     @PostMapping("/comments")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('CREATE:COMMUNITY')")
     public ResponseEntity<CommentDto> createComment(@Valid @RequestBody CommentCreateDto dto) {
         CommentDto c = service.createComment(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(c);
@@ -76,13 +79,13 @@ public class CommunityController {
     // ─── Likes ───────────────────────────────────────────────────────────────
 
     @GetMapping("/posts/{postId}/likes")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:COMMUNITY')")
     public List<PostLikeDto> findLikesByPost(@PathVariable UUID postId) {
         return service.findLikesByPost(postId);
     }
 
     @PostMapping("/likes")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('CREATE:COMMUNITY')")
     public ResponseEntity<PostLikeDto> like(@Valid @RequestBody PostLikeCreateDto dto) {
         PostLikeDto l = service.like(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(l);

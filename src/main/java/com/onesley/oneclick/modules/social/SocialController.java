@@ -16,6 +16,9 @@ import java.util.UUID;
 
 import static com.onesley.oneclick.modules.social.api.SocialDtos.*;
 
+/**
+ * Bug 32 (Batch D RBAC v2) — double-binding (isAuthenticated() | hasAnyRole(...)) or hasAuthority('VERB:COMMUNITY')
+ */
 @RestController
 @RequestMapping("/api/social")
 @Tag(name = "Social", description = "Amitiés + parrainages (§8)")
@@ -33,7 +36,7 @@ public class SocialController {
 
     @GetMapping("/friendships/by-user/{userId}")
     @Operation(summary = "Liste des amis acceptés d'un user")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:COMMUNITY')")
     public List<FriendshipDto> findFriendsOf(@PathVariable UUID userId) {
         SecurityHelper.requireOwnerOrAdmin(userId);
         return service.findFriendsOf(userId);
@@ -41,26 +44,26 @@ public class SocialController {
 
     @PostMapping("/friendships")
     @Operation(summary = "Demande d'amitié (pending)")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('CREATE:COMMUNITY')")
     public ResponseEntity<FriendshipDto> request(@Valid @RequestBody FriendshipCreateDto dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.request(dto));
     }
 
     @PatchMapping("/friendships/{id}/accept")
     @Operation(summary = "Accepte une demande d'amitié")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('UPDATE:COMMUNITY')")
     public FriendshipDto accept(@PathVariable UUID id) { return service.accept(id); }
 
     @PatchMapping("/friendships/{id}/decline")
     @Operation(summary = "Refuse une demande d'amitié")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('UPDATE:COMMUNITY')")
     public FriendshipDto decline(@PathVariable UUID id) { return service.decline(id); }
 
     // ─── Referrals ───────────────────────────────────────────────────────────
 
     @GetMapping("/referrals")
     @Operation(summary = "Liste paginée de tous les parrainages (admin platform-wide)")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN') or hasAuthority('VIEW:COMMUNITY')")
     public org.springframework.data.domain.Page<ReferralDto> findAllReferrals(
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size
@@ -69,21 +72,21 @@ public class SocialController {
     }
 
     @GetMapping("/referrals/by-referrer/{referrerId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:COMMUNITY')")
     public List<ReferralDto> findByReferrer(@PathVariable UUID referrerId) {
         SecurityHelper.requireOwnerOrAdmin(referrerId);
         return service.findByReferrer(referrerId);
     }
 
     @PostMapping("/referrals")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('CREATE:COMMUNITY')")
     public ResponseEntity<ReferralDto> create(@Valid @RequestBody ReferralCreateDto dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.create(dto));
     }
 
     @PatchMapping("/referrals/{id}/activate")
     @Operation(summary = "Active un parrainage (lors du signup du parrainé)")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('UPDATE:COMMUNITY')")
     public ReferralDto activate(@PathVariable UUID id, @RequestBody ActivateReferralDto body) {
         return service.activate(id, body.referredUserId());
     }
@@ -92,7 +95,7 @@ public class SocialController {
 
     @GetMapping("/favorites/by-user/{userId}")
     @Operation(summary = "Liste des restaurants favoris d'un user")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:COMMUNITY')")
     public List<UserFavoriteDto> findFavoritesOf(@PathVariable UUID userId) {
         SecurityHelper.requireOwnerOrAdmin(userId);
         return service.findFavoritesOf(userId);
@@ -100,14 +103,14 @@ public class SocialController {
 
     @PostMapping("/favorites")
     @Operation(summary = "Ajoute un restaurant aux favoris d'un user")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('CREATE:COMMUNITY')")
     public ResponseEntity<UserFavoriteDto> addFavorite(@Valid @RequestBody UserFavoriteCreateDto dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.addFavorite(dto));
     }
 
     @DeleteMapping("/favorites/{id}")
     @Operation(summary = "Retire un favori")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('DELETE:COMMUNITY')")
     public ResponseEntity<Void> removeFavorite(@PathVariable UUID id) {
         service.removeFavorite(id);
         return ResponseEntity.noContent().build();
@@ -117,7 +120,7 @@ public class SocialController {
 
     @GetMapping("/friend-groups/by-owner/{ownerId}")
     @Operation(summary = "Groupes possédés par un user")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:COMMUNITY')")
     public List<FriendGroupDto> findGroupsByOwner(@PathVariable UUID ownerId) {
         SecurityHelper.requireOwnerOrAdmin(ownerId);
         return service.findGroupsByOwner(ownerId);
@@ -125,7 +128,7 @@ public class SocialController {
 
     @GetMapping("/friend-groups/by-member/{userId}")
     @Operation(summary = "Groupes auxquels un user appartient")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:COMMUNITY')")
     public List<FriendGroupDto> findGroupsByMember(@PathVariable UUID userId) {
         SecurityHelper.requireOwnerOrAdmin(userId);
         return service.findGroupsByMember(userId);
@@ -133,28 +136,28 @@ public class SocialController {
 
     @GetMapping("/friend-groups/{id}")
     @Operation(summary = "Détail d'un groupe (owner, membres, admin)")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:COMMUNITY')")
     public FriendGroupDto findGroupById(@PathVariable UUID id) {
         return service.findGroupById(id);
     }
 
     @PostMapping("/friend-groups")
     @Operation(summary = "Crée un groupe (owner = current user)")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('CREATE:COMMUNITY')")
     public ResponseEntity<FriendGroupDto> createGroup(@Valid @RequestBody FriendGroupCreateDto dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.createGroup(dto));
     }
 
     @PatchMapping("/friend-groups/{id}")
     @Operation(summary = "Met à jour nom/description/avatar d'un groupe")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('UPDATE:COMMUNITY')")
     public FriendGroupDto updateGroup(@PathVariable UUID id, @Valid @RequestBody FriendGroupUpdateDto dto) {
         return service.updateGroup(id, dto);
     }
 
     @DeleteMapping("/friend-groups/{id}")
     @Operation(summary = "Soft delete d'un groupe")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('DELETE:COMMUNITY')")
     public ResponseEntity<Void> deleteGroup(@PathVariable UUID id) {
         service.deleteGroup(id);
         return ResponseEntity.noContent().build();
@@ -162,14 +165,14 @@ public class SocialController {
 
     @GetMapping("/friend-groups/{groupId}/members")
     @Operation(summary = "Liste des membres d'un groupe")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:COMMUNITY')")
     public List<FriendGroupMemberDto> findGroupMembers(@PathVariable UUID groupId) {
         return service.findGroupMembers(groupId);
     }
 
     @PostMapping("/friend-groups/{groupId}/members")
     @Operation(summary = "Ajoute un membre au groupe (owner/admin du groupe)")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('UPDATE:COMMUNITY')")
     public ResponseEntity<FriendGroupMemberDto> addGroupMember(
         @PathVariable UUID groupId,
         @Valid @RequestBody FriendGroupMemberAddDto dto
@@ -179,7 +182,7 @@ public class SocialController {
 
     @DeleteMapping("/friend-groups/{groupId}/members/{friendId}")
     @Operation(summary = "Retire un membre du groupe (owner/admin du groupe, ou self)")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('UPDATE:COMMUNITY')")
     public ResponseEntity<Void> removeGroupMember(
         @PathVariable UUID groupId,
         @PathVariable UUID friendId

@@ -30,15 +30,16 @@ public class ExploreFeaturedController {
         return service.findAllEnabled();
     }
 
+    // Bug 32 (Batch D RBAC v2) — RESOURCE=RESTAURANTS (featured = curation resto).
     @PostMapping
     @Operation(summary = "Upsert featured (admin)")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN') or hasAuthority('UPDATE:RESTAURANTS')")
     public ResponseEntity<ExploreFeaturedDto> upsert(@Valid @RequestBody ExploreFeaturedCreateDto dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.upsert(dto));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN') or hasAuthority('DELETE:RESTAURANTS')")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         service.delete(id);
         return ResponseEntity.noContent().build();

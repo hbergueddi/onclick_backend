@@ -34,9 +34,10 @@ public class EmailController {
         this.templateService = templateService;
     }
 
+    // Bug 32 (Batch D RBAC v2) — RESOURCE=NOTIFICATIONS (email = canal notification).
     @PostMapping("/send")
     @Operation(summary = "Envoie un email branded (template + tenant slug + variables interpolées)")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR') or hasAuthority('CREATE:NOTIFICATIONS')")
     public ResponseEntity<EmailSendResultDto> send(@Valid @RequestBody EmailSendDto dto) {
         String html = templateService.render(dto.tenantSlug(), dto.template(),
             dto.variables(), dto.subjectFr());

@@ -22,6 +22,9 @@ import com.onesley.oneclick.core.configuration.api.ConfigurationDtos.FeatureFlag
 import com.onesley.oneclick.core.configuration.api.ConfigurationDtos.FeatureFlagUpdateDto;
 import com.onesley.oneclick.core.configuration.internal.ConfigurationService;
 
+/**
+ * Bug 32 (Batch D RBAC v2) — RESOURCE=AUDIT (configs admin/monitoring).
+ */
 @RestController
 @RequestMapping("/api/configuration")
 @Tag(name = "Configuration", description = "Feature flags (rollout progressif) + cache configurations (§19)")
@@ -37,18 +40,18 @@ public class ConfigurationController {
 
     @GetMapping("/feature-flags")
     @Operation(summary = "Tous les feature flags (admin)")
-    @PreAuthorize("hasRole('SUPERADMIN')")
+    @PreAuthorize("hasRole('SUPERADMIN') or hasAuthority('VIEW:AUDIT')")
     public List<FeatureFlagDto> findAllFlags() { return service.findAllFlags(); }
 
     @GetMapping("/feature-flags/by-code/{code}")
     @Operation(summary = "Lookup feature flag par code — utilisé par les services pour gate une feature.")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:AUDIT')")
     public FeatureFlagDto findFlagByCode(@PathVariable String code) {
         return service.findFlagByCode(code);
     }
 
     @PostMapping("/feature-flags")
-    @PreAuthorize("hasRole('SUPERADMIN')")
+    @PreAuthorize("hasRole('SUPERADMIN') or hasAuthority('CREATE:AUDIT')")
     public ResponseEntity<FeatureFlagDto> createFlag(@Valid @RequestBody FeatureFlagCreateDto dto) {
         FeatureFlagDto f = service.createFlag(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(f);
@@ -56,7 +59,7 @@ public class ConfigurationController {
 
     @PatchMapping("/feature-flags/{id}")
     @Operation(summary = "Mise à jour enabled / rolloutPct / description (cache évicté)")
-    @PreAuthorize("hasRole('SUPERADMIN')")
+    @PreAuthorize("hasRole('SUPERADMIN') or hasAuthority('UPDATE:AUDIT')")
     public FeatureFlagDto updateFlag(@PathVariable UUID id, @Valid @RequestBody FeatureFlagUpdateDto dto) {
         return service.updateFlag(id, dto);
     }
@@ -65,13 +68,13 @@ public class ConfigurationController {
 
     @GetMapping("/feature-flags/{featureFlagId}/targets")
     @Operation(summary = "Overrides spécifiques d'un flag (par user/tenant/role)")
-    @PreAuthorize("hasRole('SUPERADMIN')")
+    @PreAuthorize("hasRole('SUPERADMIN') or hasAuthority('VIEW:AUDIT')")
     public List<FeatureFlagTargetDto> findTargetsByFlag(@PathVariable UUID featureFlagId) {
         return service.findTargetsByFlag(featureFlagId);
     }
 
     @PostMapping("/feature-flag-targets")
-    @PreAuthorize("hasRole('SUPERADMIN')")
+    @PreAuthorize("hasRole('SUPERADMIN') or hasAuthority('CREATE:AUDIT')")
     public ResponseEntity<FeatureFlagTargetDto> createTarget(@Valid @RequestBody FeatureFlagTargetCreateDto dto) {
         FeatureFlagTargetDto t = service.createTarget(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(t);
@@ -81,11 +84,11 @@ public class ConfigurationController {
 
     @GetMapping("/cache-configs")
     @Operation(summary = "TTL et taille max des caches (vue admin — modifiable sans redéploiement)")
-    @PreAuthorize("hasRole('SUPERADMIN')")
+    @PreAuthorize("hasRole('SUPERADMIN') or hasAuthority('VIEW:AUDIT')")
     public List<CacheConfigDto> findAllCacheConfigs() { return service.findAllCacheConfigs(); }
 
     @PostMapping("/cache-configs")
-    @PreAuthorize("hasRole('SUPERADMIN')")
+    @PreAuthorize("hasRole('SUPERADMIN') or hasAuthority('CREATE:AUDIT')")
     public ResponseEntity<CacheConfigDto> createCacheConfig(@Valid @RequestBody CacheConfigCreateDto dto) {
         CacheConfigDto c = service.createCacheConfig(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(c);

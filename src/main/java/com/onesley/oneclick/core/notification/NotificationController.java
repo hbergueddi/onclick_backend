@@ -30,6 +30,9 @@ import com.onesley.oneclick.core.notification.api.NotificationDtos.PushReservati
 import com.onesley.oneclick.core.notification.api.NotificationDtos.PushResultDto;
 import com.onesley.oneclick.core.notification.api.NotificationDtos.UnreadCountDto;
 
+/**
+ * Bug 32 (Batch D RBAC v2) — double-binding (isAuthenticated() | hasAnyRole(...)) or hasAuthority('VERB:NOTIFICATIONS')
+ */
 @RestController
 @RequestMapping("/api/notifications")
 @Tag(name = "Notifications", description = "Notifications, campagnes, device tokens (§7 + core/notification)")
@@ -47,7 +50,7 @@ public class NotificationController {
 
     @GetMapping
     @Operation(summary = "Notifications paginées — filtres recipientUserId / unreadOnly")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:NOTIFICATIONS')")
     public PageResponse<NotificationDto> findAll(
         @RequestParam(required = false) UUID recipientUserId,
         @RequestParam(required = false) Boolean unreadOnly,
@@ -58,7 +61,7 @@ public class NotificationController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR') or hasAuthority('CREATE:NOTIFICATIONS')")
     public ResponseEntity<NotificationDto> create(@Valid @RequestBody NotificationCreateDto dto) {
         NotificationDto n = service.create(dto);
         return ResponseEntity.created(URI.create("/api/notifications/" + n.id())).body(n);
@@ -66,14 +69,14 @@ public class NotificationController {
 
     @PatchMapping("/{id}/read")
     @Operation(summary = "Marque la notification comme lue (read_at = now() si pas déjà lue)")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('UPDATE:NOTIFICATIONS')")
     public NotificationDto markRead(@PathVariable UUID id) {
         return service.markRead(id);
     }
 
     @GetMapping("/by-user/{userId}")
     @Operation(summary = "Cloche notifications — toutes (ou non lues si unreadOnly=true) triées DESC.")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:NOTIFICATIONS')")
     public List<NotificationDto> findByUser(
         @PathVariable UUID userId,
         @RequestParam(required = false) Boolean unreadOnly
@@ -83,14 +86,14 @@ public class NotificationController {
 
     @GetMapping("/unread-count/by-user/{userId}")
     @Operation(summary = "Badge cloche — nombre de notifications non lues pour un user.")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:NOTIFICATIONS')")
     public UnreadCountDto unreadCountByUser(@PathVariable UUID userId) {
         return service.unreadCountByUser(userId);
     }
 
     @PatchMapping("/mark-all-read/by-user/{userId}")
     @Operation(summary = "Marque toutes les notifications non lues d'un user comme lues — renvoie le compteur.")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('UPDATE:NOTIFICATIONS')")
     public MarkAllReadResultDto markAllReadByUser(@PathVariable UUID userId) {
         return service.markAllReadByUser(userId);
     }
@@ -98,14 +101,14 @@ public class NotificationController {
     // ─── Campaigns ───────────────────────────────────────────────────────────
 
     @GetMapping("/campaigns/by-tenant/{tenantId}")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR') or hasAuthority('VIEW:NOTIFICATIONS')")
     public List<CampaignDto> findCampaignsByTenant(@PathVariable UUID tenantId) {
         return service.findCampaignsByTenant(tenantId);
     }
 
     @PostMapping("/campaigns")
     @Operation(summary = "Crée une campagne marketing. scheduledAt non null → status=scheduled.")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR') or hasAuthority('CREATE:NOTIFICATIONS')")
     public ResponseEntity<CampaignDto> createCampaign(@Valid @RequestBody CampaignCreateDto dto) {
         CampaignDto c = service.createCampaign(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(c);
@@ -114,7 +117,7 @@ public class NotificationController {
     // ─── Device tokens ───────────────────────────────────────────────────────
 
     @GetMapping("/tokens/by-user/{userId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:NOTIFICATIONS')")
     public List<DeviceTokenDto> findTokensByUser(@PathVariable UUID userId) {
         SecurityHelper.requireOwnerOrAdmin(userId);
         return service.findTokensByUser(userId);
@@ -122,14 +125,14 @@ public class NotificationController {
 
     @PostMapping("/tokens")
     @Operation(summary = "Enregistre (ou retourne le token existant) — upsert idempotent par token.")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('CREATE:NOTIFICATIONS')")
     public ResponseEntity<DeviceTokenDto> registerToken(@Valid @RequestBody DeviceTokenCreateDto dto) {
         DeviceTokenDto t = service.registerToken(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(t);
     }
 
     @DeleteMapping("/tokens/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('DELETE:NOTIFICATIONS')")
     public ResponseEntity<Void> unregisterToken(@PathVariable UUID id) {
         service.unregisterToken(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
@@ -139,14 +142,14 @@ public class NotificationController {
 
     @PostMapping("/push/promo")
     @Operation(summary = "Push FCM promo — fan-out vers tous les device_tokens des userIds cibles. Stub si FCM non configuré.")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN') or hasAuthority('CREATE:NOTIFICATIONS')")
     public PushResultDto pushPromo(@Valid @RequestBody PushPromoDto dto) {
         return pushService.sendPromo(dto);
     }
 
     @PostMapping("/push/reservation")
     @Operation(summary = "Push FCM réservation — fan-out vers les device_tokens du recipient (client OU staff). Stub si FCM non configuré.")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR') or hasAuthority('CREATE:NOTIFICATIONS')")
     public PushResultDto pushReservation(@Valid @RequestBody PushReservationDto dto) {
         return pushService.sendReservation(dto);
     }

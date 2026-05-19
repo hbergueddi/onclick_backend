@@ -28,7 +28,8 @@ public class RestaurantEnrichmentController {
 
     @PostMapping("/{id}/enrich-google-places")
     @Operation(summary = "Enrichit un restaurant via Google Places API (rating, hours, GPS, phone, website)")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR')")
+    // Bug 32 (Batch D RBAC v2) — RESOURCE=RESTAURANTS (enrichissement fiche).
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR') or hasAuthority('UPDATE:RESTAURANTS')")
     public Map<String, Object> enrich(
         @PathVariable UUID id,
         @RequestParam(defaultValue = "false") boolean force
