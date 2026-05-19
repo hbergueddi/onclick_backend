@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Contrôleur AI — Sprint B.1 G.4-bis (port des 4 EFs Groq legacy).
@@ -39,15 +40,11 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/ai")
 @Tag(name = "AI", description = "Wrappers Groq LLM — Sprint B.1 G.4-bis (port 4 EFs Supabase)")
+@RequiredArgsConstructor
 public class AiController {
 
     private final AiService service;
     private final GroqStreamingClient streamingClient;
-
-    public AiController(AiService service, GroqStreamingClient streamingClient) {
-        this.service = service;
-        this.streamingClient = streamingClient;
-    }
 
     @PostMapping("/care-chat")
     @Operation(summary = "Support chat — répond aux questions client avec contexte tickets")

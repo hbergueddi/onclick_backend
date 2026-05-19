@@ -2,26 +2,22 @@ package com.onesley.oneclick.modules.store.internal;
 
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.modules.store.api.StoreOnboardingDtos.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @Transactional
+@Slf4j
+@RequiredArgsConstructor
 public class StoreOnboardingService {
 
-    private static final Logger log = LoggerFactory.getLogger(StoreOnboardingService.class);
-
     private final StoreOnboardingRepository repo;
-
-    public StoreOnboardingService(StoreOnboardingRepository repo) {
-        this.repo = repo;
-    }
 
     @Transactional(readOnly = true)
     public List<OnboardingRequestDto> findAll(String status) {

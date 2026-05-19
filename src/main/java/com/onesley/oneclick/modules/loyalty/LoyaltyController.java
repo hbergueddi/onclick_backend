@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 
 /**
  * REST controller {@code /api/loyalty} — Bug 32 (Batch A RBAC v2).
@@ -39,19 +40,12 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/loyalty")
 @Tag(name = "Loyalty", description = "Comptes + transactions fidélité (§6)")
+@RequiredArgsConstructor
 public class LoyaltyController {
 
     private final LoyaltyService service;
     private final OcrReceiptService ocrService;
     private final GainRuleRequestService gainRuleRequestService;
-
-    public LoyaltyController(LoyaltyService service,
-                             OcrReceiptService ocrService,
-                             GainRuleRequestService gainRuleRequestService) {
-        this.service = service;
-        this.ocrService = ocrService;
-        this.gainRuleRequestService = gainRuleRequestService;
-    }
 
     public record SpendDto(
         @NotNull UUID clientId,

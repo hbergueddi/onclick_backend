@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Service CRUD pour {@link BookingRule} — règles de réservation par restaurant.
@@ -20,13 +21,10 @@ import java.util.UUID;
  */
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class BookingRuleService {
 
     private final BookingRuleRepository repository;
-
-    public BookingRuleService(BookingRuleRepository repository) {
-        this.repository = repository;
-    }
 
     public List<BookingRuleDto> findByRestaurant(UUID restaurantId) {
         return repository.findAllByRestaurantId(restaurantId).stream()

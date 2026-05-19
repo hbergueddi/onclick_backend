@@ -20,10 +20,12 @@ import com.onesley.oneclick.modules.promotion.api.OfferPatchDto;
 import com.onesley.oneclick.modules.promotion.internal.Offer;
 import com.onesley.oneclick.modules.promotion.internal.OfferRepository;
 import com.onesley.oneclick.modules.promotion.internal.OfferService;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/offers")
 @Tag(name = "Offers", description = "Offres / promotions par restaurant (§7)")
+@RequiredArgsConstructor
 public class OfferController {
 
     /** Whitelist Phase 4 §6.3 — champs filtrables/sortables. */
@@ -37,11 +39,6 @@ public class OfferController {
 
     private final OfferService service;
     private final OfferRepository offerRepository;
-
-    public OfferController(OfferService service, OfferRepository offerRepository) {
-        this.service = service;
-        this.offerRepository = offerRepository;
-    }
 
     // Bug 32 (Batch A RBAC v2) — RBAC v2 senior strict hasAuthority('VERB:OFFERS')
     @GetMapping

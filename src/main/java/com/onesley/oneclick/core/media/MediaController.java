@@ -22,6 +22,7 @@ import com.onesley.oneclick.core.media.api.MediaDtos.FileDto;
 import com.onesley.oneclick.core.media.api.MediaDtos.MediaCreateDto;
 import com.onesley.oneclick.core.media.api.MediaDtos.MediaDto;
 import com.onesley.oneclick.core.media.internal.MediaStorageService;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Bug 32 (Batch D RBAC v2) — RBAC v2 senior strict hasAuthority('VERB:MEDIA')
@@ -29,15 +30,11 @@ import com.onesley.oneclick.core.media.internal.MediaStorageService;
 @RestController
 @RequestMapping("/api/media")
 @Tag(name = "Media", description = "Médias polymorphiques (image/video/audio/pdf) + pièces jointes (§14)")
+@RequiredArgsConstructor
 public class MediaController {
 
     private final MediaService service;
     private final MediaStorageService storage;
-
-    public MediaController(MediaService service, MediaStorageService storage) {
-        this.service = service;
-        this.storage = storage;
-    }
 
     // ─── Media ───────────────────────────────────────────────────────────────
 

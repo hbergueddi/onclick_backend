@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Endpoints "Inscrire membre" — port commit legacy e7a8b49b (Sprint 9 HOMU).
@@ -34,13 +35,10 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/loyalty")
 @Tag(name = "Enrollment", description = "Inscription d'un nouveau membre avec welcome points")
+@RequiredArgsConstructor
 public class EnrollmentController {
 
     private final EnrollmentService enrollmentService;
-
-    public EnrollmentController(EnrollmentService enrollmentService) {
-        this.enrollmentService = enrollmentService;
-    }
 
     // Bug 32 (Batch A RBAC v2) — RBAC v2 senior strict hasAuthority('VERB:LOYALTY')
     @PostMapping("/enroll-member")

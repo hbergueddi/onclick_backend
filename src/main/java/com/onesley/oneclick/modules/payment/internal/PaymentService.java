@@ -24,25 +24,17 @@ import com.onesley.oneclick.modules.payment.api.PaymentDtos.RefundDto;
 import com.onesley.oneclick.modules.payment.api.PaymentDtos.RefundUpdateDto;
 import com.onesley.oneclick.modules.payment.api.PaymentDtos.TransactionCreateDto;
 import com.onesley.oneclick.modules.payment.api.PaymentDtos.TransactionDto;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class PaymentService {
 
     private final PaymentMethodRepository methodRepo;
     private final PaymentRepository paymentRepo;
     private final RefundRepository refundRepo;
     private final PaymentTransactionRepository txRepo;
-
-    public PaymentService(PaymentMethodRepository methodRepo,
-                          PaymentRepository paymentRepo,
-                          RefundRepository refundRepo,
-                          PaymentTransactionRepository txRepo) {
-        this.methodRepo = methodRepo;
-        this.paymentRepo = paymentRepo;
-        this.refundRepo = refundRepo;
-        this.txRepo = txRepo;
-    }
 
     // ─── Payment methods ─────────────────────────────────────────────────────
 

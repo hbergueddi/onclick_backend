@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static com.onesley.oneclick.modules.community.api.CommunityDtos.*;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Bug 32 (Batch D RBAC v2) — RBAC v2 senior strict hasAuthority('VERB:COMMUNITY')
@@ -22,13 +23,10 @@ import static com.onesley.oneclick.modules.community.api.CommunityDtos.*;
 @RestController
 @RequestMapping("/api/community")
 @Tag(name = "Community", description = "Posts + commentaires + likes (§8)")
+@RequiredArgsConstructor
 public class CommunityController {
 
     private final CommunityService service;
-
-    public CommunityController(CommunityService service) {
-        this.service = service;
-    }
 
     // ─── Posts ───────────────────────────────────────────────────────────────
 

@@ -12,17 +12,15 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/restaurants/featured")
 @Tag(name = "Explore featured", description = "Sprint H — curation manuelle restaurants featured Explore")
+@RequiredArgsConstructor
 public class ExploreFeaturedController {
 
     private final ExploreFeaturedService service;
-
-    public ExploreFeaturedController(ExploreFeaturedService service) {
-        this.service = service;
-    }
 
     @GetMapping
     @Operation(summary = "Liste publique des restos featured (Explore)")

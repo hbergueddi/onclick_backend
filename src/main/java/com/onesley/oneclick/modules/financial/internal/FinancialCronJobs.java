@@ -2,8 +2,6 @@ package com.onesley.oneclick.modules.financial.internal;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Crons du module financial — Sprint G.3 (port pg_cron legacy) + Sprint I.3.
@@ -23,9 +22,9 @@ import java.time.format.DateTimeFormatter;
  * Tous les 1er du mois à 3h UTC.
  */
 @Component
+@Slf4j
 public class FinancialCronJobs {
 
-    private static final Logger log = LoggerFactory.getLogger(FinancialCronJobs.class);
     private static final DateTimeFormatter MONTH_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM");
 
     @PersistenceContext

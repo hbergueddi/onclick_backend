@@ -2,8 +2,6 @@ package com.onesley.oneclick.core.ai.internal;
 
 import com.onesley.oneclick.core.ai.api.AiDtos;
 import com.onesley.oneclick.core.ai.api.AiDtos.AiResponseDto;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
@@ -13,6 +11,7 @@ import org.springframework.web.client.RestClientException;
 
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Client HTTP Groq LLM (format OpenAI-compatible) — Sprint B.1 G.4-bis.
@@ -34,9 +33,8 @@ import java.util.Map;
  * </pre>
  */
 @Component
+@Slf4j
 public class GroqClient {
-
-    private static final Logger log = LoggerFactory.getLogger(GroqClient.class);
 
     @Value("${app.ai.groq.api-key:}")
     private String apiKey;

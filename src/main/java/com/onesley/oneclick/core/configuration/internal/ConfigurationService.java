@@ -22,9 +22,11 @@ import com.onesley.oneclick.core.configuration.api.ConfigurationDtos.FeatureFlag
 import com.onesley.oneclick.core.configuration.api.ConfigurationDtos.FeatureFlagTargetCreateDto;
 import com.onesley.oneclick.core.configuration.api.ConfigurationDtos.FeatureFlagTargetDto;
 import com.onesley.oneclick.core.configuration.api.ConfigurationDtos.FeatureFlagUpdateDto;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class ConfigurationService {
 
     private final FeatureFlagRepository flagRepo;
@@ -33,14 +35,6 @@ public class ConfigurationService {
 
     @PersistenceContext
     private EntityManager entityManager;
-
-    public ConfigurationService(FeatureFlagRepository flagRepo,
-                                FeatureFlagTargetRepository targetRepo,
-                                CacheConfigurationRepository cacheRepo) {
-        this.flagRepo = flagRepo;
-        this.targetRepo = targetRepo;
-        this.cacheRepo = cacheRepo;
-    }
 
     // ─── Feature flags ───────────────────────────────────────────────────────
 

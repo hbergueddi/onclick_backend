@@ -27,9 +27,11 @@ import com.onesley.oneclick.modules.resource_booking.api.ResourceBookingDtos.Pri
 import com.onesley.oneclick.modules.resource_booking.api.ResourceBookingDtos.PricingDto;
 import com.onesley.oneclick.modules.resource_booking.api.ResourceBookingDtos.ResourceCreateDto;
 import com.onesley.oneclick.modules.resource_booking.api.ResourceBookingDtos.ResourceDto;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class ResourceBookingService {
 
     private final ResourceRepository resourceRepo;
@@ -39,16 +41,6 @@ public class ResourceBookingService {
 
     @PersistenceContext
     private EntityManager entityManager;
-
-    public ResourceBookingService(ResourceRepository resourceRepo,
-                                  ResourcePricingRepository pricingRepo,
-                                  ResourceBookingRepository bookingRepo,
-                                  ResourceBookingGuestRepository guestRepo) {
-        this.resourceRepo = resourceRepo;
-        this.pricingRepo = pricingRepo;
-        this.bookingRepo = bookingRepo;
-        this.guestRepo = guestRepo;
-    }
 
     // ─── Resources ───────────────────────────────────────────────────────────
 

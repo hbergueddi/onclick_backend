@@ -2,8 +2,6 @@ package com.onesley.oneclick.modules.loyalty.internal;
 
 import com.onesley.oneclick.modules.loyalty.api.OcrReceiptRequestDto;
 import com.onesley.oneclick.modules.loyalty.api.OcrReceiptResultDto;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -17,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Wrapper sur l'API OCR.space — port de l'Edge Function Supabase {@code ocr-receipt}.
@@ -30,9 +29,8 @@ import java.util.regex.Pattern;
  * l'endpoint OCR.space {@code /parse/imageurl}.
  */
 @Service
+@Slf4j
 public class OcrReceiptService {
-
-    private static final Logger log = LoggerFactory.getLogger(OcrReceiptService.class);
 
     private final String apiKey;
     private final String endpoint;

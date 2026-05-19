@@ -11,19 +11,16 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/analytics")
 @Tag(name = "Admin views", description = "Sprint H — admin users + wallet + recycling-pool + HI cockpit")
+@RequiredArgsConstructor
 public class AdminViewsController {
 
     private final AdminViewsService service;
     private final AdminStatsFullService statsFullService;
-
-    public AdminViewsController(AdminViewsService service, AdminStatsFullService statsFullService) {
-        this.service = service;
-        this.statsFullService = statsFullService;
-    }
 
     @GetMapping("/admin-stats-full")
     @Operation(summary = "Admin stats enrichi (compatible legacy useAdminStats — KPIs + deltas + trends + charts)")

@@ -23,9 +23,11 @@ import com.onesley.oneclick.modules.community.api.CommunityDtos.PostCreateDto;
 import com.onesley.oneclick.modules.community.api.CommunityDtos.PostDto;
 import com.onesley.oneclick.modules.community.api.CommunityDtos.PostLikeCreateDto;
 import com.onesley.oneclick.modules.community.api.CommunityDtos.PostLikeDto;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class CommunityService {
 
     private final PostRepository postRepo;
@@ -34,12 +36,6 @@ public class CommunityService {
 
     @PersistenceContext
     private EntityManager entityManager;
-
-    public CommunityService(PostRepository postRepo, CommentRepository commentRepo, PostLikeRepository likeRepo) {
-        this.postRepo = postRepo;
-        this.commentRepo = commentRepo;
-        this.likeRepo = likeRepo;
-    }
 
     // ─── Posts ───────────────────────────────────────────────────────────────
 

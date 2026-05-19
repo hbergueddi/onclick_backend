@@ -27,9 +27,11 @@ import com.onesley.oneclick.modules.social.api.SocialDtos.FriendGroupCreateDto;
 import com.onesley.oneclick.modules.social.api.SocialDtos.FriendGroupUpdateDto;
 import com.onesley.oneclick.modules.social.api.SocialDtos.FriendGroupMemberDto;
 import com.onesley.oneclick.modules.social.api.SocialDtos.FriendGroupMemberAddDto;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class SocialService {
 
     private final FriendshipRepository friendshipRepo;
@@ -40,20 +42,6 @@ public class SocialService {
 
     @PersistenceContext
     private EntityManager entityManager;
-
-    public SocialService(
-        FriendshipRepository friendshipRepo,
-        ReferralRepository referralRepo,
-        UserFavoriteRepository favoriteRepo,
-        FriendGroupRepository groupRepo,
-        FriendGroupMemberRepository groupMemberRepo
-    ) {
-        this.friendshipRepo = friendshipRepo;
-        this.referralRepo = referralRepo;
-        this.favoriteRepo = favoriteRepo;
-        this.groupRepo = groupRepo;
-        this.groupMemberRepo = groupMemberRepo;
-    }
 
     // ─── Friendships ─────────────────────────────────────────────────────────
 

@@ -5,8 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.onesley.oneclick.exception.NotFoundException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +18,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Service Sprint I.3 — Enrichissement Google Places (port EF fetch-google-places).
@@ -32,9 +31,9 @@ import java.util.UUID;
  */
 @Service
 @Transactional
+@Slf4j
 public class GooglePlacesEnrichmentService {
 
-    private static final Logger log = LoggerFactory.getLogger(GooglePlacesEnrichmentService.class);
     private static final String PLACES_TEXT_SEARCH = "https://places.googleapis.com/v1/places:searchText";
     private static final String PLACES_DETAILS = "https://places.googleapis.com/v1/places/";
 

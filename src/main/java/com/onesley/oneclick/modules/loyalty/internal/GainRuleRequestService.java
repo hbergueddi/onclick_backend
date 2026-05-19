@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Service du workflow d'approbation des demandes de règles de gain (Sprint G.2.3).
@@ -24,16 +25,11 @@ import java.util.UUID;
  */
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class GainRuleRequestService {
 
     private final GainRuleRequestRepository repository;
     private final GainRuleRepository gainRuleRepository;
-
-    public GainRuleRequestService(GainRuleRequestRepository repository,
-                                  GainRuleRepository gainRuleRepository) {
-        this.repository = repository;
-        this.gainRuleRepository = gainRuleRepository;
-    }
 
     /** Liste toutes les demandes (admin platform-wide). */
     public List<GainRuleRequestDto> findAll() {

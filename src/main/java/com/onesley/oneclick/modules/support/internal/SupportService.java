@@ -24,9 +24,11 @@ import com.onesley.oneclick.modules.support.api.SupportDtos.MessageDto;
 import com.onesley.oneclick.modules.support.api.SupportDtos.TicketCreateDto;
 import com.onesley.oneclick.modules.support.api.SupportDtos.TicketDto;
 import com.onesley.oneclick.modules.support.api.SupportDtos.TicketUpdateDto;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class SupportService {
 
     private final SupportTicketRepository ticketRepo;
@@ -35,14 +37,6 @@ public class SupportService {
 
     @PersistenceContext
     private EntityManager entityManager;
-
-    public SupportService(SupportTicketRepository ticketRepo,
-                          TicketMessageRepository messageRepo,
-                          TicketAttachmentRepository attachmentRepo) {
-        this.ticketRepo = ticketRepo;
-        this.messageRepo = messageRepo;
-        this.attachmentRepo = attachmentRepo;
-    }
 
     // ─── Tickets ─────────────────────────────────────────────────────────────
 

@@ -26,6 +26,7 @@ import com.onesley.oneclick.modules.reservation.internal.Reservation;
 import com.onesley.oneclick.modules.reservation.internal.ReservationGuestService;
 import com.onesley.oneclick.modules.reservation.internal.ReservationRepository;
 import com.onesley.oneclick.modules.reservation.internal.ReservationService;
+import lombok.RequiredArgsConstructor;
 
 /**
  * REST controller {@code /api/reservations} — Bug 32 (Batch A RBAC v2).
@@ -42,6 +43,7 @@ import com.onesley.oneclick.modules.reservation.internal.ReservationService;
 @RestController
 @RequestMapping("/api/reservations")
 @Tag(name = "Reservations", description = "Workflow réservations (§5)")
+@RequiredArgsConstructor
 public class ReservationController {
 
     /** Whitelist Phase 4 §6.3 — champs filtrables/sortables. */
@@ -54,18 +56,6 @@ public class ReservationController {
     private final ReservationRepository reservationRepository;
     private final BookingRuleService bookingRuleService;
     private final ReservationGuestService guestService;
-
-    public ReservationController(
-        ReservationService service,
-        ReservationRepository reservationRepository,
-        BookingRuleService bookingRuleService,
-        ReservationGuestService guestService
-    ) {
-        this.service = service;
-        this.reservationRepository = reservationRepository;
-        this.bookingRuleService = bookingRuleService;
-        this.guestService = guestService;
-    }
 
     public record StatusChangeDto(String status, UUID changedById, String reason) {}
 

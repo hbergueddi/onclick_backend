@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Endpoints Sprint H — extensions admin/whitelabel pour le module loyalty.
@@ -25,13 +26,10 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/loyalty")
 @Tag(name = "Loyalty extensions", description = "Sprint H — admin views (ratings, AI usage, restitutions, expired points, tier)")
+@RequiredArgsConstructor
 public class LoyaltyExtensionController {
 
     private final LoyaltyExtensionService service;
-
-    public LoyaltyExtensionController(LoyaltyExtensionService service) {
-        this.service = service;
-    }
 
     // ─── Client ratings ─────────────────────────────────────────────────
     @GetMapping("/ratings/by-user/{userId}")

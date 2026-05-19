@@ -3,8 +3,6 @@ package com.onesley.oneclick.core.ai.internal;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.onesley.oneclick.core.ai.api.AiDtos;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -18,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Streaming SSE client Groq — Sprint C C.1.
@@ -35,9 +34,9 @@ import java.util.concurrent.Executors;
  * <p>Pattern OpenAI-compatible — le frontend legacy parse déjà ce format.
  */
 @Component
+@Slf4j
 public class GroqStreamingClient {
 
-    private static final Logger log = LoggerFactory.getLogger(GroqStreamingClient.class);
     private static final java.util.concurrent.ExecutorService STREAM_EXECUTOR =
         Executors.newCachedThreadPool();
 

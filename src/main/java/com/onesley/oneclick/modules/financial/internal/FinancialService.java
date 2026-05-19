@@ -30,9 +30,11 @@ import com.onesley.oneclick.modules.financial.api.FinancialDtos.ContractTemplate
 import com.onesley.oneclick.modules.financial.api.FinancialDtos.ContractTemplateDto;
 import com.onesley.oneclick.modules.financial.api.FinancialDtos.ContractTemplatePatchDto;
 import com.onesley.oneclick.exception.BadRequestException;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class FinancialService {
 
     private final ContractRepository contractRepo;
@@ -43,18 +45,6 @@ public class FinancialService {
 
     @PersistenceContext
     private EntityManager entityManager;
-
-    public FinancialService(ContractRepository contractRepo,
-                            InvoiceRepository invoiceRepo,
-                            InvoiceLineRepository lineRepo,
-                            WalletTransactionRepository walletRepo,
-                            ContractTemplateRepository templateRepo) {
-        this.contractRepo = contractRepo;
-        this.invoiceRepo = invoiceRepo;
-        this.lineRepo = lineRepo;
-        this.walletRepo = walletRepo;
-        this.templateRepo = templateRepo;
-    }
 
     // ─── Contracts ───────────────────────────────────────────────────────────
 

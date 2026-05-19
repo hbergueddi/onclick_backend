@@ -4,14 +4,13 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.lang.reflect.Method;
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Aspect AOP — wrap toutes les méthodes annotées {@code @Scheduled} pour tracer
@@ -33,9 +32,9 @@ import java.util.UUID;
  */
 @Aspect
 @Component
+@Slf4j
 public class JobExecutionAspect {
 
-    private static final Logger log = LoggerFactory.getLogger(JobExecutionAspect.class);
     private static final int MAX_ERR_LEN = 4000;
 
     private final JobExecutionRepository jobRepo;

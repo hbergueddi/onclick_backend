@@ -11,8 +11,6 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -27,6 +25,7 @@ import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Rate-limit filter — Sprint G.6 + Bug 35 (V2 distribué Bucket4j-Redis).
@@ -52,9 +51,9 @@ import java.util.UUID;
  */
 @Component
 @ConditionalOnProperty(prefix = "app.rate-limit", name = "enabled", havingValue = "true")
+@Slf4j
 public class RateLimitFilter extends OncePerRequestFilter {
 
-    private static final Logger log = LoggerFactory.getLogger(RateLimitFilter.class);
     private static final String ERROR_TYPE = "https://api.oneclick.ma/errors/rate-limit-exceeded";
     private static final String REDIS_KEY_PREFIX = "rate-limit:";
 

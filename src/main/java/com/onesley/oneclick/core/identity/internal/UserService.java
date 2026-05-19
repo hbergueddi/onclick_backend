@@ -29,6 +29,7 @@ import com.onesley.oneclick.core.identity.api.UserUpdateDto;
 import com.onesley.oneclick.core.identity.api.Role;
 import com.onesley.oneclick.core.identity.api.User;
 import com.onesley.oneclick.core.identity.api.UserRepository;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Service métier {@link User} — signup, lookup, update, soft delete.
@@ -38,6 +39,7 @@ import com.onesley.oneclick.core.identity.api.UserRepository;
  */
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class UserService {
 
     private final UserRepository repository;
@@ -55,16 +57,6 @@ public class UserService {
 
     @PersistenceContext
     private EntityManager entityManager;
-
-    public UserService(UserRepository repository, RoleRepository roleRepository,
-                       PasswordEncoder passwordEncoder, ApplicationEventPublisher eventPublisher,
-                       OneClickUserDetailsService userDetailsService) {
-        this.repository = repository;
-        this.roleRepository = roleRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.eventPublisher = eventPublisher;
-        this.userDetailsService = userDetailsService;
-    }
 
     public UserDto findById(UUID id) {
         User user = repository.findById(id)

@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Bug 32 (Batch D RBAC v2) — RBAC v2 senior strict hasAuthority('VERB:AUDIT')
@@ -22,13 +23,10 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/system")
 @Tag(name = "System monitoring", description = "Sprint H — health checks, alerts, quota change logs (admin)")
+@RequiredArgsConstructor
 public class SystemController {
 
     private final SystemService service;
-
-    public SystemController(SystemService service) {
-        this.service = service;
-    }
 
     // ─── Health checks ────────────────────────────────────────────────────
     @GetMapping("/health-checks")

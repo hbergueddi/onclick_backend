@@ -3,8 +3,6 @@ package com.onesley.oneclick.core.notification.internal;
 import com.onesley.oneclick.core.notification.api.NotificationDtos.PushPromoDto;
 import com.onesley.oneclick.core.notification.api.NotificationDtos.PushReservationDto;
 import com.onesley.oneclick.core.notification.api.NotificationDtos.PushResultDto;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
@@ -14,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * FCM push service — port des Edge Functions Supabase {@code send-promo-push}
@@ -36,9 +35,8 @@ import java.util.UUID;
  * </ol>
  */
 @Service
+@Slf4j
 public class FcmPushService {
-
-    private static final Logger log = LoggerFactory.getLogger(FcmPushService.class);
 
     private final String projectId;
     private final String serviceAccountJson;

@@ -24,6 +24,7 @@ import com.onesley.oneclick.core.audit_log.api.AuditLogDtos.JobExecutionDto;
 import com.onesley.oneclick.core.audit_log.api.AuditLogDtos.SystemEventCreateDto;
 import com.onesley.oneclick.core.audit_log.api.AuditLogDtos.SystemEventDto;
 import com.onesley.oneclick.core.audit_log.api.SystemEvent;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Service de lecture/écriture des journaux audit + events + erreurs.
@@ -35,6 +36,7 @@ import com.onesley.oneclick.core.audit_log.api.SystemEvent;
  */
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class AuditLogService {
 
     private final AuditLogRepository auditRepo;
@@ -44,16 +46,6 @@ public class AuditLogService {
 
     @PersistenceContext
     private EntityManager entityManager;
-
-    public AuditLogService(AuditLogRepository auditRepo,
-                           SystemEventRepository eventRepo,
-                           ErrorLogRepository errorRepo,
-                           JobExecutionRepository jobRepo) {
-        this.auditRepo = auditRepo;
-        this.eventRepo = eventRepo;
-        this.errorRepo = errorRepo;
-        this.jobRepo = jobRepo;
-    }
 
     // ─── AuditLog ────────────────────────────────────────────────────────────
 

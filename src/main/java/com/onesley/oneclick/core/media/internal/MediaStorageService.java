@@ -1,8 +1,6 @@
 package com.onesley.oneclick.core.media.internal;
 
 import com.onesley.oneclick.exception.BadRequestException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -17,6 +15,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import java.io.IOException;
 import java.util.Set;
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Service de stockage binaire — Phase 3.5 §X spec.
@@ -35,9 +34,8 @@ import java.util.UUID;
  * Override via {@code app.storage.media.max-size-mb} / {@code allowed-mime-types}.
  */
 @Service
+@Slf4j
 public class MediaStorageService {
-
-    private static final Logger log = LoggerFactory.getLogger(MediaStorageService.class);
 
     private static final Set<String> DEFAULT_ALLOWED_MIME = Set.of(
         "image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif",

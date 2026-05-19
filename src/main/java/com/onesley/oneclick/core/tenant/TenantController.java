@@ -19,10 +19,12 @@ import com.onesley.oneclick.core.tenant.api.TenantCreateDto;
 import com.onesley.oneclick.core.tenant.api.TenantDto;
 import com.onesley.oneclick.core.tenant.api.Tenant;
 import com.onesley.oneclick.core.tenant.internal.TenantRepository;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/tenants")
 @Tag(name = "Tenants", description = "Multi-tenant — racine whitelabel (OneClick, HOMU, PCC, ...)")
+@RequiredArgsConstructor
 public class TenantController {
 
     /** Whitelist Phase 4 §6.3 — champs filtrables/sortables. */
@@ -32,11 +34,6 @@ public class TenantController {
 
     private final TenantService service;
     private final TenantRepository tenantRepository;
-
-    public TenantController(TenantService service, TenantRepository tenantRepository) {
-        this.service = service;
-        this.tenantRepository = tenantRepository;
-    }
 
     // Bug 32 (Batch B RBAC v2) — RBAC v2 senior strict hasAuthority('VERB:TENANTS')
     @GetMapping

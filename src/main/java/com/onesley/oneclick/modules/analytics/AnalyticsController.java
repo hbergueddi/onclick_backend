@@ -17,19 +17,16 @@ import java.util.List;
 import java.util.UUID;
 
 import static com.onesley.oneclick.modules.analytics.api.AnalyticsDtos.*;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/analytics")
 @Tag(name = "Analytics", description = "Search docs (tsvector), API clients, keys, webhooks (§13)")
+@RequiredArgsConstructor
 public class AnalyticsController {
 
     private final AnalyticsService service;
     private final AdminStatsService adminStatsService;
-
-    public AnalyticsController(AnalyticsService service, AdminStatsService adminStatsService) {
-        this.service = service;
-        this.adminStatsService = adminStatsService;
-    }
 
     // ─── Admin stats — Sprint G.2.4 ────────────────────────────────────────
 
@@ -44,7 +41,6 @@ public class AnalyticsController {
     public AdminStatsDto getAdminStats(@RequestParam(required = false) UUID tenantId) {
         return adminStatsService.computeStats(tenantId);
     }
-    
 
     // ─── API clients ─────────────────────────────────────────────────────────
 

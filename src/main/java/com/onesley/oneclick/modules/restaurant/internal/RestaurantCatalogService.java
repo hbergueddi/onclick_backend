@@ -18,6 +18,7 @@ import java.util.UUID;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantCreateDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantPatchDto;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Service {@link Restaurant} — CRUD + filtres par ville/tenant/status.
@@ -30,16 +31,13 @@ import com.onesley.oneclick.modules.restaurant.api.RestaurantPatchDto;
  */
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class RestaurantCatalogService {
 
     private final RestaurantRepository repository;
 
     @PersistenceContext
     private EntityManager entityManager;
-
-    public RestaurantCatalogService(RestaurantRepository repository) {
-        this.repository = repository;
-    }
 
     public Page<RestaurantDto> findAll(String city, UUID tenantId, int page, int size) {
         Specification<Restaurant> spec = (root, q, cb) -> cb.isNull(root.get("deletedAt"));

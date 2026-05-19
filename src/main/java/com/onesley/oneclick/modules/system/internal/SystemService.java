@@ -10,9 +10,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class SystemService {
 
     private final SystemHealthCheckRepository healthRepo;
@@ -22,24 +24,6 @@ public class SystemService {
     private final AppDocumentRepository documentRepo;
     private final DocumentVersionRepository versionRepo;
     private final CustomRoleRepository customRoleRepo;
-
-    public SystemService(
-        SystemHealthCheckRepository healthRepo,
-        SystemAlertRepository alertRepo,
-        SystemAlertRuleRepository ruleRepo,
-        QuotaChangeLogRepository quotaRepo,
-        AppDocumentRepository documentRepo,
-        DocumentVersionRepository versionRepo,
-        CustomRoleRepository customRoleRepo
-    ) {
-        this.healthRepo = healthRepo;
-        this.alertRepo = alertRepo;
-        this.ruleRepo = ruleRepo;
-        this.quotaRepo = quotaRepo;
-        this.documentRepo = documentRepo;
-        this.versionRepo = versionRepo;
-        this.customRoleRepo = customRoleRepo;
-    }
 
     @Transactional(readOnly = true)
     public List<HealthCheckDto> findRecentHealthChecks(int limit) {

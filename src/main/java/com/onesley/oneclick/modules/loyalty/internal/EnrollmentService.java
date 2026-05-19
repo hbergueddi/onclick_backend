@@ -15,8 +15,6 @@ import com.onesley.oneclick.modules.loyalty.api.LoyaltyTransactionDto;
 import com.onesley.oneclick.security.SecurityHelper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +25,8 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Service orchestrateur "Inscrire membre" — port commit legacy e7a8b49b.
@@ -55,9 +55,10 @@ import java.util.UUID;
  * </ol>
  */
 @Service
+@Slf4j
+@RequiredArgsConstructor
 public class EnrollmentService {
 
-    private static final Logger log = LoggerFactory.getLogger(EnrollmentService.class);
     /** Role CLIENT — UUID stable défini dans V1 (cf docker DB \du roles). */
     private static final UUID CLIENT_ROLE_ID = UUID.fromString("10000000-0000-0000-0000-000000000001");
 
@@ -68,18 +69,6 @@ public class EnrollmentService {
 
     @PersistenceContext
     private EntityManager em;
-
-    public EnrollmentService(
-        UserRepository userRepository,
-        GainRuleRepository gainRuleRepository,
-        LoyaltyService loyaltyService,
-        PasswordEncoder passwordEncoder
-    ) {
-        this.userRepository = userRepository;
-        this.gainRuleRepository = gainRuleRepository;
-        this.loyaltyService = loyaltyService;
-        this.passwordEncoder = passwordEncoder;
-    }
 
     // ─── ENROLLMENT ────────────────────────────────────────────────────────
 

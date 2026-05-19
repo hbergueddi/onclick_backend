@@ -22,6 +22,7 @@ import com.onesley.oneclick.core.identity.api.UserDto;
 import com.onesley.oneclick.core.identity.api.UserUpdateDto;
 import com.onesley.oneclick.core.identity.api.User;
 import com.onesley.oneclick.core.identity.api.UserRepository;
+import lombok.RequiredArgsConstructor;
 
 /**
  * REST controller {@code /api/users}.
@@ -29,6 +30,7 @@ import com.onesley.oneclick.core.identity.api.UserRepository;
 @RestController
 @RequestMapping("/api/users")
 @Tag(name = "Users", description = "Identités applicatives (RBAC simplifié 1 user = 1 role)")
+@RequiredArgsConstructor
 public class UserController {
 
     /** Whitelist Phase 4 spec §6.3 — champs filtrables/sortables via /search. */
@@ -39,11 +41,6 @@ public class UserController {
 
     private final UserService service;
     private final UserRepository userRepository;
-
-    public UserController(UserService service, UserRepository userRepository) {
-        this.service = service;
-        this.userRepository = userRepository;
-    }
 
     // Bug 32 (Batch B RBAC v2) — RBAC v2 senior strict hasAuthority('VERB:USERS')
     @GetMapping

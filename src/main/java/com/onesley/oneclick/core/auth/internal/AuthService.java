@@ -8,8 +8,6 @@ import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.security.JwtIssuer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +16,8 @@ import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Service authentification — §2 spec senior dev (Identity & Auth).
@@ -41,9 +41,10 @@ import java.util.UUID;
  */
 @Service
 @Transactional(readOnly = true)
+@Slf4j
+@RequiredArgsConstructor
 public class AuthService {
 
-    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
     private static final SecureRandom RNG = new SecureRandom();
 
     private final UserRepository userRepo;
@@ -53,22 +54,6 @@ public class AuthService {
     private final TenantRepository tenantRepo;
     private final PasswordEncoder passwordEncoder;
     private final JwtIssuer jwtIssuer;
-
-    public AuthService(UserRepository userRepo,
-                       RefreshTokenRepository refreshRepo,
-                       OtpRequestRepository otpRepo,
-                       LoginHistoryRepository loginRepo,
-                       TenantRepository tenantRepo,
-                       PasswordEncoder passwordEncoder,
-                       JwtIssuer jwtIssuer) {
-        this.userRepo = userRepo;
-        this.refreshRepo = refreshRepo;
-        this.otpRepo = otpRepo;
-        this.loginRepo = loginRepo;
-        this.tenantRepo = tenantRepo;
-        this.passwordEncoder = passwordEncoder;
-        this.jwtIssuer = jwtIssuer;
-    }
 
     // ─── Login (email + password) ──────────────────────────────────────────────
     @Transactional

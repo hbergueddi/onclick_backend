@@ -1,7 +1,5 @@
 package com.onesley.oneclick.modules.analytics.search.es;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
@@ -12,6 +10,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Sync PostgreSQL → Elasticsearch — projection {@code restaurants} → index ES.
@@ -32,9 +31,8 @@ import java.util.UUID;
  * tsvector PostgreSQL reste opérationnel comme fallback (cf SearchController).
  */
 @Service
+@Slf4j
 public class RestaurantEsSyncService {
-
-    private static final Logger log = LoggerFactory.getLogger(RestaurantEsSyncService.class);
 
     private final JdbcTemplate jdbc;
     private final RestaurantEsRepository esRepo;

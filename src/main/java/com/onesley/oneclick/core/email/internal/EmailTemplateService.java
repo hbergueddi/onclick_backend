@@ -1,8 +1,6 @@
 package com.onesley.oneclick.core.email.internal;
 
 import com.onesley.oneclick.exception.NotFoundException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
@@ -11,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Service Sprint I.3 — rendu des templates HTML email.
@@ -26,9 +25,9 @@ import java.util.regex.Pattern;
  * n'est pas encore livré).
  */
 @Service
+@Slf4j
 public class EmailTemplateService {
 
-    private static final Logger log = LoggerFactory.getLogger(EmailTemplateService.class);
     private static final Pattern VAR_PATTERN = Pattern.compile("\\{\\{(\\w+)}}");
 
     public String render(String tenantSlug, String template, Map<String, Object> variables, String subjectFallback) {

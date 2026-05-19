@@ -16,17 +16,15 @@ import java.util.List;
 import java.util.UUID;
 
 import static com.onesley.oneclick.modules.payment.api.PaymentDtos.*;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/payments")
 @Tag(name = "Payments", description = "Méthodes, paiements, remboursements, événements provider (§12)")
+@RequiredArgsConstructor
 public class PaymentController {
 
     private final PaymentService service;
-
-    public PaymentController(PaymentService service) {
-        this.service = service;
-    }
 
     // Bug 32 (Batch C RBAC v2) — RBAC v2 senior strict sur tous les endpoints du module payment.
 

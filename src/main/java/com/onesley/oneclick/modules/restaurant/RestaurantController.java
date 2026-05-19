@@ -35,10 +35,12 @@ import com.onesley.oneclick.modules.restaurant.internal.Restaurant;
 import com.onesley.oneclick.modules.restaurant.internal.RestaurantCatalogService;
 import com.onesley.oneclick.modules.restaurant.internal.RestaurantRepository;
 import com.onesley.oneclick.modules.restaurant.internal.RestaurantSubResourceService;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/restaurants")
 @Tag(name = "Restaurants", description = "Catalogue restaurants partenaires")
+@RequiredArgsConstructor
 public class RestaurantController {
 
     /** Whitelist Phase 4 §6.3 — champs filtrables/sortables. */
@@ -51,18 +53,6 @@ public class RestaurantController {
     private final RestaurantRepository restaurantRepository;
     private final RestaurantSubResourceService subResourceService;
     private final UserRepository userRepository;
-
-    public RestaurantController(
-        RestaurantCatalogService service,
-        RestaurantRepository restaurantRepository,
-        RestaurantSubResourceService subResourceService,
-        UserRepository userRepository
-    ) {
-        this.service = service;
-        this.restaurantRepository = restaurantRepository;
-        this.subResourceService = subResourceService;
-        this.userRepository = userRepository;
-    }
 
     @GetMapping
     @Operation(summary = "Liste paginée des restaurants — filtres city + tenantId optionnels (PUBLIC catalogue)")

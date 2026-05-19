@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Endpoint Email Resend — Sprint I.3.
@@ -24,15 +25,11 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/email")
 @Tag(name = "Email", description = "Sprint I.3 — wrapper Resend pour emails brandés whitelabel")
+@RequiredArgsConstructor
 public class EmailController {
 
     private final ResendClient resendClient;
     private final EmailTemplateService templateService;
-
-    public EmailController(ResendClient resendClient, EmailTemplateService templateService) {
-        this.resendClient = resendClient;
-        this.templateService = templateService;
-    }
 
     // Bug 32 (Batch D RBAC v2) — RESOURCE=NOTIFICATIONS (email = canal notification).
     @PostMapping("/send")

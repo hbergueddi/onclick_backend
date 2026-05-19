@@ -5,6 +5,7 @@ import com.onesley.oneclick.core.ai.api.AiDtos.AiResponseDto;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Service AI — orchestration des 4 usages (care chat, assistant, review, plan).
@@ -14,13 +15,10 @@ import java.util.List;
  * {@link GroqClient} avec les paramètres adéquats.
  */
 @Service
+@RequiredArgsConstructor
 public class AiService {
 
     private final GroqClient groq;
-
-    public AiService(GroqClient groq) {
-        this.groq = groq;
-    }
 
     /**
      * Chat support client — répond à des questions du support avec contexte

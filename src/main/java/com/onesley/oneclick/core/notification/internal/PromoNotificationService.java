@@ -10,19 +10,17 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class PromoNotificationService {
 
     private final PromoNotificationRequestRepository requestRepo;
 
     @PersistenceContext
     private EntityManager em;
-
-    public PromoNotificationService(PromoNotificationRequestRepository requestRepo) {
-        this.requestRepo = requestRepo;
-    }
 
     @Transactional(readOnly = true)
     public List<PromoRequestDto> findAll(String status, UUID restaurantId) {

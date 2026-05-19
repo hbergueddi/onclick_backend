@@ -2,11 +2,10 @@ package com.onesley.oneclick.modules.reservation.internal;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Crons du module reservation — Sprint G.3 (port pg_cron legacy).
@@ -26,9 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
  * sur un job qui devrait tourner).
  */
 @Component
+@Slf4j
 public class ReservationCronJobs {
-
-    private static final Logger log = LoggerFactory.getLogger(ReservationCronJobs.class);
 
     @PersistenceContext
     private EntityManager em;

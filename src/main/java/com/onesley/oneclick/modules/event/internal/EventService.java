@@ -25,9 +25,11 @@ import com.onesley.oneclick.modules.event.api.EventDtos.EventCreateDto;
 import com.onesley.oneclick.modules.event.api.EventDtos.EventDto;
 import com.onesley.oneclick.modules.event.api.EventDtos.ParticipationCreateDto;
 import com.onesley.oneclick.modules.event.api.EventDtos.ParticipationDto;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class EventService {
 
     private final EventRepository eventRepo;
@@ -35,11 +37,6 @@ public class EventService {
 
     @PersistenceContext
     private EntityManager entityManager;
-
-    public EventService(EventRepository eventRepo, EventParticipationRepository participationRepo) {
-        this.eventRepo = eventRepo;
-        this.participationRepo = participationRepo;
-    }
 
     // ─── Events ──────────────────────────────────────────────────────────────
 

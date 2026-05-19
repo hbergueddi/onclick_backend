@@ -15,6 +15,7 @@ import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Service d'extension Sprint H pour les vues admin loyalty :
@@ -23,6 +24,7 @@ import java.util.UUID;
  */
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class LoyaltyExtensionService {
 
     private static final int AI_DAILY_LIMIT = 20;
@@ -34,18 +36,6 @@ public class LoyaltyExtensionService {
 
     @PersistenceContext
     private EntityManager em;
-
-    public LoyaltyExtensionService(
-        ClientRatingRepository ratingRepo,
-        AIUsageRepository aiUsageRepo,
-        RestaurantRestitutionRepository restitutionRepo,
-        RestaurantTierStatusRepository tierStatusRepo
-    ) {
-        this.ratingRepo = ratingRepo;
-        this.aiUsageRepo = aiUsageRepo;
-        this.restitutionRepo = restitutionRepo;
-        this.tierStatusRepo = tierStatusRepo;
-    }
 
     // ─── Client ratings ──────────────────────────────────────────────
     @Transactional(readOnly = true)

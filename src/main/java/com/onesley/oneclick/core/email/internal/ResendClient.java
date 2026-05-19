@@ -3,13 +3,12 @@ package com.onesley.oneclick.core.email.internal;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.onesley.oneclick.core.email.api.EmailDtos.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Client Resend HTTP API — Sprint I.3.
@@ -23,9 +22,9 @@ import java.util.Map;
  * via {@code app.email.brand.{slug}.*}.
  */
 @Component
+@Slf4j
 public class ResendClient {
 
-    private static final Logger log = LoggerFactory.getLogger(ResendClient.class);
     private static final String RESEND_API = "https://api.resend.com/emails";
 
     @Value("${app.email.resend.api-key:}")

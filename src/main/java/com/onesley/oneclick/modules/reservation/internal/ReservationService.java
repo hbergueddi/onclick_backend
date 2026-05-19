@@ -22,12 +22,14 @@ import java.util.Set;
 import java.util.UUID;
 import com.onesley.oneclick.modules.reservation.api.ReservationCreateDto;
 import com.onesley.oneclick.modules.reservation.api.ReservationDto;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Service réservation — création + workflow transitions.
  */
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class ReservationService {
 
     private static final Set<String> VALID_STATUSES = Set.of(
@@ -40,14 +42,6 @@ public class ReservationService {
 
     @PersistenceContext
     private EntityManager entityManager;
-
-    public ReservationService(ReservationRepository repository,
-                              ReservationStatusHistoryRepository historyRepository,
-                              ApplicationEventPublisher eventPublisher) {
-        this.repository = repository;
-        this.historyRepository = historyRepository;
-        this.eventPublisher = eventPublisher;
-    }
 
     public Page<ReservationDto> findAll(UUID clientId, UUID restaurantId, String status,
                                         int page, int size) {

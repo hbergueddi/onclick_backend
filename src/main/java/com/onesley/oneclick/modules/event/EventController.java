@@ -21,6 +21,7 @@ import com.onesley.oneclick.modules.event.api.EventDtos.EventPatchDto;
 import com.onesley.oneclick.modules.event.api.EventDtos.ParticipationCreateDto;
 import com.onesley.oneclick.modules.event.api.EventDtos.ParticipationDto;
 import com.onesley.oneclick.modules.event.internal.EventService;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Bug 32 (Batch D RBAC v2) — RBAC v2 senior strict hasAuthority('VERB:EVENTS')
@@ -28,13 +29,10 @@ import com.onesley.oneclick.modules.event.internal.EventService;
 @RestController
 @RequestMapping("/api/events")
 @Tag(name = "Events", description = "Événements + RSVP (§9)")
+@RequiredArgsConstructor
 public class EventController {
 
     private final EventService service;
-
-    public EventController(EventService service) {
-        this.service = service;
-    }
 
     @GetMapping
     @Operation(summary = "Liste paginée d'événements — filtres tenantId / restaurantId / upcomingOnly")

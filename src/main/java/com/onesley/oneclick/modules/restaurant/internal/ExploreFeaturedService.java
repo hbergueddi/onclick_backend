@@ -7,16 +7,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class ExploreFeaturedService {
 
     private final ExploreFeaturedRepository repo;
-
-    public ExploreFeaturedService(ExploreFeaturedRepository repo) {
-        this.repo = repo;
-    }
 
     @Transactional(readOnly = true)
     public List<ExploreFeaturedDto> findAllEnabled() {

@@ -19,9 +19,11 @@ import java.util.UUID;
 import com.onesley.oneclick.modules.promotion.api.OfferCreateDto;
 import com.onesley.oneclick.modules.promotion.api.OfferDto;
 import com.onesley.oneclick.modules.promotion.api.OfferPatchDto;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class OfferService {
 
     /** Valeurs autorisées pour Offer.type (miroir du CHECK V15 côté DB). */
@@ -32,11 +34,6 @@ public class OfferService {
 
     @PersistenceContext
     private EntityManager entityManager;
-
-    public OfferService(OfferRepository repository, ApplicationEventPublisher eventPublisher) {
-        this.repository = repository;
-        this.eventPublisher = eventPublisher;
-    }
 
     public Page<OfferDto> findAll(UUID restaurantId, Boolean activeOnly, int page, int size) {
         Specification<Offer> spec = (root, q, cb) -> cb.isNull(root.get("deletedAt"));

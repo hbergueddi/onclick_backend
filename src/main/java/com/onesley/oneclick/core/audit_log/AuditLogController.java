@@ -21,17 +21,15 @@ import com.onesley.oneclick.core.audit_log.api.AuditLogDtos.ErrorLogDto;
 import com.onesley.oneclick.core.audit_log.api.AuditLogDtos.JobExecutionDto;
 import com.onesley.oneclick.core.audit_log.api.AuditLogDtos.SystemEventCreateDto;
 import com.onesley.oneclick.core.audit_log.api.AuditLogDtos.SystemEventDto;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/audit")
 @Tag(name = "AuditLog", description = "Journal audit + events système + erreurs + jobs (§15)")
+@RequiredArgsConstructor
 public class AuditLogController {
 
     private final AuditLogService service;
-
-    public AuditLogController(AuditLogService service) {
-        this.service = service;
-    }
 
     // ─── AuditLog ────────────────────────────────────────────────────────────
 

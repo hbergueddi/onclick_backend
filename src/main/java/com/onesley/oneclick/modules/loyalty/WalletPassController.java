@@ -12,6 +12,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Endpoints Wallet pass — Sprint I.2.
@@ -27,13 +28,10 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/loyalty/wallet-pass")
 @Tag(name = "Wallet pass", description = "Sprint I.2 — Apple .pkpass + Google Wallet save URL")
+@RequiredArgsConstructor
 public class WalletPassController {
 
     private final WalletPassService service;
-
-    public WalletPassController(WalletPassService service) {
-        this.service = service;
-    }
 
     // Bug 32 (Batch A RBAC v2) — RBAC v2 senior strict VIEW:LOYALTY (génération = lecture).
     @GetMapping

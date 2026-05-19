@@ -29,6 +29,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Service métier loyalty — gestion comptable points.
@@ -43,6 +44,7 @@ import java.util.UUID;
  */
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class LoyaltyService {
 
     private final LoyaltyAccountRepository accountRepository;
@@ -53,18 +55,6 @@ public class LoyaltyService {
 
     @PersistenceContext
     private EntityManager entityManager;
-
-    public LoyaltyService(LoyaltyAccountRepository accountRepository,
-                          LoyaltyTransactionRepository transactionRepository,
-                          GainRuleRepository gainRuleRepository,
-                          TierRepository tierRepository,
-                          ApplicationEventPublisher eventPublisher) {
-        this.accountRepository = accountRepository;
-        this.transactionRepository = transactionRepository;
-        this.gainRuleRepository = gainRuleRepository;
-        this.tierRepository = tierRepository;
-        this.eventPublisher = eventPublisher;
-    }
 
     public LoyaltyAccountDto findAccount(UUID accountId) {
         LoyaltyAccount a = accountRepository.findById(accountId)

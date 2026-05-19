@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Bug 32 (Batch D RBAC v2) — RBAC v2 senior strict hasAuthority('VERB:NOTIFICATIONS')
@@ -19,13 +20,10 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/notifications/promo-requests")
 @Tag(name = "Promo notification requests", description = "Sprint H — workflow admin approval push promo")
+@RequiredArgsConstructor
 public class PromoNotificationController {
 
     private final PromoNotificationService service;
-
-    public PromoNotificationController(PromoNotificationService service) {
-        this.service = service;
-    }
 
     @GetMapping
     @Operation(summary = "Liste des demandes push promo (admin)")

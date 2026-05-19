@@ -8,18 +8,15 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class SocialExtensionService {
 
     private final EliteApplicationRepository eliteRepo;
     private final RestaurantGroupRepository groupRepo;
-
-    public SocialExtensionService(EliteApplicationRepository eliteRepo, RestaurantGroupRepository groupRepo) {
-        this.eliteRepo = eliteRepo;
-        this.groupRepo = groupRepo;
-    }
 
     // ─── Elite applications ─────────────────────────────────────────────
     @Transactional(readOnly = true)

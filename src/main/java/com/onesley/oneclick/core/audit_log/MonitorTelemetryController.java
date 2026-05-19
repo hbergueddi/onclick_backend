@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Endpoint Sprint I.3 — Ingestion télémétrie app mobile (port EF monitor-telemetry).
@@ -25,13 +26,10 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/audit/telemetry")
 @Tag(name = "Monitor telemetry", description = "Sprint I.3 — ingestion télémétrie batch app mobile")
+@RequiredArgsConstructor
 public class MonitorTelemetryController {
 
     private final MonitorTelemetryRepository repo;
-
-    public MonitorTelemetryController(MonitorTelemetryRepository repo) {
-        this.repo = repo;
-    }
 
     public record TelemetryEventDto(
         UUID userId,

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Bug 34 — Service Spring Security qui charge un {@link UserDetails} depuis le
@@ -31,13 +32,10 @@ import java.util.UUID;
  * (nom, avatar) pour préserver le hit rate.
  */
 @Service
+@RequiredArgsConstructor
 public class OneClickUserDetailsService implements UserDetailsService {
 
     private final UserRepository userRepository;
-
-    public OneClickUserDetailsService(UserRepository userRepository) {
-        this.userRepository = userRepository;
-    }
 
     /**
      * Charge un user par son UUID (passé en string pour matcher l'API Spring

@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Service CRUD pour les sous-ressources d'un restaurant : staff, services (repas),
@@ -35,6 +36,7 @@ import java.util.UUID;
  */
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class RestaurantSubResourceService {
 
     private final RestaurantStaffRepository staffRepository;
@@ -45,20 +47,6 @@ public class RestaurantSubResourceService {
 
     @PersistenceContext
     private EntityManager entityManager;
-
-    public RestaurantSubResourceService(
-        RestaurantStaffRepository staffRepository,
-        MealServiceRepository mealServiceRepository,
-        RestaurantZoneRepository zoneRepository,
-        RestaurantTableRepository tableRepository,
-        RestaurantRepository restaurantRepository
-    ) {
-        this.staffRepository = staffRepository;
-        this.mealServiceRepository = mealServiceRepository;
-        this.zoneRepository = zoneRepository;
-        this.tableRepository = tableRepository;
-        this.restaurantRepository = restaurantRepository;
-    }
 
     private Restaurant requireRestaurant(UUID restaurantId) {
         return restaurantRepository.findById(restaurantId)

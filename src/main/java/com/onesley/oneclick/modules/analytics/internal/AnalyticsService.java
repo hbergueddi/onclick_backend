@@ -25,9 +25,11 @@ import com.onesley.oneclick.modules.analytics.api.AnalyticsDtos.WebhookCreateDto
 import com.onesley.oneclick.modules.analytics.api.AnalyticsDtos.WebhookDeliveryCreateDto;
 import com.onesley.oneclick.modules.analytics.api.AnalyticsDtos.WebhookDeliveryDto;
 import com.onesley.oneclick.modules.analytics.api.AnalyticsDtos.WebhookDto;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class AnalyticsService {
     private final ApiClientRepository apiClientRepo;
     private final ApiKeyRepository apiKeyRepo;
@@ -36,17 +38,6 @@ public class AnalyticsService {
 
     @PersistenceContext
     private EntityManager entityManager;
-
-    public AnalyticsService(ApiClientRepository apiClientRepo,
-                            ApiKeyRepository apiKeyRepo,
-                            WebhookRepository webhookRepo,
-                            WebhookDeliveryRepository deliveryRepo) {
-        this.apiClientRepo = apiClientRepo;
-        this.apiKeyRepo = apiKeyRepo;
-        this.webhookRepo = webhookRepo;
-        this.deliveryRepo = deliveryRepo;
-    }
-    
 
     // ─── API clients ─────────────────────────────────────────────────────────
 

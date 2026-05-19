@@ -2,11 +2,10 @@ package com.onesley.oneclick.modules.resource_booking.internal;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Crons du module resource_booking — Sprint G.3 (port pg_cron legacy).
@@ -17,9 +16,8 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>Toutes les 15 min (aligné ReservationCronJobs).
  */
 @Component
+@Slf4j
 public class ResourceBookingCronJobs {
-
-    private static final Logger log = LoggerFactory.getLogger(ResourceBookingCronJobs.class);
 
     @PersistenceContext
     private EntityManager em;

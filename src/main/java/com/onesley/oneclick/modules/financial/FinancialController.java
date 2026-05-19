@@ -30,19 +30,16 @@ import com.onesley.oneclick.modules.financial.api.FinancialDtos.ContractTemplate
 import com.onesley.oneclick.modules.financial.api.FinancialDtos.ContractTemplatePatchDto;
 import com.onesley.oneclick.modules.financial.internal.FinancialCronJobs;
 import com.onesley.oneclick.modules.financial.internal.FinancialService;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/financial")
 @Tag(name = "Financial", description = "Contrats, factures, lignes de facture, wallet transactions (§5)")
+@RequiredArgsConstructor
 public class FinancialController {
 
     private final FinancialService service;
     private final FinancialCronJobs cronJobs;
-
-    public FinancialController(FinancialService service, FinancialCronJobs cronJobs) {
-        this.service = service;
-        this.cronJobs = cronJobs;
-    }
 
     /**
      * Trigger manuel de la génération mensuelle des factures — Sprint I.3.

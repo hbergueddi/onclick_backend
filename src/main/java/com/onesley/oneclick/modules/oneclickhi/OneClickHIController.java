@@ -12,17 +12,15 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/oneclickhi")
 @Tag(name = "OneClick HI", description = "Sprint H — whitelabel HR/payroll invoicing")
+@RequiredArgsConstructor
 public class OneClickHIController {
 
     private final OneClickHIService service;
-
-    public OneClickHIController(OneClickHIService service) {
-        this.service = service;
-    }
 
     // Bug 32 (Batch C RBAC v2) — RBAC v2 senior strict sur tous les endpoints OneClickHI (RESOURCE=FINANCIAL).
     @GetMapping("/invoices")

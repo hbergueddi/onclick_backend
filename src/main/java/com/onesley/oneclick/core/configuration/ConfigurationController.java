@@ -21,6 +21,7 @@ import com.onesley.oneclick.core.configuration.api.ConfigurationDtos.FeatureFlag
 import com.onesley.oneclick.core.configuration.api.ConfigurationDtos.FeatureFlagTargetDto;
 import com.onesley.oneclick.core.configuration.api.ConfigurationDtos.FeatureFlagUpdateDto;
 import com.onesley.oneclick.core.configuration.internal.ConfigurationService;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Bug 32 (Batch D RBAC v2) — RESOURCE=AUDIT (configs admin/monitoring).
@@ -28,13 +29,10 @@ import com.onesley.oneclick.core.configuration.internal.ConfigurationService;
 @RestController
 @RequestMapping("/api/configuration")
 @Tag(name = "Configuration", description = "Feature flags (rollout progressif) + cache configurations (§19)")
+@RequiredArgsConstructor
 public class ConfigurationController {
 
     private final ConfigurationService service;
-
-    public ConfigurationController(ConfigurationService service) {
-        this.service = service;
-    }
 
     // ─── Feature flags ───────────────────────────────────────────────────────
 

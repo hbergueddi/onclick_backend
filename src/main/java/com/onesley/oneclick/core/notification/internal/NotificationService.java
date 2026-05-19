@@ -23,6 +23,7 @@ import com.onesley.oneclick.core.notification.api.NotificationDtos.MarkAllReadRe
 import com.onesley.oneclick.core.notification.api.NotificationDtos.NotificationCreateDto;
 import com.onesley.oneclick.core.notification.api.NotificationDtos.NotificationDto;
 import com.onesley.oneclick.core.notification.api.NotificationDtos.UnreadCountDto;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Service du microservice notification (Phase 2 §21 spec senior).
@@ -33,19 +34,12 @@ import com.onesley.oneclick.core.notification.api.NotificationDtos.UnreadCountDt
  */
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class NotificationService {
 
     private final NotificationRepository notifRepo;
     private final NotificationCampaignRepository campaignRepo;
     private final DeviceTokenRepository tokenRepo;
-
-    public NotificationService(NotificationRepository notifRepo,
-                               NotificationCampaignRepository campaignRepo,
-                               DeviceTokenRepository tokenRepo) {
-        this.notifRepo = notifRepo;
-        this.campaignRepo = campaignRepo;
-        this.tokenRepo = tokenRepo;
-    }
 
     // ─── Notifications ───────────────────────────────────────────────────────
 

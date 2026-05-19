@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Endpoints Store onboarding — Sprint I.3.
@@ -27,13 +28,10 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/store/onboarding")
 @Tag(name = "Store onboarding", description = "Sprint I.3 — workflow demandes inscription restaurants")
+@RequiredArgsConstructor
 public class StoreOnboardingController {
 
     private final StoreOnboardingService service;
-
-    public StoreOnboardingController(StoreOnboardingService service) {
-        this.service = service;
-    }
 
     // Bug 32 (Batch D RBAC v2) — RESOURCE=TENANTS (onboarding = candidature tenant).
     @GetMapping

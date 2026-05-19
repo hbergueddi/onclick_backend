@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Service du workflow {@link ReservationGuest} — invite, list, status update,
@@ -25,6 +26,7 @@ import java.util.UUID;
  */
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class ReservationGuestService {
 
     private static final Set<String> VALID_STATUSES = Set.of(
@@ -36,12 +38,6 @@ public class ReservationGuestService {
 
     @PersistenceContext
     private EntityManager entityManager;
-
-    public ReservationGuestService(ReservationGuestRepository repository,
-                                   ReservationRepository reservationRepository) {
-        this.repository = repository;
-        this.reservationRepository = reservationRepository;
-    }
 
     /** Tous les guests d'une réservation. */
     public List<ReservationGuestDto> findByReservation(UUID reservationId) {

@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static com.onesley.oneclick.modules.support.api.SupportDtos.*;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Bug 32 (Batch D RBAC v2) — RBAC v2 senior strict hasAuthority('VERB:SUPPORT')
@@ -22,13 +23,10 @@ import static com.onesley.oneclick.modules.support.api.SupportDtos.*;
 @RestController
 @RequestMapping("/api/support")
 @Tag(name = "Support", description = "Tickets, messages, pièces jointes (§10)")
+@RequiredArgsConstructor
 public class SupportController {
 
     private final SupportService service;
-
-    public SupportController(SupportService service) {
-        this.service = service;
-    }
 
     // ─── Tickets ─────────────────────────────────────────────────────────────
 

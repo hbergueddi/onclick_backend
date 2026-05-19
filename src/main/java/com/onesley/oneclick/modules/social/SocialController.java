@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static com.onesley.oneclick.modules.social.api.SocialDtos.*;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Bug 32 (Batch D RBAC v2) — RBAC v2 senior strict hasAuthority('VERB:COMMUNITY')
@@ -22,13 +23,10 @@ import static com.onesley.oneclick.modules.social.api.SocialDtos.*;
 @RestController
 @RequestMapping("/api/social")
 @Tag(name = "Social", description = "Amitiés + parrainages (§8)")
+@RequiredArgsConstructor
 public class SocialController {
 
     private final SocialService service;
-
-    public SocialController(SocialService service) {
-        this.service = service;
-    }
 
     public record ActivateReferralDto(UUID referredUserId) {}
 

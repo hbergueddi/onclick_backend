@@ -20,6 +20,7 @@ import java.util.UUID;
 import com.onesley.oneclick.core.auth.internal.AuthService;
 import com.onesley.oneclick.core.auth.internal.AuthService.LoginResult;
 import com.onesley.oneclick.core.auth.internal.AuthService.OtpResult;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Authentification — POST /api/auth/* — Phase 4 §2 spec senior dev.
@@ -36,13 +37,10 @@ import com.onesley.oneclick.core.auth.internal.AuthService.OtpResult;
 @RestController
 @RequestMapping("/api/auth")
 @Tag(name = "Auth", description = "Authentification login/refresh/logout/OTP (§2 spec senior)")
+@RequiredArgsConstructor
 public class AuthController {
 
     private final AuthService authService;
-
-    public AuthController(AuthService authService) {
-        this.authService = authService;
-    }
 
     @PostMapping("/login")
     @Operation(summary = "Login email + password → access token JWT HS256 + refresh token opaque (avec tenant isolation optionnelle)")

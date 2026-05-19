@@ -29,6 +29,7 @@ import com.onesley.oneclick.core.notification.api.NotificationDtos.PushPromoDto;
 import com.onesley.oneclick.core.notification.api.NotificationDtos.PushReservationDto;
 import com.onesley.oneclick.core.notification.api.NotificationDtos.PushResultDto;
 import com.onesley.oneclick.core.notification.api.NotificationDtos.UnreadCountDto;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Bug 32 (Batch D RBAC v2) — RBAC v2 senior strict hasAuthority('VERB:NOTIFICATIONS')
@@ -36,15 +37,11 @@ import com.onesley.oneclick.core.notification.api.NotificationDtos.UnreadCountDt
 @RestController
 @RequestMapping("/api/notifications")
 @Tag(name = "Notifications", description = "Notifications, campagnes, device tokens (§7 + core/notification)")
+@RequiredArgsConstructor
 public class NotificationController {
 
     private final NotificationService service;
     private final FcmPushService pushService;
-
-    public NotificationController(NotificationService service, FcmPushService pushService) {
-        this.service = service;
-        this.pushService = pushService;
-    }
 
     // ─── Notifications ───────────────────────────────────────────────────────
 

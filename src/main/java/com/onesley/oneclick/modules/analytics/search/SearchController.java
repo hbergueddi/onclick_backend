@@ -5,8 +5,6 @@ import com.onesley.oneclick.modules.analytics.search.es.RestaurantEsRepository;
 import com.onesley.oneclick.modules.analytics.search.es.RestaurantEsSyncService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
@@ -27,6 +25,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Recherche full-text restaurants (Phase 2 §21 + Phase 3.4 §X spec senior).
@@ -44,9 +43,8 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/search")
 @Tag(name = "Search", description = "Recherche full-text restaurants (Phase 3.4 — ES + tsvector fallback)")
+@Slf4j
 public class SearchController {
-
-    private static final Logger log = LoggerFactory.getLogger(SearchController.class);
 
     private final JdbcTemplate jdbc;
     private final RestaurantEsRepository esRepo;

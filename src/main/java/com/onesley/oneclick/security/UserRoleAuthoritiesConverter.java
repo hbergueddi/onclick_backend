@@ -9,6 +9,7 @@ import org.springframework.core.convert.converter.Converter;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Convertit un {@link Jwt} en {@link AbstractAuthenticationToken} dont les
@@ -37,14 +38,11 @@ import java.util.List;
  * Security le traitera comme un 403 sur tout endpoint protégé.
  */
 @Component
+@RequiredArgsConstructor
 public class UserRoleAuthoritiesConverter
     implements Converter<Jwt, AbstractAuthenticationToken> {
 
     private final OneClickUserDetailsService userDetailsService;
-
-    public UserRoleAuthoritiesConverter(OneClickUserDetailsService userDetailsService) {
-        this.userDetailsService = userDetailsService;
-    }
 
     @Override
     public AbstractAuthenticationToken convert(Jwt jwt) {

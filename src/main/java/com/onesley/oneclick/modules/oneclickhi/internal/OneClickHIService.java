@@ -11,9 +11,11 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class OneClickHIService {
 
     private static java.time.Instant toInstant(Object o) {
@@ -24,15 +26,10 @@ public class OneClickHIService {
         return java.time.Instant.parse(o.toString());
     }
 
-
     private final OneClickHIInvoiceRepository invoiceRepo;
 
     @PersistenceContext
     private EntityManager em;
-
-    public OneClickHIService(OneClickHIInvoiceRepository invoiceRepo) {
-        this.invoiceRepo = invoiceRepo;
-    }
 
     @Transactional(readOnly = true)
     public List<OneClickHIInvoiceDto> findAll(UUID restaurantId, UUID tenantId) {

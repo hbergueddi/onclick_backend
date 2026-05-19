@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Endpoint enrichissement Google Places — Sprint I.3.
@@ -18,13 +19,10 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/restaurants")
 @Tag(name = "Restaurant enrichment", description = "Sprint I.3 — Google Places enrichment")
+@RequiredArgsConstructor
 public class RestaurantEnrichmentController {
 
     private final GooglePlacesEnrichmentService service;
-
-    public RestaurantEnrichmentController(GooglePlacesEnrichmentService service) {
-        this.service = service;
-    }
 
     @PostMapping("/{id}/enrich-google-places")
     @Operation(summary = "Enrichit un restaurant via Google Places API (rating, hours, GPS, phone, website)")

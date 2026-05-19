@@ -9,8 +9,6 @@ import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.codec.ByteArrayCodec;
 import io.lettuce.core.codec.RedisCodec;
 import io.lettuce.core.codec.StringCodec;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -21,6 +19,7 @@ import java.time.Duration;
 import java.util.Comparator;
 import java.util.Objects;
 import java.util.stream.Stream;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Configuration Spring du rate-limiter — Sprint G.6 + Bug 35 (Bucket4j V2 distribué).
@@ -48,9 +47,8 @@ import java.util.stream.Stream;
  */
 @Configuration
 @EnableConfigurationProperties(RateLimitProperties.class)
+@Slf4j
 public class RateLimitConfig {
-
-    private static final Logger log = LoggerFactory.getLogger(RateLimitConfig.class);
 
     /**
      * Client Lettuce natif dédié au rate-limit. Distinct du

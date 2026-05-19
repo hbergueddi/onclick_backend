@@ -17,18 +17,15 @@ import com.onesley.oneclick.core.media.api.MediaDtos.FileCreateDto;
 import com.onesley.oneclick.core.media.api.MediaDtos.FileDto;
 import com.onesley.oneclick.core.media.api.MediaDtos.MediaCreateDto;
 import com.onesley.oneclick.core.media.api.MediaDtos.MediaDto;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class MediaService {
 
     private final MediaRepository mediaRepo;
     private final FileAttachmentRepository fileRepo;
-
-    public MediaService(MediaRepository mediaRepo, FileAttachmentRepository fileRepo) {
-        this.mediaRepo = mediaRepo;
-        this.fileRepo = fileRepo;
-    }
 
     // ─── Media polymorphique ─────────────────────────────────────────────────
 

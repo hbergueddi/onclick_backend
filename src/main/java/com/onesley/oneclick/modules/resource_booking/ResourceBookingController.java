@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static com.onesley.oneclick.modules.resource_booking.api.ResourceBookingDtos.*;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Bug 32 (Batch D RBAC v2) — RBAC v2 senior strict hasAuthority('VERB:RESOURCE_BOOKINGS')
@@ -22,13 +23,10 @@ import static com.onesley.oneclick.modules.resource_booking.api.ResourceBookingD
 @RestController
 @RequestMapping("/api/resource-bookings")
 @Tag(name = "ResourceBookings", description = "Ressources bookables, tarifs, bookings, invités (§11 — padel/spa/golf/coiffeur/gym)")
+@RequiredArgsConstructor
 public class ResourceBookingController {
 
     private final ResourceBookingService service;
-
-    public ResourceBookingController(ResourceBookingService service) {
-        this.service = service;
-    }
 
     // ─── Resources ───────────────────────────────────────────────────────────
 

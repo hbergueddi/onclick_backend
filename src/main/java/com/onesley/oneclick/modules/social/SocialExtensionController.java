@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Bug 32 (Batch D RBAC v2) — RESOURCE COMMUNITY pour Elite apps,
@@ -19,13 +20,10 @@ import java.util.UUID;
  */
 @RestController
 @Tag(name = "Social extensions", description = "Sprint H — Elite applications + Restaurant groups (Galaxy)")
+@RequiredArgsConstructor
 public class SocialExtensionController {
 
     private final SocialExtensionService service;
-
-    public SocialExtensionController(SocialExtensionService service) {
-        this.service = service;
-    }
 
     // ─── Elite applications ─────────────────────────────────────────────
     @GetMapping("/api/social/elite-applications")

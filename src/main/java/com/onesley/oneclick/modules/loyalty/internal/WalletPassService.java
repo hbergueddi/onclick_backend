@@ -3,8 +3,6 @@ package com.onesley.oneclick.modules.loyalty.internal;
 import com.onesley.oneclick.modules.loyalty.api.WalletPassDtos.*;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +12,7 @@ import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Service Sprint I.2 — Wallet pass Apple/Google.
@@ -31,9 +30,8 @@ import java.util.UUID;
  */
 @Service
 @Transactional(readOnly = true)
+@Slf4j
 public class WalletPassService {
-
-    private static final Logger log = LoggerFactory.getLogger(WalletPassService.class);
 
     @Value("${app.wallet.apple.pass-type-id:pass.ma.oneclick.loyalty}")
     private String applePassTypeId;
