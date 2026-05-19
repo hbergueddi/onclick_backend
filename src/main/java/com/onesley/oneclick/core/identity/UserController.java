@@ -65,6 +65,28 @@ public class UserController {
         return service.findMe();
     }
 
+    @GetMapping("/me/permissions")
+    @Operation(
+        summary = "Bug 32 (RBAC v2) — Authorities du user courant au format VERB:RESOURCE.",
+        description = "Permet au frontend de cacher les CTA pour lesquels l'utilisateur n'a " +
+                      "pas la permission (UX cosmétique — le backend reste la source de vérité " +
+                      "via @PreAuthorize). Cache TanStack frontend conseillé : staleTime 5 min."
+    )
+    @PreAuthorize("isAuthenticated()")
+    public java.util.List<String> findMyPermissions(
+        org.springframework.security.core.Authentication authentication
+    ) {
+        if (authentication == null) return java.util.List.of();
+        return authentication.getAuthorities().stream()
+            .map(org.springframework.security.core.GrantedAuthority::getAuthority)
+            // Ne renvoie QUE les authorities format VERB:RESOURCE (un ":" séparateur)
+            // — exclut ROLE_SUPERADMIN, SUPERADMIN, etc. qui sont là pour
+            // backward-compat hasRole/hasAuthority(<role>) mais ne sont pas du RBAC v2.
+            .filter(a -> a != null && a.contains(":"))
+            .sorted()
+            .toList();
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Détail d'un user par UUID — owner ou SUPERADMIN")
     @PreAuthorize("isAuthenticated()")
