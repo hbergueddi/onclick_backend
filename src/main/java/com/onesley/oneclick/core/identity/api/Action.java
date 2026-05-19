@@ -16,6 +16,7 @@ import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import jakarta.validation.constraints.Size;
 
 /**
  * Action métier (CREATE_RESERVATION, CANCEL_RESERVATION, SCAN_TICKET, ...)
@@ -34,15 +35,15 @@ public class Action {
 
     @NotBlank
     @Column(name = "code", nullable = false, unique = true)
-    private String code;
+    @Size(max = 255) private String code;
 
     @NotBlank
     @Column(name = "name", nullable = false)
-    private String name;
+    @Size(max = 255) private String name;
 
     @NotBlank
     @Column(name = "module", nullable = false)
-    private String module;
+    @Size(max = 512) private String module;
 
     @CreatedDate
     @Column(name = "created_at", updatable = false, nullable = false)

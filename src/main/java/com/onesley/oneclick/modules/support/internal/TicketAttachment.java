@@ -12,6 +12,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.Size;
 
 /** Pièce jointe d'un ticket support. */
 @Entity
@@ -24,9 +25,9 @@ public class TicketAttachment {
     @Id @Column(name = "id", nullable = false, updatable = false) private UUID id;
     @Column(name = "ticket_id", nullable = false, insertable = false, updatable = false) private UUID ticketId;
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "ticket_id", nullable = false) private SupportTicket ticket;
-    @NotBlank @Column(name = "url", nullable = false) private String url;
-    @Column(name = "file_name") @Setter private String fileName;
-    @Column(name = "mime_type") @Setter private String mimeType;
+    @NotBlank @Column(name = "url", nullable = false) @Size(max = 1024) private String url;
+    @Column(name = "file_name") @Setter @Size(max = 255) private String fileName;
+    @Column(name = "mime_type") @Setter @Size(max = 255) private String mimeType;
     @CreatedDate @Column(name = "created_at", updatable = false, nullable = false) private Instant createdAt;
     public TicketAttachment(UUID id, SupportTicket ticket, String url) {
         this.id = id; this.ticket = ticket; this.url = url;

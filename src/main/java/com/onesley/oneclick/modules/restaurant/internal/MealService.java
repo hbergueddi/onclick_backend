@@ -20,6 +20,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.Size;
 
 /**
  * Créneau de service d'un restaurant (brunch, déjeuner, dîner) avec horaires.
@@ -47,7 +48,7 @@ public class MealService extends TimestampedEntity {
 
     @NotBlank
     @Column(name = "name", nullable = false)
-    @Setter private String name;
+    @Setter @Size(max = 255) private String name;
 
     @NotNull
     @Column(name = "start_time", nullable = false)

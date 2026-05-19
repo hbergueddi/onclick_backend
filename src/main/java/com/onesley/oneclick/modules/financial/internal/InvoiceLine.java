@@ -14,6 +14,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
 
 /** Ligne de facture (1 row par item). line_total = quantity × unit_price (GENERATED ALWAYS). */
 @Entity
@@ -35,12 +37,12 @@ public class InvoiceLine {
 
     @NotBlank
     @Column(name = "label", nullable = false)
-    private String label;
+    @Size(max = 255) private String label;
 
     @NotNull
     @DecimalMin("0.00")
     @Column(name = "quantity", nullable = false, precision = 10, scale = 2)
-    private BigDecimal quantity = BigDecimal.ONE;
+    @PositiveOrZero private BigDecimal quantity = BigDecimal.ONE;
 
     @NotNull
     @Column(name = "unit_price", nullable = false, precision = 12, scale = 2)

@@ -13,6 +13,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.Size;
 
 /** Parrainage avec code et status d'activation. */
 @Entity
@@ -26,8 +27,8 @@ public class Referral extends TimestampedEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "referrer_id", nullable = false) private User referrer;
     @Column(name = "referred_user_id", insertable = false, updatable = false) private UUID referredUserId;
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "referred_user_id") @Setter private User referredUser;
-    @NotBlank @Column(name = "referral_code", nullable = false) private String referralCode;
-    @Pattern(regexp = "^(pending|activated|expired)$") @Column(name = "status", nullable = false) @Setter private String status = "pending";
+    @NotBlank @Column(name = "referral_code", nullable = false) @Size(max = 255) private String referralCode;
+    @Pattern(regexp = "^(pending|activated|expired)$") @Column(name = "status", nullable = false) @Setter @Size(max = 255) @NotBlank private String status = "pending";
     @Column(name = "activated_at") private Instant activatedAt;
     public Referral(UUID id, User referrer, String referralCode) {
         this.id = id; this.referrer = referrer; this.referralCode = referralCode;

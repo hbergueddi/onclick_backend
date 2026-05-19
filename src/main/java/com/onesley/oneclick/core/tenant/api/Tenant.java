@@ -16,6 +16,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.Size;
 
 /**
  * Racine multi-tenant. 1 ligne par marque whitelabel.
@@ -32,17 +33,17 @@ public class Tenant extends SoftDeletableAuditedEntity {
 
     @NotBlank
     @Column(name = "name", nullable = false)
-    @Setter private String name;
+    @Setter @Size(max = 255) private String name;
 
     @NotBlank
     @Pattern(regexp = "^[a-z0-9_-]+$", message = "slug doit être lowercase alphanumeric (a-z 0-9 _ -)")
     @Column(name = "slug", nullable = false, unique = true)
-    private String slug;
+    @Size(max = 255) private String slug;
 
     @NotBlank
     @Pattern(regexp = "^(active|paused|archived)$")
     @Column(name = "status", nullable = false)
-    @Setter private String status = "active";
+    @Setter @Size(max = 255) private String status = "active";
 
     public Tenant(UUID id, String name, String slug) {
         this.id = id;

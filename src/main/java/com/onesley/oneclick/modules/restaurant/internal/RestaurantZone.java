@@ -18,6 +18,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.Size;
 
 /**
  * Zone physique d'un restaurant (Terrasse, Salle principale, Bar, etc.).
@@ -41,7 +42,7 @@ public class RestaurantZone extends TimestampedEntity {
 
     @NotBlank
     @Column(name = "name", nullable = false)
-    @Setter private String name;
+    @Setter @Size(max = 255) private String name;
 
     public RestaurantZone(UUID id, Restaurant restaurant, String name) {
         this.id = id;

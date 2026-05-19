@@ -12,6 +12,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.Size;
 
 /** Commentaire sur un post. */
 @Entity
@@ -25,7 +26,7 @@ public class Comment extends TimestampedEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "post_id", nullable = false) private Post post;
     @Column(name = "author_id", nullable = false, insertable = false, updatable = false) private UUID authorId;
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "author_id", nullable = false) private User author;
-    @NotBlank @Column(name = "content", nullable = false) @Setter private String content;
+    @NotBlank @Column(name = "content", nullable = false) @Setter @Size(max = 10000) private String content;
     @Column(name = "deleted_at") private Instant deletedAt;
     public Comment(UUID id, Post post, User author, String content) {
         this.id = id; this.post = post; this.author = author; this.content = content;

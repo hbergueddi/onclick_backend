@@ -13,6 +13,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.Size;
 
 /** Ressource bookable générique (padel, spa, golf, coiffeur, gym...). */
 @Entity
@@ -34,14 +35,14 @@ public class Resource extends SoftDeletableAuditedEntity {
 
     @NotBlank
     @Column(name = "resource_type", nullable = false)
-    private String resourceType;
+    @Size(max = 255) private String resourceType;
 
     @NotBlank
     @Column(name = "name", nullable = false)
-    @Setter private String name;
+    @Setter @Size(max = 255) private String name;
 
     @Column(name = "description")
-    @Setter private String description;
+    @Setter @Size(max = 2000) private String description;
 
     @Column(name = "capacity")
     @Setter private Integer capacity;

@@ -17,6 +17,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.Size;
 
 /**
  * Entrée de menu applicatif (sidebar). Hiérarchique via {@code parent_id}.
@@ -33,17 +34,17 @@ public class Menu extends TimestampedEntity {
 
     @NotBlank
     @Column(name = "code", nullable = false, unique = true)
-    private String code;
+    @Size(max = 255) private String code;
 
     @NotBlank
     @Column(name = "name", nullable = false)
-    private String name;
+    @Size(max = 255) private String name;
 
     @Column(name = "icon")
-    @Setter private String icon;
+    @Setter @Size(max = 1024) private String icon;
 
     @Column(name = "path")
-    @Setter private String path;
+    @Setter @Size(max = 512) private String path;
 
     // Self-reference parent — LAZY pour pouvoir naviguer l'arbre côté service
     @Column(name = "parent_id", insertable = false, updatable = false)

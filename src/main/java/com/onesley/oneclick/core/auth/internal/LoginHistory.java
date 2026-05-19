@@ -19,6 +19,7 @@ import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import jakarta.validation.constraints.Size;
 
 /**
  * Historique des tentatives de connexion — audit sécurité (anti brute-force, anomalies).
@@ -45,10 +46,10 @@ public class LoginHistory {
     private User user;
 
     @Column(name = "ip_address")
-    private String ipAddress;
+    @Size(max = 2000) private String ipAddress;
 
     @Column(name = "device")
-    private String device;
+    @Size(max = 512) private String device;
 
     @Column(name = "success", nullable = false)
     private boolean success;

@@ -8,6 +8,9 @@ import java.time.Instant;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Pattern;
 
 @Entity
 @Table(name = "oneclick_hi_invoices")
@@ -26,10 +29,10 @@ public class OneClickHIInvoice extends TimestampedEntity {
     @Setter private UUID restaurantId;
 
     @Column(name = "invoice_number", unique = true, length = 64)
-    @Setter private String invoiceNumber;
+    @Setter @Size(max = 64) private String invoiceNumber;
 
     @Column(name = "period_month", nullable = false, length = 10)
-    @Setter private String periodMonth;
+    @Setter @Size(max = 10) @NotBlank private String periodMonth;
 
     @Column(name = "total_amount", nullable = false, precision = 12, scale = 2)
     @Setter private BigDecimal totalAmount = BigDecimal.ZERO;
@@ -38,10 +41,10 @@ public class OneClickHIInvoice extends TimestampedEntity {
     @Setter private BigDecimal vatAmount = BigDecimal.ZERO;
 
     @Column(nullable = false, length = 32)
-    @Setter private String status = "draft";
+    @Setter @Size(max = 32) @NotBlank @Pattern(regexp = "^(draft|sent|paid|overdue)$") private String status = "draft";
 
     @Column(name = "pdf_url")
-    @Setter private String pdfUrl;
+    @Setter @Size(max = 1024) private String pdfUrl;
 
     @Column(name = "deleted_at")
     @Setter private Instant deletedAt;
@@ -61,5 +64,5 @@ public class OneClickHIInvoice extends TimestampedEntity {
     @Setter private Instant sentAt;
 
     @Column(name = "pdf_path")
-    @Setter private String pdfPath;
+    @Setter @Size(max = 1024) private String pdfPath;
 }

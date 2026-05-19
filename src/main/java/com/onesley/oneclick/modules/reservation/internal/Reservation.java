@@ -23,6 +23,9 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 
 /**
  * Réservation — workflow 7 statuts. {@code reservation_at} timestamptz UNIFIÉ.
@@ -70,14 +73,14 @@ public class Reservation extends SoftDeletableAuditedEntity {
 
     @Min(1)
     @Column(name = "guest_count", nullable = false)
-    @Setter private Integer guestCount;
+    @Setter @Positive private Integer guestCount;
 
     @Pattern(regexp = "^(pending|confirmed|refused|counter_proposed|cancelled|honored|no_show)$")
     @Column(name = "status", nullable = false)
-    @Setter private String status = "pending";
+    @Setter @Size(max = 255) @NotBlank private String status = "pending";
 
     @Column(name = "notes")
-    @Setter private String notes;
+    @Setter @Size(max = 2000) private String notes;
 
     public Reservation(UUID id, Tenant tenant, User client, UUID restaurantId,
                        Instant reservationAt, Integer guestCount) {

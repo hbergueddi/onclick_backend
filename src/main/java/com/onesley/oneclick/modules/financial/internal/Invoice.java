@@ -17,6 +17,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.Size;
 
 /** Facture mensuelle par restaurant. */
 @Entity
@@ -34,7 +35,7 @@ public class Invoice extends TimestampedEntity {
 
     @NotBlank
     @Column(name = "invoice_number", nullable = false, unique = true)
-    private String invoiceNumber;
+    @Size(max = 255) private String invoiceNumber;
 
     @NotNull
     @Column(name = "period_start", nullable = false)
@@ -55,7 +56,7 @@ public class Invoice extends TimestampedEntity {
 
     @Pattern(regexp = "^(draft|sent|paid|overdue|cancelled)$")
     @Column(name = "status", nullable = false)
-    @Setter private String status = "draft";
+    @Setter @Size(max = 255) @NotBlank private String status = "draft";
 
     @Column(name = "issued_at")
     @Setter private LocalDate issuedAt;

@@ -13,6 +13,7 @@ import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import jakarta.validation.constraints.Size;
 
 /** Invités d'une réservation de ressource. */
 @Entity
@@ -41,7 +42,7 @@ public class ResourceBookingGuest {
     private User guestUser;
 
     @Column(name = "guest_name")
-    private String guestName;
+    @Size(max = 255) private String guestName;
 
     @CreatedDate
     @Column(name = "created_at", updatable = false, nullable = false)

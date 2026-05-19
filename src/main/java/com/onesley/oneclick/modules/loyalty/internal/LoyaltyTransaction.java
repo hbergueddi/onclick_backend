@@ -22,6 +22,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.Size;
 
 /**
  * Mouvement de points — typé pour expliquer la modification de balance.
@@ -52,7 +53,7 @@ public class LoyaltyTransaction {
     @NotBlank
     @Pattern(regexp = "^(earn|spend|expire|gift|adjust)$")
     @Column(name = "type", nullable = false)
-    private String type;
+    @Size(max = 255) private String type;
 
     @NotNull
     @Column(name = "points", nullable = false)
@@ -62,7 +63,7 @@ public class LoyaltyTransaction {
     @Setter private BigDecimal amount;
 
     @Column(name = "reason")
-    private String reason;
+    @Size(max = 2000) private String reason;
 
     @Column(name = "expires_at")
     @Setter private Instant expiresAt;

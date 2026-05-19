@@ -16,6 +16,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.Size;
 
 /**
  * Config TTL et taille pour les caches (Redis ou JVM in-memory).
@@ -33,7 +34,7 @@ public class CacheConfiguration extends TimestampedEntity {
 
     @NotBlank
     @Column(name = "cache_name", nullable = false, unique = true)
-    private String cacheName;
+    @Size(max = 255) private String cacheName;
 
     @Min(1)
     @Column(name = "ttl_seconds", nullable = false)

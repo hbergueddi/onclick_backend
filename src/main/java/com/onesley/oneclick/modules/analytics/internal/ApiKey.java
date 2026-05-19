@@ -16,6 +16,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.Size;
 
 /** Clé API hashée. */
 @Entity
@@ -28,8 +29,8 @@ public class ApiKey {
     @Id @Column(name = "id", nullable = false, updatable = false) private UUID id;
     @Column(name = "api_client_id", nullable = false, insertable = false, updatable = false) private UUID apiClientId;
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "api_client_id", nullable = false) private ApiClient apiClient;
-    @NotBlank @Column(name = "key_hash", nullable = false, unique = true) private String keyHash;
-    @NotBlank @Column(name = "key_prefix", nullable = false) private String keyPrefix;
+    @NotBlank @Column(name = "key_hash", nullable = false, unique = true) @Size(max = 255) private String keyHash;
+    @NotBlank @Column(name = "key_prefix", nullable = false) @Size(max = 255) private String keyPrefix;
     @JdbcTypeCode(SqlTypes.JSON) @Column(name = "scopes", columnDefinition = "jsonb") private List<String> scopes = new ArrayList<>();
     @Column(name = "enabled", nullable = false) @Setter private boolean enabled = true;
     @Column(name = "last_used_at") private Instant lastUsedAt;

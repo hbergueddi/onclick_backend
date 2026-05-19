@@ -9,6 +9,9 @@ import java.util.Map;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 @Entity
 @Table(name = "system_alerts")
@@ -24,10 +27,10 @@ public class SystemAlert {
     @Setter private UUID ruleId;
 
     @Column(nullable = false, length = 32)
-    @Setter private String severity;
+    @Setter @Size(max = 32) @NotBlank private String severity;
 
     @Column(nullable = false)
-    @Setter private String message;
+    @Setter @Size(max = 2000) @NotBlank private String message;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
@@ -40,5 +43,5 @@ public class SystemAlert {
     @Setter private UUID acknowledgedBy;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt = Instant.now();
+    @NotNull private Instant createdAt = Instant.now();
 }

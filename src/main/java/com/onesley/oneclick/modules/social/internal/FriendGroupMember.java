@@ -13,6 +13,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 /**
  * Junction {@code users × friend_groups} — appartenance + rôle dans le groupe.
@@ -47,7 +49,7 @@ public class FriendGroupMember {
 
     @Pattern(regexp = "^(owner|admin|member)$")
     @Column(name = "role", nullable = false)
-    @Setter private String role = "member";
+    @Setter @Size(max = 255) @NotBlank private String role = "member";
 
     @CreatedDate
     @Column(name = "joined_at", updatable = false, nullable = false)

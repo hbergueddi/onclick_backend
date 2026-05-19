@@ -21,6 +21,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.Positive;
 
 /**
  * Redemption — utilisation de points pour obtenir une réduction.
@@ -46,12 +47,12 @@ public class Redemption {
     @NotNull
     @Min(1)
     @Column(name = "points_used", nullable = false)
-    private Integer pointsUsed;
+    @Positive private Integer pointsUsed;
 
     @NotNull
     @DecimalMin("0.01")
     @Column(name = "discount_amount", nullable = false, precision = 12, scale = 2)
-    private BigDecimal discountAmount;
+    @Positive private BigDecimal discountAmount;
 
     @Column(name = "otp_validated", nullable = false)
     @Setter private boolean otpValidated = false;

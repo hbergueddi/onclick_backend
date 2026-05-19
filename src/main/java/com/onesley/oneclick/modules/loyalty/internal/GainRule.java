@@ -20,6 +20,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 
 /**
  * Règle de gain de points PAR restaurant — override des {@link LoyaltyRule} globaux.
@@ -67,15 +69,15 @@ public class GainRule extends SoftDeletableAuditedEntity {
 
     @Min(1)
     @Column(name = "cap_per_visit")
-    @Setter private Integer capPerVisit;
+    @Setter @Positive private Integer capPerVisit;
 
     @Min(1)
     @Column(name = "cap_per_month")
-    @Setter private Integer capPerMonth;
+    @Setter @Positive private Integer capPerMonth;
 
     @DecimalMin("0.00")
     @Column(name = "min_amount", precision = 10, scale = 2)
-    @Setter private BigDecimal minAmount = BigDecimal.ZERO;
+    @Setter @PositiveOrZero private BigDecimal minAmount = BigDecimal.ZERO;
 
     @Column(name = "is_active", nullable = false)
     @Setter private boolean isActive = true;
@@ -86,7 +88,7 @@ public class GainRule extends SoftDeletableAuditedEntity {
      */
     @Min(0)
     @Column(name = "welcome_points_default", nullable = false)
-    @Setter private int welcomePointsDefault = 100;
+    @Setter @PositiveOrZero private int welcomePointsDefault = 100;
 
     /**
      * Plafond du bonus de bienvenue. EnrollmentService rejette toute demande

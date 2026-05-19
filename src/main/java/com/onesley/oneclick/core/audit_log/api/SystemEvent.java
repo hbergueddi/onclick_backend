@@ -20,6 +20,7 @@ import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import jakarta.validation.constraints.Size;
 
 /**
  * Domain event persisté (replay, audit, async processing).
@@ -41,7 +42,7 @@ public class SystemEvent {
 
     @NotBlank
     @Column(name = "type", nullable = false)
-    private String type;
+    @Size(max = 255) private String type;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "payload", columnDefinition = "jsonb")

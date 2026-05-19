@@ -14,6 +14,9 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 
 /** Remboursement partiel ou total d'un Payment. */
 @Entity
@@ -25,9 +28,9 @@ public class Refund {
 
     @Id @Column(name = "id", nullable = false, updatable = false) private UUID id;
     @Column(name = "payment_id", nullable = false) private UUID paymentId;
-    @NotNull @DecimalMin("0.01") @Column(name = "amount", nullable = false, precision = 12, scale = 2) private BigDecimal amount;
-    @Column(name = "reason") @Setter private String reason;
-    @Pattern(regexp = "^(pending|succeeded|failed)$") @Column(name = "status", nullable = false) @Setter private String status = "pending";
+    @NotNull @DecimalMin("0.01") @Column(name = "amount", nullable = false, precision = 12, scale = 2) @Positive private BigDecimal amount;
+    @Column(name = "reason") @Setter @Size(max = 2000) private String reason;
+    @Pattern(regexp = "^(pending|succeeded|failed)$") @Column(name = "status", nullable = false) @Setter @Size(max = 255) @NotBlank private String status = "pending";
     @CreatedDate @Column(name = "created_at", updatable = false, nullable = false) private Instant createdAt;
     @Column(name = "processed_at") private Instant processedAt;
     @CreatedBy @Column(name = "created_by", updatable = false) private UUID createdById;

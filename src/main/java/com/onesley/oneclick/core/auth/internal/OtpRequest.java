@@ -21,6 +21,8 @@ import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 /**
  * Code OTP — purpose : signup / reset_password / verify_phone / verify_email / 2fa / redemption.
@@ -53,14 +55,14 @@ public class OtpRequest {
     @NotBlank
     @Pattern(regexp = "^(signup|reset_password|verify_phone|verify_email|2fa|redemption)$")
     @Column(name = "purpose", nullable = false)
-    private String purpose;
+    @Size(max = 512) private String purpose;
 
     @NotBlank
     @Column(name = "code", nullable = false)
-    private String code;
+    @Size(max = 255) private String code;
 
     @Column(name = "expires_at", nullable = false)
-    private Instant expiresAt;
+    @NotNull private Instant expiresAt;
 
     @Column(name = "verified_at")
     private Instant verifiedAt;

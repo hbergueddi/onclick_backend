@@ -17,6 +17,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.Size;
 
 /** Historique des appels webhook. */
 @Entity
@@ -29,10 +30,10 @@ public class WebhookDelivery {
     @Id @Column(name = "id", nullable = false, updatable = false) private UUID id;
     @Column(name = "webhook_id", nullable = false, insertable = false, updatable = false) private UUID webhookId;
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "webhook_id", nullable = false) private Webhook webhook;
-    @NotBlank @Column(name = "event_type", nullable = false) private String eventType;
+    @NotBlank @Column(name = "event_type", nullable = false) @Size(max = 255) private String eventType;
     @NotNull @JdbcTypeCode(SqlTypes.JSON) @Column(name = "payload", nullable = false, columnDefinition = "jsonb") private Map<String, Object> payload = new HashMap<>();
     @Column(name = "status_code") @Setter private Integer statusCode;
-    @Column(name = "response_body", columnDefinition = "text") @Setter private String responseBody;
+    @Column(name = "response_body", columnDefinition = "text") @Setter @Size(max = 10000) private String responseBody;
     @Column(name = "attempts", nullable = false) private Integer attempts = 0;
     @Column(name = "succeeded_at") private Instant succeededAt;
     @Column(name = "failed_at") private Instant failedAt;

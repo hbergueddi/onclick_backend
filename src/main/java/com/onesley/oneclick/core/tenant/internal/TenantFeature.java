@@ -19,6 +19,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.Size;
 
 /**
  * Feature flag par tenant. Pattern : un couple (tenant_id, feature_code) est UNIQUE.
@@ -45,7 +46,7 @@ public class TenantFeature extends TimestampedEntity {
 
     @NotBlank
     @Column(name = "feature_code", nullable = false)
-    private String featureCode;
+    @Size(max = 255) private String featureCode;
 
     @Column(name = "enabled", nullable = false)
     @Setter private boolean enabled = false;

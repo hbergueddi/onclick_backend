@@ -17,6 +17,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 
 /**
  * Règle de calcul des points par restaurant.
@@ -40,17 +42,17 @@ public class LoyaltyRule extends TimestampedEntity {
     @NotNull
     @DecimalMin("0.0000")
     @Column(name = "conversion_rate", nullable = false, precision = 5, scale = 4)
-    @Setter private BigDecimal conversionRate = new BigDecimal("0.0500");
+    @Setter @PositiveOrZero private BigDecimal conversionRate = new BigDecimal("0.0500");
 
     @NotNull
     @Min(1)
     @Column(name = "max_points", nullable = false)
-    @Setter private Integer maxPoints = 1000;
+    @Setter @Positive private Integer maxPoints = 1000;
 
     @NotNull
     @DecimalMin("0.00")
     @Column(name = "min_ticket_amount", nullable = false, precision = 12, scale = 2)
-    @Setter private BigDecimal minTicketAmount = new BigDecimal("100.00");
+    @Setter @PositiveOrZero private BigDecimal minTicketAmount = new BigDecimal("100.00");
 
     @NotNull
     @DecimalMin("0.0000")
@@ -59,7 +61,7 @@ public class LoyaltyRule extends TimestampedEntity {
 
     @Min(1)
     @Column(name = "expires_after_days", nullable = false)
-    @Setter private Integer expiresAfterDays = 365;
+    @Setter @Positive private Integer expiresAfterDays = 365;
 
     @Column(name = "enabled", nullable = false)
     @Setter private boolean enabled = true;

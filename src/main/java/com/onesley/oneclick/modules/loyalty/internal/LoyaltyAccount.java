@@ -16,6 +16,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.PositiveOrZero;
 
 /**
  * Compte fidélité — 1 par couple (client × restaurant).
@@ -53,7 +54,7 @@ public class LoyaltyAccount extends TimestampedEntity {
 
     @Min(0)
     @Column(name = "balance", nullable = false)
-    @Setter private Integer balance = 0;
+    @Setter @PositiveOrZero private Integer balance = 0;
 
     public LoyaltyAccount(UUID id, UUID clientId, UUID restaurantId) {
         this.id = id;

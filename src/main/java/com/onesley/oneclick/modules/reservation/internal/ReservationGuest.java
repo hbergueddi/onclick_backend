@@ -21,6 +21,9 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 
 /**
  * Invité d'une réservation — un des 3 identifiants au minimum (CHECK constraint V17) :
@@ -66,10 +69,10 @@ public class ReservationGuest {
     private User guestUser;
 
     @Column(name = "guest_name")
-    @Setter private String guestName;
+    @Setter @Size(max = 255) private String guestName;
 
     @Column(name = "guest_phone")
-    private String guestPhone;
+    @Size(max = 255) private String guestPhone;
 
     @Column(name = "invited_by", insertable = false, updatable = false)
     private UUID invitedById;
@@ -79,7 +82,7 @@ public class ReservationGuest {
     private User invitedBy;
 
     @Column(name = "status", nullable = false)
-    @Setter private String status = "linked";
+    @Setter @Size(max = 255) @NotBlank @Pattern(regexp = "^(linked|invited|accepted|refused|cancelled)$") private String status = "linked";
 
     @Column(name = "seen_by_host", nullable = false)
     @Setter private boolean seenByHost = false;

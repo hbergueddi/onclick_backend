@@ -23,6 +23,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.Size;
 
 /**
  * Erreurs applicatives — log local centralisé. Équivalent persisté de Sentry.
@@ -40,18 +41,18 @@ public class ErrorLog {
 
     @NotBlank
     @Column(name = "service_name", nullable = false)
-    private String serviceName;
+    @Size(max = 255) private String serviceName;
 
     @NotBlank
     @Column(name = "message", nullable = false)
-    private String message;
+    @Size(max = 2000) private String message;
 
     @Column(name = "stacktrace", columnDefinition = "text")
-    @Setter private String stacktrace;
+    @Setter @Size(max = 512) private String stacktrace;
 
     @Pattern(regexp = "^(debug|info|warn|error|fatal)$")
     @Column(name = "severity", nullable = false)
-    private String severity = "error";
+    @Size(max = 512) @NotBlank private String severity = "error";
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "metadata", columnDefinition = "jsonb")

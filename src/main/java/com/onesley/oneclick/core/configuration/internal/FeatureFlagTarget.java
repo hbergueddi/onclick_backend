@@ -23,6 +23,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.Size;
 
 /**
  * Targeting custom d'un feature flag — override par user / tenant / role.
@@ -55,7 +56,7 @@ public class FeatureFlagTarget {
     @NotBlank
     @Pattern(regexp = "^(user|tenant|role)$")
     @Column(name = "target_type", nullable = false)
-    private String targetType;
+    @Size(max = 255) private String targetType;
 
     @Column(name = "target_id", nullable = false)
     private UUID targetId;

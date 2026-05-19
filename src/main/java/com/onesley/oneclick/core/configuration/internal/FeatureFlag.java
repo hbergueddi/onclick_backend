@@ -17,6 +17,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.Size;
 
 /**
  * Feature flag dynamique — peut être activé/désactivé sans redéploiement.
@@ -35,14 +36,14 @@ public class FeatureFlag extends TimestampedEntity {
 
     @NotBlank
     @Column(name = "code", nullable = false, unique = true)
-    private String code;
+    @Size(max = 255) private String code;
 
     @NotBlank
     @Column(name = "name", nullable = false)
-    @Setter private String name;
+    @Setter @Size(max = 255) private String name;
 
     @Column(name = "description")
-    @Setter private String description;
+    @Setter @Size(max = 2000) private String description;
 
     @Column(name = "enabled", nullable = false)
     @Setter private boolean enabled = false;

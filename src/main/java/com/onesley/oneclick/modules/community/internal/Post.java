@@ -13,6 +13,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.Size;
 
 /** Post communauté (feed social). */
 @Entity
@@ -24,8 +25,8 @@ public class Post extends TimestampedEntity {
     @Id @Column(name = "id", nullable = false, updatable = false) private UUID id;
     @Column(name = "author_id", nullable = false, insertable = false, updatable = false) private UUID authorId;
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "author_id", nullable = false) private User author;
-    @NotBlank @Column(name = "content", nullable = false) @Setter private String content;
-    @Pattern(regexp = "^(public|friends|private)$") @Column(name = "visibility", nullable = false) @Setter private String visibility = "public";
+    @NotBlank @Column(name = "content", nullable = false) @Setter @Size(max = 10000) private String content;
+    @Pattern(regexp = "^(public|friends|private)$") @Column(name = "visibility", nullable = false) @Setter @Size(max = 512) @NotBlank private String visibility = "public";
     @Column(name = "deleted_at") private Instant deletedAt;
     public Post(UUID id, User author, String content) { this.id = id; this.author = author; this.content = content; }
     public void markDeleted() { this.deletedAt = Instant.now(); }

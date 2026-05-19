@@ -9,6 +9,9 @@ import java.util.Map;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 /**
  * Entity Sprint I.3 — ingestion télémétrie batch app mobile (port EF monitor-telemetry).
@@ -33,21 +36,21 @@ public class MonitorTelemetry {
     @Setter private UUID tenantId;
 
     @Column(name = "app_id", length = 64)
-    @Setter private String appId;
+    @Setter @Size(max = 64) private String appId;
 
     @Column(name = "event_type", nullable = false, length = 64)
-    @Setter private String eventType;
+    @Setter @Size(max = 64) @NotBlank private String eventType;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "event_data", columnDefinition = "jsonb")
     @Setter private Map<String, Object> eventData;
 
     @Column(length = 32)
-    @Setter private String platform;
+    @Setter @Size(max = 32) private String platform;
 
     @Column(name = "app_version", length = 32)
-    @Setter private String appVersion;
+    @Setter @Size(max = 32) private String appVersion;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt = Instant.now();
+    @NotNull private Instant createdAt = Instant.now();
 }

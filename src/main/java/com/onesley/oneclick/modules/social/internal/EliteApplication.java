@@ -7,6 +7,9 @@ import java.time.Instant;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
+import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 
 @Entity
 @Table(name = "elite_applications")
@@ -25,7 +28,7 @@ public class EliteApplication extends TimestampedEntity {
     @Setter private UUID userId;
 
     @Column(nullable = false, length = 32)
-    @Setter private String status = "pending";
+    @Setter @Size(max = 32) @NotBlank @Pattern(regexp = "^(pending|approved|rejected)$") private String status = "pending";
 
     @Column @Setter private String motivation;
 
@@ -39,7 +42,7 @@ public class EliteApplication extends TimestampedEntity {
     @Setter private Instant reviewedAt;
 
     @Column(name = "rejection_reason")
-    @Setter private String rejectionReason;
+    @Setter @Size(max = 2000) private String rejectionReason;
 
     @Column(name = "deleted_at")
     @Setter private Instant deletedAt;

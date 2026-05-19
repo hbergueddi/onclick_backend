@@ -13,6 +13,7 @@ import org.hibernate.type.SqlTypes;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
+import jakarta.validation.constraints.Size;
 
 /**
  * Rôle personnalisé admin — page {@code GestionRoles}.
@@ -34,10 +35,10 @@ public class CustomRole extends TimestampedEntity {
 
     @NotBlank
     @Column(name = "name", nullable = false)
-    @Setter private String name;
+    @Setter @Size(max = 255) private String name;
 
     @Column(name = "description")
-    @Setter private String description;
+    @Setter @Size(max = 2000) private String description;
 
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(name = "permissions", columnDefinition = "text[]", nullable = false)

@@ -23,6 +23,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.Size;
 
 /**
  * Fichier (PDF, docs) polymorphique attaché à une entité.
@@ -43,23 +44,23 @@ public class FileAttachment {
 
     @NotBlank
     @Column(name = "entity_type", nullable = false)
-    private String entityType;
+    @Size(max = 255) private String entityType;
 
     @Column(name = "entity_id", nullable = false)
     private UUID entityId;
 
     @NotBlank
     @Column(name = "path", nullable = false)
-    private String path;
+    @Size(max = 512) private String path;
 
     @Column(name = "mime_type")
-    private String mimeType;
+    @Size(max = 255) private String mimeType;
 
     @Column(name = "size_bytes")
     @Setter private Long sizeBytes;
 
     @Column(name = "original_name")
-    @Setter private String originalName;
+    @Setter @Size(max = 255) private String originalName;
 
     @CreatedDate
     @Column(name = "created_at", updatable = false, nullable = false)

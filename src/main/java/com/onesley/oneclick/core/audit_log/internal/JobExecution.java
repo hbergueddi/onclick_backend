@@ -18,6 +18,8 @@ import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 /**
  * Statut d'exécution d'un job/batch — tracking pour cron, retries, monitoring.
@@ -34,14 +36,14 @@ public class JobExecution {
 
     @NotBlank
     @Column(name = "job_name", nullable = false)
-    private String jobName;
+    @Size(max = 255) private String jobName;
 
     @Pattern(regexp = "^(running|success|failed|cancelled)$")
     @Column(name = "status", nullable = false)
-    private String status = "running";
+    @Size(max = 255) @NotBlank private String status = "running";
 
     @Column(name = "started_at", nullable = false)
-    private Instant startedAt = Instant.now();
+    @NotNull private Instant startedAt = Instant.now();
 
     @Column(name = "finished_at")
     private Instant finishedAt;
@@ -51,7 +53,7 @@ public class JobExecution {
     private Map<String, Object> result;
 
     @Column(name = "error_message", columnDefinition = "text")
-    private String errorMessage;
+    @Size(max = 2000) private String errorMessage;
 
     public JobExecution(UUID id, String jobName) {
         this.id = id;

@@ -27,6 +27,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.Size;
 
 /**
  * Audit trail — qui a fait quoi sur quelle entité, avec diff.
@@ -62,24 +63,24 @@ public class AuditLog {
 
     @NotBlank
     @Column(name = "entity_type", nullable = false)
-    private String entityType;
+    @Size(max = 255) private String entityType;
 
     @Column(name = "entity_id")
     private UUID entityId;
 
     @NotBlank
     @Column(name = "action", nullable = false)
-    private String action;
+    @Size(max = 512) private String action;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "diff", columnDefinition = "jsonb")
     private Map<String, Object> diff = new HashMap<>();
 
     @Column(name = "ip_address")
-    @Setter private String ipAddress;
+    @Setter @Size(max = 2000) private String ipAddress;
 
     @Column(name = "user_agent")
-    @Setter private String userAgent;
+    @Setter @Size(max = 512) private String userAgent;
 
     @CreatedDate
     @Column(name = "created_at", updatable = false, nullable = false)

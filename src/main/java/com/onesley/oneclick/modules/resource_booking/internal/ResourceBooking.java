@@ -15,6 +15,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 /** Réservation d'une ressource (vs réservation restaurant). */
 @Entity
@@ -58,10 +60,10 @@ public class ResourceBooking extends TimestampedEntity {
 
     @Pattern(regexp = "^(pending|confirmed|cancelled|no_show|completed)$")
     @Column(name = "status", nullable = false)
-    @Setter private String status = "confirmed";
+    @Setter @Size(max = 255) @NotBlank private String status = "confirmed";
 
     @Column(name = "notes")
-    @Setter private String notes;
+    @Setter @Size(max = 2000) private String notes;
 
     @Column(name = "deleted_at")
     private Instant deletedAt;

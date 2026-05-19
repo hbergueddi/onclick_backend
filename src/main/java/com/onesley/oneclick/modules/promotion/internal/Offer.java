@@ -20,6 +20,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.Size;
 
 /** Offre / promotion par restaurant. */
 @Entity
@@ -30,8 +31,8 @@ public class Offer extends SoftDeletableAuditedEntity {
 
     @Id @Column(name = "id", nullable = false, updatable = false) private UUID id;
     @Column(name = "restaurant_id", nullable = false) private UUID restaurantId;
-    @NotBlank @Column(name = "title", nullable = false) @Setter private String title;
-    @Column(name = "description") @Setter private String description;
+    @NotBlank @Column(name = "title", nullable = false) @Setter @Size(max = 255) private String title;
+    @Column(name = "description") @Setter @Size(max = 2000) private String description;
     @NotNull @Column(name = "starts_at", nullable = false) @Setter private Instant startsAt;
     @NotNull @Column(name = "expires_at", nullable = false) @Setter private Instant expiresAt;
     @DecimalMin("0.00") @DecimalMax("100.00") @Column(name = "discount_pct", precision = 5, scale = 2) @Setter private BigDecimal discountPct;
@@ -41,7 +42,7 @@ public class Offer extends SoftDeletableAuditedEntity {
     /** Catégorie d'offre — promo | bonus | reco. */
     @NotBlank
     @Pattern(regexp = "^(promo|bonus|reco)$")
-    @Column(name = "type", nullable = false) @Setter private String type = "promo";
+    @Column(name = "type", nullable = false) @Setter @Size(max = 255) private String type = "promo";
 
     /** Bonus points fidélité — renseigné uniquement quand type='bonus'. */
     @Positive
@@ -53,7 +54,7 @@ public class Offer extends SoftDeletableAuditedEntity {
     @Column(name = "push_notify", nullable = false) @Setter private boolean pushNotify = false;
 
     /** URL de la bannière promo. */
-    @Column(name = "image") @Setter private String image;
+    @Column(name = "image") @Setter @Size(max = 1024) private String image;
 
     /** Segments clients ciblés (tous, fideles, nouveaux, inactifs, ruby, …). */
     @JdbcTypeCode(SqlTypes.ARRAY)

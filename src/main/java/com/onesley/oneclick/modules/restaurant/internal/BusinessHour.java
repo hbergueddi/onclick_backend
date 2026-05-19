@@ -17,6 +17,7 @@ import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import jakarta.validation.constraints.Size;
 
 /**
  * Horaires polymorphiques — utilisable pour restaurant ET resource (§4).
@@ -39,7 +40,7 @@ public class BusinessHour extends TimestampedEntity {
 
     @NotBlank
     @Column(name = "entity_type", nullable = false)
-    private String entityType;
+    @Size(max = 255) private String entityType;
 
     @Column(name = "entity_id", nullable = false)
     private UUID entityId;

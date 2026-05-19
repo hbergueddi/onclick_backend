@@ -36,8 +36,8 @@ public class FriendGroup extends SoftDeletableAuditedEntity {
     private User owner;
 
     @NotBlank @Size(max = 500) @Column(name = "name", nullable = false) @Setter private String name;
-    @Column(name = "description") @Setter private String description;
-    @Column(name = "avatar_url") @Setter private String avatarUrl;
+    @Column(name = "description") @Setter @Size(max = 2000) private String description;
+    @Column(name = "avatar_url") @Setter @Size(max = 1024) private String avatarUrl;
 
     public FriendGroup(UUID id, User owner, String name) {
         this.id = id;

@@ -21,6 +21,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.Size;
 
 /**
  * Junction user × restaurant avec role_code applicatif (owner, manager, server, host, etc.).
@@ -56,7 +57,7 @@ public class RestaurantStaff extends TimestampedEntity {
 
     @NotBlank
     @Column(name = "role_code", nullable = false)
-    @Setter private String roleCode;
+    @Setter @Size(max = 255) private String roleCode;
 
     @Column(name = "deleted_at")
     private Instant deletedAt;

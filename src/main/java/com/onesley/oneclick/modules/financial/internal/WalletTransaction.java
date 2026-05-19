@@ -18,6 +18,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 /** Mouvement du wallet restaurateur (crédit/débit/commission/payout/adjustment). */
 @Entity
@@ -36,7 +38,7 @@ public class WalletTransaction {
 
     @Pattern(regexp = "^(credit|debit|commission|payout|adjustment)$")
     @Column(name = "type", nullable = false)
-    private String type;
+    @Size(max = 255) @NotBlank private String type;
 
     @NotNull
     @Column(name = "amount", nullable = false, precision = 12, scale = 2)
@@ -46,13 +48,13 @@ public class WalletTransaction {
     @Setter private BigDecimal balanceAfter;
 
     @Column(name = "reason")
-    private String reason;
+    @Size(max = 2000) private String reason;
 
     @Column(name = "reference_id")
     @Setter private UUID referenceId;
 
     @Column(name = "reference_type")
-    @Setter private String referenceType;
+    @Setter @Size(max = 255) private String referenceType;
 
     @CreatedDate
     @Column(name = "created_at", updatable = false, nullable = false)

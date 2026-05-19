@@ -18,6 +18,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.Size;
 
 /**
  * Campagne marketing programmée — envoi batch à un segment de users.
@@ -41,14 +42,14 @@ public class NotificationCampaign extends TimestampedEntity {
 
     @NotBlank
     @Column(name = "title", nullable = false)
-    private String title;
+    @Size(max = 255) private String title;
 
     @NotBlank
     @Column(name = "message", nullable = false)
-    private String message;
+    @Size(max = 2000) private String message;
 
     @Column(name = "target_segment")
-    @Setter private String targetSegment;
+    @Setter @Size(max = 512) private String targetSegment;
 
     @Column(name = "scheduled_at")
     @Setter private Instant scheduledAt;
@@ -58,7 +59,7 @@ public class NotificationCampaign extends TimestampedEntity {
 
     @Pattern(regexp = "^(draft|scheduled|sending|sent|cancelled|failed)$")
     @Column(name = "status", nullable = false)
-    @Setter private String status = "draft";
+    @Setter @Size(max = 255) @NotBlank private String status = "draft";
 
     @Column(name = "created_by")
     @Setter private UUID createdById;

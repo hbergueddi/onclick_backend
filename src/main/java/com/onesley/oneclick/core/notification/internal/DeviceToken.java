@@ -9,6 +9,7 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.time.Instant;
@@ -39,13 +40,15 @@ public class DeviceToken extends TimestampedEntity {
     private UUID userId;
 
     @NotBlank
+    @Size(max = 4096)
     @Column(name = "token", nullable = false, unique = true)
     private String token;
 
     @Pattern(regexp = "^(ios|android|web)$")
     @Column(name = "platform")
-    private String platform;
+    @Size(max = 255) private String platform;
 
+    @Size(max = 255)
     @Column(name = "app_id")
     @Setter private String appId;
 

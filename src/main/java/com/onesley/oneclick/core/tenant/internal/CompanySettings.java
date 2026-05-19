@@ -21,6 +21,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.Size;
 
 /**
  * Configuration légale et facturation par tenant (raison sociale, ICE, RIB, TVA).
@@ -45,13 +46,13 @@ public class CompanySettings extends TimestampedEntity {
 
     @NotBlank
     @Column(name = "raison_sociale", nullable = false)
-    @Setter private String raisonSociale;
+    @Setter @Size(max = 512) private String raisonSociale;
 
     @Column(name = "ice")
-    @Setter private String ice;
+    @Setter @Size(max = 512) private String ice;
 
     @Column(name = "rib")
-    @Setter private String rib;
+    @Setter @Size(max = 512) private String rib;
 
     @DecimalMin("0.00")
     @DecimalMax("100.00")

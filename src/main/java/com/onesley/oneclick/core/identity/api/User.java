@@ -66,15 +66,15 @@ public class User extends SoftDeletableAuditedEntity {
     @Email
     @NotBlank
     @Column(name = "email", nullable = false, unique = true)
-    @Setter private String email;
+    @Setter @Size(max = 255) private String email;
 
     @Pattern(regexp = "^\\+?[0-9 ]{6,20}$", message = "phone format invalid")
     @Column(name = "phone", unique = true)
-    @Setter private String phone;
+    @Setter @Size(max = 255) private String phone;
 
     @NotBlank
     @Column(name = "password_hash", nullable = false)
-    @Setter private String passwordHash;
+    @Setter @Size(max = 512) private String passwordHash;
 
     @NotBlank
     @Size(max = 100)
@@ -87,14 +87,14 @@ public class User extends SoftDeletableAuditedEntity {
     @Setter private String lastName;
 
     @Column(name = "avatar_url")
-    @Setter private String avatarUrl;
+    @Setter @Size(max = 1024) private String avatarUrl;
 
     @Pattern(regexp = "^(fr|en|ar)$", message = "language must be fr/en/ar")
     @Column(name = "language", nullable = false)
-    @Setter private String language = "fr";
+    @Setter @Size(max = 255) @NotBlank private String language = "fr";
 
     @Column(name = "status", nullable = false)
-    @Setter private String status = "active";
+    @Setter @Size(max = 255) @NotBlank private String status = "active";
 
     // ─── Flags Spring Security (§2.1) ────────────────────────────────────────
     @Column(name = "account_non_expired", nullable = false)
@@ -117,7 +117,7 @@ public class User extends SoftDeletableAuditedEntity {
      * via migration V14. Lecture seule au niveau API : non modifiable via PATCH.
      */
     @Column(name = "referral_code", unique = true)
-    @Setter private String referralCode;
+    @Setter @Size(max = 255) private String referralCode;
 
     public User(UUID id, Role role, String email, String passwordHash, String firstName, String lastName) {
         this.id = id;

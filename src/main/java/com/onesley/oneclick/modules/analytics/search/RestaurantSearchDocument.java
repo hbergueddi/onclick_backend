@@ -10,6 +10,8 @@ import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 /**
  * Document de recherche full-text — 1 row par restaurant.
@@ -33,10 +35,10 @@ public class RestaurantSearchDocument {
     private UUID restaurantId;
 
     @Column(name = "document", columnDefinition = "tsvector", insertable = false, updatable = false)
-    private String document;
+    @Size(max = 512) private String document;
 
     @Column(name = "indexed_at", nullable = false)
-    private Instant indexedAt = Instant.now();
+    @NotNull private Instant indexedAt = Instant.now();
 
     public RestaurantSearchDocument(UUID restaurantId) {
         this.restaurantId = restaurantId;

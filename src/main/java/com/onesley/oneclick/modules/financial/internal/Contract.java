@@ -14,6 +14,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.Size;
 
 /** Contrat partenaire — commission_rate par restaurant. */
 @Entity
@@ -30,6 +31,7 @@ public class Contract extends SoftDeletableAuditedEntity {
     private UUID restaurantId;
 
     @NotBlank
+    @Size(max = 255)
     @Column(name = "contract_number", nullable = false, unique = true)
     private String contractNumber;
 
@@ -45,9 +47,10 @@ public class Contract extends SoftDeletableAuditedEntity {
     @Column(name = "ends_at")
     @Setter private LocalDate endsAt;
 
+    @NotBlank
     @Pattern(regexp = "^(draft|active|paused|terminated)$")
     @Column(name = "status", nullable = false)
-    @Setter private String status = "active";
+    @Setter @Size(max = 255) private String status = "active";
 
     public Contract(UUID id, UUID restaurantId, String contractNumber, BigDecimal commissionRate, LocalDate startsAt) {
         this.id = id;

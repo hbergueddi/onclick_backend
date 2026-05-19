@@ -18,6 +18,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 /**
  * Audit workflow d'une réservation — 1 ligne par changement de statut.
@@ -43,11 +45,11 @@ public class ReservationStatusHistory {
     private Reservation reservation;
 
     @Column(name = "old_status")
-    private String oldStatus;
+    @Size(max = 255) private String oldStatus;
 
     @NotBlank
     @Column(name = "new_status", nullable = false)
-    private String newStatus;
+    @Size(max = 255) private String newStatus;
 
     @Column(name = "changed_by", insertable = false, updatable = false)
     private UUID changedById;
@@ -57,10 +59,10 @@ public class ReservationStatusHistory {
     private User changedBy;
 
     @Column(name = "reason")
-    @Setter private String reason;
+    @Setter @Size(max = 2000) private String reason;
 
     @Column(name = "changed_at", nullable = false)
-    private Instant changedAt = Instant.now();
+    @NotNull private Instant changedAt = Instant.now();
 
     public ReservationStatusHistory(UUID id, Reservation reservation, String oldStatus, String newStatus, User changedBy) {
         this.id = id;

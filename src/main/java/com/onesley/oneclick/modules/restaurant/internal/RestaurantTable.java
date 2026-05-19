@@ -20,6 +20,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 
 /**
  * Table physique d'un restaurant (T01, T02...) rattachée à une zone.
@@ -47,11 +49,11 @@ public class RestaurantTable extends TimestampedEntity {
 
     @NotBlank
     @Column(name = "table_number", nullable = false)
-    @Setter private String tableNumber;
+    @Setter @Size(max = 255) private String tableNumber;
 
     @Min(1)
     @Column(name = "seats", nullable = false)
-    @Setter private Integer seats;
+    @Setter @Positive private Integer seats;
 
     public RestaurantTable(UUID id, RestaurantZone zone, String tableNumber, Integer seats) {
         this.id = id;

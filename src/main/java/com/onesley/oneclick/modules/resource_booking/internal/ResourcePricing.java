@@ -15,6 +15,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
 
 /** Grille tarifaire par ressource (1h padel, 30 min coiffeur, ...). */
 @Entity
@@ -36,12 +38,12 @@ public class ResourcePricing extends TimestampedEntity {
 
     @NotBlank
     @Column(name = "name", nullable = false)
-    private String name;
+    @Size(max = 255) private String name;
 
     @NotNull
     @DecimalMin("0.00")
     @Column(name = "price", nullable = false, precision = 12, scale = 2)
-    @Setter private BigDecimal price;
+    @Setter @PositiveOrZero private BigDecimal price;
 
     @Column(name = "duration_minutes")
     @Setter private Integer durationMinutes;

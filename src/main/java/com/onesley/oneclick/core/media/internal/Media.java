@@ -20,6 +20,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.Size;
 
 /**
  * Média polymorphique (image/video/audio/pdf) attaché à n'importe quelle entité.
@@ -40,22 +41,22 @@ public class Media extends SoftDeletableAuditedEntity {
 
     @NotBlank
     @Column(name = "entity_type", nullable = false)
-    private String entityType;
+    @Size(max = 255) private String entityType;
 
     @Column(name = "entity_id", nullable = false)
     private UUID entityId;
 
     @NotBlank
     @Column(name = "url", nullable = false)
-    @Setter private String url;
+    @Setter @Size(max = 1024) private String url;
 
     @NotBlank
     @Pattern(regexp = "^(image|video|audio|pdf)$")
     @Column(name = "media_type", nullable = false)
-    private String mediaType;
+    @Size(max = 255) private String mediaType;
 
     @Column(name = "mime_type")
-    @Setter private String mimeType;
+    @Setter @Size(max = 255) private String mimeType;
 
     @Column(name = "size_bytes")
     @Setter private Long sizeBytes;

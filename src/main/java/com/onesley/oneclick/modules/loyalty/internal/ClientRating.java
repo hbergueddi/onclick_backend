@@ -7,6 +7,8 @@ import java.math.BigDecimal;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 
 /**
  * Système de notation client 0-5 — Sprint H.
@@ -34,7 +36,7 @@ public class ClientRating extends TimestampedEntity {
     @Setter private UUID reservationId;
 
     @Column(nullable = false, precision = 2, scale = 1)
-    @Setter private BigDecimal rating = new BigDecimal("5.0");
+    @Setter @DecimalMin("0") @DecimalMax("5") private BigDecimal rating = new BigDecimal("5.0");
 
     @Column(name = "visible_rating", nullable = false, precision = 2, scale = 1)
     @Setter private BigDecimal visibleRating = new BigDecimal("5.0");

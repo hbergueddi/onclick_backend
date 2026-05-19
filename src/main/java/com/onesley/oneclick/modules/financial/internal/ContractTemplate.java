@@ -18,6 +18,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.Size;
 
 /**
  * Template contractuel versionné & multilangue — utilisé par ContractDownload
@@ -44,12 +45,12 @@ public class ContractTemplate extends SoftDeletableAuditedEntity {
     /** Code fonctionnel (ex: {@code "partner_contract"}, {@code "tos"}). */
     @NotBlank
     @Column(name = "code", nullable = false)
-    private String code;
+    @Size(max = 255) private String code;
 
     /** Libellé interne (admin-facing). */
     @NotBlank
     @Column(name = "name", nullable = false)
-    @Setter private String name;
+    @Setter @Size(max = 255) private String name;
 
     /** Numéro de version — incrément à chaque révision juridique. */
     @NotNull
@@ -61,17 +62,17 @@ public class ContractTemplate extends SoftDeletableAuditedEntity {
     @NotBlank
     @Pattern(regexp = "^(fr|en|ar)$")
     @Column(name = "language", nullable = false)
-    private String language = "fr";
+    @Size(max = 255) private String language = "fr";
 
     /** Titre affiché dans le PDF. */
     @NotBlank
     @Column(name = "title", nullable = false)
-    @Setter private String title;
+    @Setter @Size(max = 255) private String title;
 
     /** Corps du contrat — markdown ou texte brut, rendu par le générateur PDF. */
     @NotBlank
     @Column(name = "body", nullable = false, columnDefinition = "text")
-    @Setter private String body;
+    @Setter @Size(max = 10000) private String body;
 
     @Column(name = "is_active", nullable = false)
     @Setter private boolean active = true;

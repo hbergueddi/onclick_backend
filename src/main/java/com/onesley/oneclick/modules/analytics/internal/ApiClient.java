@@ -11,6 +11,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.Size;
 
 /** Client API (intégration partenaire). */
 @Entity
@@ -22,8 +23,8 @@ public class ApiClient extends TimestampedEntity {
     @Id @Column(name = "id", nullable = false, updatable = false) private UUID id;
     @Column(name = "tenant_id", insertable = false, updatable = false) private UUID tenantId;
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "tenant_id") @Setter private Tenant tenant;
-    @NotBlank @Column(name = "name", nullable = false) @Setter private String name;
-    @Column(name = "description") @Setter private String description;
+    @NotBlank @Column(name = "name", nullable = false) @Setter @Size(max = 255) private String name;
+    @Column(name = "description") @Setter @Size(max = 2000) private String description;
     @Column(name = "enabled", nullable = false) @Setter private boolean enabled = true;
     public ApiClient(UUID id, String name) { this.id = id; this.name = name; }
 

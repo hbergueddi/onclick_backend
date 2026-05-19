@@ -19,6 +19,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
 
 /**
  * Niveau de fidélité (Ruby, Sapphire, Emeraude, ...) par tenant.
@@ -41,15 +43,15 @@ public class Tier extends TimestampedEntity {
 
     @NotBlank
     @Column(name = "name", nullable = false)
-    private String name;
+    @Size(max = 255) private String name;
 
     @Min(0)
     @Column(name = "min_points", nullable = false)
-    private Integer minPoints = 0;
+    @PositiveOrZero private Integer minPoints = 0;
 
     @DecimalMin("0.00")
     @Column(name = "bonus_percent", nullable = false, precision = 5, scale = 2)
-    private BigDecimal bonusPercent = BigDecimal.ZERO;
+    @PositiveOrZero private BigDecimal bonusPercent = BigDecimal.ZERO;
 
     @Column(name = "sort_order", nullable = false)
     @Setter private Integer sortOrder = 0;

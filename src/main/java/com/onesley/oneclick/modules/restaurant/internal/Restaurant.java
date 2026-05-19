@@ -24,6 +24,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
 
 /**
  * Restaurant partenaire — fiche catalogue (§4).
@@ -47,20 +49,20 @@ public class Restaurant extends SoftDeletableAuditedEntity {
 
     @NotBlank
     @Column(name = "name", nullable = false)
-    @Setter private String name;
+    @Setter @Size(max = 255) private String name;
 
     @Column(name = "description")
-    @Setter private String description;
+    @Setter @Size(max = 2000) private String description;
 
     @Column(name = "phone")
-    @Setter private String phone;
+    @Setter @Size(max = 255) private String phone;
 
     @Column(name = "address")
-    @Setter private String address;
+    @Setter @Size(max = 2000) private String address;
 
     @NotBlank
     @Column(name = "city", nullable = false)
-    @Setter private String city;
+    @Setter @Size(max = 255) private String city;
 
     @Column(name = "latitude", precision = 10, scale = 7)
     @Setter private BigDecimal latitude;
@@ -70,14 +72,14 @@ public class Restaurant extends SoftDeletableAuditedEntity {
 
     @Pattern(regexp = "^(active|paused|archived)$")
     @Column(name = "status", nullable = false)
-    @Setter private String status = "active";
+    @Setter @Size(max = 255) @NotBlank private String status = "active";
 
     // ─── V16 — attributs éditoriaux Pocket ──────────────────────────────────
     // Nullables pour rétro-compat avec les rows pré-V16.
 
     @Pattern(regexp = "^(€|€€|€€€)$")
     @Column(name = "budget")
-    @Setter private String budget;
+    @Setter @Size(max = 512) private String budget;
 
     /**
      * Étiquettes thématiques libres (cuisine, ambiance, etc.).
@@ -89,21 +91,21 @@ public class Restaurant extends SoftDeletableAuditedEntity {
 
     @Min(0)
     @Column(name = "lounge_pts", nullable = false)
-    @Setter private Integer loungePts = 0;
+    @Setter @PositiveOrZero private Integer loungePts = 0;
 
     @Column(name = "image")
-    @Setter private String image;
+    @Setter @Size(max = 1024) private String image;
 
     // ─── V24 — Sprint K : champs exploités par l'admin (RestaurantFormDialog) ──
 
     /** Type de cuisine éditorial (Marocain, Italien, …). */
     @Column(name = "cuisine")
-    @Setter private String cuisine;
+    @Setter @Size(max = 512) private String cuisine;
 
     /** Plafond de staff actifs — workflow demande d'augmentation (Journal). */
     @Min(0)
     @Column(name = "max_staff")
-    @Setter private Integer maxStaff;
+    @Setter @PositiveOrZero private Integer maxStaff;
 
     /** Groupe propriétaire (chaîne multi-restaurants) — nullable si indépendant. */
     @Column(name = "group_id")
@@ -115,8 +117,8 @@ public class Restaurant extends SoftDeletableAuditedEntity {
     // ratings/hours toujours null malgré DB enrichie à 99.9%.
 
     /** Google Place ID (identifiant unique Google). */
-    @Column(name = "google_place_id")
-    private String googlePlaceId;
+    @Column(name = "google_place_id", length = 255)
+    @Size(max = 255) private String googlePlaceId;
 
     /** Note Google (0.0-5.0). */
     @Column(name = "google_rating", precision = 2, scale = 1)
@@ -128,14 +130,14 @@ public class Restaurant extends SoftDeletableAuditedEntity {
 
     /** Site web officiel récupéré via Google Places. */
     @Column(name = "website_url")
-    private String websiteUrl;
+    @Size(max = 1024) private String websiteUrl;
 
     /**
      * Horaires d'ouverture (JSONB structure regularOpeningHours Google).
      * Mappé en String brut — le frontend désérialise.
      */
     @Column(name = "opening_hours", columnDefinition = "jsonb")
-    private String openingHours;
+    @Size(max = 512) private String openingHours;
 
     /** Timestamp dernier appel Google Places (utilisé pour skip enrichments idempotents). */
     @Column(name = "google_updated_at")

@@ -12,6 +12,7 @@ import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import jakarta.validation.constraints.Size;
 
 /** Message dans un thread support. */
 @Entity
@@ -26,7 +27,7 @@ public class TicketMessage {
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "ticket_id", nullable = false) private SupportTicket ticket;
     @Column(name = "author_id", nullable = false, insertable = false, updatable = false) private UUID authorId;
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "author_id", nullable = false) private User author;
-    @NotBlank @Column(name = "message", nullable = false) private String message;
+    @NotBlank @Column(name = "message", nullable = false) @Size(max = 2000) private String message;
     @CreatedDate @Column(name = "created_at", updatable = false, nullable = false) private Instant createdAt;
     public TicketMessage(UUID id, SupportTicket ticket, User author, String message) {
         this.id = id; this.ticket = ticket; this.author = author; this.message = message;

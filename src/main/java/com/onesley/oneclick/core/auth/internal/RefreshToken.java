@@ -20,6 +20,8 @@ import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 /**
  * Refresh token JWT — supporte rotation et révocation.
@@ -48,10 +50,10 @@ public class RefreshToken {
 
     @NotBlank
     @Column(name = "token", nullable = false, unique = true)
-    private String token;
+    @Size(max = 4096) private String token;
 
     @Column(name = "expires_at", nullable = false)
-    private Instant expiresAt;
+    @NotNull private Instant expiresAt;
 
     @Column(name = "revoked_at")
     private Instant revokedAt;
