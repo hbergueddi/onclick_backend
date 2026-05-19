@@ -43,9 +43,10 @@ public class OfferController {
         this.offerRepository = offerRepository;
     }
 
+    // Bug 32 (Batch A RBAC v2) — double-binding hasAnyRole(...) or hasAuthority('VERB:OFFERS')
     @GetMapping
     @Operation(summary = "Liste paginée — filtres restaurantId + activeOnly")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:OFFERS')")
     public PageResponse<OfferDto> findAll(
         @RequestParam(required = false) UUID restaurantId,
         @RequestParam(required = false) Boolean activeOnly,
@@ -57,12 +58,12 @@ public class OfferController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Détail offre par UUID")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:OFFERS')")
     public OfferDto findById(@PathVariable UUID id) { return service.findById(id); }
 
     @PostMapping
     @Operation(summary = "Crée une offre/promotion")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR') or hasAuthority('CREATE:OFFERS')")
     public ResponseEntity<OfferDto> create(@Valid @RequestBody OfferCreateDto dto) {
         OfferDto o = service.create(dto);
         return ResponseEntity.created(URI.create("/api/offers/" + o.id())).body(o);
@@ -70,14 +71,14 @@ public class OfferController {
 
     @PatchMapping("/{id}")
     @Operation(summary = "Mise à jour partielle d'une offre — null = pas de modification")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR') or hasAuthority('UPDATE:OFFERS')")
     public OfferDto patch(@PathVariable UUID id, @Valid @RequestBody OfferPatchDto dto) {
         return service.patch(id, dto);
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Soft delete d'une offre")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR') or hasAuthority('DELETE:OFFERS')")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         service.softDelete(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
@@ -85,7 +86,7 @@ public class OfferController {
 
     @PostMapping("/search")
     @Operation(summary = "Recherche dynamique (Phase 4 §6.3) — 12 opérateurs + whitelist")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:OFFERS')")
     public PageResponse<OfferDto> search(@RequestBody SearchRequest req) {
         return PageResponse.from(
             Searchable.execute(offerRepository, req, SEARCHABLE_FIELDS, Offer::toDto)

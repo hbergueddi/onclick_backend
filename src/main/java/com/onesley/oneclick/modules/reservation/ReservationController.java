@@ -27,6 +27,19 @@ import com.onesley.oneclick.modules.reservation.internal.ReservationGuestService
 import com.onesley.oneclick.modules.reservation.internal.ReservationRepository;
 import com.onesley.oneclick.modules.reservation.internal.ReservationService;
 
+/**
+ * REST controller {@code /api/reservations} — Bug 32 (Batch A RBAC v2).
+ *
+ * <p>Tous les endpoints sont en double-binding {@code hasAnyRole(...) or
+ * hasAuthority('VERB:RESERVATIONS')} pendant la phase de transition RBAC v2.
+ * Cf. {@link com.onesley.oneclick.security.UserRoleAuthoritiesConverter} pour
+ * la résolution des authorities depuis la table {@code permissions}.</p>
+ *
+ * <p>Le scoping fin (ownership, staff-of-restaurant) reste géré dans
+ * {@link ReservationService} via {@code SecurityHelper.requireOwnerOrAdmin}
+ * et les checks {@code canAccess()} — RBAC autorise grossièrement, ABAC
+ * restreint finement.</p>
+ */
 @RestController
 @RequestMapping("/api/reservations")
 @Tag(name = "Reservations", description = "Workflow réservations (§5)")
@@ -59,7 +72,7 @@ public class ReservationController {
 
     @GetMapping
     @Operation(summary = "Liste paginée — filtres clientId / restaurantId / status optionnels")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:RESERVATIONS')")
     public PageResponse<ReservationDto> findAll(
         @RequestParam(required = false) UUID clientId,
         @RequestParam(required = false) UUID restaurantId,
@@ -72,7 +85,7 @@ public class ReservationController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Détail réservation par UUID")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:RESERVATIONS')")
     public ReservationDto findById(@PathVariable UUID id) {
         return service.findById(id);
     }
@@ -84,14 +97,14 @@ public class ReservationController {
                     + "Les UUIDs sans droit d'accès ou inexistants sont simplement omis du résultat — "
                     + "pas de 403 en cas d'accès partiel."
     )
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:RESERVATIONS')")
     public List<ReservationDto> findByIds(@RequestBody List<UUID> ids) {
         return service.findAccessibleByIds(ids);
     }
 
     @PostMapping
     @Operation(summary = "Crée une réservation (status initial: pending)")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('CREATE:RESERVATIONS')")
     public ResponseEntity<ReservationDto> create(@Valid @RequestBody ReservationCreateDto dto) {
         ReservationDto r = service.create(dto);
         return ResponseEntity.created(URI.create("/api/reservations/" + r.id())).body(r);
@@ -99,14 +112,14 @@ public class ReservationController {
 
     @PatchMapping("/{id}/status")
     @Operation(summary = "Change le statut (workflow audit dans reservation_status_histories)")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR') or hasAuthority('UPDATE:RESERVATIONS')")
     public ReservationDto changeStatus(@PathVariable UUID id, @RequestBody StatusChangeDto body) {
         return service.changeStatus(id, body.status(), body.changedById(), body.reason());
     }
 
     @PostMapping("/search")
     @Operation(summary = "Recherche dynamique (Phase 4 §6.3) — 12 opérateurs + whitelist")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:RESERVATIONS')")
     public PageResponse<ReservationDto> search(@RequestBody SearchRequest req) {
         return PageResponse.from(
             Searchable.execute(reservationRepository, req, SEARCHABLE_FIELDS, Reservation::toDto)
@@ -120,7 +133,7 @@ public class ReservationController {
                       "Retourne Map<restaurantId, count> triée DESC. Pas de DTO dédié — pattern " +
                       "Map<String,Long> standard du module analytics. Anti-N+1 : 1 SQL groupée."
     )
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN') or hasAuthority('VIEW:RESERVATIONS')")
     public java.util.Map<UUID, Long> countReservationsByRestaurant(
         @RequestParam(defaultValue = "30") int sinceDays,
         @RequestParam(required = false) String status
@@ -137,14 +150,14 @@ public class ReservationController {
 
     @GetMapping("/booking-rules/by-restaurant/{restaurantId}")
     @Operation(summary = "Liste les règles de réservation d'un restaurant")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:RESERVATIONS')")
     public List<BookingRuleDto> findBookingRulesByRestaurant(@PathVariable UUID restaurantId) {
         return bookingRuleService.findByRestaurant(restaurantId);
     }
 
     @PostMapping("/booking-rules/by-restaurant/{restaurantId}")
     @Operation(summary = "Crée une règle de réservation pour un restaurant")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR') or hasAuthority('CREATE:RESERVATIONS')")
     public ResponseEntity<BookingRuleDto> createBookingRule(
         @PathVariable UUID restaurantId,
         @Valid @RequestBody BookingRuleCreateDto dto
@@ -155,7 +168,7 @@ public class ReservationController {
 
     @PatchMapping("/booking-rules/{id}")
     @Operation(summary = "Modifie une règle de réservation")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR') or hasAuthority('UPDATE:RESERVATIONS')")
     public BookingRuleDto patchBookingRule(
         @PathVariable UUID id,
         @Valid @RequestBody BookingRulePatchDto dto
@@ -165,7 +178,7 @@ public class ReservationController {
 
     @DeleteMapping("/booking-rules/{id}")
     @Operation(summary = "Supprime une règle de réservation")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR') or hasAuthority('DELETE:RESERVATIONS')")
     public ResponseEntity<Void> deleteBookingRule(@PathVariable UUID id) {
         bookingRuleService.delete(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
@@ -179,14 +192,14 @@ public class ReservationController {
 
     @GetMapping("/{reservationId}/guests")
     @Operation(summary = "Liste tous les invités d'une réservation")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:RESERVATIONS')")
     public List<ReservationGuestDto> findGuestsByReservation(@PathVariable UUID reservationId) {
         return guestService.findByReservation(reservationId);
     }
 
     @GetMapping("/guests/by-user/{userId}")
     @Operation(summary = "Liste toutes les invitations reçues par un user (Pocket)")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:RESERVATIONS')")
     public List<ReservationGuestDto> findGuestsByUser(@PathVariable UUID userId) {
         return guestService.findByGuestUser(userId);
     }
@@ -196,7 +209,7 @@ public class ReservationController {
         summary = "Invite un guest à une réservation",
         description = "Au moins un identifiant requis : guestUserId, guestPhone, ou guestName"
     )
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('UPDATE:RESERVATIONS')")
     public ResponseEntity<ReservationGuestDto> inviteGuest(
         @PathVariable UUID reservationId,
         @Valid @RequestBody ReservationGuestDto.CreateDto dto
@@ -207,7 +220,7 @@ public class ReservationController {
 
     @PatchMapping("/guests/{guestId}/status")
     @Operation(summary = "Change le statut d'une invitation (guest répond OU organisateur annule)")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('UPDATE:RESERVATIONS')")
     public ReservationGuestDto updateGuestStatus(
         @PathVariable UUID guestId,
         @Valid @RequestBody ReservationGuestDto.StatusUpdateDto dto
@@ -217,7 +230,7 @@ public class ReservationController {
 
     @PatchMapping("/{reservationId}/guests/mark-seen")
     @Operation(summary = "Marque toutes les réponses des invités comme vues par l'organisateur")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('UPDATE:RESERVATIONS')")
     public ResponseEntity<Void> markGuestsSeen(@PathVariable UUID reservationId) {
         guestService.markSeen(reservationId);
         return ResponseEntity.noContent().build();
@@ -225,7 +238,7 @@ public class ReservationController {
 
     @DeleteMapping("/guests/{guestId}")
     @Operation(summary = "Supprime un guest d'une réservation (organisateur)")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('UPDATE:RESERVATIONS')")
     public ResponseEntity<Void> deleteGuest(@PathVariable UUID guestId) {
         guestService.delete(guestId);
         return ResponseEntity.noContent().build();
