@@ -7,6 +7,9 @@ import jakarta.persistence.Table;
 
 import java.time.Instant;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 /**
  * Document de recherche full-text — 1 row par restaurant.
@@ -21,6 +24,8 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "restaurant_search_documents")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class RestaurantSearchDocument {
 
     @Id
@@ -33,15 +38,7 @@ public class RestaurantSearchDocument {
     @Column(name = "indexed_at", nullable = false)
     private Instant indexedAt = Instant.now();
 
-    protected RestaurantSearchDocument() {
-        // JPA
-    }
-
     public RestaurantSearchDocument(UUID restaurantId) {
         this.restaurantId = restaurantId;
     }
-
-    public UUID getRestaurantId() { return restaurantId; }
-    public String getDocument() { return document; }
-    public Instant getIndexedAt() { return indexedAt; }
 }

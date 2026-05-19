@@ -14,6 +14,10 @@ import org.hibernate.proxy.HibernateProxy;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Audit workflow d'une réservation — 1 ligne par changement de statut.
@@ -23,6 +27,8 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "reservation_status_histories")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ReservationStatusHistory {
 
     @Id
@@ -51,14 +57,10 @@ public class ReservationStatusHistory {
     private User changedBy;
 
     @Column(name = "reason")
-    private String reason;
+    @Setter private String reason;
 
     @Column(name = "changed_at", nullable = false)
     private Instant changedAt = Instant.now();
-
-    protected ReservationStatusHistory() {
-        // JPA
-    }
 
     public ReservationStatusHistory(UUID id, Reservation reservation, String oldStatus, String newStatus, User changedBy) {
         this.id = id;
@@ -67,17 +69,6 @@ public class ReservationStatusHistory {
         this.newStatus = newStatus;
         this.changedBy = changedBy;
     }
-
-    public UUID getId() { return id; }
-    public UUID getReservationId() { return reservationId; }
-    public Reservation getReservation() { return reservation; }
-    public String getOldStatus() { return oldStatus; }
-    public String getNewStatus() { return newStatus; }
-    public UUID getChangedById() { return changedById; }
-    public User getChangedBy() { return changedBy; }
-    public String getReason() { return reason; }
-    public void setReason(String reason) { this.reason = reason; }
-    public Instant getChangedAt() { return changedAt; }
 
     @Override
     public boolean equals(Object o) {

@@ -10,10 +10,16 @@ import org.hibernate.proxy.HibernateProxy;
 import java.math.BigDecimal;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /** Ligne de facture (1 row par item). line_total = quantity × unit_price (GENERATED ALWAYS). */
 @Entity
 @Table(name = "invoice_lines")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class InvoiceLine {
 
     @Id
@@ -45,9 +51,7 @@ public class InvoiceLine {
     private BigDecimal lineTotal;
 
     @Column(name = "sort_order", nullable = false)
-    private Integer sortOrder = 0;
-
-    protected InvoiceLine() {}
+    @Setter private Integer sortOrder = 0;
 
     public InvoiceLine(UUID id, Invoice invoice, String label, BigDecimal quantity, BigDecimal unitPrice) {
         this.id = id;
@@ -56,16 +60,6 @@ public class InvoiceLine {
         this.quantity = quantity;
         this.unitPrice = unitPrice;
     }
-
-    public UUID getId() { return id; }
-    public UUID getInvoiceId() { return invoiceId; }
-    public Invoice getInvoice() { return invoice; }
-    public String getLabel() { return label; }
-    public BigDecimal getQuantity() { return quantity; }
-    public BigDecimal getUnitPrice() { return unitPrice; }
-    public BigDecimal getLineTotal() { return lineTotal; }
-    public Integer getSortOrder() { return sortOrder; }
-    public void setSortOrder(Integer sortOrder) { this.sortOrder = sortOrder; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public InvoiceLineDto toDto() {

@@ -5,6 +5,7 @@ import jakarta.persistence.MappedSuperclass;
 import org.springframework.data.annotation.LastModifiedBy;
 
 import java.util.UUID;
+import lombok.Getter;
 
 /**
  * Audit avec auteur de création + dernier modificateur — {@code created_at} +
@@ -37,13 +38,10 @@ import java.util.UUID;
  * @see AuditedEntity
  */
 @MappedSuperclass
+@Getter
 public abstract class CreatedAuditedEntity extends CreatedAuthorEntity {
 
     @LastModifiedBy
     @Column(name = "modified_by")
     private UUID modifiedBy;
-
-    public UUID getModifiedBy() {
-        return modifiedBy;
-    }
 }

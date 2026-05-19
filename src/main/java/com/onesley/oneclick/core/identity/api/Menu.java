@@ -13,12 +13,18 @@ import org.hibernate.proxy.HibernateProxy;
 
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Entrée de menu applicatif (sidebar). Hiérarchique via {@code parent_id}.
  */
 @Entity
 @Table(name = "menus")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Menu extends TimestampedEntity {
 
     @Id
@@ -34,10 +40,10 @@ public class Menu extends TimestampedEntity {
     private String name;
 
     @Column(name = "icon")
-    private String icon;
+    @Setter private String icon;
 
     @Column(name = "path")
-    private String path;
+    @Setter private String path;
 
     // Self-reference parent — LAZY pour pouvoir naviguer l'arbre côté service
     @Column(name = "parent_id", insertable = false, updatable = false)
@@ -45,33 +51,16 @@ public class Menu extends TimestampedEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id")
-    private Menu parent;
+    @Setter private Menu parent;
 
     @Column(name = "sort_order", nullable = false)
-    private Integer sortOrder = 0;
-
-    protected Menu() {
-        // JPA
-    }
+    @Setter private Integer sortOrder = 0;
 
     public Menu(UUID id, String code, String name) {
         this.id = id;
         this.code = code;
         this.name = name;
     }
-
-    public UUID getId() { return id; }
-    public String getCode() { return code; }
-    public String getName() { return name; }
-    public String getIcon() { return icon; }
-    public void setIcon(String icon) { this.icon = icon; }
-    public String getPath() { return path; }
-    public void setPath(String path) { this.path = path; }
-    public UUID getParentId() { return parentId; }
-    public Menu getParent() { return parent; }
-    public void setParent(Menu parent) { this.parent = parent; }
-    public Integer getSortOrder() { return sortOrder; }
-    public void setSortOrder(Integer sortOrder) { this.sortOrder = sortOrder; }
 
     @Override
     public boolean equals(Object o) {

@@ -17,6 +17,10 @@ import org.hibernate.proxy.HibernateProxy;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Junction user × restaurant avec role_code applicatif (owner, manager, server, host, etc.).
@@ -28,6 +32,8 @@ import java.util.UUID;
     name = "restaurant_staffs",
     uniqueConstraints = @UniqueConstraint(columnNames = {"restaurant_id", "user_id"})
 )
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class RestaurantStaff extends TimestampedEntity {
 
     @Id
@@ -50,14 +56,10 @@ public class RestaurantStaff extends TimestampedEntity {
 
     @NotBlank
     @Column(name = "role_code", nullable = false)
-    private String roleCode;
+    @Setter private String roleCode;
 
     @Column(name = "deleted_at")
     private Instant deletedAt;
-
-    protected RestaurantStaff() {
-        // JPA
-    }
 
     public RestaurantStaff(UUID id, Restaurant restaurant, User user, String roleCode) {
         this.id = id;
@@ -65,15 +67,6 @@ public class RestaurantStaff extends TimestampedEntity {
         this.user = user;
         this.roleCode = roleCode;
     }
-
-    public UUID getId() { return id; }
-    public UUID getRestaurantId() { return restaurantId; }
-    public Restaurant getRestaurant() { return restaurant; }
-    public UUID getUserId() { return userId; }
-    public User getUser() { return user; }
-    public String getRoleCode() { return roleCode; }
-    public void setRoleCode(String roleCode) { this.roleCode = roleCode; }
-    public Instant getDeletedAt() { return deletedAt; }
     public boolean isDeleted() { return deletedAt != null; }
     public void markDeleted() { this.deletedAt = Instant.now(); }
     /** Réactive un staff précédemment désactivé (soft-delete → actif). */

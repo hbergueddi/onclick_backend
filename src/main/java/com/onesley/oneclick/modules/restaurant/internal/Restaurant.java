@@ -20,12 +20,18 @@ import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Restaurant partenaire — fiche catalogue (§4).
  */
 @Entity
 @Table(name = "restaurants")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Restaurant extends SoftDeletableAuditedEntity {
 
     @Id
@@ -41,37 +47,37 @@ public class Restaurant extends SoftDeletableAuditedEntity {
 
     @NotBlank
     @Column(name = "name", nullable = false)
-    private String name;
+    @Setter private String name;
 
     @Column(name = "description")
-    private String description;
+    @Setter private String description;
 
     @Column(name = "phone")
-    private String phone;
+    @Setter private String phone;
 
     @Column(name = "address")
-    private String address;
+    @Setter private String address;
 
     @NotBlank
     @Column(name = "city", nullable = false)
-    private String city;
+    @Setter private String city;
 
     @Column(name = "latitude", precision = 10, scale = 7)
-    private BigDecimal latitude;
+    @Setter private BigDecimal latitude;
 
     @Column(name = "longitude", precision = 10, scale = 7)
-    private BigDecimal longitude;
+    @Setter private BigDecimal longitude;
 
     @Pattern(regexp = "^(active|paused|archived)$")
     @Column(name = "status", nullable = false)
-    private String status = "active";
+    @Setter private String status = "active";
 
     // ─── V16 — attributs éditoriaux Pocket ──────────────────────────────────
     // Nullables pour rétro-compat avec les rows pré-V16.
 
     @Pattern(regexp = "^(€|€€|€€€)$")
     @Column(name = "budget")
-    private String budget;
+    @Setter private String budget;
 
     /**
      * Étiquettes thématiques libres (cuisine, ambiance, etc.).
@@ -79,29 +85,29 @@ public class Restaurant extends SoftDeletableAuditedEntity {
      */
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(name = "tags", columnDefinition = "text[]")
-    private String[] tags;
+    @Setter private String[] tags;
 
     @Min(0)
     @Column(name = "lounge_pts", nullable = false)
-    private Integer loungePts = 0;
+    @Setter private Integer loungePts = 0;
 
     @Column(name = "image")
-    private String image;
+    @Setter private String image;
 
     // ─── V24 — Sprint K : champs exploités par l'admin (RestaurantFormDialog) ──
 
     /** Type de cuisine éditorial (Marocain, Italien, …). */
     @Column(name = "cuisine")
-    private String cuisine;
+    @Setter private String cuisine;
 
     /** Plafond de staff actifs — workflow demande d'augmentation (Journal). */
     @Min(0)
     @Column(name = "max_staff")
-    private Integer maxStaff;
+    @Setter private Integer maxStaff;
 
     /** Groupe propriétaire (chaîne multi-restaurants) — nullable si indépendant. */
     @Column(name = "group_id")
-    private UUID groupId;
+    @Setter private UUID groupId;
 
     // ─── Google Places enrichment (cols V23 + service GooglePlacesEnrichmentService) ──
     // Avant ce mapping JPA : colonnes peuplées en native SQL mais invisibles dans
@@ -135,56 +141,12 @@ public class Restaurant extends SoftDeletableAuditedEntity {
     @Column(name = "google_updated_at")
     private java.time.Instant googleUpdatedAt;
 
-    protected Restaurant() {
-        // JPA
-    }
-
     public Restaurant(UUID id, Tenant tenant, String name, String city) {
         this.id = id;
         this.tenant = tenant;
         this.name = name;
         this.city = city;
     }
-
-    public UUID getId() { return id; }
-    public UUID getTenantId() { return tenantId; }
-    public Tenant getTenant() { return tenant; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
-    public String getPhone() { return phone; }
-    public void setPhone(String phone) { this.phone = phone; }
-    public String getAddress() { return address; }
-    public void setAddress(String address) { this.address = address; }
-    public String getCity() { return city; }
-    public void setCity(String city) { this.city = city; }
-    public BigDecimal getLatitude() { return latitude; }
-    public void setLatitude(BigDecimal latitude) { this.latitude = latitude; }
-    public BigDecimal getLongitude() { return longitude; }
-    public void setLongitude(BigDecimal longitude) { this.longitude = longitude; }
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
-    public String getBudget() { return budget; }
-    public void setBudget(String budget) { this.budget = budget; }
-    public String[] getTags() { return tags; }
-    public void setTags(String[] tags) { this.tags = tags; }
-    public Integer getLoungePts() { return loungePts; }
-    public void setLoungePts(Integer loungePts) { this.loungePts = loungePts; }
-    public String getImage() { return image; }
-    public void setImage(String image) { this.image = image; }
-    public String getCuisine() { return cuisine; }
-    public void setCuisine(String cuisine) { this.cuisine = cuisine; }
-    public Integer getMaxStaff() { return maxStaff; }
-    public void setMaxStaff(Integer maxStaff) { this.maxStaff = maxStaff; }
-    public UUID getGroupId() { return groupId; }
-    public void setGroupId(UUID groupId) { this.groupId = groupId; }
-    public String getGooglePlaceId() { return googlePlaceId; }
-    public BigDecimal getGoogleRating() { return googleRating; }
-    public Integer getGoogleReviewsCount() { return googleReviewsCount; }
-    public String getWebsiteUrl() { return websiteUrl; }
-    public String getOpeningHours() { return openingHours; }
-    public java.time.Instant getGoogleUpdatedAt() { return googleUpdatedAt; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public RestaurantDto toDto() {

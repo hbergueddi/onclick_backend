@@ -16,74 +16,51 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /** Offre / promotion par restaurant. */
 @Entity
 @Table(name = "offers")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Offer extends SoftDeletableAuditedEntity {
 
     @Id @Column(name = "id", nullable = false, updatable = false) private UUID id;
     @Column(name = "restaurant_id", nullable = false) private UUID restaurantId;
-    @NotBlank @Column(name = "title", nullable = false) private String title;
-    @Column(name = "description") private String description;
-    @NotNull @Column(name = "starts_at", nullable = false) private Instant startsAt;
-    @NotNull @Column(name = "expires_at", nullable = false) private Instant expiresAt;
-    @DecimalMin("0.00") @DecimalMax("100.00") @Column(name = "discount_pct", precision = 5, scale = 2) private BigDecimal discountPct;
-    @Column(name = "discount_amount", precision = 12, scale = 2) private BigDecimal discountAmount;
-    @Column(name = "enabled", nullable = false) private boolean enabled = true;
+    @NotBlank @Column(name = "title", nullable = false) @Setter private String title;
+    @Column(name = "description") @Setter private String description;
+    @NotNull @Column(name = "starts_at", nullable = false) @Setter private Instant startsAt;
+    @NotNull @Column(name = "expires_at", nullable = false) @Setter private Instant expiresAt;
+    @DecimalMin("0.00") @DecimalMax("100.00") @Column(name = "discount_pct", precision = 5, scale = 2) @Setter private BigDecimal discountPct;
+    @Column(name = "discount_amount", precision = 12, scale = 2) @Setter private BigDecimal discountAmount;
+    @Column(name = "enabled", nullable = false) @Setter private boolean enabled = true;
 
     /** Catégorie d'offre — promo | bonus | reco. */
     @NotBlank
     @Pattern(regexp = "^(promo|bonus|reco)$")
-    @Column(name = "type", nullable = false) private String type = "promo";
+    @Column(name = "type", nullable = false) @Setter private String type = "promo";
 
     /** Bonus points fidélité — renseigné uniquement quand type='bonus'. */
     @Positive
-    @Column(name = "pts") private Integer pts;
+    @Column(name = "pts") @Setter private Integer pts;
 
     // ─── V24 — Sprint K : champs exploités par l'admin (PromotionsLounge / OfferJet) ──
 
     /** Déclenche une push notification de masse à la publication. */
-    @Column(name = "push_notify", nullable = false) private boolean pushNotify = false;
+    @Column(name = "push_notify", nullable = false) @Setter private boolean pushNotify = false;
 
     /** URL de la bannière promo. */
-    @Column(name = "image") private String image;
+    @Column(name = "image") @Setter private String image;
 
     /** Segments clients ciblés (tous, fideles, nouveaux, inactifs, ruby, …). */
     @JdbcTypeCode(SqlTypes.ARRAY)
-    @Column(name = "segments", columnDefinition = "text[]") private String[] segments;
-
-    protected Offer() {}
+    @Column(name = "segments", columnDefinition = "text[]") @Setter private String[] segments;
     public Offer(UUID id, UUID restaurantId, String title, Instant startsAt, Instant expiresAt) {
         this.id = id; this.restaurantId = restaurantId; this.title = title; this.startsAt = startsAt; this.expiresAt = expiresAt;
     }
-
-    public UUID getId() { return id; }
-    public UUID getRestaurantId() { return restaurantId; }
-    public String getTitle() { return title; }
-    public void setTitle(String title) { this.title = title; }
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
-    public Instant getStartsAt() { return startsAt; }
-    public void setStartsAt(Instant startsAt) { this.startsAt = startsAt; }
-    public Instant getExpiresAt() { return expiresAt; }
-    public void setExpiresAt(Instant expiresAt) { this.expiresAt = expiresAt; }
-    public BigDecimal getDiscountPct() { return discountPct; }
-    public void setDiscountPct(BigDecimal discountPct) { this.discountPct = discountPct; }
-    public BigDecimal getDiscountAmount() { return discountAmount; }
-    public void setDiscountAmount(BigDecimal discountAmount) { this.discountAmount = discountAmount; }
-    public boolean isEnabled() { return enabled; }
-    public void setEnabled(boolean enabled) { this.enabled = enabled; }
-    public String getType() { return type; }
-    public void setType(String type) { this.type = type; }
-    public Integer getPts() { return pts; }
-    public void setPts(Integer pts) { this.pts = pts; }
-    public boolean isPushNotify() { return pushNotify; }
-    public void setPushNotify(boolean pushNotify) { this.pushNotify = pushNotify; }
-    public String getImage() { return image; }
-    public void setImage(String image) { this.image = image; }
-    public String[] getSegments() { return segments; }
-    public void setSegments(String[] segments) { this.segments = segments; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public OfferDto toDto() {

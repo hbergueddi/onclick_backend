@@ -18,6 +18,10 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Mouvement de points — typé pour expliquer la modification de balance.
@@ -34,6 +38,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "loyalty_transactions")
 @EntityListeners(AuditingEntityListener.class)
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class LoyaltyTransaction {
 
     @Id
@@ -53,13 +59,13 @@ public class LoyaltyTransaction {
     private Integer points;
 
     @Column(name = "amount", precision = 12, scale = 2)
-    private BigDecimal amount;
+    @Setter private BigDecimal amount;
 
     @Column(name = "reason")
     private String reason;
 
     @Column(name = "expires_at")
-    private Instant expiresAt;
+    @Setter private Instant expiresAt;
 
     @CreatedDate
     @Column(name = "created_at", updatable = false, nullable = false)
@@ -69,10 +75,6 @@ public class LoyaltyTransaction {
     @Column(name = "created_by", updatable = false)
     private UUID createdById;
 
-    protected LoyaltyTransaction() {
-        // JPA
-    }
-
     public LoyaltyTransaction(UUID id, UUID accountId, String type, Integer points, String reason) {
         this.id = id;
         this.accountId = accountId;
@@ -80,18 +82,6 @@ public class LoyaltyTransaction {
         this.points = points;
         this.reason = reason;
     }
-
-    public UUID getId() { return id; }
-    public UUID getAccountId() { return accountId; }
-    public String getType() { return type; }
-    public Integer getPoints() { return points; }
-    public BigDecimal getAmount() { return amount; }
-    public void setAmount(BigDecimal amount) { this.amount = amount; }
-    public String getReason() { return reason; }
-    public Instant getExpiresAt() { return expiresAt; }
-    public void setExpiresAt(Instant expiresAt) { this.expiresAt = expiresAt; }
-    public Instant getCreatedAt() { return createdAt; }
-    public UUID getCreatedById() { return createdById; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public LoyaltyTransactionDto toDto() {

@@ -10,37 +10,29 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /** Remboursement partiel ou total d'un Payment. */
 @Entity
 @Table(name = "refunds")
 @EntityListeners(AuditingEntityListener.class)
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Refund {
 
     @Id @Column(name = "id", nullable = false, updatable = false) private UUID id;
     @Column(name = "payment_id", nullable = false) private UUID paymentId;
     @NotNull @DecimalMin("0.01") @Column(name = "amount", nullable = false, precision = 12, scale = 2) private BigDecimal amount;
-    @Column(name = "reason") private String reason;
-    @Pattern(regexp = "^(pending|succeeded|failed)$") @Column(name = "status", nullable = false) private String status = "pending";
+    @Column(name = "reason") @Setter private String reason;
+    @Pattern(regexp = "^(pending|succeeded|failed)$") @Column(name = "status", nullable = false) @Setter private String status = "pending";
     @CreatedDate @Column(name = "created_at", updatable = false, nullable = false) private Instant createdAt;
     @Column(name = "processed_at") private Instant processedAt;
     @CreatedBy @Column(name = "created_by", updatable = false) private UUID createdById;
-    
-
-    protected Refund() {}
     public Refund(UUID id, UUID paymentId, BigDecimal amount) { this.id = id; this.paymentId = paymentId; this.amount = amount; }
-
-    public UUID getId() { return id; }
-    public UUID getPaymentId() { return paymentId; }
-    public BigDecimal getAmount() { return amount; }
-    public String getReason() { return reason; }
-    public void setReason(String reason) { this.reason = reason; }
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
-    public Instant getCreatedAt() { return createdAt; }
-    public Instant getProcessedAt() { return processedAt; }
     public void markProcessed() { this.processedAt = Instant.now(); }
-    public UUID getCreatedById() { return createdById; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public RefundDto toDto() {

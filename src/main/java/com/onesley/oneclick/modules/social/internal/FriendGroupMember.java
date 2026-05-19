@@ -9,6 +9,10 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Junction {@code users × friend_groups} — appartenance + rôle dans le groupe.
@@ -25,6 +29,8 @@ import java.util.UUID;
     )
 )
 @EntityListeners(AuditingEntityListener.class)
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class FriendGroupMember {
 
     @Id @Column(name = "id", nullable = false, updatable = false) private UUID id;
@@ -41,15 +47,13 @@ public class FriendGroupMember {
 
     @Pattern(regexp = "^(owner|admin|member)$")
     @Column(name = "role", nullable = false)
-    private String role = "member";
+    @Setter private String role = "member";
 
     @CreatedDate
     @Column(name = "joined_at", updatable = false, nullable = false)
     private Instant joinedAt;
 
-    @Column(name = "invited_by") private UUID invitedBy;
-
-    protected FriendGroupMember() {}
+    @Column(name = "invited_by") @Setter private UUID invitedBy;
 
     public FriendGroupMember(UUID id, FriendGroup friendGroup, User friend, String role) {
         this.id = id;
@@ -57,17 +61,6 @@ public class FriendGroupMember {
         this.friend = friend;
         this.role = role == null ? "member" : role;
     }
-
-    public UUID getId() { return id; }
-    public UUID getFriendGroupId() { return friendGroupId; }
-    public FriendGroup getFriendGroup() { return friendGroup; }
-    public UUID getFriendId() { return friendId; }
-    public User getFriend() { return friend; }
-    public String getRole() { return role; }
-    public void setRole(String role) { this.role = role; }
-    public Instant getJoinedAt() { return joinedAt; }
-    public UUID getInvitedBy() { return invitedBy; }
-    public void setInvitedBy(UUID invitedBy) { this.invitedBy = invitedBy; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public FriendGroupMemberDto toDto() {

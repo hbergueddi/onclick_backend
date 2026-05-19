@@ -15,6 +15,10 @@ import org.hibernate.proxy.HibernateProxy;
 import java.math.BigDecimal;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Niveau de fidélité (Ruby, Sapphire, Emeraude, ...) par tenant.
@@ -24,6 +28,8 @@ import java.util.UUID;
     name = "tiers",
     uniqueConstraints = @UniqueConstraint(columnNames = {"tenant_id", "name"})
 )
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Tier extends TimestampedEntity {
 
     @Id
@@ -46,11 +52,7 @@ public class Tier extends TimestampedEntity {
     private BigDecimal bonusPercent = BigDecimal.ZERO;
 
     @Column(name = "sort_order", nullable = false)
-    private Integer sortOrder = 0;
-
-    protected Tier() {
-        // JPA
-    }
+    @Setter private Integer sortOrder = 0;
 
     public Tier(UUID id, UUID tenantId, String name, Integer minPoints, BigDecimal bonusPercent) {
         this.id = id;
@@ -59,14 +61,6 @@ public class Tier extends TimestampedEntity {
         this.minPoints = minPoints;
         this.bonusPercent = bonusPercent;
     }
-
-    public UUID getId() { return id; }
-    public UUID getTenantId() { return tenantId; }
-    public String getName() { return name; }
-    public Integer getMinPoints() { return minPoints; }
-    public BigDecimal getBonusPercent() { return bonusPercent; }
-    public Integer getSortOrder() { return sortOrder; }
-    public void setSortOrder(Integer sortOrder) { this.sortOrder = sortOrder; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public TierDto toDto() {

@@ -8,10 +8,16 @@ import jakarta.validation.constraints.NotBlank;
 
 import java.time.Instant;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /** Commentaire sur un post. */
 @Entity
 @Table(name = "comments")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Comment extends TimestampedEntity {
 
     @Id @Column(name = "id", nullable = false, updatable = false) private UUID id;
@@ -19,22 +25,11 @@ public class Comment extends TimestampedEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "post_id", nullable = false) private Post post;
     @Column(name = "author_id", nullable = false, insertable = false, updatable = false) private UUID authorId;
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "author_id", nullable = false) private User author;
-    @NotBlank @Column(name = "content", nullable = false) private String content;
+    @NotBlank @Column(name = "content", nullable = false) @Setter private String content;
     @Column(name = "deleted_at") private Instant deletedAt;
-
-    protected Comment() {}
     public Comment(UUID id, Post post, User author, String content) {
         this.id = id; this.post = post; this.author = author; this.content = content;
     }
-
-    public UUID getId() { return id; }
-    public UUID getPostId() { return postId; }
-    public Post getPost() { return post; }
-    public UUID getAuthorId() { return authorId; }
-    public User getAuthor() { return author; }
-    public String getContent() { return content; }
-    public void setContent(String content) { this.content = content; }
-    public Instant getDeletedAt() { return deletedAt; }
     public void markDeleted() { this.deletedAt = Instant.now(); }
 
     /** Mapping vers le DTO public exposé hors du module. */

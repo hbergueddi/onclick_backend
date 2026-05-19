@@ -13,6 +13,9 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 /**
  * Action métier (CREATE_RESERVATION, CANCEL_RESERVATION, SCAN_TICKET, ...)
@@ -21,6 +24,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "actions")
 @EntityListeners(AuditingEntityListener.class)
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Action {
 
     @Id
@@ -43,22 +48,12 @@ public class Action {
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt;
 
-    protected Action() {
-        // JPA
-    }
-
     public Action(UUID id, String code, String name, String module) {
         this.id = id;
         this.code = code;
         this.name = name;
         this.module = module;
     }
-
-    public UUID getId() { return id; }
-    public String getCode() { return code; }
-    public String getName() { return name; }
-    public String getModule() { return module; }
-    public Instant getCreatedAt() { return createdAt; }
 
     @Override
     public boolean equals(Object o) {

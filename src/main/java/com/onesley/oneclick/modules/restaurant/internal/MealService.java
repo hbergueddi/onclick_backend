@@ -16,6 +16,10 @@ import org.hibernate.proxy.HibernateProxy;
 import java.time.LocalTime;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Créneau de service d'un restaurant (brunch, déjeuner, dîner) avec horaires.
@@ -26,6 +30,8 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "restaurant_services")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class MealService extends TimestampedEntity {
 
     @Id
@@ -41,19 +47,15 @@ public class MealService extends TimestampedEntity {
 
     @NotBlank
     @Column(name = "name", nullable = false)
-    private String name;
+    @Setter private String name;
 
     @NotNull
     @Column(name = "start_time", nullable = false)
-    private LocalTime startTime;
+    @Setter private LocalTime startTime;
 
     @NotNull
     @Column(name = "end_time", nullable = false)
-    private LocalTime endTime;
-
-    protected MealService() {
-        // JPA
-    }
+    @Setter private LocalTime endTime;
 
     public MealService(UUID id, Restaurant restaurant, String name, LocalTime startTime, LocalTime endTime) {
         this.id = id;
@@ -62,16 +64,6 @@ public class MealService extends TimestampedEntity {
         this.startTime = startTime;
         this.endTime = endTime;
     }
-
-    public UUID getId() { return id; }
-    public UUID getRestaurantId() { return restaurantId; }
-    public Restaurant getRestaurant() { return restaurant; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public LocalTime getStartTime() { return startTime; }
-    public void setStartTime(LocalTime startTime) { this.startTime = startTime; }
-    public LocalTime getEndTime() { return endTime; }
-    public void setEndTime(LocalTime endTime) { this.endTime = endTime; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public MealServiceDto toDto() {

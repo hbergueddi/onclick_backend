@@ -10,10 +10,16 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /** Contrat partenaire — commission_rate par restaurant. */
 @Entity
 @Table(name = "contracts")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Contract extends SoftDeletableAuditedEntity {
 
     @Id
@@ -30,20 +36,18 @@ public class Contract extends SoftDeletableAuditedEntity {
     @NotNull
     @DecimalMin("0.00") @DecimalMax("100.00")
     @Column(name = "commission_rate", nullable = false, precision = 5, scale = 2)
-    private BigDecimal commissionRate;
+    @Setter private BigDecimal commissionRate;
 
     @NotNull
     @Column(name = "starts_at", nullable = false)
     private LocalDate startsAt;
 
     @Column(name = "ends_at")
-    private LocalDate endsAt;
+    @Setter private LocalDate endsAt;
 
     @Pattern(regexp = "^(draft|active|paused|terminated)$")
     @Column(name = "status", nullable = false)
-    private String status = "active";
-
-    protected Contract() {}
+    @Setter private String status = "active";
 
     public Contract(UUID id, UUID restaurantId, String contractNumber, BigDecimal commissionRate, LocalDate startsAt) {
         this.id = id;
@@ -52,17 +56,6 @@ public class Contract extends SoftDeletableAuditedEntity {
         this.commissionRate = commissionRate;
         this.startsAt = startsAt;
     }
-
-    public UUID getId() { return id; }
-    public UUID getRestaurantId() { return restaurantId; }
-    public String getContractNumber() { return contractNumber; }
-    public BigDecimal getCommissionRate() { return commissionRate; }
-    public void setCommissionRate(BigDecimal commissionRate) { this.commissionRate = commissionRate; }
-    public LocalDate getStartsAt() { return startsAt; }
-    public LocalDate getEndsAt() { return endsAt; }
-    public void setEndsAt(LocalDate endsAt) { this.endsAt = endsAt; }
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public ContractDto toDto() {

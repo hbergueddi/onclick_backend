@@ -14,12 +14,18 @@ import org.hibernate.proxy.HibernateProxy;
 
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Zone physique d'un restaurant (Terrasse, Salle principale, Bar, etc.).
  */
 @Entity
 @Table(name = "restaurant_zones")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class RestaurantZone extends TimestampedEntity {
 
     @Id
@@ -35,23 +41,13 @@ public class RestaurantZone extends TimestampedEntity {
 
     @NotBlank
     @Column(name = "name", nullable = false)
-    private String name;
-
-    protected RestaurantZone() {
-        // JPA
-    }
+    @Setter private String name;
 
     public RestaurantZone(UUID id, Restaurant restaurant, String name) {
         this.id = id;
         this.restaurant = restaurant;
         this.name = name;
     }
-
-    public UUID getId() { return id; }
-    public UUID getRestaurantId() { return restaurantId; }
-    public Restaurant getRestaurant() { return restaurant; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public RestaurantZoneDto toDto() {

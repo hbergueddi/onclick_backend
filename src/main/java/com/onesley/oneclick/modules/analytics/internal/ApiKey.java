@@ -12,11 +12,17 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /** Clé API hashée. */
 @Entity
 @Table(name = "api_keys")
 @EntityListeners(AuditingEntityListener.class)
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ApiKey {
 
     @Id @Column(name = "id", nullable = false, updatable = false) private UUID id;
@@ -25,31 +31,15 @@ public class ApiKey {
     @NotBlank @Column(name = "key_hash", nullable = false, unique = true) private String keyHash;
     @NotBlank @Column(name = "key_prefix", nullable = false) private String keyPrefix;
     @JdbcTypeCode(SqlTypes.JSON) @Column(name = "scopes", columnDefinition = "jsonb") private List<String> scopes = new ArrayList<>();
-    @Column(name = "enabled", nullable = false) private boolean enabled = true;
+    @Column(name = "enabled", nullable = false) @Setter private boolean enabled = true;
     @Column(name = "last_used_at") private Instant lastUsedAt;
-    @Column(name = "expires_at") private Instant expiresAt;
+    @Column(name = "expires_at") @Setter private Instant expiresAt;
     @CreatedDate @Column(name = "created_at", updatable = false, nullable = false) private Instant createdAt;
     @Column(name = "revoked_at") private Instant revokedAt;
-
-    protected ApiKey() {}
     public ApiKey(UUID id, ApiClient apiClient, String keyHash, String keyPrefix) {
         this.id = id; this.apiClient = apiClient; this.keyHash = keyHash; this.keyPrefix = keyPrefix;
     }
-
-    public UUID getId() { return id; }
-    public UUID getApiClientId() { return apiClientId; }
-    public ApiClient getApiClient() { return apiClient; }
-    public String getKeyHash() { return keyHash; }
-    public String getKeyPrefix() { return keyPrefix; }
-    public List<String> getScopes() { return scopes; }
-    public boolean isEnabled() { return enabled; }
-    public void setEnabled(boolean enabled) { this.enabled = enabled; }
-    public Instant getLastUsedAt() { return lastUsedAt; }
     public void markUsed() { this.lastUsedAt = Instant.now(); }
-    public Instant getExpiresAt() { return expiresAt; }
-    public void setExpiresAt(Instant expiresAt) { this.expiresAt = expiresAt; }
-    public Instant getCreatedAt() { return createdAt; }
-    public Instant getRevokedAt() { return revokedAt; }
     public void revoke() { this.revokedAt = Instant.now(); }
 
     /** Mapping vers le DTO public exposé hors du module. */

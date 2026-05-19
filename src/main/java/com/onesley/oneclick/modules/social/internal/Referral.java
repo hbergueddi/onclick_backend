@@ -9,36 +9,29 @@ import jakarta.validation.constraints.Pattern;
 
 import java.time.Instant;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /** Parrainage avec code et status d'activation. */
 @Entity
 @Table(name = "referrals")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Referral extends TimestampedEntity {
 
     @Id @Column(name = "id", nullable = false, updatable = false) private UUID id;
     @Column(name = "referrer_id", nullable = false, insertable = false, updatable = false) private UUID referrerId;
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "referrer_id", nullable = false) private User referrer;
     @Column(name = "referred_user_id", insertable = false, updatable = false) private UUID referredUserId;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "referred_user_id") private User referredUser;
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "referred_user_id") @Setter private User referredUser;
     @NotBlank @Column(name = "referral_code", nullable = false) private String referralCode;
-    @Pattern(regexp = "^(pending|activated|expired)$") @Column(name = "status", nullable = false) private String status = "pending";
+    @Pattern(regexp = "^(pending|activated|expired)$") @Column(name = "status", nullable = false) @Setter private String status = "pending";
     @Column(name = "activated_at") private Instant activatedAt;
-
-    protected Referral() {}
     public Referral(UUID id, User referrer, String referralCode) {
         this.id = id; this.referrer = referrer; this.referralCode = referralCode;
     }
-
-    public UUID getId() { return id; }
-    public UUID getReferrerId() { return referrerId; }
-    public User getReferrer() { return referrer; }
-    public UUID getReferredUserId() { return referredUserId; }
-    public User getReferredUser() { return referredUser; }
-    public void setReferredUser(User referredUser) { this.referredUser = referredUser; }
-    public String getReferralCode() { return referralCode; }
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
-    public Instant getActivatedAt() { return activatedAt; }
     public void markActivated() { this.activatedAt = Instant.now(); this.status = "activated"; }
 
     /** Mapping vers le DTO public exposé hors du module. */

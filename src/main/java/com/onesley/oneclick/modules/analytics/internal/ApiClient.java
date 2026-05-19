@@ -7,32 +7,25 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /** Client API (intégration partenaire). */
 @Entity
 @Table(name = "api_clients")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ApiClient extends TimestampedEntity {
 
     @Id @Column(name = "id", nullable = false, updatable = false) private UUID id;
     @Column(name = "tenant_id", insertable = false, updatable = false) private UUID tenantId;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "tenant_id") private Tenant tenant;
-    @NotBlank @Column(name = "name", nullable = false) private String name;
-    @Column(name = "description") private String description;
-    @Column(name = "enabled", nullable = false) private boolean enabled = true;
-
-    protected ApiClient() {}
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "tenant_id") @Setter private Tenant tenant;
+    @NotBlank @Column(name = "name", nullable = false) @Setter private String name;
+    @Column(name = "description") @Setter private String description;
+    @Column(name = "enabled", nullable = false) @Setter private boolean enabled = true;
     public ApiClient(UUID id, String name) { this.id = id; this.name = name; }
-
-    public UUID getId() { return id; }
-    public UUID getTenantId() { return tenantId; }
-    public Tenant getTenant() { return tenant; }
-    public void setTenant(Tenant tenant) { this.tenant = tenant; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
-    public boolean isEnabled() { return enabled; }
-    public void setEnabled(boolean enabled) { this.enabled = enabled; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public ApiClientDto toDto() {

@@ -16,6 +16,10 @@ import org.hibernate.proxy.HibernateProxy;
 import java.math.BigDecimal;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Règle de gain de points PAR restaurant — override des {@link LoyaltyRule} globaux.
@@ -39,6 +43,8 @@ import java.util.UUID;
     name = "gain_rules",
     uniqueConstraints = @UniqueConstraint(columnNames = {"restaurant_id"})
 )
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class GainRule extends SoftDeletableAuditedEntity {
 
     @Id
@@ -57,22 +63,22 @@ public class GainRule extends SoftDeletableAuditedEntity {
     @DecimalMin("0.0000")
     @DecimalMax("1.0000")
     @Column(name = "conversion_rate", nullable = false, precision = 6, scale = 4)
-    private BigDecimal conversionRate = new BigDecimal("0.1000");
+    @Setter private BigDecimal conversionRate = new BigDecimal("0.1000");
 
     @Min(1)
     @Column(name = "cap_per_visit")
-    private Integer capPerVisit;
+    @Setter private Integer capPerVisit;
 
     @Min(1)
     @Column(name = "cap_per_month")
-    private Integer capPerMonth;
+    @Setter private Integer capPerMonth;
 
     @DecimalMin("0.00")
     @Column(name = "min_amount", precision = 10, scale = 2)
-    private BigDecimal minAmount = BigDecimal.ZERO;
+    @Setter private BigDecimal minAmount = BigDecimal.ZERO;
 
     @Column(name = "is_active", nullable = false)
-    private boolean isActive = true;
+    @Setter private boolean isActive = true;
 
     /**
      * Bonus de bienvenue par défaut crédité à l'inscription d'un nouveau membre
@@ -80,7 +86,7 @@ public class GainRule extends SoftDeletableAuditedEntity {
      */
     @Min(0)
     @Column(name = "welcome_points_default", nullable = false)
-    private int welcomePointsDefault = 100;
+    @Setter private int welcomePointsDefault = 100;
 
     /**
      * Plafond du bonus de bienvenue. EnrollmentService rejette toute demande
@@ -88,35 +94,13 @@ public class GainRule extends SoftDeletableAuditedEntity {
      */
     @Min(0)
     @Column(name = "welcome_points_max", nullable = false)
-    private int welcomePointsMax = 500;
-
-    protected GainRule() {
-        // JPA
-    }
+    @Setter private int welcomePointsMax = 500;
 
     public GainRule(UUID id, UUID restaurantId, BigDecimal conversionRate) {
         this.id = id;
         this.restaurantId = restaurantId;
         this.conversionRate = conversionRate;
     }
-
-    public UUID getId() { return id; }
-    public UUID getRestaurantId() { return restaurantId; }
-    public UUID getTenantId() { return tenantId; }
-    public BigDecimal getConversionRate() { return conversionRate; }
-    public void setConversionRate(BigDecimal conversionRate) { this.conversionRate = conversionRate; }
-    public Integer getCapPerVisit() { return capPerVisit; }
-    public void setCapPerVisit(Integer capPerVisit) { this.capPerVisit = capPerVisit; }
-    public Integer getCapPerMonth() { return capPerMonth; }
-    public void setCapPerMonth(Integer capPerMonth) { this.capPerMonth = capPerMonth; }
-    public BigDecimal getMinAmount() { return minAmount; }
-    public void setMinAmount(BigDecimal minAmount) { this.minAmount = minAmount; }
-    public boolean isActive() { return isActive; }
-    public void setActive(boolean active) { this.isActive = active; }
-    public int getWelcomePointsDefault() { return welcomePointsDefault; }
-    public void setWelcomePointsDefault(int v) { this.welcomePointsDefault = v; }
-    public int getWelcomePointsMax() { return welcomePointsMax; }
-    public void setWelcomePointsMax(int v) { this.welcomePointsMax = v; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public GainRuleDto toDto() {

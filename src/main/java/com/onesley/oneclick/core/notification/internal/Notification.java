@@ -20,6 +20,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Notification unitaire — multi-canal (§7).
@@ -31,6 +35,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "notifications")
 @EntityListeners(AuditingEntityListener.class)
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Notification {
 
     @Id
@@ -60,7 +66,7 @@ public class Notification {
     private String body;
 
     @Column(name = "link")
-    private String link;
+    @Setter private String link;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "metadata", columnDefinition = "jsonb")
@@ -73,10 +79,6 @@ public class Notification {
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt;
 
-    protected Notification() {
-        // JPA
-    }
-
     public Notification(UUID id, UUID recipientUserId, String type, String channel, String title, String body) {
         this.id = id;
         this.recipientUserId = recipientUserId;
@@ -85,20 +87,8 @@ public class Notification {
         this.title = title;
         this.body = body;
     }
-
-    public UUID getId() { return id; }
-    public UUID getRecipientUserId() { return recipientUserId; }
-    public String getType() { return type; }
-    public String getChannel() { return channel; }
-    public String getTitle() { return title; }
-    public String getBody() { return body; }
-    public String getLink() { return link; }
-    public void setLink(String link) { this.link = link; }
-    public Map<String, Object> getMetadata() { return metadata; }
-    public Instant getReadAt() { return readAt; }
     public boolean isRead() { return readAt != null; }
     public void markRead() { this.readAt = Instant.now(); }
-    public Instant getCreatedAt() { return createdAt; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public NotificationDto toDto() {

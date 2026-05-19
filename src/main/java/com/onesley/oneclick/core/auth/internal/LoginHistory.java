@@ -16,6 +16,9 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 /**
  * Historique des tentatives de connexion — audit sécurité (anti brute-force, anomalies).
@@ -26,6 +29,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "login_histories")
 @EntityListeners(AuditingEntityListener.class)
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class LoginHistory {
 
     @Id
@@ -52,10 +57,6 @@ public class LoginHistory {
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt;
 
-    protected LoginHistory() {
-        // JPA
-    }
-
     public LoginHistory(UUID id, User user, String ipAddress, String device, boolean success) {
         this.id = id;
         this.user = user;
@@ -63,14 +64,6 @@ public class LoginHistory {
         this.device = device;
         this.success = success;
     }
-
-    public UUID getId() { return id; }
-    public UUID getUserId() { return userId; }
-    public User getUser() { return user; }
-    public String getIpAddress() { return ipAddress; }
-    public String getDevice() { return device; }
-    public boolean isSuccess() { return success; }
-    public Instant getCreatedAt() { return createdAt; }
 
     @Override
     public boolean equals(Object o) {

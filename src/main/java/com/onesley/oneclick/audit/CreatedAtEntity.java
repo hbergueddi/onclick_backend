@@ -7,6 +7,7 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
+import lombok.Getter;
 
 /**
  * Audit niveau minimal — uniquement {@code created_at} (sans {@code updated_at}).
@@ -48,13 +49,10 @@ import java.time.Instant;
  */
 @MappedSuperclass
 @EntityListeners(AuditingEntityListener.class)
+@Getter
 public abstract class CreatedAtEntity {
 
     @CreatedDate
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt;
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
 }

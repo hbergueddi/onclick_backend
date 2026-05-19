@@ -17,6 +17,10 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Invité d'une réservation — un des 3 identifiants au minimum (CHECK constraint V17) :
@@ -39,6 +43,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "reservation_guests")
 @EntityListeners(AuditingEntityListener.class)
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ReservationGuest {
 
     @Id
@@ -60,7 +66,7 @@ public class ReservationGuest {
     private User guestUser;
 
     @Column(name = "guest_name")
-    private String guestName;
+    @Setter private String guestName;
 
     @Column(name = "guest_phone")
     private String guestPhone;
@@ -73,18 +79,14 @@ public class ReservationGuest {
     private User invitedBy;
 
     @Column(name = "status", nullable = false)
-    private String status = "linked";
+    @Setter private String status = "linked";
 
     @Column(name = "seen_by_host", nullable = false)
-    private boolean seenByHost = false;
+    @Setter private boolean seenByHost = false;
 
     @CreatedDate
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt;
-
-    protected ReservationGuest() {
-        // JPA
-    }
 
     public ReservationGuest(UUID id, Reservation reservation, User guestUser, String guestName,
                             String guestPhone, User invitedBy, String status) {
@@ -99,24 +101,7 @@ public class ReservationGuest {
 
     // ─── Getters ───────────────────────────────────────────────────────
 
-    public UUID getId() { return id; }
-    public UUID getReservationId() { return reservationId; }
-    public Reservation getReservation() { return reservation; }
-    public UUID getGuestUserId() { return guestUserId; }
-    public User getGuestUser() { return guestUser; }
-    public String getGuestName() { return guestName; }
-    public String getGuestPhone() { return guestPhone; }
-    public UUID getInvitedById() { return invitedById; }
-    public User getInvitedBy() { return invitedBy; }
-    public String getStatus() { return status; }
-    public boolean isSeenByHost() { return seenByHost; }
-    public Instant getCreatedAt() { return createdAt; }
-
     // ─── Setters (workflow) ────────────────────────────────────────────
-
-    public void setStatus(String status) { this.status = status; }
-    public void setGuestName(String guestName) { this.guestName = guestName; }
-    public void setSeenByHost(boolean seenByHost) { this.seenByHost = seenByHost; }
 
     // ─── toDto (pattern senior — internal → api autorisé en Modulith) ──
 

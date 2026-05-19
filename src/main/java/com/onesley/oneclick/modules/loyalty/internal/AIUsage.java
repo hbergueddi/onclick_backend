@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 
 import java.time.Instant;
 import java.util.UUID;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * Rate limit AI par user/jour — Sprint H.
@@ -13,6 +15,7 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "ai_usage")
+@Getter
 public class AIUsage extends TimestampedEntity {
 
     @Id
@@ -21,19 +24,11 @@ public class AIUsage extends TimestampedEntity {
     private UUID id;
 
     @Column(name = "user_id", nullable = false, unique = true)
-    private UUID userId;
+    @Setter private UUID userId;
 
     @Column(name = "prompt_count", nullable = false)
-    private Integer promptCount = 0;
+    @Setter private Integer promptCount = 0;
 
     @Column(name = "last_prompt_at")
-    private Instant lastPromptAt;
-
-    public UUID getId() { return id; }
-    public UUID getUserId() { return userId; }
-    public void setUserId(UUID v) { this.userId = v; }
-    public Integer getPromptCount() { return promptCount; }
-    public void setPromptCount(Integer v) { this.promptCount = v; }
-    public Instant getLastPromptAt() { return lastPromptAt; }
-    public void setLastPromptAt(Instant v) { this.lastPromptAt = v; }
+    @Setter private Instant lastPromptAt;
 }

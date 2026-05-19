@@ -8,10 +8,16 @@ import jakarta.validation.constraints.Pattern;
 import java.util.UUID;
 import com.onesley.oneclick.modules.event.api.Event;
 import com.onesley.oneclick.modules.event.api.EventDtos.ParticipationDto;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /** RSVP sur un Event. */
 @Entity
 @Table(name = "event_participations", uniqueConstraints = @UniqueConstraint(columnNames = {"event_id", "user_id"}))
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class EventParticipation extends TimestampedEntity {
 
     @Id @Column(name = "id", nullable = false, updatable = false) private UUID id;
@@ -19,25 +25,13 @@ public class EventParticipation extends TimestampedEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "event_id", nullable = false) private Event event;
     @Column(name = "user_id", nullable = false, insertable = false, updatable = false) private UUID userId;
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "user_id", nullable = false) private User user;
-    @Pattern(regexp = "^(going|maybe|declined|attended)$") @Column(name = "status", nullable = false) private String status = "going";
+    @Pattern(regexp = "^(going|maybe|declined|attended)$") @Column(name = "status", nullable = false) @Setter private String status = "going";
 
     // V20 — Sprint D : Elite +1 invité
-    @Column(name = "plus_one_name") private String plusOneName;
-
-    protected EventParticipation() {}
+    @Column(name = "plus_one_name") @Setter private String plusOneName;
     public EventParticipation(UUID id, Event event, User user, String status) {
         this.id = id; this.event = event; this.user = user; this.status = status;
     }
-
-    public UUID getId() { return id; }
-    public UUID getEventId() { return eventId; }
-    public Event getEvent() { return event; }
-    public UUID getUserId() { return userId; }
-    public User getUser() { return user; }
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
-    public String getPlusOneName() { return plusOneName; }
-    public void setPlusOneName(String plusOneName) { this.plusOneName = plusOneName; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public ParticipationDto toDto() {

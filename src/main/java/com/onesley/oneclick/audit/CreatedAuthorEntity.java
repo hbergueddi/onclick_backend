@@ -5,6 +5,7 @@ import jakarta.persistence.MappedSuperclass;
 import org.springframework.data.annotation.CreatedBy;
 
 import java.util.UUID;
+import lombok.Getter;
 
 /**
  * Audit avec auteur de création seul — {@code created_at} + {@code created_by}
@@ -31,13 +32,10 @@ import java.util.UUID;
  * @see CreatedAuditedEntity
  */
 @MappedSuperclass
+@Getter
 public abstract class CreatedAuthorEntity extends CreatedAtEntity {
 
     @CreatedBy
     @Column(name = "created_by", updatable = false)
     private UUID createdBy;
-
-    public UUID getCreatedBy() {
-        return createdBy;
-    }
 }

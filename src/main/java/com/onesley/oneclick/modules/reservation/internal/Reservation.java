@@ -19,6 +19,10 @@ import org.hibernate.proxy.HibernateProxy;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Réservation — workflow 7 statuts. {@code reservation_at} timestamptz UNIFIÉ.
@@ -29,6 +33,8 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "reservations")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Reservation extends SoftDeletableAuditedEntity {
 
     @Id
@@ -53,29 +59,25 @@ public class Reservation extends SoftDeletableAuditedEntity {
     private UUID restaurantId;
 
     @Column(name = "table_id")
-    private UUID tableId;
+    @Setter private UUID tableId;
 
     @Column(name = "service_id")
-    private UUID serviceId;
+    @Setter private UUID serviceId;
 
     @NotNull
     @Column(name = "reservation_at", nullable = false)
-    private Instant reservationAt;
+    @Setter private Instant reservationAt;
 
     @Min(1)
     @Column(name = "guest_count", nullable = false)
-    private Integer guestCount;
+    @Setter private Integer guestCount;
 
     @Pattern(regexp = "^(pending|confirmed|refused|counter_proposed|cancelled|honored|no_show)$")
     @Column(name = "status", nullable = false)
-    private String status = "pending";
+    @Setter private String status = "pending";
 
     @Column(name = "notes")
-    private String notes;
-
-    protected Reservation() {
-        // JPA
-    }
+    @Setter private String notes;
 
     public Reservation(UUID id, Tenant tenant, User client, UUID restaurantId,
                        Instant reservationAt, Integer guestCount) {
@@ -86,25 +88,6 @@ public class Reservation extends SoftDeletableAuditedEntity {
         this.reservationAt = reservationAt;
         this.guestCount = guestCount;
     }
-
-    public UUID getId() { return id; }
-    public UUID getTenantId() { return tenantId; }
-    public Tenant getTenant() { return tenant; }
-    public UUID getClientId() { return clientId; }
-    public User getClient() { return client; }
-    public UUID getRestaurantId() { return restaurantId; }
-    public UUID getTableId() { return tableId; }
-    public void setTableId(UUID tableId) { this.tableId = tableId; }
-    public UUID getServiceId() { return serviceId; }
-    public void setServiceId(UUID serviceId) { this.serviceId = serviceId; }
-    public Instant getReservationAt() { return reservationAt; }
-    public void setReservationAt(Instant reservationAt) { this.reservationAt = reservationAt; }
-    public Integer getGuestCount() { return guestCount; }
-    public void setGuestCount(Integer guestCount) { this.guestCount = guestCount; }
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
-    public String getNotes() { return notes; }
-    public void setNotes(String notes) { this.notes = notes; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public ReservationDto toDto() {

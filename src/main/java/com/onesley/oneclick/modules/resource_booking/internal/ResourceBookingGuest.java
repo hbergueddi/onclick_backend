@@ -10,11 +10,16 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 /** Invités d'une réservation de ressource. */
 @Entity
 @Table(name = "resource_booking_guests")
 @EntityListeners(AuditingEntityListener.class)
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ResourceBookingGuest {
 
     @Id
@@ -42,22 +47,12 @@ public class ResourceBookingGuest {
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt;
 
-    protected ResourceBookingGuest() {}
-
     public ResourceBookingGuest(UUID id, ResourceBooking booking, User guestUser, String guestName) {
         this.id = id;
         this.booking = booking;
         this.guestUser = guestUser;
         this.guestName = guestName;
     }
-
-    public UUID getId() { return id; }
-    public UUID getBookingId() { return bookingId; }
-    public ResourceBooking getBooking() { return booking; }
-    public UUID getGuestUserId() { return guestUserId; }
-    public User getGuestUser() { return guestUser; }
-    public String getGuestName() { return guestName; }
-    public Instant getCreatedAt() { return createdAt; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public GuestDto toDto() {

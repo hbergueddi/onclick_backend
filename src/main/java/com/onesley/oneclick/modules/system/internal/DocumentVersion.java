@@ -8,6 +8,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 import java.util.UUID;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * Révision archivée d'un {@link AppDocument} — historique append-only.
@@ -18,6 +20,7 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "document_versions")
+@Getter
 public class DocumentVersion extends CreatedAuthorEntity {
 
     @Id
@@ -26,24 +29,14 @@ public class DocumentVersion extends CreatedAuthorEntity {
     private UUID id;
 
     @Column(name = "document_id", nullable = false)
-    private String documentId;
+    @Setter private String documentId;
 
     @Column(name = "version")
-    private String version;
+    @Setter private String version;
 
     @Column(name = "content")
-    private String content;
+    @Setter private String content;
 
     @Column(name = "notes")
-    private String notes;
-
-    public UUID getId() { return id; }
-    public String getDocumentId() { return documentId; }
-    public void setDocumentId(String documentId) { this.documentId = documentId; }
-    public String getVersion() { return version; }
-    public void setVersion(String version) { this.version = version; }
-    public String getContent() { return content; }
-    public void setContent(String content) { this.content = content; }
-    public String getNotes() { return notes; }
-    public void setNotes(String notes) { this.notes = notes; }
+    @Setter private String notes;
 }

@@ -18,6 +18,9 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 /**
  * Code OTP — purpose : signup / reset_password / verify_phone / verify_email / 2fa / redemption.
@@ -25,6 +28,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "otp_requests")
 @EntityListeners(AuditingEntityListener.class)
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class OtpRequest {
 
     public static final String PURPOSE_SIGNUP = "signup";
@@ -64,10 +69,6 @@ public class OtpRequest {
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt;
 
-    protected OtpRequest() {
-        // JPA
-    }
-
     public OtpRequest(UUID id, User user, String purpose, String code, Instant expiresAt) {
         this.id = id;
         this.user = user;
@@ -75,15 +76,6 @@ public class OtpRequest {
         this.code = code;
         this.expiresAt = expiresAt;
     }
-
-    public UUID getId() { return id; }
-    public UUID getUserId() { return userId; }
-    public User getUser() { return user; }
-    public String getPurpose() { return purpose; }
-    public String getCode() { return code; }
-    public Instant getExpiresAt() { return expiresAt; }
-    public Instant getVerifiedAt() { return verifiedAt; }
-    public Instant getCreatedAt() { return createdAt; }
 
     public boolean isVerified() {
         return verifiedAt != null;

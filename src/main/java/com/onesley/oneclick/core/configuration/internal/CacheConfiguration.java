@@ -12,6 +12,10 @@ import org.hibernate.proxy.HibernateProxy;
 
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Config TTL et taille pour les caches (Redis ou JVM in-memory).
@@ -19,6 +23,8 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "cache_configurations")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class CacheConfiguration extends TimestampedEntity {
 
     @Id
@@ -31,32 +37,19 @@ public class CacheConfiguration extends TimestampedEntity {
 
     @Min(1)
     @Column(name = "ttl_seconds", nullable = false)
-    private Integer ttlSeconds;
+    @Setter private Integer ttlSeconds;
 
     @Column(name = "max_entries")
-    private Integer maxEntries;
+    @Setter private Integer maxEntries;
 
     @Column(name = "enabled", nullable = false)
-    private boolean enabled = true;
-
-    protected CacheConfiguration() {
-        // JPA
-    }
+    @Setter private boolean enabled = true;
 
     public CacheConfiguration(UUID id, String cacheName, Integer ttlSeconds) {
         this.id = id;
         this.cacheName = cacheName;
         this.ttlSeconds = ttlSeconds;
     }
-
-    public UUID getId() { return id; }
-    public String getCacheName() { return cacheName; }
-    public Integer getTtlSeconds() { return ttlSeconds; }
-    public void setTtlSeconds(Integer ttlSeconds) { this.ttlSeconds = ttlSeconds; }
-    public Integer getMaxEntries() { return maxEntries; }
-    public void setMaxEntries(Integer maxEntries) { this.maxEntries = maxEntries; }
-    public boolean isEnabled() { return enabled; }
-    public void setEnabled(boolean enabled) { this.enabled = enabled; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public CacheConfigDto toDto() {

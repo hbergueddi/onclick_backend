@@ -8,64 +8,40 @@ import jakarta.validation.constraints.NotNull;
 
 import java.time.Instant;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /** Événement (soirée, dégustation, séminaire). */
 @Entity
 @Table(name = "events")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Event extends SoftDeletableAuditedEntity {
 
     @Id @Column(name = "id", nullable = false, updatable = false) private UUID id;
     @Column(name = "tenant_id", nullable = false, insertable = false, updatable = false) private UUID tenantId;
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "tenant_id", nullable = false) private Tenant tenant;
-    @Column(name = "restaurant_id") private UUID restaurantId;
-    @NotBlank @Column(name = "title", nullable = false) private String title;
-    @Column(name = "description") private String description;
-    @Column(name = "event_type") private String eventType;
-    @NotNull @Column(name = "event_at", nullable = false) private Instant eventAt;
-    @Column(name = "capacity") private Integer capacity;
+    @Column(name = "restaurant_id") @Setter private UUID restaurantId;
+    @NotBlank @Column(name = "title", nullable = false) @Setter private String title;
+    @Column(name = "description") @Setter private String description;
+    @Column(name = "event_type") @Setter private String eventType;
+    @NotNull @Column(name = "event_at", nullable = false) @Setter private Instant eventAt;
+    @Column(name = "capacity") @Setter private Integer capacity;
 
     // ─── V20 — Sprint D Elite enrich ────────────────────────────────────
-    @Column(name = "min_tier") private String minTier;
-    @Column(name = "places_taken", nullable = false) private Integer placesTaken = 0;
-    @Column(name = "image_url") private String imageUrl;
-    @Column(name = "location_name") private String locationName;
-    @Column(name = "is_active", nullable = false) private boolean isActive = true;
-    @Column(name = "event_end") private Instant eventEnd;
-
-    protected Event() {}
+    @Column(name = "min_tier") @Setter private String minTier;
+    @Column(name = "places_taken", nullable = false) @Setter private Integer placesTaken = 0;
+    @Column(name = "image_url") @Setter private String imageUrl;
+    @Column(name = "location_name") @Setter private String locationName;
+    @Column(name = "is_active", nullable = false) @Setter private boolean isActive = true;
+    @Column(name = "event_end") @Setter private Instant eventEnd;
     public Event(UUID id, Tenant tenant, String title, Instant eventAt) {
         this.id = id; this.tenant = tenant; this.title = title; this.eventAt = eventAt;
     }
 
-    public UUID getId() { return id; }
-    public UUID getTenantId() { return tenantId; }
-    public Tenant getTenant() { return tenant; }
-    public UUID getRestaurantId() { return restaurantId; }
-    public void setRestaurantId(UUID restaurantId) { this.restaurantId = restaurantId; }
-    public String getTitle() { return title; }
-    public void setTitle(String title) { this.title = title; }
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
-    public String getEventType() { return eventType; }
-    public void setEventType(String eventType) { this.eventType = eventType; }
-    public Instant getEventAt() { return eventAt; }
-    public void setEventAt(Instant eventAt) { this.eventAt = eventAt; }
-    public Integer getCapacity() { return capacity; }
-    public void setCapacity(Integer capacity) { this.capacity = capacity; }
-
     // V20 getters/setters
-    public String getMinTier() { return minTier; }
-    public void setMinTier(String minTier) { this.minTier = minTier; }
-    public Integer getPlacesTaken() { return placesTaken; }
-    public void setPlacesTaken(Integer placesTaken) { this.placesTaken = placesTaken; }
-    public String getImageUrl() { return imageUrl; }
-    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
-    public String getLocationName() { return locationName; }
-    public void setLocationName(String locationName) { this.locationName = locationName; }
-    public boolean isActive() { return isActive; }
-    public void setActive(boolean active) { this.isActive = active; }
-    public Instant getEventEnd() { return eventEnd; }
-    public void setEventEnd(Instant eventEnd) { this.eventEnd = eventEnd; }
 
     /** Helpers métier Elite. */
     public boolean hasCapacity() {

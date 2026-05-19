@@ -16,6 +16,10 @@ import org.hibernate.proxy.HibernateProxy;
 
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Table physique d'un restaurant (T01, T02...) rattachée à une zone.
@@ -26,6 +30,8 @@ import java.util.UUID;
     name = "restaurant_tables",
     uniqueConstraints = @UniqueConstraint(columnNames = {"zone_id", "table_number"})
 )
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class RestaurantTable extends TimestampedEntity {
 
     @Id
@@ -41,15 +47,11 @@ public class RestaurantTable extends TimestampedEntity {
 
     @NotBlank
     @Column(name = "table_number", nullable = false)
-    private String tableNumber;
+    @Setter private String tableNumber;
 
     @Min(1)
     @Column(name = "seats", nullable = false)
-    private Integer seats;
-
-    protected RestaurantTable() {
-        // JPA
-    }
+    @Setter private Integer seats;
 
     public RestaurantTable(UUID id, RestaurantZone zone, String tableNumber, Integer seats) {
         this.id = id;
@@ -57,14 +59,6 @@ public class RestaurantTable extends TimestampedEntity {
         this.tableNumber = tableNumber;
         this.seats = seats;
     }
-
-    public UUID getId() { return id; }
-    public UUID getZoneId() { return zoneId; }
-    public RestaurantZone getZone() { return zone; }
-    public String getTableNumber() { return tableNumber; }
-    public void setTableNumber(String tableNumber) { this.tableNumber = tableNumber; }
-    public Integer getSeats() { return seats; }
-    public void setSeats(Integer seats) { this.seats = seats; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public RestaurantTableDto toDto() {

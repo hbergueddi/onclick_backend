@@ -8,35 +8,29 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /** Pièce jointe d'un ticket support. */
 @Entity
 @Table(name = "ticket_attachments")
 @EntityListeners(AuditingEntityListener.class)
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class TicketAttachment {
 
     @Id @Column(name = "id", nullable = false, updatable = false) private UUID id;
     @Column(name = "ticket_id", nullable = false, insertable = false, updatable = false) private UUID ticketId;
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "ticket_id", nullable = false) private SupportTicket ticket;
     @NotBlank @Column(name = "url", nullable = false) private String url;
-    @Column(name = "file_name") private String fileName;
-    @Column(name = "mime_type") private String mimeType;
+    @Column(name = "file_name") @Setter private String fileName;
+    @Column(name = "mime_type") @Setter private String mimeType;
     @CreatedDate @Column(name = "created_at", updatable = false, nullable = false) private Instant createdAt;
-
-    protected TicketAttachment() {}
     public TicketAttachment(UUID id, SupportTicket ticket, String url) {
         this.id = id; this.ticket = ticket; this.url = url;
     }
-
-    public UUID getId() { return id; }
-    public UUID getTicketId() { return ticketId; }
-    public SupportTicket getTicket() { return ticket; }
-    public String getUrl() { return url; }
-    public String getFileName() { return fileName; }
-    public void setFileName(String fileName) { this.fileName = fileName; }
-    public String getMimeType() { return mimeType; }
-    public void setMimeType(String mimeType) { this.mimeType = mimeType; }
-    public Instant getCreatedAt() { return createdAt; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public AttachmentDto toDto() {

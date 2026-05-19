@@ -12,12 +12,18 @@ import org.hibernate.proxy.HibernateProxy;
 
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Racine multi-tenant. 1 ligne par marque whitelabel.
  */
 @Entity
 @Table(name = "tenants")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Tenant extends SoftDeletableAuditedEntity {
 
     @Id
@@ -26,7 +32,7 @@ public class Tenant extends SoftDeletableAuditedEntity {
 
     @NotBlank
     @Column(name = "name", nullable = false)
-    private String name;
+    @Setter private String name;
 
     @NotBlank
     @Pattern(regexp = "^[a-z0-9_-]+$", message = "slug doit être lowercase alphanumeric (a-z 0-9 _ -)")
@@ -36,24 +42,13 @@ public class Tenant extends SoftDeletableAuditedEntity {
     @NotBlank
     @Pattern(regexp = "^(active|paused|archived)$")
     @Column(name = "status", nullable = false)
-    private String status = "active";
-
-    protected Tenant() {
-        // JPA
-    }
+    @Setter private String status = "active";
 
     public Tenant(UUID id, String name, String slug) {
         this.id = id;
         this.name = name;
         this.slug = slug;
     }
-
-    public UUID getId() { return id; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public String getSlug() { return slug; }
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public TenantDto toDto() {

@@ -8,46 +8,31 @@ import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /** Paiement applicatif (réservation, redemption, etc.). */
 @Entity
 @Table(name = "payments")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Payment extends TimestampedEntity {
 
     @Id @Column(name = "id", nullable = false, updatable = false) private UUID id;
     @Column(name = "user_id", nullable = false) private UUID userId;
-    @Column(name = "payment_method_id") private UUID paymentMethodId;
+    @Column(name = "payment_method_id") @Setter private UUID paymentMethodId;
     @NotNull @DecimalMin("0.01") @Column(name = "amount", nullable = false, precision = 12, scale = 2) private BigDecimal amount;
-    @NotBlank @Column(name = "currency", nullable = false) private String currency = "MAD";
+    @NotBlank @Column(name = "currency", nullable = false) @Setter private String currency = "MAD";
     @Pattern(regexp = "^(pending|processing|succeeded|failed|cancelled|refunded)$")
-    @Column(name = "status", nullable = false) private String status = "pending";
-    @Column(name = "provider") private String provider;
-    @Column(name = "transaction_ref") private String transactionRef;
-    @Column(name = "reference_type") private String referenceType;
-    @Column(name = "reference_id") private UUID referenceId;
+    @Column(name = "status", nullable = false) @Setter private String status = "pending";
+    @Column(name = "provider") @Setter private String provider;
+    @Column(name = "transaction_ref") @Setter private String transactionRef;
+    @Column(name = "reference_type") @Setter private String referenceType;
+    @Column(name = "reference_id") @Setter private UUID referenceId;
     @Column(name = "completed_at") private Instant completedAt;
-
-    protected Payment() {}
     public Payment(UUID id, UUID userId, BigDecimal amount) { this.id = id; this.userId = userId; this.amount = amount; }
-
-    public UUID getId() { return id; }
-    public UUID getUserId() { return userId; }
-    public UUID getPaymentMethodId() { return paymentMethodId; }
-    public void setPaymentMethodId(UUID paymentMethodId) { this.paymentMethodId = paymentMethodId; }
-    public BigDecimal getAmount() { return amount; }
-    public String getCurrency() { return currency; }
-    public void setCurrency(String currency) { this.currency = currency; }
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
-    public String getProvider() { return provider; }
-    public void setProvider(String provider) { this.provider = provider; }
-    public String getTransactionRef() { return transactionRef; }
-    public void setTransactionRef(String transactionRef) { this.transactionRef = transactionRef; }
-    public String getReferenceType() { return referenceType; }
-    public void setReferenceType(String referenceType) { this.referenceType = referenceType; }
-    public UUID getReferenceId() { return referenceId; }
-    public void setReferenceId(UUID referenceId) { this.referenceId = referenceId; }
-    public Instant getCompletedAt() { return completedAt; }
     public void markCompleted() { this.completedAt = Instant.now(); this.status = "succeeded"; }
 
     /** Mapping vers le DTO public exposé hors du module. */

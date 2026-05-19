@@ -17,6 +17,10 @@ import java.math.BigDecimal;
 import java.util.Objects;
 import java.util.UUID;
 import com.onesley.oneclick.core.tenant.api.Tenant;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Configuration légale et facturation par tenant (raison sociale, ICE, RIB, TVA).
@@ -24,6 +28,8 @@ import com.onesley.oneclick.core.tenant.api.Tenant;
  */
 @Entity
 @Table(name = "company_settings")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class CompanySettings extends TimestampedEntity {
 
     @Id
@@ -39,40 +45,24 @@ public class CompanySettings extends TimestampedEntity {
 
     @NotBlank
     @Column(name = "raison_sociale", nullable = false)
-    private String raisonSociale;
+    @Setter private String raisonSociale;
 
     @Column(name = "ice")
-    private String ice;
+    @Setter private String ice;
 
     @Column(name = "rib")
-    private String rib;
+    @Setter private String rib;
 
     @DecimalMin("0.00")
     @DecimalMax("100.00")
     @Column(name = "tva_rate", nullable = false, precision = 5, scale = 2)
-    private BigDecimal tvaRate = new BigDecimal("20.00");
-
-    protected CompanySettings() {
-        // JPA
-    }
+    @Setter private BigDecimal tvaRate = new BigDecimal("20.00");
 
     public CompanySettings(UUID id, Tenant tenant, String raisonSociale) {
         this.id = id;
         this.tenant = tenant;
         this.raisonSociale = raisonSociale;
     }
-
-    public UUID getId() { return id; }
-    public UUID getTenantId() { return tenantId; }
-    public Tenant getTenant() { return tenant; }
-    public String getRaisonSociale() { return raisonSociale; }
-    public void setRaisonSociale(String raisonSociale) { this.raisonSociale = raisonSociale; }
-    public String getIce() { return ice; }
-    public void setIce(String ice) { this.ice = ice; }
-    public String getRib() { return rib; }
-    public void setRib(String rib) { this.rib = rib; }
-    public BigDecimal getTvaRate() { return tvaRate; }
-    public void setTvaRate(BigDecimal tvaRate) { this.tvaRate = tvaRate; }
 
     @Override
     public boolean equals(Object o) {

@@ -18,6 +18,10 @@ import org.hibernate.proxy.HibernateProxy;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Identité applicative — 1 user = 1 rôle (RBAC simplifié).
@@ -34,6 +38,8 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "users")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User extends SoftDeletableAuditedEntity {
 
     @Id
@@ -46,7 +52,7 @@ public class User extends SoftDeletableAuditedEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tenant_id")
-    private com.onesley.oneclick.core.tenant.api.Tenant tenant;
+    @Setter private com.onesley.oneclick.core.tenant.api.Tenant tenant;
 
     // ─── Rôle (1 seul, RBAC simplifié) ───────────────────────────────────────
     @Column(name = "role_id", nullable = false, insertable = false, updatable = false)
@@ -54,41 +60,41 @@ public class User extends SoftDeletableAuditedEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "role_id", nullable = false)
-    private Role role;
+    @Setter private Role role;
 
     // ─── Identité ────────────────────────────────────────────────────────────
     @Email
     @NotBlank
     @Column(name = "email", nullable = false, unique = true)
-    private String email;
+    @Setter private String email;
 
     @Pattern(regexp = "^\\+?[0-9 ]{6,20}$", message = "phone format invalid")
     @Column(name = "phone", unique = true)
-    private String phone;
+    @Setter private String phone;
 
     @NotBlank
     @Column(name = "password_hash", nullable = false)
-    private String passwordHash;
+    @Setter private String passwordHash;
 
     @NotBlank
     @Size(max = 100)
     @Column(name = "first_name", nullable = false)
-    private String firstName;
+    @Setter private String firstName;
 
     @NotBlank
     @Size(max = 100)
     @Column(name = "last_name", nullable = false)
-    private String lastName;
+    @Setter private String lastName;
 
     @Column(name = "avatar_url")
-    private String avatarUrl;
+    @Setter private String avatarUrl;
 
     @Pattern(regexp = "^(fr|en|ar)$", message = "language must be fr/en/ar")
     @Column(name = "language", nullable = false)
-    private String language = "fr";
+    @Setter private String language = "fr";
 
     @Column(name = "status", nullable = false)
-    private String status = "active";
+    @Setter private String status = "active";
 
     // ─── Flags Spring Security (§2.1) ────────────────────────────────────────
     @Column(name = "account_non_expired", nullable = false)
@@ -104,18 +110,14 @@ public class User extends SoftDeletableAuditedEntity {
     private boolean enabled = true;
 
     @Column(name = "last_login_at")
-    private Instant lastLoginAt;
+    @Setter private Instant lastLoginAt;
 
     /**
      * Code de parrainage public stable (8 chars uppercase) — généré depuis l'UUID
      * via migration V14. Lecture seule au niveau API : non modifiable via PATCH.
      */
     @Column(name = "referral_code", unique = true)
-    private String referralCode;
-
-    protected User() {
-        // JPA
-    }
+    @Setter private String referralCode;
 
     public User(UUID id, Role role, String email, String passwordHash, String firstName, String lastName) {
         this.id = id;
@@ -127,37 +129,6 @@ public class User extends SoftDeletableAuditedEntity {
     }
 
     // ─── Getters ─────────────────────────────────────────────────────────────
-    public UUID getId() { return id; }
-    public UUID getTenantId() { return tenantId; }
-    public com.onesley.oneclick.core.tenant.api.Tenant getTenant() { return tenant; }
-    public void setTenant(com.onesley.oneclick.core.tenant.api.Tenant tenant) { this.tenant = tenant; }
-    public UUID getRoleId() { return roleId; }
-    public Role getRole() { return role; }
-    public void setRole(Role role) { this.role = role; }
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
-    public String getPhone() { return phone; }
-    public void setPhone(String phone) { this.phone = phone; }
-    public String getPasswordHash() { return passwordHash; }
-    public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
-    public String getFirstName() { return firstName; }
-    public void setFirstName(String firstName) { this.firstName = firstName; }
-    public String getLastName() { return lastName; }
-    public void setLastName(String lastName) { this.lastName = lastName; }
-    public String getAvatarUrl() { return avatarUrl; }
-    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
-    public String getLanguage() { return language; }
-    public void setLanguage(String language) { this.language = language; }
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
-    public boolean isAccountNonExpired() { return accountNonExpired; }
-    public boolean isAccountNonLocked() { return accountNonLocked; }
-    public boolean isCredentialsNonExpired() { return credentialsNonExpired; }
-    public boolean isEnabled() { return enabled; }
-    public Instant getLastLoginAt() { return lastLoginAt; }
-    public void setLastLoginAt(Instant lastLoginAt) { this.lastLoginAt = lastLoginAt; }
-    public String getReferralCode() { return referralCode; }
-    public void setReferralCode(String referralCode) { this.referralCode = referralCode; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public UserDto toDto() {

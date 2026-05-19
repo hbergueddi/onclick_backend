@@ -15,12 +15,17 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 /**
  * Statut d'exécution d'un job/batch — tracking pour cron, retries, monitoring.
  */
 @Entity
 @Table(name = "job_executions")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class JobExecution {
 
     @Id
@@ -48,22 +53,10 @@ public class JobExecution {
     @Column(name = "error_message", columnDefinition = "text")
     private String errorMessage;
 
-    protected JobExecution() {
-        // JPA
-    }
-
     public JobExecution(UUID id, String jobName) {
         this.id = id;
         this.jobName = jobName;
     }
-
-    public UUID getId() { return id; }
-    public String getJobName() { return jobName; }
-    public String getStatus() { return status; }
-    public Instant getStartedAt() { return startedAt; }
-    public Instant getFinishedAt() { return finishedAt; }
-    public Map<String, Object> getResult() { return result; }
-    public String getErrorMessage() { return errorMessage; }
 
     public void markSuccess(Map<String, Object> result) {
         this.status = "success";

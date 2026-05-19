@@ -8,11 +8,16 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 /** Like sur un post. UNIQUE (post_id, user_id). */
 @Entity
 @Table(name = "post_likes", uniqueConstraints = @UniqueConstraint(columnNames = {"post_id", "user_id"}))
 @EntityListeners(AuditingEntityListener.class)
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class PostLike {
 
     @Id @Column(name = "id", nullable = false, updatable = false) private UUID id;
@@ -21,16 +26,7 @@ public class PostLike {
     @Column(name = "user_id", nullable = false, insertable = false, updatable = false) private UUID userId;
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "user_id", nullable = false) private User user;
     @CreatedDate @Column(name = "created_at", updatable = false, nullable = false) private Instant createdAt;
-
-    protected PostLike() {}
     public PostLike(UUID id, Post post, User user) { this.id = id; this.post = post; this.user = user; }
-
-    public UUID getId() { return id; }
-    public UUID getPostId() { return postId; }
-    public Post getPost() { return post; }
-    public UUID getUserId() { return userId; }
-    public User getUser() { return user; }
-    public Instant getCreatedAt() { return createdAt; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public PostLikeDto toDto() {

@@ -23,6 +23,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Audit trail — qui a fait quoi sur quelle entité, avec diff.
@@ -34,6 +38,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "audit_logs")
 @EntityListeners(AuditingEntityListener.class)
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class AuditLog {
 
     @Id
@@ -52,7 +58,7 @@ public class AuditLog {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tenant_id")
-    private Tenant tenant;
+    @Setter private Tenant tenant;
 
     @NotBlank
     @Column(name = "entity_type", nullable = false)
@@ -70,18 +76,14 @@ public class AuditLog {
     private Map<String, Object> diff = new HashMap<>();
 
     @Column(name = "ip_address")
-    private String ipAddress;
+    @Setter private String ipAddress;
 
     @Column(name = "user_agent")
-    private String userAgent;
+    @Setter private String userAgent;
 
     @CreatedDate
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt;
-
-    protected AuditLog() {
-        // JPA
-    }
 
     public AuditLog(UUID id, User user, String entityType, UUID entityId, String action) {
         this.id = id;
@@ -90,22 +92,6 @@ public class AuditLog {
         this.entityId = entityId;
         this.action = action;
     }
-
-    public UUID getId() { return id; }
-    public UUID getUserId() { return userId; }
-    public User getUser() { return user; }
-    public UUID getTenantId() { return tenantId; }
-    public Tenant getTenant() { return tenant; }
-    public void setTenant(Tenant tenant) { this.tenant = tenant; }
-    public String getEntityType() { return entityType; }
-    public UUID getEntityId() { return entityId; }
-    public String getAction() { return action; }
-    public Map<String, Object> getDiff() { return diff; }
-    public String getIpAddress() { return ipAddress; }
-    public void setIpAddress(String ipAddress) { this.ipAddress = ipAddress; }
-    public String getUserAgent() { return userAgent; }
-    public void setUserAgent(String userAgent) { this.userAgent = userAgent; }
-    public Instant getCreatedAt() { return createdAt; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public AuditLogDto toDto() {

@@ -13,10 +13,16 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /** Facture mensuelle par restaurant. */
 @Entity
 @Table(name = "invoices")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Invoice extends TimestampedEntity {
 
     @Id
@@ -39,28 +45,26 @@ public class Invoice extends TimestampedEntity {
     private LocalDate periodEnd;
 
     @Column(name = "subtotal", nullable = false, precision = 12, scale = 2)
-    private BigDecimal subtotal = BigDecimal.ZERO;
+    @Setter private BigDecimal subtotal = BigDecimal.ZERO;
 
     @Column(name = "tva_amount", nullable = false, precision = 12, scale = 2)
-    private BigDecimal tvaAmount = BigDecimal.ZERO;
+    @Setter private BigDecimal tvaAmount = BigDecimal.ZERO;
 
     @Column(name = "total_ttc", nullable = false, precision = 12, scale = 2)
-    private BigDecimal totalTtc = BigDecimal.ZERO;
+    @Setter private BigDecimal totalTtc = BigDecimal.ZERO;
 
     @Pattern(regexp = "^(draft|sent|paid|overdue|cancelled)$")
     @Column(name = "status", nullable = false)
-    private String status = "draft";
+    @Setter private String status = "draft";
 
     @Column(name = "issued_at")
-    private LocalDate issuedAt;
+    @Setter private LocalDate issuedAt;
 
     @Column(name = "due_at")
-    private LocalDate dueAt;
+    @Setter private LocalDate dueAt;
 
     @Column(name = "paid_at")
     private Instant paidAt;
-
-    protected Invoice() {}
 
     public Invoice(UUID id, UUID restaurantId, String invoiceNumber, LocalDate periodStart, LocalDate periodEnd) {
         this.id = id;
@@ -69,25 +73,6 @@ public class Invoice extends TimestampedEntity {
         this.periodStart = periodStart;
         this.periodEnd = periodEnd;
     }
-
-    public UUID getId() { return id; }
-    public UUID getRestaurantId() { return restaurantId; }
-    public String getInvoiceNumber() { return invoiceNumber; }
-    public LocalDate getPeriodStart() { return periodStart; }
-    public LocalDate getPeriodEnd() { return periodEnd; }
-    public BigDecimal getSubtotal() { return subtotal; }
-    public void setSubtotal(BigDecimal subtotal) { this.subtotal = subtotal; }
-    public BigDecimal getTvaAmount() { return tvaAmount; }
-    public void setTvaAmount(BigDecimal tvaAmount) { this.tvaAmount = tvaAmount; }
-    public BigDecimal getTotalTtc() { return totalTtc; }
-    public void setTotalTtc(BigDecimal totalTtc) { this.totalTtc = totalTtc; }
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
-    public LocalDate getIssuedAt() { return issuedAt; }
-    public void setIssuedAt(LocalDate issuedAt) { this.issuedAt = issuedAt; }
-    public LocalDate getDueAt() { return dueAt; }
-    public void setDueAt(LocalDate dueAt) { this.dueAt = dueAt; }
-    public Instant getPaidAt() { return paidAt; }
     public void markPaid() { this.paidAt = Instant.now(); this.status = "paid"; }
 
     /** Mapping vers le DTO public exposé hors du module. */

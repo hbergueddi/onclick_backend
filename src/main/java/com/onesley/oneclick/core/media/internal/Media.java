@@ -16,6 +16,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Média polymorphique (image/video/audio/pdf) attaché à n'importe quelle entité.
@@ -26,6 +30,8 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "medias")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Media extends SoftDeletableAuditedEntity {
 
     @Id
@@ -41,7 +47,7 @@ public class Media extends SoftDeletableAuditedEntity {
 
     @NotBlank
     @Column(name = "url", nullable = false)
-    private String url;
+    @Setter private String url;
 
     @NotBlank
     @Pattern(regexp = "^(image|video|audio|pdf)$")
@@ -49,21 +55,17 @@ public class Media extends SoftDeletableAuditedEntity {
     private String mediaType;
 
     @Column(name = "mime_type")
-    private String mimeType;
+    @Setter private String mimeType;
 
     @Column(name = "size_bytes")
-    private Long sizeBytes;
+    @Setter private Long sizeBytes;
 
     @Column(name = "sort_order")
-    private Integer sortOrder = 0;
+    @Setter private Integer sortOrder = 0;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "metadata", columnDefinition = "jsonb")
     private Map<String, Object> metadata = new HashMap<>();
-
-    protected Media() {
-        // JPA
-    }
 
     public Media(UUID id, String entityType, UUID entityId, String url, String mediaType) {
         this.id = id;
@@ -72,20 +74,6 @@ public class Media extends SoftDeletableAuditedEntity {
         this.url = url;
         this.mediaType = mediaType;
     }
-
-    public UUID getId() { return id; }
-    public String getEntityType() { return entityType; }
-    public UUID getEntityId() { return entityId; }
-    public String getUrl() { return url; }
-    public void setUrl(String url) { this.url = url; }
-    public String getMediaType() { return mediaType; }
-    public String getMimeType() { return mimeType; }
-    public void setMimeType(String mimeType) { this.mimeType = mimeType; }
-    public Long getSizeBytes() { return sizeBytes; }
-    public void setSizeBytes(Long sizeBytes) { this.sizeBytes = sizeBytes; }
-    public Integer getSortOrder() { return sortOrder; }
-    public void setSortOrder(Integer sortOrder) { this.sortOrder = sortOrder; }
-    public Map<String, Object> getMetadata() { return metadata; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public MediaDto toDto() {

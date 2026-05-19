@@ -6,6 +6,7 @@ import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.LastModifiedBy;
 
 import java.util.UUID;
+import lombok.Getter;
 
 /**
  * Audit niveau 1 — étend {@link TimestampedEntity} avec l'identité de l'auteur.
@@ -30,6 +31,7 @@ import java.util.UUID;
  * @see TimestampedEntity
  */
 @MappedSuperclass
+@Getter
 public abstract class AuditedEntity extends TimestampedEntity {
 
     @CreatedBy
@@ -39,12 +41,4 @@ public abstract class AuditedEntity extends TimestampedEntity {
     @LastModifiedBy
     @Column(name = "modified_by")
     private UUID modifiedBy;
-
-    public UUID getCreatedBy() {
-        return createdBy;
-    }
-
-    public UUID getModifiedBy() {
-        return modifiedBy;
-    }
 }

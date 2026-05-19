@@ -19,6 +19,10 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Targeting custom d'un feature flag — override par user / tenant / role.
@@ -33,6 +37,8 @@ import java.util.UUID;
     uniqueConstraints = @UniqueConstraint(columnNames = {"feature_flag_id", "target_type", "target_id"})
 )
 @EntityListeners(AuditingEntityListener.class)
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class FeatureFlagTarget {
 
     @Id
@@ -55,15 +61,11 @@ public class FeatureFlagTarget {
     private UUID targetId;
 
     @Column(name = "enabled", nullable = false)
-    private boolean enabled = true;
+    @Setter private boolean enabled = true;
 
     @CreatedDate
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt;
-
-    protected FeatureFlagTarget() {
-        // JPA
-    }
 
     public FeatureFlagTarget(UUID id, FeatureFlag featureFlag, String targetType, UUID targetId, boolean enabled) {
         this.id = id;
@@ -72,15 +74,6 @@ public class FeatureFlagTarget {
         this.targetId = targetId;
         this.enabled = enabled;
     }
-
-    public UUID getId() { return id; }
-    public UUID getFeatureFlagId() { return featureFlagId; }
-    public FeatureFlag getFeatureFlag() { return featureFlag; }
-    public String getTargetType() { return targetType; }
-    public UUID getTargetId() { return targetId; }
-    public boolean isEnabled() { return enabled; }
-    public void setEnabled(boolean enabled) { this.enabled = enabled; }
-    public Instant getCreatedAt() { return createdAt; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public FeatureFlagTargetDto toDto() {

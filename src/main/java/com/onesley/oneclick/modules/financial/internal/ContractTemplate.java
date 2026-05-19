@@ -14,6 +14,10 @@ import org.hibernate.proxy.HibernateProxy;
 
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Template contractuel versionné & multilangue — utilisé par ContractDownload
@@ -25,6 +29,8 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "contract_templates")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ContractTemplate extends SoftDeletableAuditedEntity {
 
     @Id
@@ -43,7 +49,7 @@ public class ContractTemplate extends SoftDeletableAuditedEntity {
     /** Libellé interne (admin-facing). */
     @NotBlank
     @Column(name = "name", nullable = false)
-    private String name;
+    @Setter private String name;
 
     /** Numéro de version — incrément à chaque révision juridique. */
     @NotNull
@@ -60,17 +66,15 @@ public class ContractTemplate extends SoftDeletableAuditedEntity {
     /** Titre affiché dans le PDF. */
     @NotBlank
     @Column(name = "title", nullable = false)
-    private String title;
+    @Setter private String title;
 
     /** Corps du contrat — markdown ou texte brut, rendu par le générateur PDF. */
     @NotBlank
     @Column(name = "body", nullable = false, columnDefinition = "text")
-    private String body;
+    @Setter private String body;
 
     @Column(name = "is_active", nullable = false)
-    private boolean active = true;
-
-    protected ContractTemplate() {}
+    @Setter private boolean active = true;
 
     public ContractTemplate(UUID id, UUID tenantId, String code, String name,
                             Integer version, String language, String title, String body) {
@@ -83,20 +87,6 @@ public class ContractTemplate extends SoftDeletableAuditedEntity {
         this.title = title;
         this.body = body;
     }
-
-    public UUID getId() { return id; }
-    public UUID getTenantId() { return tenantId; }
-    public String getCode() { return code; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public Integer getVersion() { return version; }
-    public String getLanguage() { return language; }
-    public String getTitle() { return title; }
-    public void setTitle(String title) { this.title = title; }
-    public String getBody() { return body; }
-    public void setBody(String body) { this.body = body; }
-    public boolean isActive() { return active; }
-    public void setActive(boolean active) { this.active = active; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public ContractTemplateDto toDto() {

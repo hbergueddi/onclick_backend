@@ -11,10 +11,16 @@ import org.hibernate.proxy.HibernateProxy;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /** Réservation d'une ressource (vs réservation restaurant). */
 @Entity
 @Table(name = "resource_bookings")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ResourceBooking extends TimestampedEntity {
 
     @Id
@@ -40,7 +46,7 @@ public class ResourceBooking extends TimestampedEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "pricing_id")
-    private ResourcePricing pricing;
+    @Setter private ResourcePricing pricing;
 
     @NotNull
     @Column(name = "start_at", nullable = false)
@@ -52,15 +58,13 @@ public class ResourceBooking extends TimestampedEntity {
 
     @Pattern(regexp = "^(pending|confirmed|cancelled|no_show|completed)$")
     @Column(name = "status", nullable = false)
-    private String status = "confirmed";
+    @Setter private String status = "confirmed";
 
     @Column(name = "notes")
-    private String notes;
+    @Setter private String notes;
 
     @Column(name = "deleted_at")
     private Instant deletedAt;
-
-    protected ResourceBooking() {}
 
     public ResourceBooking(UUID id, Resource resource, User organizer, Instant startAt, Instant endAt) {
         this.id = id;
@@ -69,22 +73,6 @@ public class ResourceBooking extends TimestampedEntity {
         this.startAt = startAt;
         this.endAt = endAt;
     }
-
-    public UUID getId() { return id; }
-    public UUID getResourceId() { return resourceId; }
-    public Resource getResource() { return resource; }
-    public UUID getOrganizerId() { return organizerId; }
-    public User getOrganizer() { return organizer; }
-    public UUID getPricingId() { return pricingId; }
-    public ResourcePricing getPricing() { return pricing; }
-    public void setPricing(ResourcePricing pricing) { this.pricing = pricing; }
-    public Instant getStartAt() { return startAt; }
-    public Instant getEndAt() { return endAt; }
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
-    public String getNotes() { return notes; }
-    public void setNotes(String notes) { this.notes = notes; }
-    public Instant getDeletedAt() { return deletedAt; }
     public boolean isDeleted() { return deletedAt != null; }
     public void markDeleted() { this.deletedAt = Instant.now(); }
 

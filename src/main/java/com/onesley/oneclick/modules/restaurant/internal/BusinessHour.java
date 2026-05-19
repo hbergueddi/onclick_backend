@@ -14,6 +14,9 @@ import org.hibernate.proxy.HibernateProxy;
 import java.time.LocalTime;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 /**
  * Horaires polymorphiques — utilisable pour restaurant ET resource (§4).
@@ -26,6 +29,8 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "business_hours")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class BusinessHour extends TimestampedEntity {
 
     @Id
@@ -52,10 +57,6 @@ public class BusinessHour extends TimestampedEntity {
     @Column(name = "end_time", nullable = false)
     private LocalTime endTime;
 
-    protected BusinessHour() {
-        // JPA
-    }
-
     public BusinessHour(UUID id, String entityType, UUID entityId, Integer dayOfWeek, LocalTime startTime, LocalTime endTime) {
         this.id = id;
         this.entityType = entityType;
@@ -64,13 +65,6 @@ public class BusinessHour extends TimestampedEntity {
         this.startTime = startTime;
         this.endTime = endTime;
     }
-
-    public UUID getId() { return id; }
-    public String getEntityType() { return entityType; }
-    public UUID getEntityId() { return entityId; }
-    public Integer getDayOfWeek() { return dayOfWeek; }
-    public LocalTime getStartTime() { return startTime; }
-    public LocalTime getEndTime() { return endTime; }
 
     @Override
     public boolean equals(Object o) {

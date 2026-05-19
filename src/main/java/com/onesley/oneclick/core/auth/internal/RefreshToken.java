@@ -17,6 +17,9 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 /**
  * Refresh token JWT — supporte rotation et révocation.
@@ -28,6 +31,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "refresh_tokens")
 @EntityListeners(AuditingEntityListener.class)
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class RefreshToken {
 
     @Id
@@ -55,24 +60,12 @@ public class RefreshToken {
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt;
 
-    protected RefreshToken() {
-        // JPA
-    }
-
     public RefreshToken(UUID id, User user, String token, Instant expiresAt) {
         this.id = id;
         this.user = user;
         this.token = token;
         this.expiresAt = expiresAt;
     }
-
-    public UUID getId() { return id; }
-    public UUID getUserId() { return userId; }
-    public User getUser() { return user; }
-    public String getToken() { return token; }
-    public Instant getExpiresAt() { return expiresAt; }
-    public Instant getRevokedAt() { return revokedAt; }
-    public Instant getCreatedAt() { return createdAt; }
 
     public boolean isActive() {
         return revokedAt == null && Instant.now().isBefore(expiresAt);

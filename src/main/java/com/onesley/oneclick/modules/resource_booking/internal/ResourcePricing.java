@@ -11,10 +11,16 @@ import org.hibernate.proxy.HibernateProxy;
 import java.math.BigDecimal;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /** Grille tarifaire par ressource (1h padel, 30 min coiffeur, ...). */
 @Entity
 @Table(name = "resource_pricings")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ResourcePricing extends TimestampedEntity {
 
     @Id
@@ -35,15 +41,13 @@ public class ResourcePricing extends TimestampedEntity {
     @NotNull
     @DecimalMin("0.00")
     @Column(name = "price", nullable = false, precision = 12, scale = 2)
-    private BigDecimal price;
+    @Setter private BigDecimal price;
 
     @Column(name = "duration_minutes")
-    private Integer durationMinutes;
+    @Setter private Integer durationMinutes;
 
     @Column(name = "enabled", nullable = false)
-    private boolean enabled = true;
-
-    protected ResourcePricing() {}
+    @Setter private boolean enabled = true;
 
     public ResourcePricing(UUID id, Resource resource, String name, BigDecimal price) {
         this.id = id;
@@ -51,17 +55,6 @@ public class ResourcePricing extends TimestampedEntity {
         this.name = name;
         this.price = price;
     }
-
-    public UUID getId() { return id; }
-    public UUID getResourceId() { return resourceId; }
-    public Resource getResource() { return resource; }
-    public String getName() { return name; }
-    public BigDecimal getPrice() { return price; }
-    public void setPrice(BigDecimal price) { this.price = price; }
-    public Integer getDurationMinutes() { return durationMinutes; }
-    public void setDurationMinutes(Integer durationMinutes) { this.durationMinutes = durationMinutes; }
-    public boolean isEnabled() { return enabled; }
-    public void setEnabled(boolean enabled) { this.enabled = enabled; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public PricingDto toDto() {

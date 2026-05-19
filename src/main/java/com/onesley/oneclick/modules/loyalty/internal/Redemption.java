@@ -17,6 +17,10 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Redemption — utilisation de points pour obtenir une réduction.
@@ -28,6 +32,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "redemptions")
 @EntityListeners(AuditingEntityListener.class)
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Redemption {
 
     @Id
@@ -48,7 +54,7 @@ public class Redemption {
     private BigDecimal discountAmount;
 
     @Column(name = "otp_validated", nullable = false)
-    private boolean otpValidated = false;
+    @Setter private boolean otpValidated = false;
 
     @CreatedDate
     @Column(name = "created_at", updatable = false, nullable = false)
@@ -58,25 +64,12 @@ public class Redemption {
     @Column(name = "created_by", updatable = false)
     private UUID createdById;
 
-    protected Redemption() {
-        // JPA
-    }
-
     public Redemption(UUID id, UUID accountId, Integer pointsUsed, BigDecimal discountAmount) {
         this.id = id;
         this.accountId = accountId;
         this.pointsUsed = pointsUsed;
         this.discountAmount = discountAmount;
     }
-
-    public UUID getId() { return id; }
-    public UUID getAccountId() { return accountId; }
-    public Integer getPointsUsed() { return pointsUsed; }
-    public BigDecimal getDiscountAmount() { return discountAmount; }
-    public boolean isOtpValidated() { return otpValidated; }
-    public void setOtpValidated(boolean otpValidated) { this.otpValidated = otpValidated; }
-    public Instant getCreatedAt() { return createdAt; }
-    public UUID getCreatedById() { return createdById; }
 
     @Override
     public boolean equals(Object o) {

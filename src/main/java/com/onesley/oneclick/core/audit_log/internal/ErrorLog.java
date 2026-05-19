@@ -19,6 +19,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Erreurs applicatives — log local centralisé. Équivalent persisté de Sentry.
@@ -26,6 +30,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "error_logs")
 @EntityListeners(AuditingEntityListener.class)
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ErrorLog {
 
     @Id
@@ -41,7 +47,7 @@ public class ErrorLog {
     private String message;
 
     @Column(name = "stacktrace", columnDefinition = "text")
-    private String stacktrace;
+    @Setter private String stacktrace;
 
     @Pattern(regexp = "^(debug|info|warn|error|fatal)$")
     @Column(name = "severity", nullable = false)
@@ -55,25 +61,12 @@ public class ErrorLog {
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt;
 
-    protected ErrorLog() {
-        // JPA
-    }
-
     public ErrorLog(UUID id, String serviceName, String message, String severity) {
         this.id = id;
         this.serviceName = serviceName;
         this.message = message;
         this.severity = severity;
     }
-
-    public UUID getId() { return id; }
-    public String getServiceName() { return serviceName; }
-    public String getMessage() { return message; }
-    public String getStacktrace() { return stacktrace; }
-    public void setStacktrace(String stacktrace) { this.stacktrace = stacktrace; }
-    public String getSeverity() { return severity; }
-    public Map<String, Object> getMetadata() { return metadata; }
-    public Instant getCreatedAt() { return createdAt; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public ErrorLogDto toDto() {

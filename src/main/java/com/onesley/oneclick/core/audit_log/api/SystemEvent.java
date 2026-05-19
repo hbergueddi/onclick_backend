@@ -17,6 +17,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 /**
  * Domain event persisté (replay, audit, async processing).
@@ -28,6 +31,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "system_events")
 @EntityListeners(AuditingEntityListener.class)
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class SystemEvent {
 
     @Id
@@ -49,23 +54,13 @@ public class SystemEvent {
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt;
 
-    protected SystemEvent() {
-        // JPA
-    }
-
     public SystemEvent(UUID id, String type, Map<String, Object> payload) {
         this.id = id;
         this.type = type;
         if (payload != null) this.payload = payload;
     }
-
-    public UUID getId() { return id; }
-    public String getType() { return type; }
-    public Map<String, Object> getPayload() { return payload; }
-    public Instant getProcessedAt() { return processedAt; }
     public boolean isProcessed() { return processedAt != null; }
     public void markProcessed() { this.processedAt = Instant.now(); }
-    public Instant getCreatedAt() { return createdAt; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public AuditLogDtos.SystemEventDto toDto() {

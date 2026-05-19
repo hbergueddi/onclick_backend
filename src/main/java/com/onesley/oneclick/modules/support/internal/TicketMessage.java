@@ -9,11 +9,16 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 /** Message dans un thread support. */
 @Entity
 @Table(name = "ticket_messages")
 @EntityListeners(AuditingEntityListener.class)
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class TicketMessage {
 
     @Id @Column(name = "id", nullable = false, updatable = false) private UUID id;
@@ -23,19 +28,9 @@ public class TicketMessage {
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "author_id", nullable = false) private User author;
     @NotBlank @Column(name = "message", nullable = false) private String message;
     @CreatedDate @Column(name = "created_at", updatable = false, nullable = false) private Instant createdAt;
-
-    protected TicketMessage() {}
     public TicketMessage(UUID id, SupportTicket ticket, User author, String message) {
         this.id = id; this.ticket = ticket; this.author = author; this.message = message;
     }
-
-    public UUID getId() { return id; }
-    public UUID getTicketId() { return ticketId; }
-    public SupportTicket getTicket() { return ticket; }
-    public UUID getAuthorId() { return authorId; }
-    public User getAuthor() { return author; }
-    public String getMessage() { return message; }
-    public Instant getCreatedAt() { return createdAt; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public MessageDto toDto() {

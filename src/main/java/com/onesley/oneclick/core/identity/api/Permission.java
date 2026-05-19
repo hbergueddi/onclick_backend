@@ -17,6 +17,9 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 import com.onesley.oneclick.core.identity.api.Role;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 /**
  * Junction {@code role × (menu | action)} — la liste des choses qu'un rôle peut faire/voir.
@@ -32,6 +35,8 @@ import com.onesley.oneclick.core.identity.api.Role;
     uniqueConstraints = @UniqueConstraint(columnNames = {"role_id", "menu_id", "action_id"})
 )
 @EntityListeners(AuditingEntityListener.class)
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Permission {
 
     @Id
@@ -63,25 +68,12 @@ public class Permission {
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt;
 
-    protected Permission() {
-        // JPA
-    }
-
     public Permission(UUID id, Role role, Menu menu, Action action) {
         this.id = id;
         this.role = role;
         this.menu = menu;
         this.action = action;
     }
-
-    public UUID getId() { return id; }
-    public UUID getRoleId() { return roleId; }
-    public Role getRole() { return role; }
-    public UUID getMenuId() { return menuId; }
-    public Menu getMenu() { return menu; }
-    public UUID getActionId() { return actionId; }
-    public Action getAction() { return action; }
-    public Instant getCreatedAt() { return createdAt; }
 
     @Override
     public boolean equals(Object o) {

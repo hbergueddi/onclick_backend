@@ -12,6 +12,10 @@ import org.hibernate.proxy.HibernateProxy;
 
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Compte fidélité — 1 par couple (client × restaurant).
@@ -25,6 +29,8 @@ import java.util.UUID;
     name = "loyalty_accounts",
     uniqueConstraints = @UniqueConstraint(columnNames = {"client_id", "restaurant_id"})
 )
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class LoyaltyAccount extends TimestampedEntity {
 
     @Id
@@ -38,7 +44,7 @@ public class LoyaltyAccount extends TimestampedEntity {
     private UUID restaurantId;
 
     @Column(name = "tier_id")
-    private UUID tierId;
+    @Setter private UUID tierId;
 
     // tenant_id rempli automatiquement par trigger DB V10 (depuis restaurants.tenant_id)
     // → read-only côté Hibernate
@@ -47,26 +53,13 @@ public class LoyaltyAccount extends TimestampedEntity {
 
     @Min(0)
     @Column(name = "balance", nullable = false)
-    private Integer balance = 0;
-
-    protected LoyaltyAccount() {
-        // JPA
-    }
+    @Setter private Integer balance = 0;
 
     public LoyaltyAccount(UUID id, UUID clientId, UUID restaurantId) {
         this.id = id;
         this.clientId = clientId;
         this.restaurantId = restaurantId;
     }
-
-    public UUID getId() { return id; }
-    public UUID getClientId() { return clientId; }
-    public UUID getRestaurantId() { return restaurantId; }
-    public UUID getTierId() { return tierId; }
-    public void setTierId(UUID tierId) { this.tierId = tierId; }
-    public UUID getTenantId() { return tenantId; }
-    public Integer getBalance() { return balance; }
-    public void setBalance(Integer balance) { this.balance = balance; }
     public void addPoints(int points) { this.balance = Math.max(0, this.balance + points); }
     public void deductPoints(int points) { this.balance = Math.max(0, this.balance - points); }
 

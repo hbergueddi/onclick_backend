@@ -7,6 +7,7 @@ import org.springframework.data.annotation.LastModifiedBy;
 
 import java.time.Instant;
 import java.util.UUID;
+import lombok.Getter;
 
 /**
  * Audit niveau 2 — la base de toutes les entités métier enterprise.
@@ -35,6 +36,7 @@ import java.util.UUID;
  * @see AuditedEntity
  */
 @MappedSuperclass
+@Getter
 public abstract class SoftDeletableAuditedEntity extends TimestampedEntity {
 
     @Column(name = "deleted_at")
@@ -48,10 +50,6 @@ public abstract class SoftDeletableAuditedEntity extends TimestampedEntity {
     @Column(name = "updated_by")
     private UUID updatedBy;
 
-    public Instant getDeletedAt() {
-        return deletedAt;
-    }
-
     public boolean isDeleted() {
         return deletedAt != null;
     }
@@ -63,13 +61,5 @@ public abstract class SoftDeletableAuditedEntity extends TimestampedEntity {
 
     public void restore() {
         this.deletedAt = null;
-    }
-
-    public UUID getCreatedBy() {
-        return createdBy;
-    }
-
-    public UUID getUpdatedBy() {
-        return updatedBy;
     }
 }

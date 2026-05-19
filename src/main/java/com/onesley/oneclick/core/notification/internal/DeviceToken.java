@@ -14,6 +14,10 @@ import org.hibernate.proxy.HibernateProxy;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Token FCM/APNs par device — pour push notifications (mobile + web).
@@ -22,6 +26,8 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "device_tokens")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class DeviceToken extends TimestampedEntity {
 
     @Id
@@ -41,14 +47,10 @@ public class DeviceToken extends TimestampedEntity {
     private String platform;
 
     @Column(name = "app_id")
-    private String appId;
+    @Setter private String appId;
 
     @Column(name = "last_used_at")
     private Instant lastUsedAt;
-
-    protected DeviceToken() {
-        // JPA
-    }
 
     public DeviceToken(UUID id, UUID userId, String token, String platform) {
         this.id = id;
@@ -56,14 +58,6 @@ public class DeviceToken extends TimestampedEntity {
         this.token = token;
         this.platform = platform;
     }
-
-    public UUID getId() { return id; }
-    public UUID getUserId() { return userId; }
-    public String getToken() { return token; }
-    public String getPlatform() { return platform; }
-    public String getAppId() { return appId; }
-    public void setAppId(String appId) { this.appId = appId; }
-    public Instant getLastUsedAt() { return lastUsedAt; }
     public void markUsed() { this.lastUsedAt = Instant.now(); }
 
     /** Mapping vers le DTO public exposé hors du module. */

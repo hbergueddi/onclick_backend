@@ -12,6 +12,10 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Demande d'approbation d'une règle de gain de points (Sprint G.2.3).
@@ -34,6 +38,8 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "gain_rule_requests")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class GainRuleRequest extends SoftDeletableAuditedEntity {
 
     @Id
@@ -48,44 +54,40 @@ public class GainRuleRequest extends SoftDeletableAuditedEntity {
     private UUID tenantId;
 
     @Column(name = "name", nullable = false)
-    private String name;
+    @Setter private String name;
 
     @Column(name = "description")
-    private String description;
+    @Setter private String description;
 
     @Column(name = "type", nullable = false)
-    private String type = "standard";
+    @Setter private String type = "standard";
 
     @Column(name = "conversion_rate", nullable = false, precision = 6, scale = 4)
-    private BigDecimal conversionRate = new BigDecimal("0.1000");
+    @Setter private BigDecimal conversionRate = new BigDecimal("0.1000");
 
     @Column(name = "cap_per_visit")
-    private Integer capPerVisit;
+    @Setter private Integer capPerVisit;
 
     @Column(name = "cap_per_month")
-    private Integer capPerMonth;
+    @Setter private Integer capPerMonth;
 
     @Column(name = "min_amount", precision = 10, scale = 2)
-    private BigDecimal minAmount = BigDecimal.ZERO;
+    @Setter private BigDecimal minAmount = BigDecimal.ZERO;
 
     @Column(name = "status", nullable = false)
-    private String status = "pending";
+    @Setter private String status = "pending";
 
     @Column(name = "rejection_reason")
-    private String rejectionReason;
+    @Setter private String rejectionReason;
 
     @Column(name = "reviewed_by")
-    private UUID reviewedById;
+    @Setter private UUID reviewedById;
 
     @Column(name = "reviewed_at")
-    private Instant reviewedAt;
+    @Setter private Instant reviewedAt;
 
     @Column(name = "created_rule_id")
-    private UUID createdRuleId;
-
-    protected GainRuleRequest() {
-        // JPA
-    }
+    @Setter private UUID createdRuleId;
 
     public GainRuleRequest(UUID id, UUID restaurantId, String name, BigDecimal conversionRate) {
         this.id = id;
@@ -93,34 +95,6 @@ public class GainRuleRequest extends SoftDeletableAuditedEntity {
         this.name = name;
         this.conversionRate = conversionRate;
     }
-
-    public UUID getId() { return id; }
-    public UUID getRestaurantId() { return restaurantId; }
-    public UUID getTenantId() { return tenantId; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
-    public String getType() { return type; }
-    public void setType(String type) { this.type = type; }
-    public BigDecimal getConversionRate() { return conversionRate; }
-    public void setConversionRate(BigDecimal conversionRate) { this.conversionRate = conversionRate; }
-    public Integer getCapPerVisit() { return capPerVisit; }
-    public void setCapPerVisit(Integer capPerVisit) { this.capPerVisit = capPerVisit; }
-    public Integer getCapPerMonth() { return capPerMonth; }
-    public void setCapPerMonth(Integer capPerMonth) { this.capPerMonth = capPerMonth; }
-    public BigDecimal getMinAmount() { return minAmount; }
-    public void setMinAmount(BigDecimal minAmount) { this.minAmount = minAmount; }
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
-    public String getRejectionReason() { return rejectionReason; }
-    public void setRejectionReason(String rejectionReason) { this.rejectionReason = rejectionReason; }
-    public UUID getReviewedById() { return reviewedById; }
-    public void setReviewedById(UUID reviewedById) { this.reviewedById = reviewedById; }
-    public Instant getReviewedAt() { return reviewedAt; }
-    public void setReviewedAt(Instant reviewedAt) { this.reviewedAt = reviewedAt; }
-    public UUID getCreatedRuleId() { return createdRuleId; }
-    public void setCreatedRuleId(UUID createdRuleId) { this.createdRuleId = createdRuleId; }
 
     public GainRuleRequestDto toDto() {
         return new GainRuleRequestDto(

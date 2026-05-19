@@ -11,6 +11,8 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.util.UUID;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * Rôle personnalisé admin — page {@code GestionRoles}.
@@ -22,6 +24,7 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "custom_roles")
+@Getter
 public class CustomRole extends TimestampedEntity {
 
     @Id
@@ -31,25 +34,15 @@ public class CustomRole extends TimestampedEntity {
 
     @NotBlank
     @Column(name = "name", nullable = false)
-    private String name;
+    @Setter private String name;
 
     @Column(name = "description")
-    private String description;
+    @Setter private String description;
 
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(name = "permissions", columnDefinition = "text[]", nullable = false)
-    private String[] permissions = new String[0];
+    @Setter private String[] permissions = new String[0];
 
     @Column(name = "created_by")
-    private UUID createdBy;
-
-    public UUID getId() { return id; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
-    public String[] getPermissions() { return permissions; }
-    public void setPermissions(String[] permissions) { this.permissions = permissions; }
-    public UUID getCreatedBy() { return createdBy; }
-    public void setCreatedBy(UUID createdBy) { this.createdBy = createdBy; }
+    @Setter private UUID createdBy;
 }

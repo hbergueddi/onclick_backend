@@ -9,30 +9,25 @@ import jakarta.validation.constraints.Pattern;
 
 import java.time.Instant;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /** Post communauté (feed social). */
 @Entity
 @Table(name = "posts")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Post extends TimestampedEntity {
 
     @Id @Column(name = "id", nullable = false, updatable = false) private UUID id;
     @Column(name = "author_id", nullable = false, insertable = false, updatable = false) private UUID authorId;
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "author_id", nullable = false) private User author;
-    @NotBlank @Column(name = "content", nullable = false) private String content;
-    @Pattern(regexp = "^(public|friends|private)$") @Column(name = "visibility", nullable = false) private String visibility = "public";
+    @NotBlank @Column(name = "content", nullable = false) @Setter private String content;
+    @Pattern(regexp = "^(public|friends|private)$") @Column(name = "visibility", nullable = false) @Setter private String visibility = "public";
     @Column(name = "deleted_at") private Instant deletedAt;
-
-    protected Post() {}
     public Post(UUID id, User author, String content) { this.id = id; this.author = author; this.content = content; }
-
-    public UUID getId() { return id; }
-    public UUID getAuthorId() { return authorId; }
-    public User getAuthor() { return author; }
-    public String getContent() { return content; }
-    public void setContent(String content) { this.content = content; }
-    public String getVisibility() { return visibility; }
-    public void setVisibility(String visibility) { this.visibility = visibility; }
-    public Instant getDeletedAt() { return deletedAt; }
     public void markDeleted() { this.deletedAt = Instant.now(); }
 
     /** Mapping vers le DTO public exposé hors du module. */

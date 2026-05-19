@@ -11,12 +11,18 @@ import org.hibernate.proxy.HibernateProxy;
 
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Règles de réservation par restaurant (couverts max, durée slot, fenêtre annulation).
  */
 @Entity
 @Table(name = "booking_rules")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class BookingRule extends TimestampedEntity {
 
     @Id
@@ -28,35 +34,22 @@ public class BookingRule extends TimestampedEntity {
 
     @Min(1)
     @Column(name = "max_guest", nullable = false)
-    private Integer maxGuest = 12;
+    @Setter private Integer maxGuest = 12;
 
     /** Durée d'un slot en minutes (90 par défaut). */
     @Min(15)
     @Column(name = "slot_duration", nullable = false)
-    private Integer slotDuration = 90;
+    @Setter private Integer slotDuration = 90;
 
     /** Fenêtre d'annulation gratuite en heures avant reservation_at. */
     @Min(0)
     @Column(name = "cancellation_window_hours", nullable = false)
-    private Integer cancellationWindowHours = 2;
-
-    protected BookingRule() {
-        // JPA
-    }
+    @Setter private Integer cancellationWindowHours = 2;
 
     public BookingRule(UUID id, UUID restaurantId) {
         this.id = id;
         this.restaurantId = restaurantId;
     }
-
-    public UUID getId() { return id; }
-    public UUID getRestaurantId() { return restaurantId; }
-    public Integer getMaxGuest() { return maxGuest; }
-    public void setMaxGuest(Integer maxGuest) { this.maxGuest = maxGuest; }
-    public Integer getSlotDuration() { return slotDuration; }
-    public void setSlotDuration(Integer slotDuration) { this.slotDuration = slotDuration; }
-    public Integer getCancellationWindowHours() { return cancellationWindowHours; }
-    public void setCancellationWindowHours(Integer cancellationWindowHours) { this.cancellationWindowHours = cancellationWindowHours; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public BookingRuleDto toDto() {

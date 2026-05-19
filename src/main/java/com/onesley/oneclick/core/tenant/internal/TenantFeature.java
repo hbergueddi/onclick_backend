@@ -15,6 +15,10 @@ import org.hibernate.proxy.HibernateProxy;
 import java.util.Objects;
 import java.util.UUID;
 import com.onesley.oneclick.core.tenant.api.Tenant;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Feature flag par tenant. Pattern : un couple (tenant_id, feature_code) est UNIQUE.
@@ -24,6 +28,8 @@ import com.onesley.oneclick.core.tenant.api.Tenant;
     name = "tenant_features",
     uniqueConstraints = @UniqueConstraint(columnNames = {"tenant_id", "feature_code"})
 )
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class TenantFeature extends TimestampedEntity {
 
     @Id
@@ -42,11 +48,7 @@ public class TenantFeature extends TimestampedEntity {
     private String featureCode;
 
     @Column(name = "enabled", nullable = false)
-    private boolean enabled = false;
-
-    protected TenantFeature() {
-        // JPA
-    }
+    @Setter private boolean enabled = false;
 
     public TenantFeature(UUID id, Tenant tenant, String featureCode, boolean enabled) {
         this.id = id;
@@ -54,13 +56,6 @@ public class TenantFeature extends TimestampedEntity {
         this.featureCode = featureCode;
         this.enabled = enabled;
     }
-
-    public UUID getId() { return id; }
-    public UUID getTenantId() { return tenantId; }
-    public Tenant getTenant() { return tenant; }
-    public String getFeatureCode() { return featureCode; }
-    public boolean isEnabled() { return enabled; }
-    public void setEnabled(boolean enabled) { this.enabled = enabled; }
 
     @Override
     public boolean equals(Object o) {

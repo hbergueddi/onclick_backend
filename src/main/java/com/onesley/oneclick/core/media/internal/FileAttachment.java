@@ -19,6 +19,10 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Fichier (PDF, docs) polymorphique attaché à une entité.
@@ -29,6 +33,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "file_attachments")
 @EntityListeners(AuditingEntityListener.class)
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class FileAttachment {
 
     @Id
@@ -50,10 +56,10 @@ public class FileAttachment {
     private String mimeType;
 
     @Column(name = "size_bytes")
-    private Long sizeBytes;
+    @Setter private Long sizeBytes;
 
     @Column(name = "original_name")
-    private String originalName;
+    @Setter private String originalName;
 
     @CreatedDate
     @Column(name = "created_at", updatable = false, nullable = false)
@@ -70,10 +76,6 @@ public class FileAttachment {
     @JoinColumn(name = "created_by", insertable = false, updatable = false)
     private User createdBy;
 
-    protected FileAttachment() {
-        // JPA
-    }
-
     public FileAttachment(UUID id, String entityType, UUID entityId, String path, String mimeType) {
         this.id = id;
         this.entityType = entityType;
@@ -81,22 +83,8 @@ public class FileAttachment {
         this.path = path;
         this.mimeType = mimeType;
     }
-
-    public UUID getId() { return id; }
-    public String getEntityType() { return entityType; }
-    public UUID getEntityId() { return entityId; }
-    public String getPath() { return path; }
-    public String getMimeType() { return mimeType; }
-    public Long getSizeBytes() { return sizeBytes; }
-    public void setSizeBytes(Long sizeBytes) { this.sizeBytes = sizeBytes; }
-    public String getOriginalName() { return originalName; }
-    public void setOriginalName(String originalName) { this.originalName = originalName; }
-    public Instant getCreatedAt() { return createdAt; }
-    public Instant getDeletedAt() { return deletedAt; }
     public boolean isDeleted() { return deletedAt != null; }
     public void markDeleted() { this.deletedAt = Instant.now(); }
-    public UUID getCreatedById() { return createdById; }
-    public User getCreatedBy() { return createdBy; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public FileDto toDto() {

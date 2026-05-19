@@ -13,6 +13,10 @@ import org.hibernate.proxy.HibernateProxy;
 
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Feature flag dynamique — peut être activé/désactivé sans redéploiement.
@@ -21,6 +25,8 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "feature_flags")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class FeatureFlag extends TimestampedEntity {
 
     @Id
@@ -33,39 +39,24 @@ public class FeatureFlag extends TimestampedEntity {
 
     @NotBlank
     @Column(name = "name", nullable = false)
-    private String name;
+    @Setter private String name;
 
     @Column(name = "description")
-    private String description;
+    @Setter private String description;
 
     @Column(name = "enabled", nullable = false)
-    private boolean enabled = false;
+    @Setter private boolean enabled = false;
 
     @Min(0)
     @Max(100)
     @Column(name = "rollout_pct", nullable = false)
-    private Integer rolloutPct = 0;
-
-    protected FeatureFlag() {
-        // JPA
-    }
+    @Setter private Integer rolloutPct = 0;
 
     public FeatureFlag(UUID id, String code, String name) {
         this.id = id;
         this.code = code;
         this.name = name;
     }
-
-    public UUID getId() { return id; }
-    public String getCode() { return code; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
-    public boolean isEnabled() { return enabled; }
-    public void setEnabled(boolean enabled) { this.enabled = enabled; }
-    public Integer getRolloutPct() { return rolloutPct; }
-    public void setRolloutPct(Integer rolloutPct) { this.rolloutPct = rolloutPct; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public FeatureFlagDto toDto() {

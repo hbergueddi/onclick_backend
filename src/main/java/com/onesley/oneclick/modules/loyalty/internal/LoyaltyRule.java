@@ -13,6 +13,10 @@ import org.hibernate.proxy.HibernateProxy;
 import java.math.BigDecimal;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Règle de calcul des points par restaurant.
@@ -22,6 +26,8 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "loyalty_rules")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class LoyaltyRule extends TimestampedEntity {
 
     @Id
@@ -34,53 +40,34 @@ public class LoyaltyRule extends TimestampedEntity {
     @NotNull
     @DecimalMin("0.0000")
     @Column(name = "conversion_rate", nullable = false, precision = 5, scale = 4)
-    private BigDecimal conversionRate = new BigDecimal("0.0500");
+    @Setter private BigDecimal conversionRate = new BigDecimal("0.0500");
 
     @NotNull
     @Min(1)
     @Column(name = "max_points", nullable = false)
-    private Integer maxPoints = 1000;
+    @Setter private Integer maxPoints = 1000;
 
     @NotNull
     @DecimalMin("0.00")
     @Column(name = "min_ticket_amount", nullable = false, precision = 12, scale = 2)
-    private BigDecimal minTicketAmount = new BigDecimal("100.00");
+    @Setter private BigDecimal minTicketAmount = new BigDecimal("100.00");
 
     @NotNull
     @DecimalMin("0.0000")
     @Column(name = "point_value", nullable = false, precision = 8, scale = 4)
-    private BigDecimal pointValue = new BigDecimal("1.0000");
+    @Setter private BigDecimal pointValue = new BigDecimal("1.0000");
 
     @Min(1)
     @Column(name = "expires_after_days", nullable = false)
-    private Integer expiresAfterDays = 365;
+    @Setter private Integer expiresAfterDays = 365;
 
     @Column(name = "enabled", nullable = false)
-    private boolean enabled = true;
-
-    protected LoyaltyRule() {
-        // JPA
-    }
+    @Setter private boolean enabled = true;
 
     public LoyaltyRule(UUID id, UUID restaurantId) {
         this.id = id;
         this.restaurantId = restaurantId;
     }
-
-    public UUID getId() { return id; }
-    public UUID getRestaurantId() { return restaurantId; }
-    public BigDecimal getConversionRate() { return conversionRate; }
-    public void setConversionRate(BigDecimal conversionRate) { this.conversionRate = conversionRate; }
-    public Integer getMaxPoints() { return maxPoints; }
-    public void setMaxPoints(Integer maxPoints) { this.maxPoints = maxPoints; }
-    public BigDecimal getMinTicketAmount() { return minTicketAmount; }
-    public void setMinTicketAmount(BigDecimal minTicketAmount) { this.minTicketAmount = minTicketAmount; }
-    public BigDecimal getPointValue() { return pointValue; }
-    public void setPointValue(BigDecimal pointValue) { this.pointValue = pointValue; }
-    public Integer getExpiresAfterDays() { return expiresAfterDays; }
-    public void setExpiresAfterDays(Integer expiresAfterDays) { this.expiresAfterDays = expiresAfterDays; }
-    public boolean isEnabled() { return enabled; }
-    public void setEnabled(boolean enabled) { this.enabled = enabled; }
 
     @Override
     public boolean equals(Object o) {

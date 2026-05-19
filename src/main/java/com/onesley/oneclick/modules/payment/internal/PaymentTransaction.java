@@ -13,11 +13,16 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 /** Journal des événements provider (Stripe webhook, CMI callback, etc.). */
 @Entity
 @Table(name = "payment_transactions")
 @EntityListeners(AuditingEntityListener.class)
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class PaymentTransaction {
 
     @Id @Column(name = "id", nullable = false, updatable = false) private UUID id;
@@ -25,18 +30,10 @@ public class PaymentTransaction {
     @JdbcTypeCode(SqlTypes.JSON) @Column(name = "provider_response", columnDefinition = "jsonb") private Map<String, Object> providerResponse = new HashMap<>();
     @NotBlank @Column(name = "event_type", nullable = false) private String eventType;
     @CreatedDate @Column(name = "created_at", updatable = false, nullable = false) private Instant createdAt;
-
-    protected PaymentTransaction() {}
     public PaymentTransaction(UUID id, UUID paymentId, String eventType, Map<String, Object> providerResponse) {
         this.id = id; this.paymentId = paymentId; this.eventType = eventType;
         if (providerResponse != null) this.providerResponse = providerResponse;
     }
-
-    public UUID getId() { return id; }
-    public UUID getPaymentId() { return paymentId; }
-    public Map<String, Object> getProviderResponse() { return providerResponse; }
-    public String getEventType() { return eventType; }
-    public Instant getCreatedAt() { return createdAt; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public TransactionDto toDto() {

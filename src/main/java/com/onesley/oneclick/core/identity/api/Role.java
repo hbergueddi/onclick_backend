@@ -15,6 +15,10 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Rôle applicatif — RBAC simplifié, 1 user = 1 role.
@@ -24,6 +28,8 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "roles")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Role extends TimestampedEntity {
 
     @Id
@@ -38,7 +44,7 @@ public class Role extends TimestampedEntity {
     @NotBlank
     @Size(max = 128)
     @Column(name = "name", nullable = false)
-    private String name;
+    @Setter private String name;
 
     /**
      * Bug 34 (UserDetails) — Permissions du rôle (relation inverse de Permission.role).
@@ -52,21 +58,11 @@ public class Role extends TimestampedEntity {
     @OneToMany(mappedBy = "role", fetch = FetchType.LAZY)
     private Set<Permission> permissions = new HashSet<>();
 
-    protected Role() {
-        // JPA
-    }
-
     public Role(UUID id, String code, String name) {
         this.id = id;
         this.code = code;
         this.name = name;
     }
-
-    public UUID getId() { return id; }
-    public String getCode() { return code; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public Set<Permission> getPermissions() { return permissions; }
 
     @Override
     public boolean equals(Object o) {

@@ -8,6 +8,10 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Groupe d'amis (squad/team) — réservation collective Pocket.
@@ -20,6 +24,8 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "friend_groups")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class FriendGroup extends SoftDeletableAuditedEntity {
 
     @Id @Column(name = "id", nullable = false, updatable = false) private UUID id;
@@ -29,27 +35,15 @@ public class FriendGroup extends SoftDeletableAuditedEntity {
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
 
-    @NotBlank @Size(max = 500) @Column(name = "name", nullable = false) private String name;
-    @Column(name = "description") private String description;
-    @Column(name = "avatar_url") private String avatarUrl;
-
-    protected FriendGroup() {}
+    @NotBlank @Size(max = 500) @Column(name = "name", nullable = false) @Setter private String name;
+    @Column(name = "description") @Setter private String description;
+    @Column(name = "avatar_url") @Setter private String avatarUrl;
 
     public FriendGroup(UUID id, User owner, String name) {
         this.id = id;
         this.owner = owner;
         this.name = name;
     }
-
-    public UUID getId() { return id; }
-    public UUID getOwnerId() { return ownerId; }
-    public User getOwner() { return owner; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
-    public String getAvatarUrl() { return avatarUrl; }
-    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
 
     /**
      * Mapping vers le DTO public — {@code memberCount} fourni par le service

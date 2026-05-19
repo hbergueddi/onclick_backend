@@ -9,10 +9,16 @@ import org.hibernate.proxy.HibernateProxy;
 
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /** Ressource bookable générique (padel, spa, golf, coiffeur, gym...). */
 @Entity
 @Table(name = "resources")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Resource extends SoftDeletableAuditedEntity {
 
     @Id
@@ -32,18 +38,16 @@ public class Resource extends SoftDeletableAuditedEntity {
 
     @NotBlank
     @Column(name = "name", nullable = false)
-    private String name;
+    @Setter private String name;
 
     @Column(name = "description")
-    private String description;
+    @Setter private String description;
 
     @Column(name = "capacity")
-    private Integer capacity;
+    @Setter private Integer capacity;
 
     @Column(name = "enabled", nullable = false)
-    private boolean enabled = true;
-
-    protected Resource() {}
+    @Setter private boolean enabled = true;
 
     public Resource(UUID id, Tenant tenant, String resourceType, String name) {
         this.id = id;
@@ -51,19 +55,6 @@ public class Resource extends SoftDeletableAuditedEntity {
         this.resourceType = resourceType;
         this.name = name;
     }
-
-    public UUID getId() { return id; }
-    public UUID getTenantId() { return tenantId; }
-    public Tenant getTenant() { return tenant; }
-    public String getResourceType() { return resourceType; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
-    public Integer getCapacity() { return capacity; }
-    public void setCapacity(Integer capacity) { this.capacity = capacity; }
-    public boolean isEnabled() { return enabled; }
-    public void setEnabled(boolean enabled) { this.enabled = enabled; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public ResourceDto toDto() {

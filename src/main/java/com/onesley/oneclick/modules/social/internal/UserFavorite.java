@@ -9,6 +9,9 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 /**
  * Favoris d'un user — bouton ❤️ Pocket (Compass/Spotlight).
@@ -27,6 +30,8 @@ import java.util.UUID;
     uniqueConstraints = @UniqueConstraint(name = "user_favorites_unique", columnNames = {"user_id", "restaurant_id"})
 )
 @EntityListeners(AuditingEntityListener.class)
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class UserFavorite {
 
     @Id @Column(name = "id", nullable = false, updatable = false) private UUID id;
@@ -42,19 +47,11 @@ public class UserFavorite {
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt;
 
-    protected UserFavorite() {}
-
     public UserFavorite(UUID id, User user, UUID restaurantId) {
         this.id = id;
         this.user = user;
         this.restaurantId = restaurantId;
     }
-
-    public UUID getId() { return id; }
-    public UUID getUserId() { return userId; }
-    public User getUser() { return user; }
-    public UUID getRestaurantId() { return restaurantId; }
-    public Instant getCreatedAt() { return createdAt; }
 
     /** Mapping vers le DTO public exposé hors du module. */
     public UserFavoriteDto toDto() {

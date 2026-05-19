@@ -14,12 +14,18 @@ import org.hibernate.proxy.HibernateProxy;
 import java.util.Objects;
 import java.util.UUID;
 import com.onesley.oneclick.core.tenant.api.Tenant;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Branding visuel d'un tenant — 1-1 avec Tenant via {@code @MapsId} (la PK est tenant_id).
  */
 @Entity
 @Table(name = "tenant_brandings")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class TenantBranding extends TimestampedEntity {
 
     @Id
@@ -32,35 +38,20 @@ public class TenantBranding extends TimestampedEntity {
     private Tenant tenant;
 
     @Column(name = "logo_url")
-    private String logoUrl;
+    @Setter private String logoUrl;
 
     @Column(name = "primary_color")
-    private String primaryColor;
+    @Setter private String primaryColor;
 
     @Column(name = "accent_color")
-    private String accentColor;
+    @Setter private String accentColor;
 
     @Column(name = "custom_domain", unique = true)
-    private String customDomain;
-
-    protected TenantBranding() {
-        // JPA
-    }
+    @Setter private String customDomain;
 
     public TenantBranding(Tenant tenant) {
         this.tenant = tenant;
     }
-
-    public UUID getTenantId() { return tenantId; }
-    public Tenant getTenant() { return tenant; }
-    public String getLogoUrl() { return logoUrl; }
-    public void setLogoUrl(String logoUrl) { this.logoUrl = logoUrl; }
-    public String getPrimaryColor() { return primaryColor; }
-    public void setPrimaryColor(String primaryColor) { this.primaryColor = primaryColor; }
-    public String getAccentColor() { return accentColor; }
-    public void setAccentColor(String accentColor) { this.accentColor = accentColor; }
-    public String getCustomDomain() { return customDomain; }
-    public void setCustomDomain(String customDomain) { this.customDomain = customDomain; }
 
     @Override
     public boolean equals(Object o) {
