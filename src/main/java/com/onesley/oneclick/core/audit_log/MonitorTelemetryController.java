@@ -73,7 +73,7 @@ public class MonitorTelemetryController {
 
     @GetMapping
     @Operation(summary = "Liste recente events télémétrie (admin)")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN') or hasAuthority('VIEW:AUDIT')")
     public List<MonitorTelemetry> findRecent(
         @RequestParam(required = false) String eventType,
         @RequestParam(required = false) UUID userId,

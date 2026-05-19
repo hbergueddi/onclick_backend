@@ -167,7 +167,7 @@ public class SearchController {
 
     @PostMapping("/admin/reindex")
     @Operation(summary = "Re-bulk-indexer toutes les restaurants vers Elasticsearch (admin)")
-    @PreAuthorize("hasRole('SUPERADMIN')")
+    @PreAuthorize("hasRole('SUPERADMIN') or hasAuthority('UPDATE:ANALYTICS')")
     public Map<String, Object> reindex() {
         int count = syncService.bulkReindex();
         return Map.of("status", "ok", "indexed", count);

@@ -38,14 +38,15 @@ public class TenantController {
         this.tenantRepository = tenantRepository;
     }
 
+    // Bug 32 (Batch B RBAC v2) — double-binding hasAnyRole(...) or hasAuthority('VERB:TENANTS')
     @GetMapping
     @Operation(summary = "Liste tous les tenants actifs (SUPERADMIN only)")
-    @PreAuthorize("hasRole('SUPERADMIN')")
+    @PreAuthorize("hasRole('SUPERADMIN') or hasAuthority('VIEW:TENANTS')")
     public List<TenantDto> findAll() { return service.findAll(); }
 
     @GetMapping("/{id}")
     @Operation(summary = "Détail d'un tenant par UUID")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:TENANTS')")
     public TenantDto findById(@PathVariable UUID id) { return service.findById(id); }
 
     @GetMapping("/by-slug")
@@ -54,7 +55,7 @@ public class TenantController {
 
     @PostMapping
     @Operation(summary = "Crée un tenant (SUPERADMIN only)")
-    @PreAuthorize("hasRole('SUPERADMIN')")
+    @PreAuthorize("hasRole('SUPERADMIN') or hasAuthority('CREATE:TENANTS')")
     public ResponseEntity<TenantDto> create(@Valid @RequestBody TenantCreateDto dto) {
         TenantDto t = service.create(dto);
         return ResponseEntity.created(URI.create("/api/tenants/" + t.id())).body(t);
@@ -62,7 +63,7 @@ public class TenantController {
 
     @PostMapping("/search")
     @Operation(summary = "Recherche dynamique (SUPERADMIN only)")
-    @PreAuthorize("hasRole('SUPERADMIN')")
+    @PreAuthorize("hasRole('SUPERADMIN') or hasAuthority('VIEW:TENANTS')")
     public PageResponse<TenantDto> search(@RequestBody SearchRequest req) {
         return PageResponse.from(
             Searchable.execute(tenantRepository, req, SEARCHABLE_FIELDS, Tenant::toDto)

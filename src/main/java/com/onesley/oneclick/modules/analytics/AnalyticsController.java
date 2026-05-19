@@ -39,7 +39,8 @@ public class AnalyticsController {
         description = "Agrégats COUNT/SUM cross-modules en native SQL (anti-N+1). " +
                       "Filtre tenantId optionnel pour scoper au tenant."
     )
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN')")
+    // Bug 32 (Batch B RBAC v2) — double-binding sur tous les endpoints du module analytics.
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN') or hasAuthority('VIEW:ANALYTICS')")
     public AdminStatsDto getAdminStats(@RequestParam(required = false) UUID tenantId) {
         return adminStatsService.computeStats(tenantId);
     }
@@ -48,7 +49,7 @@ public class AnalyticsController {
     // ─── API clients ─────────────────────────────────────────────────────────
 
     @GetMapping("/api-clients")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR') or hasAuthority('VIEW:ANALYTICS')")
     public PageResponse<ApiClientDto> findAllClients(
         @RequestParam(required = false) UUID tenantId,
         @RequestParam(defaultValue = "0") int page,
@@ -58,11 +59,11 @@ public class AnalyticsController {
     }
 
     @GetMapping("/api-clients/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:ANALYTICS')")
     public ApiClientDto findClientById(@PathVariable UUID id) { return service.findClientById(id); }
 
     @PostMapping("/api-clients")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR') or hasAuthority('CREATE:ANALYTICS')")
     public ResponseEntity<ApiClientDto> createClient(@Valid @RequestBody ApiClientCreateDto dto) {
         ApiClientDto c = service.createClient(dto);
         return ResponseEntity.created(URI.create("/api/analytics/api-clients/" + c.id())).body(c);
@@ -71,14 +72,14 @@ public class AnalyticsController {
     // ─── API keys ────────────────────────────────────────────────────────────
 
     @GetMapping("/api-clients/{apiClientId}/keys")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:ANALYTICS')")
     public List<ApiKeyDto> findKeysByClient(@PathVariable UUID apiClientId) {
         return service.findKeysByClient(apiClientId);
     }
 
     @PostMapping("/api-keys")
     @Operation(summary = "Crée une clé API. Le hash et le prefix sont fournis par l'appelant (généré côté admin).")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR') or hasAuthority('CREATE:ANALYTICS')")
     public ResponseEntity<ApiKeyDto> createKey(@Valid @RequestBody ApiKeyCreateDto dto) {
         ApiKeyDto k = service.createKey(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(k);
@@ -86,7 +87,7 @@ public class AnalyticsController {
 
     @DeleteMapping("/api-keys/{id}")
     @Operation(summary = "Revoke une clé API (revoked_at = now()).")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('DELETE:ANALYTICS')")
     public ResponseEntity<Void> revokeKey(@PathVariable UUID id) {
         service.revokeKey(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
@@ -95,20 +96,20 @@ public class AnalyticsController {
     // ─── Webhooks ────────────────────────────────────────────────────────────
 
     @GetMapping("/api-clients/{apiClientId}/webhooks")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:ANALYTICS')")
     public List<WebhookDto> findWebhooksByClient(@PathVariable UUID apiClientId) {
         return service.findWebhooksByClient(apiClientId);
     }
 
     @PostMapping("/webhooks")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR') or hasAuthority('CREATE:ANALYTICS')")
     public ResponseEntity<WebhookDto> createWebhook(@Valid @RequestBody WebhookCreateDto dto) {
         WebhookDto w = service.createWebhook(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(w);
     }
 
     @DeleteMapping("/webhooks/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('DELETE:ANALYTICS')")
     public ResponseEntity<Void> deleteWebhook(@PathVariable UUID id) {
         service.deleteWebhook(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
@@ -117,7 +118,7 @@ public class AnalyticsController {
     // ─── Webhook deliveries ──────────────────────────────────────────────────
 
     @GetMapping("/webhooks/{webhookId}/deliveries")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:ANALYTICS')")
     public PageResponse<WebhookDeliveryDto> findDeliveriesByWebhook(
         @PathVariable UUID webhookId,
         @RequestParam(defaultValue = "0") int page,
@@ -128,7 +129,7 @@ public class AnalyticsController {
 
     @PostMapping("/deliveries")
     @Operation(summary = "Enregistre une tentative de delivery (à appeler après HTTP call sortant)")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('CREATE:ANALYTICS')")
     public ResponseEntity<WebhookDeliveryDto> recordDelivery(@Valid @RequestBody WebhookDeliveryCreateDto dto) {
         WebhookDeliveryDto d = service.recordDelivery(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(d);
