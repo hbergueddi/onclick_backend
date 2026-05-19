@@ -37,7 +37,7 @@ public class AuditLogController {
 
     @GetMapping("/logs")
     @Operation(summary = "Audit logs paginés — filtres userId / tenantId / entityType / entityId")
-    @PreAuthorize("hasRole('SUPERADMIN') or hasAuthority('VIEW:AUDIT')")
+    @PreAuthorize("hasAuthority('VIEW:AUDIT')")
     public PageResponse<AuditLogDto> findAuditLogs(
         @RequestParam(required = false) UUID userId,
         @RequestParam(required = false) UUID tenantId,
@@ -51,7 +51,7 @@ public class AuditLogController {
 
     @PostMapping("/logs")
     @Operation(summary = "Enregistre un audit log (généralement appelé par les services internes)")
-    @PreAuthorize("isAuthenticated() or hasAuthority('CREATE:AUDIT')")
+    @PreAuthorize("hasAuthority('CREATE:AUDIT')")
     public ResponseEntity<AuditLogDto> recordAudit(@Valid @RequestBody AuditLogCreateDto dto) {
         AuditLogDto a = service.recordAudit(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(a);
@@ -61,7 +61,7 @@ public class AuditLogController {
 
     @GetMapping("/events")
     @Operation(summary = "Events système paginés — filtres type / unprocessedOnly")
-    @PreAuthorize("hasRole('SUPERADMIN') or hasAuthority('VIEW:AUDIT')")
+    @PreAuthorize("hasAuthority('VIEW:AUDIT')")
     public PageResponse<SystemEventDto> findEvents(
         @RequestParam(required = false) String type,
         @RequestParam(required = false) Boolean unprocessedOnly,
@@ -73,7 +73,7 @@ public class AuditLogController {
 
     @PostMapping("/events")
     @Operation(summary = "Publie un event système (sera traité de façon asynchrone)")
-    @PreAuthorize("isAuthenticated() or hasAuthority('CREATE:AUDIT')")
+    @PreAuthorize("hasAuthority('CREATE:AUDIT')")
     public ResponseEntity<SystemEventDto> publishEvent(@Valid @RequestBody SystemEventCreateDto dto) {
         SystemEventDto e = service.publishEvent(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(e);
@@ -83,7 +83,7 @@ public class AuditLogController {
 
     @GetMapping("/errors")
     @Operation(summary = "Logs d'erreurs paginés — filtres serviceName / severity")
-    @PreAuthorize("hasRole('SUPERADMIN') or hasAuthority('VIEW:AUDIT')")
+    @PreAuthorize("hasAuthority('VIEW:AUDIT')")
     public PageResponse<ErrorLogDto> findErrors(
         @RequestParam(required = false) String serviceName,
         @RequestParam(required = false) String severity,
@@ -95,7 +95,7 @@ public class AuditLogController {
 
     @PostMapping("/errors")
     @Operation(summary = "Enregistre une erreur (frontend Sentry-like ou intégration externe)")
-    @PreAuthorize("isAuthenticated() or hasAuthority('CREATE:AUDIT')")
+    @PreAuthorize("hasAuthority('CREATE:AUDIT')")
     public ResponseEntity<ErrorLogDto> recordError(@Valid @RequestBody ErrorLogCreateDto dto) {
         ErrorLogDto e = service.recordError(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(e);
@@ -105,7 +105,7 @@ public class AuditLogController {
 
     @GetMapping("/jobs")
     @Operation(summary = "Historique d'exécutions de jobs — filtres jobName / status")
-    @PreAuthorize("hasRole('SUPERADMIN') or hasAuthority('VIEW:AUDIT')")
+    @PreAuthorize("hasAuthority('VIEW:AUDIT')")
     public PageResponse<JobExecutionDto> findJobs(
         @RequestParam(required = false) String jobName,
         @RequestParam(required = false) String status,

@@ -54,10 +54,10 @@ public class FinancialController {
      * @param periodMonth format "yyyy-MM" (ex: "2026-04" pour avril 2026)
      * @return nombre de factures générées
      */
-    // Bug 32 (Batch C RBAC v2) — double-binding hasAnyRole(...) or hasAuthority('VERB:FINANCIAL')
+    // Bug 32 (Batch C RBAC v2) — RBAC v2 senior strict hasAuthority('VERB:FINANCIAL')
     @PostMapping("/invoices/generate-monthly")
     @Operation(summary = "Sprint I.3 — Trigger manuel cron génération factures mensuelles")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN') or hasAuthority('CREATE:FINANCIAL')")
+    @PreAuthorize("hasAuthority('CREATE:FINANCIAL')")
     public java.util.Map<String, Object> generateMonthlyInvoices(@RequestParam String periodMonth) {
         int generated = cronJobs.generateInvoicesForPeriod(periodMonth);
         return java.util.Map.of(
@@ -71,7 +71,7 @@ public class FinancialController {
 
     @GetMapping("/contracts")
     @Operation(summary = "Contrats paginés — filtres restaurantId / status")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR') or hasAuthority('VIEW:FINANCIAL')")
+    @PreAuthorize("hasAuthority('VIEW:FINANCIAL')")
     public PageResponse<ContractDto> findAllContracts(
         @RequestParam(required = false) UUID restaurantId,
         @RequestParam(required = false) String status,
@@ -82,18 +82,18 @@ public class FinancialController {
     }
 
     @GetMapping("/contracts/{id}")
-    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:FINANCIAL')")
+    @PreAuthorize("hasAuthority('VIEW:FINANCIAL')")
     public ContractDto findContractById(@PathVariable UUID id) { return service.findContractById(id); }
 
     @PostMapping("/contracts")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR') or hasAuthority('CREATE:FINANCIAL')")
+    @PreAuthorize("hasAuthority('CREATE:FINANCIAL')")
     public ResponseEntity<ContractDto> createContract(@Valid @RequestBody ContractCreateDto dto) {
         ContractDto c = service.createContract(dto);
         return ResponseEntity.created(URI.create("/api/financial/contracts/" + c.id())).body(c);
     }
 
     @PatchMapping("/contracts/{id}")
-    @PreAuthorize("isAuthenticated() or hasAuthority('UPDATE:FINANCIAL')")
+    @PreAuthorize("hasAuthority('UPDATE:FINANCIAL')")
     public ContractDto updateContract(@PathVariable UUID id, @Valid @RequestBody ContractUpdateDto dto) {
         return service.updateContract(id, dto);
     }
@@ -102,7 +102,7 @@ public class FinancialController {
 
     @GetMapping("/invoices")
     @Operation(summary = "Factures paginées — filtres restaurantId / status")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR') or hasAuthority('VIEW:FINANCIAL')")
+    @PreAuthorize("hasAuthority('VIEW:FINANCIAL')")
     public PageResponse<InvoiceDto> findAllInvoices(
         @RequestParam(required = false) UUID restaurantId,
         @RequestParam(required = false) String status,
@@ -113,11 +113,11 @@ public class FinancialController {
     }
 
     @GetMapping("/invoices/{id}")
-    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:FINANCIAL')")
+    @PreAuthorize("hasAuthority('VIEW:FINANCIAL')")
     public InvoiceDto findInvoiceById(@PathVariable UUID id) { return service.findInvoiceById(id); }
 
     @PostMapping("/invoices")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR') or hasAuthority('CREATE:FINANCIAL')")
+    @PreAuthorize("hasAuthority('CREATE:FINANCIAL')")
     public ResponseEntity<InvoiceDto> createInvoice(@Valid @RequestBody InvoiceCreateDto dto) {
         InvoiceDto i = service.createInvoice(dto);
         return ResponseEntity.created(URI.create("/api/financial/invoices/" + i.id())).body(i);
@@ -125,7 +125,7 @@ public class FinancialController {
 
     @PatchMapping("/invoices/{id}")
     @Operation(summary = "Mise à jour totaux / status. status=paid → paid_at automatique.")
-    @PreAuthorize("isAuthenticated() or hasAuthority('UPDATE:FINANCIAL')")
+    @PreAuthorize("hasAuthority('UPDATE:FINANCIAL')")
     public InvoiceDto updateInvoice(@PathVariable UUID id, @Valid @RequestBody InvoiceUpdateDto dto) {
         return service.updateInvoice(id, dto);
     }
@@ -134,13 +134,13 @@ public class FinancialController {
 
     @GetMapping("/invoices/{invoiceId}/lines")
     @Operation(summary = "Lignes d'une facture — line_total = quantity × unit_price (GENERATED).")
-    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:FINANCIAL')")
+    @PreAuthorize("hasAuthority('VIEW:FINANCIAL')")
     public List<InvoiceLineDto> findLinesByInvoice(@PathVariable UUID invoiceId) {
         return service.findLinesByInvoice(invoiceId);
     }
 
     @PostMapping("/lines")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR') or hasAuthority('CREATE:FINANCIAL')")
+    @PreAuthorize("hasAuthority('CREATE:FINANCIAL')")
     public ResponseEntity<InvoiceLineDto> createLine(@Valid @RequestBody InvoiceLineCreateDto dto) {
         InvoiceLineDto l = service.createLine(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(l);
@@ -150,7 +150,7 @@ public class FinancialController {
 
     @GetMapping("/wallet-tx")
     @Operation(summary = "Mouvements wallet paginés — filtres restaurantId / type")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR') or hasAuthority('VIEW:FINANCIAL')")
+    @PreAuthorize("hasAuthority('VIEW:FINANCIAL')")
     public PageResponse<WalletTxDto> findAllWalletTx(
         @RequestParam(required = false) UUID restaurantId,
         @RequestParam(required = false) String type,
@@ -161,7 +161,7 @@ public class FinancialController {
     }
 
     @PostMapping("/wallet-tx")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR') or hasAuthority('CREATE:FINANCIAL')")
+    @PreAuthorize("hasAuthority('CREATE:FINANCIAL')")
     public ResponseEntity<WalletTxDto> createWalletTx(@Valid @RequestBody WalletTxCreateDto dto) {
         WalletTxDto t = service.createWalletTx(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(t);
@@ -171,7 +171,7 @@ public class FinancialController {
 
     @GetMapping("/contract-templates")
     @Operation(summary = "Liste des templates contractuels — filtres tenantId / language / isActive")
-    @PreAuthorize("hasRole('SUPERADMIN') or hasAuthority('VIEW:FINANCIAL')")
+    @PreAuthorize("hasAuthority('VIEW:FINANCIAL')")
     public List<ContractTemplateDto> findAllContractTemplates(
         @RequestParam(required = false) UUID tenantId,
         @RequestParam(required = false) String language,
@@ -182,14 +182,14 @@ public class FinancialController {
 
     @GetMapping("/contract-templates/{id}")
     @Operation(summary = "Détail template par UUID (admin only)")
-    @PreAuthorize("hasRole('SUPERADMIN') or hasAuthority('VIEW:FINANCIAL')")
+    @PreAuthorize("hasAuthority('VIEW:FINANCIAL')")
     public ContractTemplateDto findContractTemplateById(@PathVariable UUID id) {
         return service.findContractTemplateById(id);
     }
 
     @GetMapping("/contract-templates/by-code/{code}")
     @Operation(summary = "Résolution par code (ContractDownload PDF) — fallback platform si tenant manquant")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR') or hasAuthority('VIEW:FINANCIAL')")
+    @PreAuthorize("hasAuthority('VIEW:FINANCIAL')")
     public ContractTemplateDto findContractTemplateByCode(
         @PathVariable String code,
         @RequestParam(required = false) UUID tenantId,
@@ -201,7 +201,7 @@ public class FinancialController {
 
     @PostMapping("/contract-templates")
     @Operation(summary = "Crée un template contractuel (admin only)")
-    @PreAuthorize("hasRole('SUPERADMIN') or hasAuthority('CREATE:FINANCIAL')")
+    @PreAuthorize("hasAuthority('CREATE:FINANCIAL')")
     public ResponseEntity<ContractTemplateDto> createContractTemplate(
         @Valid @RequestBody ContractTemplateCreateDto dto
     ) {
@@ -213,7 +213,7 @@ public class FinancialController {
 
     @PatchMapping("/contract-templates/{id}")
     @Operation(summary = "Mise à jour partielle d'un template (admin only)")
-    @PreAuthorize("hasRole('SUPERADMIN') or hasAuthority('UPDATE:FINANCIAL')")
+    @PreAuthorize("hasAuthority('UPDATE:FINANCIAL')")
     public ContractTemplateDto patchContractTemplate(
         @PathVariable UUID id, @Valid @RequestBody ContractTemplatePatchDto dto
     ) {
@@ -222,7 +222,7 @@ public class FinancialController {
 
     @DeleteMapping("/contract-templates/{id}")
     @Operation(summary = "Soft delete d'un template (admin only)")
-    @PreAuthorize("hasRole('SUPERADMIN') or hasAuthority('DELETE:FINANCIAL')")
+    @PreAuthorize("hasAuthority('DELETE:FINANCIAL')")
     public ResponseEntity<Void> deleteContractTemplate(@PathVariable UUID id) {
         service.softDeleteContractTemplate(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();

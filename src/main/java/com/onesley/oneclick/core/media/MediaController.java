@@ -24,7 +24,7 @@ import com.onesley.oneclick.core.media.api.MediaDtos.MediaDto;
 import com.onesley.oneclick.core.media.internal.MediaStorageService;
 
 /**
- * Bug 32 (Batch D RBAC v2) — double-binding isAuthenticated() or hasAuthority('VERB:MEDIA')
+ * Bug 32 (Batch D RBAC v2) — RBAC v2 senior strict hasAuthority('VERB:MEDIA')
  */
 @RestController
 @RequestMapping("/api/media")
@@ -43,7 +43,7 @@ public class MediaController {
 
     @GetMapping
     @Operation(summary = "Médias paginés — filtres entityType / entityId / mediaType")
-    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:MEDIA')")
+    @PreAuthorize("hasAuthority('VIEW:MEDIA')")
     public PageResponse<MediaDto> findAllMedia(
         @RequestParam(required = false) String entityType,
         @RequestParam(required = false) UUID entityId,
@@ -55,14 +55,14 @@ public class MediaController {
     }
 
     @PostMapping
-    @PreAuthorize("isAuthenticated() or hasAuthority('CREATE:MEDIA')")
+    @PreAuthorize("hasAuthority('CREATE:MEDIA')")
     public ResponseEntity<MediaDto> createMedia(@Valid @RequestBody MediaCreateDto dto) {
         MediaDto m = service.createMedia(dto);
         return ResponseEntity.created(URI.create("/api/media/" + m.id())).body(m);
     }
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("isAuthenticated() or hasAuthority('UPLOAD:MEDIA')")
+    @PreAuthorize("hasAuthority('UPLOAD:MEDIA')")
     @Operation(
         summary = "Upload binaire vers MinIO/S3 + création row Media (Phase 3.5)",
         description = """
@@ -90,7 +90,7 @@ public class MediaController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("isAuthenticated() or hasAuthority('DELETE:MEDIA')")
+    @PreAuthorize("hasAuthority('DELETE:MEDIA')")
     public ResponseEntity<Void> deleteMedia(@PathVariable UUID id) {
         service.softDeleteMedia(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
@@ -100,7 +100,7 @@ public class MediaController {
 
     @GetMapping("/files")
     @Operation(summary = "Pièces jointes paginées — filtres entityType / entityId")
-    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:MEDIA')")
+    @PreAuthorize("hasAuthority('VIEW:MEDIA')")
     public PageResponse<FileDto> findAllFiles(
         @RequestParam(required = false) String entityType,
         @RequestParam(required = false) UUID entityId,
@@ -111,14 +111,14 @@ public class MediaController {
     }
 
     @PostMapping("/files")
-    @PreAuthorize("isAuthenticated() or hasAuthority('CREATE:MEDIA')")
+    @PreAuthorize("hasAuthority('CREATE:MEDIA')")
     public ResponseEntity<FileDto> createFile(@Valid @RequestBody FileCreateDto dto) {
         FileDto f = service.createFile(dto);
         return ResponseEntity.created(URI.create("/api/media/files/" + f.id())).body(f);
     }
 
     @DeleteMapping("/files/{id}")
-    @PreAuthorize("isAuthenticated() or hasAuthority('DELETE:MEDIA')")
+    @PreAuthorize("hasAuthority('DELETE:MEDIA')")
     public ResponseEntity<Void> deleteFile(@PathVariable UUID id) {
         service.softDeleteFile(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();

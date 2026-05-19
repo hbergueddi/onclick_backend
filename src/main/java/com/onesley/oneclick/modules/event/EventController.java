@@ -23,7 +23,7 @@ import com.onesley.oneclick.modules.event.api.EventDtos.ParticipationDto;
 import com.onesley.oneclick.modules.event.internal.EventService;
 
 /**
- * Bug 32 (Batch D RBAC v2) — double-binding (isAuthenticated() | hasAnyRole(...)) or hasAuthority('VERB:EVENTS')
+ * Bug 32 (Batch D RBAC v2) — RBAC v2 senior strict hasAuthority('VERB:EVENTS')
  */
 @RestController
 @RequestMapping("/api/events")
@@ -38,7 +38,7 @@ public class EventController {
 
     @GetMapping
     @Operation(summary = "Liste paginée d'événements — filtres tenantId / restaurantId / upcomingOnly")
-    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:EVENTS')")
+    @PreAuthorize("hasAuthority('VIEW:EVENTS')")
     public PageResponse<EventDto> findAll(
         @RequestParam(required = false) UUID tenantId,
         @RequestParam(required = false) UUID restaurantId,
@@ -50,18 +50,18 @@ public class EventController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:EVENTS')")
+    @PreAuthorize("hasAuthority('VIEW:EVENTS')")
     public EventDto findById(@PathVariable UUID id) { return service.findById(id); }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR') or hasAuthority('CREATE:EVENTS')")
+    @PreAuthorize("hasAuthority('CREATE:EVENTS')")
     public ResponseEntity<EventDto> create(@Valid @RequestBody EventCreateDto dto) {
         EventDto e = service.create(dto);
         return ResponseEntity.created(URI.create("/api/events/" + e.id())).body(e);
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR') or hasAuthority('DELETE:EVENTS')")
+    @PreAuthorize("hasAuthority('DELETE:EVENTS')")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         service.softDelete(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
@@ -71,14 +71,14 @@ public class EventController {
 
     @GetMapping("/{eventId}/participations")
     @Operation(summary = "Liste des RSVP d'un événement")
-    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:EVENTS')")
+    @PreAuthorize("hasAuthority('VIEW:EVENTS')")
     public List<ParticipationDto> findParticipations(@PathVariable UUID eventId) {
         return service.findParticipations(eventId);
     }
 
     @PostMapping("/participations")
     @Operation(summary = "RSVP sur un événement (going|maybe|declined|attended)")
-    @PreAuthorize("isAuthenticated() or hasAuthority('UPDATE:EVENTS')")
+    @PreAuthorize("hasAuthority('UPDATE:EVENTS')")
     public ResponseEntity<ParticipationDto> rsvp(@Valid @RequestBody ParticipationCreateDto dto) {
         ParticipationDto p = service.rsvp(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(p);
@@ -86,7 +86,7 @@ public class EventController {
 
     @DeleteMapping("/participations/by-event/{eventId}/user/{userId}")
     @Operation(summary = "Sprint D — Cancel RSVP (decrement places_taken si going)")
-    @PreAuthorize("isAuthenticated() or hasAuthority('UPDATE:EVENTS')")
+    @PreAuthorize("hasAuthority('UPDATE:EVENTS')")
     public ResponseEntity<Void> cancelRsvp(@PathVariable UUID eventId, @PathVariable UUID userId) {
         service.cancelRsvp(eventId, userId);
         return ResponseEntity.noContent().build();
@@ -94,14 +94,14 @@ public class EventController {
 
     @GetMapping("/participations/by-user/{userId}")
     @Operation(summary = "Sprint D — RSVPs d'un user (Pocket Mes événements)")
-    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:EVENTS')")
+    @PreAuthorize("hasAuthority('VIEW:EVENTS')")
     public List<ParticipationDto> findParticipationsByUser(@PathVariable UUID userId) {
         return service.findParticipationsByUser(userId);
     }
 
     @PatchMapping("/{id}")
     @Operation(summary = "Sprint D — Patch partiel d'un event (admin Elite)")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR') or hasAuthority('UPDATE:EVENTS')")
+    @PreAuthorize("hasAuthority('UPDATE:EVENTS')")
     public EventDto patch(@PathVariable UUID id, @Valid @RequestBody EventPatchDto dto) {
         return service.patch(id, dto);
     }
@@ -115,7 +115,7 @@ public class EventController {
         summary = "Sprint D — Events Elite actifs futurs (Pocket EliteClub)",
         description = "Filtre is_active=true + event_at > NOW. Sort event_at ASC."
     )
-    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:EVENTS')")
+    @PreAuthorize("hasAuthority('VIEW:EVENTS')")
     public List<EventDto> findEliteActive() {
         return service.findEliteActiveUpcoming();
     }
@@ -125,7 +125,7 @@ public class EventController {
         summary = "Sprint D — Tous les events Elite (admin Forge dashboard)",
         description = "Sort event_at DESC. Inclut inactifs."
     )
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN') or hasAuthority('VIEW:EVENTS')")
+    @PreAuthorize("hasAuthority('VIEW:EVENTS')")
     public List<EventDto> findAllElite() {
         return service.findAllElite();
     }

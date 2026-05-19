@@ -42,14 +42,14 @@ public class EnrollmentController {
         this.enrollmentService = enrollmentService;
     }
 
-    // Bug 32 (Batch A RBAC v2) — double-binding hasAnyRole(...) or hasAuthority('VERB:LOYALTY')
+    // Bug 32 (Batch A RBAC v2) — RBAC v2 senior strict hasAuthority('VERB:LOYALTY')
     @PostMapping("/enroll-member")
     @Operation(
         summary = "Inscrit un nouveau membre dans le programme fidélité d'un restaurant",
         description = "Trouve ou crée le user, crédite welcome_points (plafonné par gain_rules.welcome_points_max). "
                     + "RBAC : SUPERADMIN ou staff actif du restaurant ciblé."
     )
-    @PreAuthorize("isAuthenticated() or hasAuthority('CREATE:LOYALTY')")
+    @PreAuthorize("hasAuthority('CREATE:LOYALTY')")
     public ResponseEntity<EnrollMemberResultDto> enrollMember(@Valid @RequestBody EnrollMemberDto dto) {
         return ResponseEntity.ok(enrollmentService.enrollMember(dto));
     }
@@ -60,7 +60,7 @@ public class EnrollmentController {
         description = "Filtre loyalty_transactions reason='welcome' joint avec users. "
                     + "RBAC : SUPERADMIN ou staff actif du restaurant."
     )
-    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:LOYALTY')")
+    @PreAuthorize("hasAuthority('VIEW:LOYALTY')")
     public List<EnrollmentRecordDto> listRecentEnrollments(
         @PathVariable UUID restaurantId,
         @RequestParam(defaultValue = "20") int limit

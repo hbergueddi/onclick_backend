@@ -89,7 +89,7 @@ public class RestaurantController {
     // ═══════════════════════════════════════════════════════════════════════
     //
     // Les 4 endpoints CRUD ci-dessous sont migrés vers le pattern senior :
-    //   @PreAuthorize("<hasAnyRole legacy> or hasAuthority('VERB:RESTAURANTS')")
+    //   @PreAuthorize("hasAuthority('VERB:RESTAURANTS')")
     //
     // Double-binding pendant la transition : aucune régression possible si le
     // seed permissions est incomplet — la branche hasAnyRole reste active. La
@@ -104,7 +104,7 @@ public class RestaurantController {
 
     @PostMapping
     @Operation(summary = "Crée un restaurant")
-    @PreAuthorize("hasRole('SUPERADMIN') or hasAuthority('CREATE:RESTAURANTS')")
+    @PreAuthorize("hasAuthority('CREATE:RESTAURANTS')")
     public ResponseEntity<RestaurantDto> create(@Valid @RequestBody RestaurantCreateDto dto) {
         RestaurantDto r = service.create(dto);
         return ResponseEntity.created(URI.create("/api/restaurants/" + r.id())).body(r);
@@ -116,14 +116,14 @@ public class RestaurantController {
         description = "Mise à jour partielle. Tous les champs DTO optionnels. " +
                       "Owner du restaurant (staff_role=owner) ou SUPERADMIN/GROUP_ADMIN."
     )
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR') or hasAuthority('UPDATE:RESTAURANTS')")
+    @PreAuthorize("hasAuthority('UPDATE:RESTAURANTS')")
     public RestaurantDto patch(@PathVariable UUID id, @Valid @RequestBody RestaurantPatchDto dto) {
         return service.patch(id, dto);
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Soft delete d'un restaurant")
-    @PreAuthorize("hasRole('SUPERADMIN') or hasAuthority('DELETE:RESTAURANTS')")
+    @PreAuthorize("hasAuthority('DELETE:RESTAURANTS')")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         service.softDelete(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
@@ -131,7 +131,7 @@ public class RestaurantController {
 
     @PostMapping("/search")
     @Operation(summary = "Recherche dynamique (Phase 4 §6.3) — 12 opérateurs + whitelist")
-    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:RESTAURANTS')")
+    @PreAuthorize("hasAuthority('VIEW:RESTAURANTS')")
     public PageResponse<RestaurantDto> search(@RequestBody SearchRequest req) {
         return PageResponse.from(
             Searchable.execute(restaurantRepository, req, SEARCHABLE_FIELDS, Restaurant::toDto)

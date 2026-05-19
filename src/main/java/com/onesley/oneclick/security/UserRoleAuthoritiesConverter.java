@@ -35,7 +35,7 @@ import java.util.UUID;
  * </ul>
  *
  * <p>Pendant la transition (PR Bug 32 → Bug 32+N), les controllers utilisent
- * le double-binding {@code hasAnyRole(...) or hasAuthority(...)} — aucune
+ * le pattern RBAC v2 senior strict {@code hasAuthority('VERB:RESOURCE')} — aucune
  * régression possible si les permissions seedées sont incomplètes.
  *
  * <p>Coût : 2 SELECT par requête authentifiée (user+role, puis permissions).

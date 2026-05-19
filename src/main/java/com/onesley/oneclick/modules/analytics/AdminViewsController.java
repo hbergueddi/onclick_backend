@@ -27,14 +27,14 @@ public class AdminViewsController {
 
     @GetMapping("/admin-stats-full")
     @Operation(summary = "Admin stats enrichi (compatible legacy useAdminStats — KPIs + deltas + trends + charts)")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN') or hasAuthority('VIEW:ANALYTICS')")
+    @PreAuthorize("hasAuthority('VIEW:ANALYTICS')")
     public AdminStatsFullDto adminStatsFull(@RequestParam(required = false) String period) {
         return statsFullService.compute(period);
     }
 
     @GetMapping("/admin-users")
     @Operation(summary = "Liste enrichie des users (KPIs loyalty/résas/tickets)")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN') or hasAuthority('VIEW:ANALYTICS')")
+    @PreAuthorize("hasAuthority('VIEW:ANALYTICS')")
     public List<AdminUserDto> findAdminUsers(
         @RequestParam(required = false) String search,
         @RequestParam(required = false) String roleCode,
@@ -46,7 +46,7 @@ public class AdminViewsController {
 
     @GetMapping("/admin-wallet/summary")
     @Operation(summary = "Résumé global wallet admin")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN') or hasAuthority('VIEW:ANALYTICS')")
+    @PreAuthorize("hasAuthority('VIEW:ANALYTICS')")
     public AdminWalletSummaryDto walletSummary() {
         return service.walletSummary();
     }
@@ -58,7 +58,7 @@ public class AdminViewsController {
                     + "peuvent voir UNIQUEMENT leur propre restaurant (restaurantId "
                     + "obligatoire + check staff actif dans le service)."
     )
-    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:ANALYTICS')")
+    @PreAuthorize("hasAuthority('VIEW:ANALYTICS')")
     public List<AdminWalletTransactionDto> walletTransactions(
         @RequestParam(required = false) UUID userId,
         @RequestParam(required = false) UUID restaurantId,
@@ -69,14 +69,14 @@ public class AdminViewsController {
 
     @GetMapping("/recycling-pool")
     @Operation(summary = "État du pool de recyclage (KPIs wallet aggregés)")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN') or hasAuthority('VIEW:ANALYTICS')")
+    @PreAuthorize("hasAuthority('VIEW:ANALYTICS')")
     public RecyclingPoolDto recyclingPool() {
         return service.recyclingPool();
     }
 
     @GetMapping("/admin-hi-cockpit")
     @Operation(summary = "Cockpit admin OneClickHI (restos + contrats + revenue + tickets)")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN') or hasAuthority('VIEW:ANALYTICS')")
+    @PreAuthorize("hasAuthority('VIEW:ANALYTICS')")
     public AdminHICockpitDto adminHICockpit() {
         return service.adminHICockpit();
     }

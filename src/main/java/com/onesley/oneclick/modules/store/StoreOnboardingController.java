@@ -38,13 +38,13 @@ public class StoreOnboardingController {
     // Bug 32 (Batch D RBAC v2) — RESOURCE=TENANTS (onboarding = candidature tenant).
     @GetMapping
     @Operation(summary = "Liste des demandes (admin) — filter status optionnel")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN') or hasAuthority('VIEW:TENANTS')")
+    @PreAuthorize("hasAuthority('VIEW:TENANTS')")
     public List<OnboardingRequestDto> findAll(@RequestParam(required = false) String status) {
         return service.findAll(status);
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN') or hasAuthority('VIEW:TENANTS')")
+    @PreAuthorize("hasAuthority('VIEW:TENANTS')")
     public OnboardingRequestDto findById(@PathVariable UUID id) {
         return service.findById(id);
     }
@@ -57,7 +57,7 @@ public class StoreOnboardingController {
 
     @PatchMapping("/{id}/decision")
     @Operation(summary = "Admin décide approve/reject la demande")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN') or hasAuthority('UPDATE:TENANTS')")
+    @PreAuthorize("hasAuthority('UPDATE:TENANTS')")
     public OnboardingRequestDto decide(@PathVariable UUID id, @Valid @RequestBody OnboardingDecisionDto dto) {
         return service.decide(id, dto);
     }

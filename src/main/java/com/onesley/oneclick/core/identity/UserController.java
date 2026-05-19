@@ -45,10 +45,10 @@ public class UserController {
         this.userRepository = userRepository;
     }
 
-    // Bug 32 (Batch B RBAC v2) — double-binding hasAnyRole(...) or hasAuthority('VERB:USERS')
+    // Bug 32 (Batch B RBAC v2) — RBAC v2 senior strict hasAuthority('VERB:USERS')
     @GetMapping
     @Operation(summary = "Liste paginée des users")
-    @PreAuthorize("hasRole('SUPERADMIN') or hasAuthority('VIEW:USERS')")
+    @PreAuthorize("hasAuthority('VIEW:USERS')")
     public PageResponse<UserDto> findAll(
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size
@@ -90,7 +90,7 @@ public class UserController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Détail d'un user par UUID — owner ou SUPERADMIN")
-    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:USERS')")
+    @PreAuthorize("hasAuthority('VIEW:USERS')")
     public UserDto findById(@PathVariable UUID id) {
         SecurityHelper.requireOwnerOrAdmin(id);
         return service.findById(id);
@@ -101,21 +101,21 @@ public class UserController {
     // Aligné sur findByPhone (isAuthenticated). Justif privacy : returns 404
     // ou UserDto basique — un staff qui veut enrôler un client par email a
     // un besoin légitime. Pas d'enum protection nécessaire au-delà de l'auth.
-    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:USERS')")
+    @PreAuthorize("hasAuthority('VIEW:USERS')")
     public UserDto findByEmail(@RequestParam String email) {
         return service.findByEmail(email);
     }
 
     @GetMapping("/by-phone")
     @Operation(summary = "Lookup user par téléphone — flow invitation ami (Pocket)")
-    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:USERS')")
+    @PreAuthorize("hasAuthority('VIEW:USERS')")
     public UserDto findByPhone(@RequestParam String phone) {
         return service.findByPhone(phone);
     }
 
     @GetMapping("/by-referral-code")
     @Operation(summary = "Lookup user par code parrain (OC-XXXXXX) — résolution code ami Pocket")
-    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:USERS')")
+    @PreAuthorize("hasAuthority('VIEW:USERS')")
     public UserDto findByReferralCode(@RequestParam("code") String referralCode) {
         return service.findByReferralCode(referralCode);
     }
@@ -127,7 +127,7 @@ public class UserController {
                     + "(useFriendships, useTeamMembers, useSupportTickets). Exposé en "
                     + "isAuthenticated() — l'appelant doit déjà connaître les UUIDs."
     )
-    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:USERS')")
+    @PreAuthorize("hasAuthority('VIEW:USERS')")
     public java.util.List<UserDto> findByIds(@RequestBody java.util.List<java.util.UUID> ids) {
         return service.findAllByIds(ids);
     }
@@ -137,7 +137,7 @@ public class UserController {
         summary = "Liste paginée des users d'un rôle — SUPERADMIN ou STAFF (picker Login)",
         description = "Filtre par code de rôle (ex: CLIENT, STAFF) et tenant optionnel. Soft-deletes exclus."
     )
-    @PreAuthorize("hasAnyRole('SUPERADMIN','STAFF') or hasAuthority('VIEW:USERS')")
+    @PreAuthorize("hasAuthority('VIEW:USERS')")
     public PageResponse<UserDto> findByRole(
         @RequestParam String role,
         @RequestParam(required = false) UUID tenantId,
@@ -149,7 +149,7 @@ public class UserController {
 
     @GetMapping("/roles-distribution")
     @Operation(summary = "Nombre d'utilisateurs par rôle — dashboard admin GestionRoles")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN') or hasAuthority('VIEW:USERS')")
+    @PreAuthorize("hasAuthority('VIEW:USERS')")
     public java.util.List<com.onesley.oneclick.core.identity.api.RoleDistributionDto> rolesDistribution() {
         return service.rolesDistribution();
     }
@@ -163,7 +163,7 @@ public class UserController {
 
     @PatchMapping("/{id}")
     @Operation(summary = "Mise à jour partielle d'un user — owner ou SUPERADMIN")
-    @PreAuthorize("isAuthenticated() or hasAuthority('UPDATE:USERS')")
+    @PreAuthorize("hasAuthority('UPDATE:USERS')")
     public UserDto patch(@PathVariable UUID id, @Valid @RequestBody UserUpdateDto dto) {
         SecurityHelper.requireOwnerOrAdmin(id);
         return service.patch(id, dto);
@@ -175,7 +175,7 @@ public class UserController {
         description = "Vérifie le mot de passe courant puis ré-encode le nouveau (BCrypt 12). " +
                       "Strict ownership : un admin ne peut PAS changer le password de quelqu'un d'autre."
     )
-    @PreAuthorize("isAuthenticated() or hasAuthority('UPDATE:USERS')")
+    @PreAuthorize("hasAuthority('UPDATE:USERS')")
     public ResponseEntity<Void> changePassword(
         @PathVariable UUID id,
         @Valid @RequestBody PasswordChangeDto dto
@@ -187,7 +187,7 @@ public class UserController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Soft delete d'un user — owner ou SUPERADMIN")
-    @PreAuthorize("isAuthenticated() or hasAuthority('DELETE:USERS')")
+    @PreAuthorize("hasAuthority('DELETE:USERS')")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         SecurityHelper.requireOwnerOrAdmin(id);
         service.softDelete(id);
@@ -196,7 +196,7 @@ public class UserController {
 
     @PostMapping("/search")
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
-    @PreAuthorize("hasRole('SUPERADMIN') or hasAuthority('VIEW:USERS')")
+    @PreAuthorize("hasAuthority('VIEW:USERS')")
     @Operation(
         summary = "Recherche dynamique (Phase 4 §6.3) — 12 opérateurs + whitelist",
         description = "Body : SearchRequest. Champs autorisés : email, phone, firstName, lastName, language, status, tenantId, roleId, lastLoginAt, createdAt, updatedAt, enabled."

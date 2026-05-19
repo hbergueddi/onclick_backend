@@ -51,28 +51,28 @@ public class AiController {
 
     @PostMapping("/care-chat")
     @Operation(summary = "Support chat — répond aux questions client avec contexte tickets")
-    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:LOYALTY')")
+    @PreAuthorize("hasAuthority('VIEW:LOYALTY')")
     public AiResponseDto careChat(@Valid @RequestBody AiDtos.CareChatRequestDto req) {
         return service.careChat(req);
     }
 
     @PostMapping("/assistant")
     @Operation(summary = "Assistant Pocket — répond aux prompts user (rate-limit 5/jour côté frontend)")
-    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:LOYALTY')")
+    @PreAuthorize("hasAuthority('VIEW:LOYALTY')")
     public AiResponseDto assistant(@Valid @RequestBody AiDtos.AssistantRequestDto req) {
         return service.assistant(req);
     }
 
     @PostMapping("/elite-review")
     @Operation(summary = "Résumé reviews — analyse N avis client d'un restaurant")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR') or hasAuthority('CREATE:LOYALTY')")
+    @PreAuthorize("hasAuthority('CREATE:LOYALTY')")
     public AiResponseDto eliteReview(@Valid @RequestBody AiDtos.EliteReviewRequestDto req) {
         return service.eliteReview(req);
     }
 
     @PostMapping("/plan")
     @Operation(summary = "Génération plan hebdomadaire — planning service auto")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR') or hasAuthority('CREATE:LOYALTY')")
+    @PreAuthorize("hasAuthority('CREATE:LOYALTY')")
     public AiResponseDto plan(@Valid @RequestBody AiDtos.PlanRequestDto req) {
         return service.plan(req);
     }
@@ -89,7 +89,7 @@ public class AiController {
         summary = "Sprint C — Support chat streaming SSE (port EF oneclick-care-chat)",
         description = "Stream Groq chunks tel quel — format OpenAI-compatible (data: {choices: [...]} + [DONE])"
     )
-    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:LOYALTY')")
+    @PreAuthorize("hasAuthority('VIEW:LOYALTY')")
     public SseEmitter careChatStream(@Valid @RequestBody AiDtos.CareChatRequestDto req) {
         // Timeout 5 min — large pour permettre les longs streams
         SseEmitter emitter = new SseEmitter(300_000L);
@@ -121,7 +121,7 @@ public class AiController {
         summary = "Sprint C — Assistant Pocket streaming SSE (port EF oneclick-ai-assistant)",
         description = "Stream avec action blocks (RESERVATION/REFERRAL/SQUAD/ADD_FRIEND/CANCEL_RESERVATION)"
     )
-    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:LOYALTY')")
+    @PreAuthorize("hasAuthority('VIEW:LOYALTY')")
     public SseEmitter assistantStream(@Valid @RequestBody AiDtos.AssistantRequestDto req) {
         SseEmitter emitter = new SseEmitter(300_000L);
 

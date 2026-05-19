@@ -17,7 +17,7 @@ import java.util.UUID;
 import static com.onesley.oneclick.modules.resource_booking.api.ResourceBookingDtos.*;
 
 /**
- * Bug 32 (Batch D RBAC v2) — double-binding (isAuthenticated() | hasAnyRole(...)) or hasAuthority('VERB:RESOURCE_BOOKINGS')
+ * Bug 32 (Batch D RBAC v2) — RBAC v2 senior strict hasAuthority('VERB:RESOURCE_BOOKINGS')
  */
 @RestController
 @RequestMapping("/api/resource-bookings")
@@ -34,7 +34,7 @@ public class ResourceBookingController {
 
     @GetMapping("/resources")
     @Operation(summary = "Liste paginée de ressources — filtres tenantId / resourceType / enabledOnly")
-    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:RESOURCE_BOOKINGS')")
+    @PreAuthorize("hasAuthority('VIEW:RESOURCE_BOOKINGS')")
     public PageResponse<ResourceDto> findAllResources(
         @RequestParam(required = false) UUID tenantId,
         @RequestParam(required = false) String resourceType,
@@ -46,18 +46,18 @@ public class ResourceBookingController {
     }
 
     @GetMapping("/resources/{id}")
-    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:RESOURCE_BOOKINGS')")
+    @PreAuthorize("hasAuthority('VIEW:RESOURCE_BOOKINGS')")
     public ResourceDto findResourceById(@PathVariable UUID id) { return service.findResourceById(id); }
 
     @PostMapping("/resources")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR') or hasAuthority('CREATE:RESOURCE_BOOKINGS')")
+    @PreAuthorize("hasAuthority('CREATE:RESOURCE_BOOKINGS')")
     public ResponseEntity<ResourceDto> createResource(@Valid @RequestBody ResourceCreateDto dto) {
         ResourceDto r = service.createResource(dto);
         return ResponseEntity.created(URI.create("/api/resource-bookings/resources/" + r.id())).body(r);
     }
 
     @DeleteMapping("/resources/{id}")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR') or hasAuthority('DELETE:RESOURCE_BOOKINGS')")
+    @PreAuthorize("hasAuthority('DELETE:RESOURCE_BOOKINGS')")
     public ResponseEntity<Void> deleteResource(@PathVariable UUID id) {
         service.softDeleteResource(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
@@ -66,13 +66,13 @@ public class ResourceBookingController {
     // ─── Pricings ────────────────────────────────────────────────────────────
 
     @GetMapping("/resources/{resourceId}/pricings")
-    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:RESOURCE_BOOKINGS')")
+    @PreAuthorize("hasAuthority('VIEW:RESOURCE_BOOKINGS')")
     public List<PricingDto> findPricingsByResource(@PathVariable UUID resourceId) {
         return service.findPricingsByResource(resourceId);
     }
 
     @PostMapping("/pricings")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR') or hasAuthority('CREATE:RESOURCE_BOOKINGS')")
+    @PreAuthorize("hasAuthority('CREATE:RESOURCE_BOOKINGS')")
     public ResponseEntity<PricingDto> createPricing(@Valid @RequestBody PricingCreateDto dto) {
         PricingDto p = service.createPricing(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(p);
@@ -82,7 +82,7 @@ public class ResourceBookingController {
 
     @GetMapping("/bookings")
     @Operation(summary = "Bookings paginés — filtres resourceId / organizerId / status")
-    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:RESOURCE_BOOKINGS')")
+    @PreAuthorize("hasAuthority('VIEW:RESOURCE_BOOKINGS')")
     public PageResponse<BookingDto> findAllBookings(
         @RequestParam(required = false) UUID resourceId,
         @RequestParam(required = false) UUID organizerId,
@@ -94,24 +94,24 @@ public class ResourceBookingController {
     }
 
     @GetMapping("/bookings/{id}")
-    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:RESOURCE_BOOKINGS')")
+    @PreAuthorize("hasAuthority('VIEW:RESOURCE_BOOKINGS')")
     public BookingDto findBookingById(@PathVariable UUID id) { return service.findBookingById(id); }
 
     @PostMapping("/bookings")
-    @PreAuthorize("isAuthenticated() or hasAuthority('CREATE:RESOURCE_BOOKINGS')")
+    @PreAuthorize("hasAuthority('CREATE:RESOURCE_BOOKINGS')")
     public ResponseEntity<BookingDto> createBooking(@Valid @RequestBody BookingCreateDto dto) {
         BookingDto b = service.createBooking(dto);
         return ResponseEntity.created(URI.create("/api/resource-bookings/bookings/" + b.id())).body(b);
     }
 
     @PatchMapping("/bookings/{id}")
-    @PreAuthorize("isAuthenticated() or hasAuthority('UPDATE:RESOURCE_BOOKINGS')")
+    @PreAuthorize("hasAuthority('UPDATE:RESOURCE_BOOKINGS')")
     public BookingDto updateBooking(@PathVariable UUID id, @Valid @RequestBody BookingUpdateDto dto) {
         return service.updateBooking(id, dto);
     }
 
     @DeleteMapping("/bookings/{id}")
-    @PreAuthorize("isAuthenticated() or hasAuthority('DELETE:RESOURCE_BOOKINGS')")
+    @PreAuthorize("hasAuthority('DELETE:RESOURCE_BOOKINGS')")
     public ResponseEntity<Void> deleteBooking(@PathVariable UUID id) {
         service.softDeleteBooking(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
@@ -120,13 +120,13 @@ public class ResourceBookingController {
     // ─── Guests ──────────────────────────────────────────────────────────────
 
     @GetMapping("/bookings/{bookingId}/guests")
-    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:RESOURCE_BOOKINGS')")
+    @PreAuthorize("hasAuthority('VIEW:RESOURCE_BOOKINGS')")
     public List<GuestDto> findGuestsByBooking(@PathVariable UUID bookingId) {
         return service.findGuestsByBooking(bookingId);
     }
 
     @PostMapping("/guests")
-    @PreAuthorize("isAuthenticated() or hasAuthority('UPDATE:RESOURCE_BOOKINGS')")
+    @PreAuthorize("hasAuthority('UPDATE:RESOURCE_BOOKINGS')")
     public ResponseEntity<GuestDto> addGuest(@Valid @RequestBody GuestCreateDto dto) {
         GuestDto g = service.addGuest(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(g);

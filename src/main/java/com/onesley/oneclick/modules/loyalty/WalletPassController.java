@@ -35,11 +35,11 @@ public class WalletPassController {
         this.service = service;
     }
 
-    // Bug 32 (Batch A RBAC v2) — double-binding sur VIEW:LOYALTY (génération = lecture).
+    // Bug 32 (Batch A RBAC v2) — RBAC v2 senior strict VIEW:LOYALTY (génération = lecture).
     @GetMapping
     @Operation(summary = "Génère le wallet pass pour l'utilisateur courant",
         description = "Apple : binaire .pkpass | Google : JSON { save_url, jwt }")
-    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:LOYALTY')")
+    @PreAuthorize("hasAuthority('VIEW:LOYALTY')")
     public ResponseEntity<?> generate(
         @RequestParam(defaultValue = "apple") String platform,
         @Parameter(hidden = true) @RequestParam(required = false) UUID userId
@@ -68,7 +68,7 @@ public class WalletPassController {
 
     @GetMapping("/metadata")
     @Operation(summary = "Métadonnées wallet (tier + points + nom)")
-    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:LOYALTY')")
+    @PreAuthorize("hasAuthority('VIEW:LOYALTY')")
     public WalletPassMetadataDto metadata(@RequestParam(required = false) UUID userId) {
         UUID effectiveUid = userId != null ? userId : resolveCurrentUserId();
         return service.getMetadata(effectiveUid);
