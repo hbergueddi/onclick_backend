@@ -1,6 +1,7 @@
 package com.onesley.oneclick.security.ratelimit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import io.github.bucket4j.BucketConfiguration;
@@ -57,19 +58,26 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private static final String ERROR_TYPE = "https://api.oneclick.ma/errors/rate-limit-exceeded";
     private static final String REDIS_KEY_PREFIX = "rate-limit:";
 
+    /**
+     * ObjectMapper local (convention codebase : ResendClient, GroqStreamingClient,
+     * GooglePlacesEnrichmentService font idem). Le projet n'expose pas de bean
+     * {@link ObjectMapper} — Spring MVC garde le sien encapsulé dans ses
+     * HttpMessageConverters. {@link JavaTimeModule} pour sérialiser les éventuels
+     * {@code Instant}/{@code Duration} du ProblemDetail.
+     */
+    private static final ObjectMapper OBJECT_MAPPER =
+        new ObjectMapper().registerModule(new JavaTimeModule());
+
     private final RateLimitProperties props;
     private final ProxyManager<String> proxyManager;
-    private final ObjectMapper objectMapper;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     public RateLimitFilter(
         RateLimitProperties props,
-        ProxyManager<String> proxyManager,
-        ObjectMapper objectMapper
+        ProxyManager<String> proxyManager
     ) {
         this.props = props;
         this.proxyManager = proxyManager;
-        this.objectMapper = objectMapper;
         log.info("[rate-limit] Bucket4j-Redis enabled — default {} req / {}",
             props.getDefaults().getCapacity(), props.getDefaults().getRefillPeriod());
         for (var e : props.getEndpoints()) {
@@ -144,7 +152,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
         pd.setProperty("limit", capacity);
         pd.setProperty("refillPeriod", refillPeriod.toString());
 
-        objectMapper.writeValue(response.getWriter(), pd);
+        OBJECT_MAPPER.writeValue(response.getWriter(), pd);
     }
 
     /** Match l'URL avec la première EndpointConfig matchant l'Ant pattern. */
