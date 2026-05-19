@@ -34,7 +34,11 @@ public class AdminStatsService {
                                           "WHERE u.deleted_at IS NULL AND r.code = 'CLIENT' " + tenantFilter.replace("tenant_id", "u.tenant_id"), tenantId);
         long totalRestaurateurs  = count("SELECT COUNT(u.*) FROM users u JOIN roles r ON r.id = u.role_id " +
                                           "WHERE u.deleted_at IS NULL AND r.code = 'RESTAURATEUR' " + tenantFilter.replace("tenant_id", "u.tenant_id"), tenantId);
-        long totalStaff          = count("SELECT COUNT(*) FROM restaurant_staff " + tenantFilterNoAnd, tenantId);
+        // Bug 33 — la table s'appelle `restaurant_staffs` (pluriel), pas
+        // `restaurant_staff` (singulier). Cf AdminStatsFullService qui utilise
+        // déjà le bon nom. Le typo causait un 500 silencieux sur le KPI
+        // /api/analytics/admin-stats utilisé par les anciennes pages admin.
+        long totalStaff          = count("SELECT COUNT(*) FROM restaurant_staffs " + tenantFilterNoAnd, tenantId);
         long totalRestaurants    = count("SELECT COUNT(*) FROM restaurants WHERE deleted_at IS NULL " + tenantFilter, tenantId);
         // Bug 29 — Spring DB stocke status='active' (anglais) ; le legacy
         // Supabase utilisait 'actif' (français). Cf AdminStatsFullService idem.

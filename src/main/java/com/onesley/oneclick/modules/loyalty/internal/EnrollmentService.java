@@ -199,10 +199,27 @@ public class EnrollmentService {
                 (UUID) r[0], (UUID) r[1],
                 (String) r[2], (String) r[3], (String) r[4],
                 ((Number) r[5]).intValue(),
-                ((java.sql.Timestamp) r[6]).toInstant()
+                toInstant(r[6])
             ));
         }
         return result;
+    }
+
+    /**
+     * Bug 33 — Convertit la valeur Timestamp/OffsetDateTime renvoyée par
+     * PostgreSQL JDBC en {@link java.time.Instant}. Le driver moderne (PG JDBC
+     * 42.7+) retourne {@code OffsetDateTime} pour {@code timestamp with time zone},
+     * pas {@code java.sql.Timestamp} comme historiquement — le cast direct
+     * provoquait un ClassCastException → 500. Pattern partagé avec
+     * {@link LoyaltyExtensionService}, {@link com.onesley.oneclick.modules.analytics.internal.AdminViewsService},
+     * {@link com.onesley.oneclick.modules.oneclickhi.internal.OneClickHIService}.
+     */
+    private static java.time.Instant toInstant(Object o) {
+        if (o == null) return null;
+        if (o instanceof java.time.Instant i) return i;
+        if (o instanceof java.sql.Timestamp ts) return ts.toInstant();
+        if (o instanceof java.time.OffsetDateTime odt) return odt.toInstant();
+        return java.time.Instant.parse(o.toString());
     }
 
     // ─── HELPERS PRIVÉS ───────────────────────────────────────────────────
