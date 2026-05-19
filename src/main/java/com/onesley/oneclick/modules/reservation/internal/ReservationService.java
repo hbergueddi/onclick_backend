@@ -116,6 +116,28 @@ public class ReservationService {
             .toList();
     }
 
+    /**
+     * Bug 31 — Agrégat (restaurantId, count) sur une période et un statut
+     * optionnel. Consommé par la widget admin "Top Réservations · Par Ville"
+     * de la page Restaurants.
+     *
+     * <p>Stub précédent : le frontend recevait `[]` ("Aucune réservation sur
+     * cette période" affiché en permanence). Maintenant la widget remonte
+     * les compteurs réels (3500+ résa en DB → 1042 lignes max).
+     *
+     * @param sinceDays  Nombre de jours dans le passé à inclure (0 = all-time)
+     * @param status     Statut EN canonique (honored, confirmed, …) ou null pour tous
+     * @return           Liste triée DESC par count, anti-N+1 (1 requête SQL groupée)
+     */
+    public List<com.onesley.oneclick.modules.reservation.api.TopReservationByRestaurantDto>
+    topByRestaurant(int sinceDays, String status) {
+        Instant since = sinceDays > 0
+            ? Instant.now().minusSeconds((long) sinceDays * 86400L)
+            : null;
+        String statusFilter = (status == null || status.isBlank()) ? null : status;
+        return repository.findTopByRestaurant(since, statusFilter);
+    }
+
     /** Variante non-throwing de {@link #requireReservationAccess(Reservation)} — pour batch. */
     private boolean canAccess(Reservation r) {
         UUID current = SecurityHelper.currentUserId();

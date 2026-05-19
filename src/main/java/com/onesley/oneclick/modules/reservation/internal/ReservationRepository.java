@@ -1,5 +1,6 @@
 package com.onesley.oneclick.modules.reservation.internal;
 
+import com.onesley.oneclick.modules.reservation.api.TopReservationByRestaurantDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -8,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -102,5 +104,39 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID>,
         @Param("restaurantId") UUID restaurantId,
         @Param("status") String status,
         Pageable pageable
+    );
+
+    /**
+     * Bug 31 — Agrégat anti-N+1 du nombre de réservations par restaurant
+     * sur une période. Consommé par la widget "Top Réservations · Par Ville"
+     * de l'admin Restaurants (re-agrégation client-side par dimension).
+     *
+     * <p>Filtres optionnels :
+     * <ul>
+     *   <li>{@code since} : borne basse {@code created_at >= :since}. Si null, all-time.</li>
+     *   <li>{@code status} : valeur EN canonique (honored, confirmed, …). Si null, tous statuts.</li>
+     * </ul>
+     *
+     * <p>Tri {@code COUNT(*) DESC} pour permettre un {@code LIMIT} naturel
+     * si on veut le top N — actuellement la widget consomme la liste entière
+     * (≤ N_restaurants lignes, scaling-safe : 1042 restos en DB → ~30 KB).
+     *
+     * <p>Projection JPQL via constructor expression vers le DTO public
+     * {@link TopReservationByRestaurantDto}.
+     */
+    @Query("""
+        SELECT new com.onesley.oneclick.modules.reservation.api.TopReservationByRestaurantDto(
+            r.restaurantId, COUNT(r)
+        )
+        FROM Reservation r
+        WHERE r.deletedAt IS NULL
+          AND (:since IS NULL OR r.createdAt >= :since)
+          AND (:status IS NULL OR r.status = :status)
+        GROUP BY r.restaurantId
+        ORDER BY COUNT(r) DESC
+        """)
+    java.util.List<TopReservationByRestaurantDto> findTopByRestaurant(
+        @Param("since") Instant since,
+        @Param("status") String status
     );
 }

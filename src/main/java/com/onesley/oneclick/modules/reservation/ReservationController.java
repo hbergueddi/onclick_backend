@@ -113,6 +113,22 @@ public class ReservationController {
         );
     }
 
+    @GetMapping("/top-by-restaurant")
+    @Operation(
+        summary = "Bug 31 — Top réservations agrégé (restaurant_id, count) sur période et statut.",
+        description = "Consommé par la widget admin 'Top Réservations · Par Ville' de la page " +
+                      "Restaurants. Le frontend re-agrège par dimension (ville ou nom) à partir " +
+                      "de cette liste plate. Anti-N+1 : 1 requête SQL groupée vs fetch-all-then-count."
+    )
+    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN')")
+    public List<com.onesley.oneclick.modules.reservation.api.TopReservationByRestaurantDto>
+    topByRestaurant(
+        @RequestParam(defaultValue = "30") int sinceDays,
+        @RequestParam(required = false) String status
+    ) {
+        return service.topByRestaurant(sinceDays, status);
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     //  Booking rules — couverts max, durée slot, fenêtre annulation
     // ═══════════════════════════════════════════════════════════════════════
