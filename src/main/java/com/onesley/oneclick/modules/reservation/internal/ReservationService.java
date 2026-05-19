@@ -117,25 +117,26 @@ public class ReservationService {
     }
 
     /**
-     * Bug 31 — Agrégat (restaurantId, count) sur une période et un statut
-     * optionnel. Consommé par la widget admin "Top Réservations · Par Ville"
-     * de la page Restaurants.
+     * Bug 31 — Compteurs de réservations par restaurant sur une période + statut
+     * optionnel, pour la widget admin "Top Réservations · Par Ville".
      *
-     * <p>Stub précédent : le frontend recevait `[]` ("Aucune réservation sur
-     * cette période" affiché en permanence). Maintenant la widget remonte
-     * les compteurs réels (3500+ résa en DB → 1042 lignes max).
+     * <p>Pas de DTO dédié — on retourne {@code Map<UUID restaurantId → count>}
+     * (même pattern que {@code AdminStatsFullService.reservationsByStatus}).
+     * LinkedHashMap pour préserver le tri COUNT DESC du repo.
      *
-     * @param sinceDays  Nombre de jours dans le passé à inclure (0 = all-time)
-     * @param status     Statut EN canonique (honored, confirmed, …) ou null pour tous
-     * @return           Liste triée DESC par count, anti-N+1 (1 requête SQL groupée)
+     * @param sinceDays  Jours dans le passé (0 = all-time)
+     * @param status     Statut EN canonique ou null pour tous
      */
-    public List<com.onesley.oneclick.modules.reservation.api.TopReservationByRestaurantDto>
-    topByRestaurant(int sinceDays, String status) {
+    public java.util.Map<UUID, Long> countReservationsByRestaurant(int sinceDays, String status) {
         Instant since = sinceDays > 0
             ? Instant.now().minusSeconds((long) sinceDays * 86400L)
             : null;
         String statusFilter = (status == null || status.isBlank()) ? null : status;
-        return repository.findTopByRestaurant(since, statusFilter);
+        java.util.Map<UUID, Long> out = new java.util.LinkedHashMap<>();
+        for (Object[] row : repository.countByRestaurantGrouped(since, statusFilter)) {
+            out.put((UUID) row[0], ((Number) row[1]).longValue());
+        }
+        return out;
     }
 
     /** Variante non-throwing de {@link #requireReservationAccess(Reservation)} — pour batch. */

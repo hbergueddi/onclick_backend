@@ -1,6 +1,5 @@
 package com.onesley.oneclick.modules.reservation.internal;
 
-import com.onesley.oneclick.modules.reservation.api.TopReservationByRestaurantDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -107,27 +106,22 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID>,
     );
 
     /**
-     * Bug 31 — Agrégat anti-N+1 du nombre de réservations par restaurant
-     * sur une période. Consommé par la widget "Top Réservations · Par Ville"
-     * de l'admin Restaurants (re-agrégation client-side par dimension).
+     * Bug 31 — Agrégat (restaurantId, count) sur une période + statut optionnel,
+     * pour la widget admin "Top Réservations · Par Ville".
      *
-     * <p>Filtres optionnels :
-     * <ul>
-     *   <li>{@code since} : borne basse {@code created_at >= :since}. Si null, all-time.</li>
-     *   <li>{@code status} : valeur EN canonique (honored, confirmed, …). Si null, tous statuts.</li>
-     * </ul>
+     * <p>Pattern volontairement minimal : retourne {@code List<Object[]>} (raw)
+     * pour éviter de créer un DTO dédié à un simple KPI. Le service mappe vers
+     * {@code Map<String, Long>} avant exposition — même style que
+     * {@code AdminStatsFullService.reservationsByStatus} et autres agrégats
+     * existants.
      *
-     * <p>Tri {@code COUNT(*) DESC} pour permettre un {@code LIMIT} naturel
-     * si on veut le top N — actuellement la widget consomme la liste entière
-     * (≤ N_restaurants lignes, scaling-safe : 1042 restos en DB → ~30 KB).
-     *
-     * <p>Projection JPQL via constructor expression vers le DTO public
-     * {@link TopReservationByRestaurantDto}.
+     * <p>Filtres optionnels {@code since} (null = all-time) et {@code status}
+     * (null = tous statuts EN canonique). Tri {@code COUNT DESC} pour rendre
+     * un éventuel LIMIT naturel — actuellement la widget consomme la liste
+     * entière (≤ 1042 lignes en prod, ~30 KB JSON, scaling-safe).
      */
     @Query("""
-        SELECT new com.onesley.oneclick.modules.reservation.api.TopReservationByRestaurantDto(
-            r.restaurantId, COUNT(r)
-        )
+        SELECT r.restaurantId, COUNT(r)
         FROM Reservation r
         WHERE r.deletedAt IS NULL
           AND (:since IS NULL OR r.createdAt >= :since)
@@ -135,7 +129,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID>,
         GROUP BY r.restaurantId
         ORDER BY COUNT(r) DESC
         """)
-    java.util.List<TopReservationByRestaurantDto> findTopByRestaurant(
+    java.util.List<Object[]> countByRestaurantGrouped(
         @Param("since") Instant since,
         @Param("status") String status
     );

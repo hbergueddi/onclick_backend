@@ -113,20 +113,19 @@ public class ReservationController {
         );
     }
 
-    @GetMapping("/top-by-restaurant")
+    @GetMapping("/count-by-restaurant")
     @Operation(
-        summary = "Bug 31 — Top réservations agrégé (restaurant_id, count) sur période et statut.",
-        description = "Consommé par la widget admin 'Top Réservations · Par Ville' de la page " +
-                      "Restaurants. Le frontend re-agrège par dimension (ville ou nom) à partir " +
-                      "de cette liste plate. Anti-N+1 : 1 requête SQL groupée vs fetch-all-then-count."
+        summary = "Bug 31 — Compteurs de réservations par restaurant sur une période.",
+        description = "KPI brut consommé par la widget admin 'Top Réservations · Par Ville'. " +
+                      "Retourne Map<restaurantId, count> triée DESC. Pas de DTO dédié — pattern " +
+                      "Map<String,Long> standard du module analytics. Anti-N+1 : 1 SQL groupée."
     )
     @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN')")
-    public List<com.onesley.oneclick.modules.reservation.api.TopReservationByRestaurantDto>
-    topByRestaurant(
+    public java.util.Map<UUID, Long> countReservationsByRestaurant(
         @RequestParam(defaultValue = "30") int sinceDays,
         @RequestParam(required = false) String status
     ) {
-        return service.topByRestaurant(sinceDays, status);
+        return service.countReservationsByRestaurant(sinceDays, status);
     }
 
     // ═══════════════════════════════════════════════════════════════════════
