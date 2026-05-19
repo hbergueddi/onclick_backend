@@ -60,4 +60,28 @@ public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificat
         @Param("tenantId") UUID tenantId,
         Pageable pageable
     );
+
+    /**
+     * Bug 34 (UserDetails) — Eager load user + role + permissions + menu + action
+     * en 1 query pour {@code OneClickUserDetailsService} (évite N+1 + alimente le
+     * cache Redis "userDetails", 1h TTL).
+     *
+     * <p>{@code LEFT JOIN FETCH} multi-niveau pour ne pas exclure les users sans
+     * permissions (ex: rôle CLIENT n'a pas de permissions seedées au moment de
+     * l'auth). Le {@code WHERE u.deletedAt IS NULL} préserve la convention
+     * soft-delete partagée par tous les finders métier.
+     *
+     * <p>Coût attendu : 1 SELECT (1 hit Postgres) au lieu de 4 (user + role +
+     * permissions + menu/action) — gain ×3 sur la latence d'auth quand le cache
+     * Redis miss.
+     */
+    @Query("""
+        SELECT u FROM User u
+        LEFT JOIN FETCH u.role r
+        LEFT JOIN FETCH r.permissions p
+        LEFT JOIN FETCH p.menu
+        LEFT JOIN FETCH p.action
+        WHERE u.id = :id AND u.deletedAt IS NULL
+        """)
+    Optional<User> findByIdWithRoleAndPermissions(@Param("id") UUID id);
 }

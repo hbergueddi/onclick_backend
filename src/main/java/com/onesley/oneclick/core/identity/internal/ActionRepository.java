@@ -1,4 +1,5 @@
 package com.onesley.oneclick.core.identity.internal;
+import com.onesley.oneclick.core.identity.api.Action;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;

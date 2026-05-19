@@ -1,4 +1,4 @@
-package com.onesley.oneclick.core.identity.internal;
+package com.onesley.oneclick.core.identity.api;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

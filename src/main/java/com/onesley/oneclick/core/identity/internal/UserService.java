@@ -5,6 +5,7 @@ import com.onesley.oneclick.core.tenant.api.Tenant;
 import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.ConflictException;
 import com.onesley.oneclick.exception.NotFoundException;
+import com.onesley.oneclick.security.OneClickUserDetailsService;
 import com.onesley.oneclick.security.SecurityHelper;
 import com.onesley.oneclick.shared.events.UserRegisteredEvent;
 import jakarta.persistence.EntityManager;
@@ -43,16 +44,26 @@ public class UserService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final ApplicationEventPublisher eventPublisher;
+    /**
+     * Bug 34 — Service Spring Security responsable du cache {@code userDetails}.
+     * Injecté ici pour appeler {@link OneClickUserDetailsService#evictUser(UUID)}
+     * sur les mutations auth-critiques (password, soft-delete) — les autres
+     * patches (nom, avatar, langue, téléphone) ne touchent pas aux champs
+     * cachés dans {@code OneClickUserDetails}, donc pas d'eviction.
+     */
+    private final OneClickUserDetailsService userDetailsService;
 
     @PersistenceContext
     private EntityManager entityManager;
 
     public UserService(UserRepository repository, RoleRepository roleRepository,
-                       PasswordEncoder passwordEncoder, ApplicationEventPublisher eventPublisher) {
+                       PasswordEncoder passwordEncoder, ApplicationEventPublisher eventPublisher,
+                       OneClickUserDetailsService userDetailsService) {
         this.repository = repository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.eventPublisher = eventPublisher;
+        this.userDetailsService = userDetailsService;
     }
 
     public UserDto findById(UUID id) {
@@ -140,6 +151,10 @@ public class UserService {
             .orElseThrow(() -> new NotFoundException("User", id));
         user.markDeleted();
         repository.save(user);
+        // Bug 34 — purge UserDetails cache : user soft-deleted ne doit plus pouvoir
+        // se réauthentifier via un JWT déjà émis (le converter renverra un token
+        // sans autorités après ré-évaluation, et le filterChain bloquera).
+        userDetailsService.evictUser(id);
     }
 
     // ───────────────────────────────────────────────────────────────────────
@@ -172,6 +187,11 @@ public class UserService {
 
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         repository.save(user);
+        // Bug 34 — purge UserDetails cache : le hash ayant changé, le payload
+        // sérialisé Redis devient stale et empêcherait une réauthentification
+        // immédiate avec le nouveau password si un autre flow (BasicAuth, etc.)
+        // tape le {@code passwordHash} via {@code UserDetails.getPassword()}.
+        userDetailsService.evictUser(id);
     }
 
     // ───────────────────────────────────────────────────────────────────────

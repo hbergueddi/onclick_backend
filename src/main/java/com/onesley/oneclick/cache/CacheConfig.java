@@ -27,6 +27,9 @@ import java.util.Map;
  *   <li>{@code restaurants}     — fiche détail (lecture fréquente), TTL 10 min</li>
  *   <li>{@code loyalty-tiers}   — table de référence, TTL 1 h</li>
  *   <li>{@code feature-flags}   — toggles, TTL 5 min</li>
+ *   <li>{@code userDetails}     — Bug 34, payload Spring Security par user
+ *       (role + authorities VERB:RESOURCE), TTL 1 h, eviction ciblée via
+ *       {@code OneClickUserDetailsService.evictUser(uuid)}</li>
  * </ul>
  *
  * <p>Sérialisation JSON via Jackson (lisible dans redis-cli, debug facilité)
@@ -44,6 +47,13 @@ public class CacheConfig {
     public static final String CACHE_RESTAURANTS     = "restaurants";
     public static final String CACHE_LOYALTY_TIERS   = "loyalty-tiers";
     public static final String CACHE_FEATURE_FLAGS   = "feature-flags";
+    /**
+     * Bug 34 — Cache du payload Spring Security ({@code OneClickUserDetails})
+     * keyed sur l'UUID string du user. TTL 1 h, évincé manuellement sur les
+     * mutations auth-critiques (rôle, password, soft-delete) via
+     * {@code OneClickUserDetailsService.evictUser(uuid)}.
+     */
+    public static final String CACHE_USER_DETAILS    = "userDetails";
 
     @Bean
     public RedisCacheManager cacheManager(RedisConnectionFactory cf) {
@@ -64,7 +74,8 @@ public class CacheConfig {
             CACHE_TENANTS_BY_SLUG, base.entryTtl(Duration.ofMinutes(30)),
             CACHE_RESTAURANTS,     base.entryTtl(Duration.ofMinutes(10)),
             CACHE_LOYALTY_TIERS,   base.entryTtl(Duration.ofHours(1)),
-            CACHE_FEATURE_FLAGS,   base.entryTtl(Duration.ofMinutes(5))
+            CACHE_FEATURE_FLAGS,   base.entryTtl(Duration.ofMinutes(5)),
+            CACHE_USER_DETAILS,    base.entryTtl(Duration.ofHours(1))
         );
 
         return RedisCacheManager.builder(cf)

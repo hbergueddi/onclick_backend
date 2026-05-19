@@ -1,25 +1,27 @@
-package com.onesley.oneclick.core.identity.internal;
+package com.onesley.oneclick.core.identity.api;
 
-import com.onesley.oneclick.audit.TimestampedEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import org.hibernate.proxy.HibernateProxy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Entrée de menu applicatif (sidebar). Hiérarchique via {@code parent_id}.
+ * Action métier (CREATE_RESERVATION, CANCEL_RESERVATION, SCAN_TICKET, ...)
+ * regroupée par module.
  */
 @Entity
-@Table(name = "menus")
-public class Menu extends TimestampedEntity {
+@Table(name = "actions")
+@EntityListeners(AuditingEntityListener.class)
+public class Action {
 
     @Id
     @Column(name = "id", nullable = false, updatable = false)
@@ -33,45 +35,30 @@ public class Menu extends TimestampedEntity {
     @Column(name = "name", nullable = false)
     private String name;
 
-    @Column(name = "icon")
-    private String icon;
+    @NotBlank
+    @Column(name = "module", nullable = false)
+    private String module;
 
-    @Column(name = "path")
-    private String path;
+    @CreatedDate
+    @Column(name = "created_at", updatable = false, nullable = false)
+    private Instant createdAt;
 
-    // Self-reference parent — LAZY pour pouvoir naviguer l'arbre côté service
-    @Column(name = "parent_id", insertable = false, updatable = false)
-    private UUID parentId;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "parent_id")
-    private Menu parent;
-
-    @Column(name = "sort_order", nullable = false)
-    private Integer sortOrder = 0;
-
-    protected Menu() {
+    protected Action() {
         // JPA
     }
 
-    public Menu(UUID id, String code, String name) {
+    public Action(UUID id, String code, String name, String module) {
         this.id = id;
         this.code = code;
         this.name = name;
+        this.module = module;
     }
 
     public UUID getId() { return id; }
     public String getCode() { return code; }
     public String getName() { return name; }
-    public String getIcon() { return icon; }
-    public void setIcon(String icon) { this.icon = icon; }
-    public String getPath() { return path; }
-    public void setPath(String path) { this.path = path; }
-    public UUID getParentId() { return parentId; }
-    public Menu getParent() { return parent; }
-    public void setParent(Menu parent) { this.parent = parent; }
-    public Integer getSortOrder() { return sortOrder; }
-    public void setSortOrder(Integer sortOrder) { this.sortOrder = sortOrder; }
+    public String getModule() { return module; }
+    public Instant getCreatedAt() { return createdAt; }
 
     @Override
     public boolean equals(Object o) {
@@ -80,7 +67,7 @@ public class Menu extends TimestampedEntity {
         Class<?> oEffective = o instanceof HibernateProxy p ? p.getHibernateLazyInitializer().getPersistentClass() : o.getClass();
         Class<?> thisEffective = this instanceof HibernateProxy p ? p.getHibernateLazyInitializer().getPersistentClass() : this.getClass();
         if (thisEffective != oEffective) return false;
-        Menu that = (Menu) o;
+        Action that = (Action) o;
         return id != null && Objects.equals(id, that.id);
     }
 

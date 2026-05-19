@@ -1,93 +1,64 @@
 package com.onesley.oneclick.security;
 
-import com.onesley.oneclick.core.identity.api.AuthoritiesProvider;
-import com.onesley.oneclick.core.identity.api.User;
-import com.onesley.oneclick.core.identity.api.UserRepository;
-import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.core.convert.converter.Converter;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
 
 /**
  * Convertit un {@link Jwt} en {@link AbstractAuthenticationToken} dont les
- * autorités sont chargées depuis le rôle unique du user + ses permissions.
+ * autorités proviennent de {@link OneClickUserDetailsService} (Bug 34).
  *
- * <p>Architecture enterprise (§2.1) : 1 user = 1 rôle. On query
- * {@code users WHERE id = sub} et on prend {@code role.code} comme autorité,
- * puis on JOIN {@code permissions × menus × actions} pour les authorities
- * fines au format {@code VERB:RESOURCE} (RBAC v2 — Bug 32).
+ * <p>Architecture senior (§2.1) : ce converter est un thin adapter qui délègue
+ * l'extraction des authorities au service Spring Security standard. Le service
+ * gère lui-même le cache Redis ({@code userDetails}, 1 h TTL) et le JOIN FETCH
+ * unique role + permissions + menu + action.
  *
- * <p>Authorities exposées (cumul, pas exclusif) :
+ * <p>Historiquement (avant Bug 34) ce converter contenait toute la logique
+ * SELECT user + extraction role + appel {@code AuthoritiesProvider} — ce qui
+ * forçait à dupliquer le pattern dans tout point d'entrée Spring Security
+ * (form login, basic auth, etc). En passant par {@code UserDetailsService}, on
+ * réutilise l'infrastructure standard.
+ *
+ * <p>Authorities produites (identiques à l'historique, cf {@link OneClickUserDetails}) :
  * <ul>
  *   <li>{@code ROLE_<code>} — backward-compat {@code hasRole(...)}</li>
- *   <li>{@code <code>} — backward-compat {@code hasAuthority(<role>)}</li>
- *   <li>{@code VIEW:RESTAURANTS}, {@code CREATE:RESERVATIONS}, … —
- *       RBAC v2 senior {@code hasAuthority('VERB:RESOURCE')}</li>
+ *   <li>{@code <code>}     — backward-compat {@code hasAuthority(<role>)}</li>
+ *   <li>{@code VERB:RESOURCE} — pattern RBAC v2 senior strict (Bug 32)</li>
  * </ul>
  *
- * <p>Pendant la transition (PR Bug 32 → Bug 32+N), les controllers utilisent
- * le pattern RBAC v2 senior strict {@code hasAuthority('VERB:RESOURCE')} — aucune
- * régression possible si les permissions seedées sont incomplètes.
- *
- * <p>Coût : 2 SELECT par requête authentifiée (user+role, puis permissions).
- * Cache Redis à introduire si besoin perf — voir cacheable annotations sur
- * {@code AuthoritiesProviderImpl}.
+ * <p>Si le {@code sub} du JWT ne correspond à aucun user (token forgé/expiré,
+ * user soft-deleted post-issue), on renvoie un token sans autorités — Spring
+ * Security le traitera comme un 403 sur tout endpoint protégé.
  */
 @Component
 public class UserRoleAuthoritiesConverter
     implements Converter<Jwt, AbstractAuthenticationToken> {
 
-    private final UserRepository userRepository;
-    private final AuthoritiesProvider authoritiesProvider;
+    private final OneClickUserDetailsService userDetailsService;
 
-    public UserRoleAuthoritiesConverter(
-        UserRepository userRepository,
-        AuthoritiesProvider authoritiesProvider
-    ) {
-        this.userRepository = userRepository;
-        this.authoritiesProvider = authoritiesProvider;
+    public UserRoleAuthoritiesConverter(OneClickUserDetailsService userDetailsService) {
+        this.userDetailsService = userDetailsService;
     }
 
     @Override
-    @Transactional(readOnly = true)
     public AbstractAuthenticationToken convert(Jwt jwt) {
-        UUID userId = parseUserId(jwt.getSubject());
-        List<GrantedAuthority> authorities = new ArrayList<>();
-        if (userId != null) {
-            // @Transactional ouvre une session Hibernate qui couvre l'accès lazy à user.role
-            // → évite LazyInitializationException sur Role proxy quand le converter est
-            //   appelé depuis le SecurityFilterChain (hors @Transactional service).
-            Optional<User> user = userRepository.findById(userId);
-            if (user.isPresent() && user.get().getRole() != null) {
-                String code = user.get().getRole().getCode();
-                UUID roleId = user.get().getRole().getId();
-                // Backward-compat : rôle exposé en double pour hasRole + hasAuthority(role)
-                authorities.add(new SimpleGrantedAuthority("ROLE_" + code));
-                authorities.add(new SimpleGrantedAuthority(code));
-                // Bug 32 — RBAC v2 : permissions du rôle au format VERB:RESOURCE
-                for (String perm : authoritiesProvider.findAuthoritiesByRoleId(roleId)) {
-                    authorities.add(new SimpleGrantedAuthority(perm));
-                }
-            }
+        String sub = jwt.getSubject();
+        if (sub == null || sub.isBlank()) {
+            return new JwtAuthenticationToken(jwt, List.of(), sub);
         }
-        return new JwtAuthenticationToken(jwt, authorities, jwt.getSubject());
-    }
-
-    private static UUID parseUserId(String sub) {
-        if (sub == null || sub.isBlank()) return null;
         try {
-            return UUID.fromString(sub);
-        } catch (IllegalArgumentException e) {
-            return null;
+            UserDetails details = userDetailsService.loadUserByUsername(sub);
+            return new JwtAuthenticationToken(jwt, details.getAuthorities(), sub);
+        } catch (UsernameNotFoundException notFound) {
+            // Token techniquement valide (signature OK) mais user inexistant ou
+            // soft-deleted → on retourne un token sans autorités.
+            return new JwtAuthenticationToken(jwt, List.of(), sub);
         }
     }
 }
