@@ -28,17 +28,19 @@ public class PaymentController {
         this.service = service;
     }
 
+    // Bug 32 (Batch C RBAC v2) — double-binding sur tous les endpoints du module payment.
+
     // ─── Payment methods ─────────────────────────────────────────────────────
 
     @GetMapping("/methods/by-user/{userId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:PAYMENTS')")
     public List<PaymentMethodDto> findMethodsByUser(@PathVariable UUID userId) {
         SecurityHelper.requireOwnerOrAdmin(userId);
         return service.findMethodsByUser(userId);
     }
 
     @PostMapping("/methods")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('CREATE:PAYMENTS')")
     public ResponseEntity<PaymentMethodDto> createMethod(@Valid @RequestBody PaymentMethodCreateDto dto) {
         SecurityHelper.requireOwnerOrAdmin(dto.userId());
         PaymentMethodDto m = service.createMethod(dto);
@@ -46,7 +48,7 @@ public class PaymentController {
     }
 
     @DeleteMapping("/methods/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('DELETE:PAYMENTS')")
     public ResponseEntity<Void> deleteMethod(@PathVariable UUID id) {
         service.softDeleteMethod(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
@@ -56,7 +58,7 @@ public class PaymentController {
 
     @GetMapping
     @Operation(summary = "Paiements paginés — filtres userId / status")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'GROUP_ADMIN', 'RESTAURATEUR') or hasAuthority('VIEW:PAYMENTS')")
     public PageResponse<PaymentDto> findAll(
         @RequestParam(required = false) UUID userId,
         @RequestParam(required = false) String status,
@@ -67,11 +69,11 @@ public class PaymentController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:PAYMENTS')")
     public PaymentDto findById(@PathVariable UUID id) { return service.findPaymentById(id); }
 
     @PostMapping
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('CREATE:PAYMENTS')")
     public ResponseEntity<PaymentDto> create(@Valid @RequestBody PaymentCreateDto dto) {
         SecurityHelper.requireOwnerOrAdmin(dto.userId());
         PaymentDto p = service.createPayment(dto);
@@ -80,7 +82,7 @@ public class PaymentController {
 
     @PatchMapping("/{id}")
     @Operation(summary = "Mise à jour status. status=succeeded → completed_at automatique.")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('UPDATE:PAYMENTS')")
     public PaymentDto update(@PathVariable UUID id, @Valid @RequestBody PaymentUpdateDto dto) {
         return service.updatePayment(id, dto);
     }
@@ -88,20 +90,20 @@ public class PaymentController {
     // ─── Refunds ─────────────────────────────────────────────────────────────
 
     @GetMapping("/{paymentId}/refunds")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:PAYMENTS')")
     public List<RefundDto> findRefundsByPayment(@PathVariable UUID paymentId) {
         return service.findRefundsByPayment(paymentId);
     }
 
     @PostMapping("/refunds")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('CREATE:PAYMENTS')")
     public ResponseEntity<RefundDto> createRefund(@Valid @RequestBody RefundCreateDto dto) {
         RefundDto r = service.createRefund(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(r);
     }
 
     @PatchMapping("/refunds/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('UPDATE:PAYMENTS')")
     public RefundDto updateRefund(@PathVariable UUID id, @Valid @RequestBody RefundUpdateDto dto) {
         return service.updateRefund(id, dto);
     }
@@ -110,13 +112,13 @@ public class PaymentController {
 
     @GetMapping("/{paymentId}/transactions")
     @Operation(summary = "Journal des événements provider (Stripe webhook, CMI callback…)")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('VIEW:PAYMENTS')")
     public List<TransactionDto> findTxByPayment(@PathVariable UUID paymentId) {
         return service.findTxByPayment(paymentId);
     }
 
     @PostMapping("/transactions")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() or hasAuthority('CREATE:PAYMENTS')")
     public ResponseEntity<TransactionDto> recordTx(@Valid @RequestBody TransactionCreateDto dto) {
         TransactionDto t = service.recordTx(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(t);
