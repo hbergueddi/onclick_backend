@@ -35,6 +35,7 @@
         <lombok-mapstruct-binding.version>0.2.0</lombok-mapstruct-binding.version>
         <springdoc.version>2.8.6</springdoc.version>
         <spring-modulith.version>2.0.6</spring-modulith.version>
+        <bucket4j.version>8.14.0</bucket4j.version>
     </properties>
 
     <!-- ════════════════════════════════════════════════════════════════════
@@ -161,11 +162,27 @@
             <artifactId>sentry-spring-boot-4-starter</artifactId>
         </dependency>
 
-        <!-- ─── Rate limiting (Sprint G.6) ───────────────────────────────────── -->
-        <!-- Implémentation maison TokenBucket (pas de dépendance externe).
-             Simple ConcurrentHashMap par IP+path, refill periodic.
-             Suffit pour single-instance V1. V2 distribué : passer sur Bucket4j-Redis. -->
-        <!-- (pas de dépendance Bucket4j externe) -->
+        <!-- ─── Rate limiting (Sprint G.6 + Bug 35 Bucket4j V2 distribué) ──── -->
+        <!-- Bucket4j 8.x JDK17 + storage Lettuce-Redis pour multi-pod safety.
+             Le proxy manager partage la même instance Redis que le RedisCacheManager
+             (cf cache/CacheConfig) mais via une connexion dédiée Lettuce native
+             (StatefulRedisConnection<String, byte[]>) pour éviter les conflits de
+             codec avec GenericJackson2JsonRedisSerializer. -->
+        <dependency>
+            <groupId>com.bucket4j</groupId>
+            <artifactId>bucket4j_jdk17-core</artifactId>
+            <version>${bucket4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.bucket4j</groupId>
+            <artifactId>bucket4j_jdk17-redis-common</artifactId>
+            <version>${bucket4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.bucket4j</groupId>
+            <artifactId>bucket4j_jdk17-lettuce</artifactId>
+            <version>${bucket4j.version}</version>
+        </dependency>
 
         <!-- ─── Spring Modulith (IN-PROCESS events, PAS Kafka) ──────────────── -->
         <dependency>

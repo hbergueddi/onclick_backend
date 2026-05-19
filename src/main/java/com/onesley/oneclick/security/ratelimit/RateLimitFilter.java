@@ -1,6 +1,11 @@
 package com.onesley.oneclick.security.ratelimit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.bucket4j.Bandwidth;
+import io.github.bucket4j.Bucket;
+import io.github.bucket4j.BucketConfiguration;
+import io.github.bucket4j.ConsumptionProbe;
+import io.github.bucket4j.distributed.proxy.ProxyManager;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,27 +26,28 @@ import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 /**
- * Rate-limit filter — Sprint G.6.1.
+ * Rate-limit filter — Sprint G.6 + Bug 35 (V2 distribué Bucket4j-Redis).
  *
- * <p>Token bucket algorithm via {@link TokenBucket} (implémentation maison
- * thread-safe). Stocke les buckets en {@link ConcurrentHashMap} key = {@code
- * "<clientId>|<pathPattern>"} pour avoir un bucket par couple (client, endpoint).
+ * <p>Token bucket algorithm via Bucket4j 8.x avec storage Redis Lettuce CAS
+ * (cf {@link RateLimitConfig#rateLimitProxyManager}). Le {@link ProxyManager}
+ * gère lui-même la concurrence (compare-and-swap atomique côté Redis) et
+ * l'expiration TTL — pas de map mémoire applicative.
  *
- * <p>Mémoire bornée : ~150 octets par bucket. Pour 100k IPs × 7 patterns =
- * ~100 MB, suffisant pour un single instance.
+ * <p>Clé Redis : {@code "rate-limit:<clientId>:<pathPattern>"} (lisible dans
+ * {@code redis-cli KEYS 'rate-limit:*'}).
+ *
+ * <p>Multi-pod safe : 2 instances backend voient le même état bucket via Redis,
+ * la limite est donc respectée globalement (vs. l'implémentation V1
+ * {@code ConcurrentHashMap} où chaque pod avait son propre compteur → 2× la
+ * limite avec 2 pods).
  *
  * <p>Active uniquement quand {@code app.rate-limit.enabled=true} (production).
  * En dev par défaut désactivé pour faciliter Swagger UI + curl manuel.
  *
  * <p>Réponse 429 : ProblemDetails RFC 7807 + headers {@code Retry-After}
  * et {@code X-RateLimit-*}, comme le standard de facto (GitHub, Stripe).
- *
- * <p>V2 distribué : remplacer {@link TokenBucket} par un backend Redis
- * (Bucket4j-Redis ou implémentation custom via Lua script atomique).
  */
 @Component
 @ConditionalOnProperty(prefix = "app.rate-limit", name = "enabled", havingValue = "true")
@@ -49,18 +55,22 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(RateLimitFilter.class);
     private static final String ERROR_TYPE = "https://api.oneclick.ma/errors/rate-limit-exceeded";
+    private static final String REDIS_KEY_PREFIX = "rate-limit:";
 
     private final RateLimitProperties props;
+    private final ProxyManager<String> proxyManager;
     private final ObjectMapper objectMapper;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
-    /** Cache des buckets : key = "<clientId>|<pathPattern>". */
-    private final ConcurrentMap<String, TokenBucket> buckets = new ConcurrentHashMap<>();
-
-    public RateLimitFilter(RateLimitProperties props, ObjectMapper objectMapper) {
+    public RateLimitFilter(
+        RateLimitProperties props,
+        ProxyManager<String> proxyManager,
+        ObjectMapper objectMapper
+    ) {
         this.props = props;
+        this.proxyManager = proxyManager;
         this.objectMapper = objectMapper;
-        log.info("[rate-limit] enabled — default {} req / {}",
+        log.info("[rate-limit] Bucket4j-Redis enabled — default {} req / {}",
             props.getDefaults().getCapacity(), props.getDefaults().getRefillPeriod());
         for (var e : props.getEndpoints()) {
             log.info("[rate-limit]   override {} → {} req / {}",
@@ -91,26 +101,25 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
         // 2. Identifier le client (IP-based, X-Forwarded-For aware)
         String clientId = resolveClientId(request);
-        String bucketKey = clientId + "|" + pathPattern;
+        String bucketKey = REDIS_KEY_PREFIX + clientId + ":" + pathPattern;
 
-        // 3. Récupérer/créer le bucket pour ce couple
-        final int finalCapacity = capacity;
-        final Duration finalRefill = refillPeriod;
-        TokenBucket bucket = buckets.computeIfAbsent(
-            bucketKey, k -> new TokenBucket(finalCapacity, finalRefill)
-        );
+        // 3. Récupérer/créer le bucket distant (CAS atomique côté Redis)
+        BucketConfiguration config = BucketConfiguration.builder()
+            .addLimit(Bandwidth.simple(capacity, refillPeriod))
+            .build();
+        Bucket bucket = proxyManager.builder().build(bucketKey, () -> config);
 
-        // 4. Tenter de consumer 1 token
-        TokenBucket.Probe probe = bucket.tryConsume(1);
-        if (probe.consumed()) {
+        // 4. Tenter de consumer 1 token + récupérer le remaining
+        ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
+        if (probe.isConsumed()) {
             response.setHeader("X-RateLimit-Limit", String.valueOf(capacity));
-            response.setHeader("X-RateLimit-Remaining", String.valueOf(probe.remainingTokens()));
+            response.setHeader("X-RateLimit-Remaining", String.valueOf(probe.getRemainingTokens()));
             chain.doFilter(request, response);
             return;
         }
 
         // 5. Bucket vide → 429
-        long secondsToWait = Math.max(1, probe.waitUntilRefill().toSeconds());
+        long secondsToWait = Math.max(1, Duration.ofNanos(probe.getNanosToWaitForRefill()).toSeconds());
 
         log.warn("[rate-limit] 429 for {} on {} (retry after {}s)", clientId, uri, secondsToWait);
 
@@ -164,15 +173,5 @@ public class RateLimitFilter extends OncePerRequestFilter {
             return xff.split(",")[0].trim();
         }
         return request.getRemoteAddr();
-    }
-
-    /** Pour les tests : exposer la taille du cache de buckets. */
-    public int getCachedBucketsSize() {
-        return buckets.size();
-    }
-
-    /** Pour les tests : vider le cache (reset between tests). */
-    public void clearBuckets() {
-        buckets.clear();
     }
 }
