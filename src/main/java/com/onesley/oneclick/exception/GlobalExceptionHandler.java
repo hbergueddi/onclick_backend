@@ -3,8 +3,6 @@ package com.onesley.oneclick.exception;
 import io.sentry.Sentry;
 import io.sentry.SentryLevel;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.ConstraintViolation;
-import jakarta.validation.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -13,7 +11,6 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.transaction.TransactionSystemException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -24,7 +21,6 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 import java.net.URI;
 import java.time.Instant;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -55,7 +51,6 @@ import lombok.extern.slf4j.Slf4j;
  * <ul>
  *   <li>{@link ApiException} et sous-classes → status défini par l'exception</li>
  *   <li>{@link MethodArgumentNotValidException} → 400 + liste des champs en erreur</li>
- *   <li>{@link ConstraintViolationException} → 400</li>
  *   <li>{@link MissingServletRequestParameterException} → 400</li>
  *   <li>{@link MethodArgumentTypeMismatchException} → 400 (UUID/enum mal formé)</li>
  *   <li>{@link HttpMessageNotReadableException} → 400 (JSON malformé)</li>
@@ -103,44 +98,6 @@ public class GlobalExceptionHandler {
         ProblemDetail body = problem(HttpStatus.BAD_REQUEST, "Validation failed", req, "validation-failed");
         body.setProperty("fieldErrors", fieldErrors);
         return ResponseEntity.badRequest().body(body);
-    }
-
-    @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<ProblemDetail> handleConstraintViolation(
-        ConstraintViolationException ex, HttpServletRequest req
-    ) {
-        List<String> violations = ex.getConstraintViolations().stream()
-            .map(ConstraintViolation::getMessage)
-            .toList();
-        ProblemDetail body = problem(HttpStatus.BAD_REQUEST, String.join("; ", violations), req, "constraint-violation");
-        body.setProperty("violations", violations);
-        return ResponseEntity.badRequest().body(body);
-    }
-
-    /**
-     * Bug 36 — La Bean Validation au niveau ENTITÉ ({@code @Size}/{@code @Pattern}/…)
-     * échoue au flush/commit Hibernate : la {@link ConstraintViolationException} est
-     * alors emballée dans une {@code RollbackException} (JPA) elle-même emballée dans
-     * une {@link TransactionSystemException} (Spring). Sans ce handler, on renverrait
-     * un 500 alors que c'est une erreur d'input → on déballe pour rendre un 400 propre
-     * (la donnée invalide est de toute façon rollback, jamais persistée).
-     *
-     * <p>Si la cause racine n'est PAS une violation de validation (vraie erreur
-     * transactionnelle : deadlock, connexion perdue…) → on retombe sur le 500.
-     */
-    @ExceptionHandler(TransactionSystemException.class)
-    public ResponseEntity<ProblemDetail> handleTransactionSystem(
-        TransactionSystemException ex, HttpServletRequest req
-    ) {
-        Throwable cause = ex.getCause();
-        while (cause != null) {
-            if (cause instanceof ConstraintViolationException cve) {
-                return handleConstraintViolation(cve, req);
-            }
-            if (cause == cause.getCause()) break;
-            cause = cause.getCause();
-        }
-        return handleAny(ex, req);
     }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
