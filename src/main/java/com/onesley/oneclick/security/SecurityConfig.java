@@ -95,6 +95,9 @@ public class SecurityConfig {
                 // Documentation API toujours publique
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 .requestMatchers("/api/auth/**").permitAll()  // Phase 4 §2 — login/refresh/otp publics
+                // Bug 37 — handshake WebSocket public ; l'auth JWT se fait au frame
+                // STOMP CONNECT (StompAuthChannelInterceptor), pas au handshake HTTP.
+                .requestMatchers("/ws/**").permitAll()
                 // Health/info publics, le reste de l'actuator authentifié
                 .requestMatchers("/actuator/health/**", "/actuator/info").permitAll()
                 // Catalogue public — Login.tsx picker resto avant authent (GET only)

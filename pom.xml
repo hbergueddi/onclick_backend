@@ -90,6 +90,17 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
+        <!-- ─── WebSocket / STOMP (Bug 37 — dashboards temps réel) ──────────── -->
+        <!-- Remplace le Realtime Supabase (postgres_changes) par un push natif
+             depuis notre Postgres : le backend pousse les KPI sur des topics STOMP
+             (/topic/admin/exec, /topic/restaurant/{id}/cockpit, /user/queue/...).
+             Live opérationnel → push sur événement domaine ; agrégats → @Scheduled
+             recompute + push-si-changé (charge DB bornée). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
+        </dependency>
+
         <!-- ─── Persistence ─────────────────────────────────────────────────── -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
