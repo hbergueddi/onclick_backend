@@ -5,7 +5,7 @@
     type = org.springframework.modulith.ApplicationModule.Type.CLOSED,
     id = "modules.analytics",
     displayName = "modules/analytics",
-    allowedDependencies = {"core.tenant", "audit", "exception", "security", "shared"}
+    allowedDependencies = {"core.tenant", "audit", "exception", "security", "shared", "realtime"}
 )
 package com.onesley.oneclick.modules.analytics;
 

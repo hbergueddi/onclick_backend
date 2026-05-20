@@ -11,7 +11,7 @@
     type = org.springframework.modulith.ApplicationModule.Type.CLOSED,
     id = "modules.oneclickhi",
     displayName = "modules/oneclickhi",
-    allowedDependencies = {"core.tenant", "audit", "exception", "security", "shared"}
+    allowedDependencies = {"core.tenant", "audit", "exception", "security", "shared", "realtime"}
 )
 package com.onesley.oneclick.modules.oneclickhi;
 

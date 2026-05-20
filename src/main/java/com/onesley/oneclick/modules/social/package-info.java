@@ -5,7 +5,7 @@
     type = org.springframework.modulith.ApplicationModule.Type.CLOSED,
     id = "modules.social",
     displayName = "modules/social",
-    allowedDependencies = {"core.identity", "audit", "exception", "security"}
+    allowedDependencies = {"core.identity", "audit", "exception", "security", "realtime"}
 )
 package com.onesley.oneclick.modules.social;
 

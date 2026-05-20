@@ -4,6 +4,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.socket.messaging.SessionConnectedEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 import org.springframework.web.socket.messaging.SessionSubscribeEvent;
@@ -58,8 +59,15 @@ public abstract class AbstractDashboardPublisher<T> {
         activeSessions.updateAndGet(n -> Math.max(0, n - 1));
     }
 
-    /** Push immédiat dès qu'un client s'abonne à CE topic (UX snappy). */
+    /**
+     * Push immédiat dès qu'un client s'abonne à CE topic (UX snappy).
+     *
+     * <p>{@code @Transactional(readOnly=true)} : appelé par le multicaster d'events
+     * (donc via le proxy) → ouvre une session pour les requêtes natives de
+     * {@link #computeSnapshot()} (fingerprints).
+     */
     @EventListener
+    @Transactional(readOnly = true)
     public void onSubscribe(SessionSubscribeEvent event) {
         String dest = StompHeaderAccessor.wrap(event.getMessage()).getDestination();
         if (topic().equals(dest)) {
@@ -69,6 +77,7 @@ public abstract class AbstractDashboardPublisher<T> {
     }
 
     @Scheduled(fixedDelayString = "${app.realtime.dashboard.interval-ms:30000}")
+    @Transactional(readOnly = true)
     public void scheduledPublish() {
         if (activeSessions.get() == 0) {
             return; // personne connecté → 0 requête DB
