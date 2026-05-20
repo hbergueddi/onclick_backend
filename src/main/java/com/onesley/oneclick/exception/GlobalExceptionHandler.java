@@ -13,6 +13,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.transaction.TransactionSystemException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -114,6 +115,32 @@ public class GlobalExceptionHandler {
         ProblemDetail body = problem(HttpStatus.BAD_REQUEST, String.join("; ", violations), req, "constraint-violation");
         body.setProperty("violations", violations);
         return ResponseEntity.badRequest().body(body);
+    }
+
+    /**
+     * Bug 36 — La Bean Validation au niveau ENTITÉ ({@code @Size}/{@code @Pattern}/…)
+     * échoue au flush/commit Hibernate : la {@link ConstraintViolationException} est
+     * alors emballée dans une {@code RollbackException} (JPA) elle-même emballée dans
+     * une {@link TransactionSystemException} (Spring). Sans ce handler, on renverrait
+     * un 500 alors que c'est une erreur d'input → on déballe pour rendre un 400 propre
+     * (la donnée invalide est de toute façon rollback, jamais persistée).
+     *
+     * <p>Si la cause racine n'est PAS une violation de validation (vraie erreur
+     * transactionnelle : deadlock, connexion perdue…) → on retombe sur le 500.
+     */
+    @ExceptionHandler(TransactionSystemException.class)
+    public ResponseEntity<ProblemDetail> handleTransactionSystem(
+        TransactionSystemException ex, HttpServletRequest req
+    ) {
+        Throwable cause = ex.getCause();
+        while (cause != null) {
+            if (cause instanceof ConstraintViolationException cve) {
+                return handleConstraintViolation(cve, req);
+            }
+            if (cause == cause.getCause()) break;
+            cause = cause.getCause();
+        }
+        return handleAny(ex, req);
     }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
