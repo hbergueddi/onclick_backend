@@ -78,19 +78,10 @@ public class RestaurantController {
     //  Bug 32 (RBAC v2 — Pilote) — Pattern senior VERB:RESOURCE
     // ═══════════════════════════════════════════════════════════════════════
     //
-    // Les 4 endpoints CRUD ci-dessous sont migrés vers le pattern senior :
-    //   @PreAuthorize("hasAuthority('VERB:RESTAURANTS')")
-    //
-    // Double-binding pendant la transition : aucune régression possible si le
-    // seed permissions est incomplet — la branche hasAnyRole reste active. La
-    // nouvelle branche hasAuthority lit la table `permissions` via le converter
-    // UserRoleAuthoritiesConverter (cf. Bug 32).
-    //
-    // GET / et GET /{id} restent PUBLICS (catalogue, cf. commentaire ligne 69)
-    // — pas de @PreAuthorize, géré par SecurityConfig whitelist.
-    //
-    // Sub-resources (staff, services, zones, tables) hors scope du pilote —
-    // gardent leur hasAnyRole(...) tant qu'on ne crée pas les RESOURCES dédiées.
+    // RBAC v2 : TOUS les endpoints en hasAuthority('VERB:RESOURCE'). Les
+    // sous-ressources STAFF/SERVICES/ZONES/TABLES ont leur menu dédié depuis le
+    // catalogue V32 (plus de hasAnyRole). GET / et GET /{id} restent PUBLICS
+    // (catalogue). GET /staff/by-user/{id} reste isAuthenticated (self/owner).
 
     @PostMapping
     @Operation(summary = "Crée un restaurant")
@@ -134,14 +125,14 @@ public class RestaurantController {
 
     @GetMapping("/{restaurantId}/staff")
     @Operation(summary = "Liste du staff d'un restaurant")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('VIEW:STAFF')")
     public List<RestaurantStaffDto> listStaff(@PathVariable UUID restaurantId) {
         return subResourceService.listStaff(restaurantId);
     }
 
     @PostMapping("/{restaurantId}/staff")
     @Operation(summary = "Ajoute un staff au restaurant (owner/manager/server…)")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR')")
+    @PreAuthorize("hasAuthority('CREATE:STAFF')")
     public ResponseEntity<RestaurantStaffDto> addStaff(
         @PathVariable UUID restaurantId,
         @Valid @RequestBody RestaurantStaffCreateDto dto
@@ -152,7 +143,7 @@ public class RestaurantController {
 
     @PatchMapping("/staff/{id}")
     @Operation(summary = "Modifie le rôle/statut d'un staff")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR')")
+    @PreAuthorize("hasAuthority('UPDATE:STAFF')")
     public RestaurantStaffDto patchStaff(
         @PathVariable UUID id,
         @Valid @RequestBody RestaurantStaffPatchDto dto
@@ -162,7 +153,7 @@ public class RestaurantController {
 
     @DeleteMapping("/staff/{id}")
     @Operation(summary = "Retire un staff (soft delete)")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR')")
+    @PreAuthorize("hasAuthority('DELETE:STAFF')")
     public ResponseEntity<Void> deleteStaff(@PathVariable UUID id) {
         subResourceService.deleteStaff(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
@@ -181,7 +172,7 @@ public class RestaurantController {
         summary = "Sprint G.5 — Transfert staff entre restos (port EF transfer-staff)",
         description = "Soft delete source + INSERT target atomique. RBAC : SUPERADMIN/GROUP_ADMIN."
     )
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR')")
+    @PreAuthorize("hasAuthority('UPDATE:STAFF')")
     public RestaurantStaffDto transferStaff(@Valid @RequestBody StaffTransferDto.TransferDto dto) {
         return subResourceService.transferStaff(
             dto.staffId(), dto.sourceRestaurantId(), dto.targetRestaurantId()
@@ -194,7 +185,7 @@ public class RestaurantController {
         description = "Si user existe → ajout staff direct. Sinon V1 retourne userExists=false " +
                       "(V2 backend : envoyer email Resend + placeholder)."
     )
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR')")
+    @PreAuthorize("hasAuthority('CREATE:STAFF')")
     public StaffTransferDto.InviteResultDto inviteStaff(@Valid @RequestBody StaffTransferDto.InviteDto dto) {
         return subResourceService.inviteStaff(dto, userRepository);
     }
@@ -205,14 +196,14 @@ public class RestaurantController {
 
     @GetMapping("/{restaurantId}/services")
     @Operation(summary = "Liste des créneaux service d'un restaurant")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('VIEW:SERVICES')")
     public List<MealServiceDto> listServices(@PathVariable UUID restaurantId) {
         return subResourceService.listServices(restaurantId);
     }
 
     @PostMapping("/{restaurantId}/services")
     @Operation(summary = "Crée un créneau service (brunch, déjeuner, dîner)")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR')")
+    @PreAuthorize("hasAuthority('CREATE:SERVICES')")
     public ResponseEntity<MealServiceDto> addService(
         @PathVariable UUID restaurantId,
         @Valid @RequestBody MealServiceCreateDto dto
@@ -223,7 +214,7 @@ public class RestaurantController {
 
     @PatchMapping("/services/{id}")
     @Operation(summary = "Modifie un créneau service")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR')")
+    @PreAuthorize("hasAuthority('UPDATE:SERVICES')")
     public MealServiceDto patchService(
         @PathVariable UUID id,
         @Valid @RequestBody MealServicePatchDto dto
@@ -233,7 +224,7 @@ public class RestaurantController {
 
     @DeleteMapping("/services/{id}")
     @Operation(summary = "Supprime un créneau service")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR')")
+    @PreAuthorize("hasAuthority('DELETE:SERVICES')")
     public ResponseEntity<Void> deleteService(@PathVariable UUID id) {
         subResourceService.deleteService(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
@@ -245,14 +236,14 @@ public class RestaurantController {
 
     @GetMapping("/{restaurantId}/zones")
     @Operation(summary = "Liste des zones d'un restaurant")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('VIEW:ZONES')")
     public List<RestaurantZoneDto> listZones(@PathVariable UUID restaurantId) {
         return subResourceService.listZones(restaurantId);
     }
 
     @PostMapping("/{restaurantId}/zones")
     @Operation(summary = "Crée une zone (Terrasse, Salle, Bar…)")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR')")
+    @PreAuthorize("hasAuthority('CREATE:ZONES')")
     public ResponseEntity<RestaurantZoneDto> addZone(
         @PathVariable UUID restaurantId,
         @Valid @RequestBody RestaurantZoneCreateDto dto
@@ -263,7 +254,7 @@ public class RestaurantController {
 
     @DeleteMapping("/zones/{id}")
     @Operation(summary = "Supprime une zone (les tables liées sont supprimées en cascade DB)")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR')")
+    @PreAuthorize("hasAuthority('DELETE:ZONES')")
     public ResponseEntity<Void> deleteZone(@PathVariable UUID id) {
         subResourceService.deleteZone(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
@@ -275,14 +266,14 @@ public class RestaurantController {
 
     @GetMapping("/{restaurantId}/tables")
     @Operation(summary = "Liste des tables d'un restaurant (toutes zones confondues)")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('VIEW:TABLES')")
     public List<RestaurantTableDto> listTables(@PathVariable UUID restaurantId) {
         return subResourceService.listTables(restaurantId);
     }
 
     @PostMapping("/{restaurantId}/tables")
     @Operation(summary = "Crée une table (rattachée à une zone du restaurant)")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR')")
+    @PreAuthorize("hasAuthority('CREATE:TABLES')")
     public ResponseEntity<RestaurantTableDto> addTable(
         @PathVariable UUID restaurantId,
         @Valid @RequestBody RestaurantTableCreateDto dto
@@ -293,7 +284,7 @@ public class RestaurantController {
 
     @DeleteMapping("/tables/{id}")
     @Operation(summary = "Supprime une table")
-    @PreAuthorize("hasAnyRole('SUPERADMIN','GROUP_ADMIN','RESTAURATEUR')")
+    @PreAuthorize("hasAuthority('DELETE:TABLES')")
     public ResponseEntity<Void> deleteTable(@PathVariable UUID id) {
         subResourceService.deleteTable(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
