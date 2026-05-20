@@ -3,6 +3,7 @@ import com.onesley.oneclick.core.identity.api.Permission;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.stereotype.Repository;
 
 import java.util.UUID;
@@ -25,4 +26,8 @@ public interface PermissionRepository extends JpaRepository<Permission, UUID>, J
     java.util.List<Permission> findAllByRoleId(java.util.UUID roleId);
     java.util.List<Permission> findAllByMenuId(java.util.UUID menuId);
     java.util.List<Permission> findAllByActionId(java.util.UUID actionId);
+
+    /** Remplace-la-grille : on supprime toutes les permissions d'un rôle avant ré-insertion. */
+    @Modifying
+    void deleteByRoleId(java.util.UUID roleId);
 }
