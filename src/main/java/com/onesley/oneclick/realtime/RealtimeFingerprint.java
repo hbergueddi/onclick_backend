@@ -26,8 +26,23 @@ public record RealtimeFingerprint(long rowCount, Instant lastChange) {
      *              utilisateur → pas d'injection SQL).
      */
     public static RealtimeFingerprint of(EntityManager em, String table) {
+        return of(em, table, "updated_at");
+    }
+
+    /**
+     * Variante avec colonne (ou expression) de changement explicite, pour les tables
+     * <strong>sans {@code updated_at}</strong> : append-only ({@code created_at}) ou
+     * avec horodatage d'action ({@code greatest(created_at, acknowledged_at)} pour
+     * capter à la fois l'insertion et l'acquittement).
+     *
+     * @param table        nom de table — CONSTANTE en dur côté publisher.
+     * @param changeColumn colonne/expression SQL de détection de changement —
+     *                     CONSTANTE en dur côté publisher (jamais d'input utilisateur
+     *                     → pas d'injection SQL).
+     */
+    public static RealtimeFingerprint of(EntityManager em, String table, String changeColumn) {
         Object[] row = (Object[]) em.createNativeQuery(
-            "SELECT count(*), max(updated_at) FROM " + table).getSingleResult();
+            "SELECT count(*), max(" + changeColumn + ") FROM " + table).getSingleResult();
         long count = ((Number) row[0]).longValue();
         return new RealtimeFingerprint(count, toInstant(row[1]));
     }

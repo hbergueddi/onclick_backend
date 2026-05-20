@@ -11,7 +11,7 @@
     type = org.springframework.modulith.ApplicationModule.Type.CLOSED,
     id = "modules.system",
     displayName = "modules/system",
-    allowedDependencies = {"audit", "exception", "security", "shared"}
+    allowedDependencies = {"audit", "exception", "security", "shared", "realtime"}
 )
 package com.onesley.oneclick.modules.system;
 
