@@ -2,6 +2,8 @@ package com.onesley.oneclick.cache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -13,6 +15,7 @@ import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -56,7 +59,9 @@ public class CacheConfig {
     public static final String CACHE_USER_DETAILS    = "userDetails";
 
     @Bean
-    public RedisCacheManager cacheManager(RedisConnectionFactory cf) {
+    public RedisCacheManager cacheManager(
+            RedisConnectionFactory cf,
+            @Qualifier("userDetailsCacheConfiguration") ObjectProvider<RedisCacheConfiguration> userDetailsCfg) {
         // Pattern Spring Data Redis 4+ :
         //  1. on instancie le serializer (ObjectMapper interne avec default typing OK)
         //  2. on enrichit via configure() pour ajouter JavaTimeModule
@@ -69,14 +74,19 @@ public class CacheConfig {
             .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
             .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(jsonSerializer));
 
-        Map<String, RedisCacheConfiguration> perCache = Map.of(
-            CACHE_USERS_BY_EMAIL,  base.entryTtl(Duration.ofMinutes(5)),
-            CACHE_TENANTS_BY_SLUG, base.entryTtl(Duration.ofMinutes(30)),
-            CACHE_RESTAURANTS,     base.entryTtl(Duration.ofMinutes(10)),
-            CACHE_LOYALTY_TIERS,   base.entryTtl(Duration.ofHours(1)),
-            CACHE_FEATURE_FLAGS,   base.entryTtl(Duration.ofMinutes(5)),
-            CACHE_USER_DETAILS,    base.entryTtl(Duration.ofHours(1))
-        );
+        // Le cache userDetails tient l'entité User → serializer DÉDIÉ (mixins :
+        // mdp/tenant/back-refs ignorés), fourni par le module security. Qualifier
+        // en littéral pour ne pas coupler le module cache au module security.
+        RedisCacheConfiguration userDetails = userDetailsCfg.getIfAvailable(
+            () -> base.entryTtl(Duration.ofHours(1)));
+
+        Map<String, RedisCacheConfiguration> perCache = new HashMap<>();
+        perCache.put(CACHE_USERS_BY_EMAIL,  base.entryTtl(Duration.ofMinutes(5)));
+        perCache.put(CACHE_TENANTS_BY_SLUG, base.entryTtl(Duration.ofMinutes(30)));
+        perCache.put(CACHE_RESTAURANTS,     base.entryTtl(Duration.ofMinutes(10)));
+        perCache.put(CACHE_LOYALTY_TIERS,   base.entryTtl(Duration.ofHours(1)));
+        perCache.put(CACHE_FEATURE_FLAGS,   base.entryTtl(Duration.ofMinutes(5)));
+        perCache.put(CACHE_USER_DETAILS,    userDetails);
 
         return RedisCacheManager.builder(cf)
             .cacheDefaults(base.entryTtl(Duration.ofMinutes(5)))

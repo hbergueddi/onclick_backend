@@ -65,7 +65,17 @@ public class OneClickUserDetailsService implements UserDetailsService {
             throw new UsernameNotFoundException("username must be a UUID: " + username, e);
         }
         return userRepository.findByIdWithRoleAndPermissions(userId)
-            .map(OneClickUserDetails::from)
+            .map(u -> {
+                // Force l'initialisation du graphe role -> permissions -> menu/action
+                // DANS la session : la sérialisation du cache (transactionAware) a
+                // lieu APRÈS le commit, session fermée. Sans ce touch, Jackson lève
+                // une LazyInitializationException en lisant role.permissions.
+                var role = u.getRole();
+                if (role != null) {
+                    role.getPermissions().forEach(p -> { p.getMenu(); p.getAction(); });
+                }
+                return OneClickUserDetails.from(u);
+            })
             .orElseThrow(() -> new UsernameNotFoundException("User not found: " + userId));
     }
 
