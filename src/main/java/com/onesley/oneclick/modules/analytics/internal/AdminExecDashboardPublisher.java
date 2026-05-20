@@ -1,6 +1,6 @@
 package com.onesley.oneclick.modules.analytics.internal;
 
-import com.onesley.oneclick.modules.analytics.api.AdminStatsDto;
+import com.onesley.oneclick.modules.analytics.api.AdminStatsFullDto;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -38,14 +38,14 @@ public class AdminExecDashboardPublisher {
     public static final String TOPIC = "/topic/admin/exec";
 
     private final SimpMessagingTemplate messagingTemplate;
-    private final AdminStatsService statsService;
+    private final AdminStatsFullService statsService;
 
     /** Nombre de sessions WS actives — gate pour ne pas charger la DB à vide. */
     private final AtomicInteger activeSessions = new AtomicInteger(0);
     /** Dernier snapshot poussé — pour ne push que sur changement. */
-    private volatile AdminStatsDto lastPushed;
+    private volatile AdminStatsFullDto lastPushed;
 
-    public AdminExecDashboardPublisher(SimpMessagingTemplate messagingTemplate, AdminStatsService statsService) {
+    public AdminExecDashboardPublisher(SimpMessagingTemplate messagingTemplate, AdminStatsFullService statsService) {
         this.messagingTemplate = messagingTemplate;
         this.statsService = statsService;
     }
@@ -81,7 +81,9 @@ public class AdminExecDashboardPublisher {
     }
 
     private void publishIfChanged() {
-        AdminStatsDto snapshot = statsService.computeStats(null);
+        // null period → snapshot plateforme par défaut (le frontend gère le
+        // sélecteur de période en fallback REST tant que le WS pousse 1 période).
+        AdminStatsFullDto snapshot = statsService.compute(null);
         if (snapshot.equals(lastPushed)) {
             return; // aucun changement → pas de trafic inutile
         }
