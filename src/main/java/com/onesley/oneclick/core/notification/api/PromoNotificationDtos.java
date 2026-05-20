@@ -1,5 +1,7 @@
 package com.onesley.oneclick.core.notification.api;
 
+import jakarta.validation.constraints.Size;
+
 import com.onesley.oneclick.core.notification.internal.PromoNotificationRequest;
 
 import java.time.Instant;
@@ -42,16 +44,16 @@ public final class PromoNotificationDtos {
         UUID tenantId,
         UUID restaurantId,
         UUID offerId,
-        String title,
-        String body,
-        String segment,
+        @Size(min = 1, max = 128) String title,
+        @Size(min = 1, max = 1024) String body,
+        @Size(min = 1, max = 64) String segment,
         UUID requestedBy
     ) {}
 
     public record PromoRequestReviewDto(
-        String status,
+        @Size(min = 1, max = 64) String status,
         UUID reviewedBy,
-        String rejectionReason
+        @Size(min = 1, max = 1024) String rejectionReason
     ) {}
 
     public record PromoStatsDto(

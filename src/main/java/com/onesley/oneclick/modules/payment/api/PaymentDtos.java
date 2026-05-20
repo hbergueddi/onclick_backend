@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.payment.api;
 
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -29,10 +30,10 @@ public final class PaymentDtos {
 
     public record PaymentMethodCreateDto(
         @NotNull UUID userId,
-        @NotNull @Pattern(regexp = "^(card|bank_account|wallet|cash_on_site)$") String type,
-        String last4,
-        String provider,
-        String providerToken,
+        @NotNull @Pattern(regexp = "^(card|bank_account|wallet|cash_on_site)$") @Size(min = 1, max = 64) String type,
+        @Size(min = 1, max = 64) String last4,
+        @Size(min = 1, max = 64) String provider,
+        @Size(min = 1, max = 512) String providerToken,
         LocalDate expiresAt,
         Boolean isDefault
     ) {}
@@ -47,16 +48,16 @@ public final class PaymentDtos {
         @NotNull UUID userId,
         UUID paymentMethodId,
         @NotNull @DecimalMin("0.01") BigDecimal amount,
-        String currency,
-        String provider,
-        String transactionRef,
-        String referenceType,
+        @Size(min = 1, max = 64) String currency,
+        @Size(min = 1, max = 64) String provider,
+        @Size(min = 1, max = 64) String transactionRef,
+        @Size(min = 1, max = 64) String referenceType,
         UUID referenceId
     ) {}
 
     public record PaymentUpdateDto(
-        @Pattern(regexp = "^(pending|processing|succeeded|failed|cancelled|refunded)$") String status,
-        String transactionRef
+        @Pattern(regexp = "^(pending|processing|succeeded|failed|cancelled|refunded)$") @Size(min = 1, max = 64) String status,
+        @Size(min = 1, max = 64) String transactionRef
     ) {}
 
     // ─── Refund ──────────────────────────────────────────────────────────────
@@ -67,11 +68,11 @@ public final class PaymentDtos {
     public record RefundCreateDto(
         @NotNull UUID paymentId,
         @NotNull @DecimalMin("0.01") BigDecimal amount,
-        String reason
+        @Size(min = 1, max = 1024) String reason
     ) {}
 
     public record RefundUpdateDto(
-        @Pattern(regexp = "^(pending|succeeded|failed)$") String status
+        @Pattern(regexp = "^(pending|succeeded|failed)$") @Size(min = 1, max = 64) String status
     ) {}
 
     // ─── PaymentTransaction (provider events log) ────────────────────────────
@@ -81,7 +82,7 @@ public final class PaymentDtos {
 
     public record TransactionCreateDto(
         @NotNull UUID paymentId,
-        @NotBlank String eventType,
+        @NotBlank @Size(min = 1, max = 64) String eventType,
         Map<String, Object> providerResponse
     ) {}
 }

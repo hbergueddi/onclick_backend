@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.loyalty.api;
 
 import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -37,9 +38,9 @@ public record GainRuleRequestDto(
     /** Création d'une demande (restaurateur). */
     public record CreateDto(
         @NotNull UUID restaurantId,
-        @NotBlank String name,
-        String description,
-        @Pattern(regexp = "^(standard|premium|event|loyalty)$") String type,
+        @NotBlank @Size(min = 1, max = 128) String name,
+        @Size(min = 1, max = 1024) String description,
+        @Pattern(regexp = "^(standard|premium|event|loyalty)$") @Size(min = 1, max = 64) String type,
         @NotNull @DecimalMin("0.0000") @DecimalMax("1.0000") BigDecimal conversionRate,
         Integer capPerVisit,
         Integer capPerMonth,
@@ -48,6 +49,6 @@ public record GainRuleRequestDto(
 
     /** Refus d'une demande (admin) — motif requis. */
     public record RejectDto(
-        @NotBlank String rejectionReason
+        @NotBlank @Size(min = 1, max = 1024) String rejectionReason
     ) {}
 }

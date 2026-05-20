@@ -27,7 +27,7 @@ public final class AiDtos {
     // ─── Care chat (support) ─────────────────────────────────────────────
 
     public record CareChatRequestDto(
-        @NotBlank @Size(max = 4000) String message,
+        @NotBlank @Size(max = 4000) @Size(min = 1, max = 1024) String message,
         // Contexte client minimal (prénom + nb tickets ouverts) — pas de PII
         Map<String, Object> context,
         // Historique conversation (last N messages)
@@ -37,7 +37,7 @@ public final class AiDtos {
     // ─── AI Assistant (Pocket — 5/jour) ──────────────────────────────────
 
     public record AssistantRequestDto(
-        @NotBlank @Size(max = 2000) String prompt,
+        @NotBlank @Size(max = 2000) @Size(min = 1, max = 64) String prompt,
         // Contexte personnalisation (préférences, tier, last reservations)
         Map<String, Object> context
     ) {}
@@ -45,7 +45,7 @@ public final class AiDtos {
     // ─── Elite review summarizer ─────────────────────────────────────────
 
     public record EliteReviewRequestDto(
-        @NotBlank String restaurantId,
+        @NotBlank @Size(min = 1, max = 64) String restaurantId,
         // Liste de reviews à résumer (text + rating)
         @Size(min = 1, max = 50) List<ReviewInput> reviews
     ) {
@@ -55,9 +55,9 @@ public final class AiDtos {
     // ─── Generate plan (hebdomadaire) ────────────────────────────────────
 
     public record PlanRequestDto(
-        @NotBlank String restaurantId,
+        @NotBlank @Size(min = 1, max = 64) String restaurantId,
         // Format : "YYYY-MM-DD" début de semaine
-        @NotBlank String weekStart,
+        @NotBlank @Size(min = 1, max = 64) String weekStart,
         // Préférences planning : avec ou sans dimanche, brunch, etc.
         Map<String, Object> preferences
     ) {}

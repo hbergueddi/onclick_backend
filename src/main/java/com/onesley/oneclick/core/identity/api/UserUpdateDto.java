@@ -8,10 +8,10 @@ import jakarta.validation.constraints.Size;
  * Champs sensibles (email, password, role) gérés par endpoints dédiés.
  */
 public record UserUpdateDto(
-    @Size(max = 100) String firstName,
-    @Size(max = 100) String lastName,
-    @Pattern(regexp = "^\\+?[0-9 ]{6,20}$") String phone,
-    String avatarUrl,
-    @Pattern(regexp = "^(fr|en|ar)$") String language
+    @Size(max = 100) @Size(min = 1, max = 128) String firstName,
+    @Size(max = 100) @Size(min = 1, max = 128) String lastName,
+    @Pattern(regexp = "^\\+?[0-9 ]{6,20}$") @Size(min = 1, max = 64) String phone,
+    @Size(min = 1, max = 512) String avatarUrl,
+    @Pattern(regexp = "^(fr|en|ar)$") @Size(min = 1, max = 64) String language
 ) {
 }

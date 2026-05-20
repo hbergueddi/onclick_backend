@@ -2,6 +2,7 @@ package com.onesley.oneclick.modules.store.api;
 
 import com.onesley.oneclick.modules.store.internal.StoreOnboardingRequest;
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 
@@ -45,22 +46,22 @@ public final class StoreOnboardingDtos {
 
     public record OnboardingCreateDto(
         UUID tenantId,
-        @NotBlank String restaurantName,
-        String cuisine,
-        String city,
-        String address,
-        String phone,
-        @NotBlank String ownerFirstName,
-        @NotBlank String ownerLastName,
-        @NotBlank @Email String ownerEmail,
+        @NotBlank @Size(min = 1, max = 128) String restaurantName,
+        @Size(min = 1, max = 64) String cuisine,
+        @Size(min = 1, max = 128) String city,
+        @Size(min = 1, max = 256) String address,
+        @Size(min = 1, max = 64) String phone,
+        @NotBlank @Size(min = 1, max = 128) String ownerFirstName,
+        @NotBlank @Size(min = 1, max = 128) String ownerLastName,
+        @NotBlank @Email @Size(min = 1, max = 256) String ownerEmail,
         @Pattern(regexp = "^[+0-9\\s()-]*$", message = "phone format invalide")
-        String ownerPhone
+        @Size(min = 1, max = 64) String ownerPhone
     ) {}
 
     public record OnboardingDecisionDto(
         @Pattern(regexp = "approved|rejected", message = "status doit être 'approved' ou 'rejected'")
-        String status,
-        String rejectionReason,
+        @Size(min = 1, max = 64) String status,
+        @Size(min = 1, max = 1024) String rejectionReason,
         UUID reviewedBy
     ) {}
 }

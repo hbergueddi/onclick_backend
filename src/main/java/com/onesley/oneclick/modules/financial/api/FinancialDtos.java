@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.financial.api;
 
 import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -29,7 +30,7 @@ public final class FinancialDtos {
 
     public record ContractCreateDto(
         @NotNull UUID restaurantId,
-        @NotBlank String contractNumber,
+        @NotBlank @Size(min = 1, max = 64) String contractNumber,
         @NotNull @DecimalMin("0.00") @DecimalMax("100.00") BigDecimal commissionRate,
         @NotNull LocalDate startsAt,
         LocalDate endsAt
@@ -38,7 +39,7 @@ public final class FinancialDtos {
     public record ContractUpdateDto(
         @DecimalMin("0.00") @DecimalMax("100.00") BigDecimal commissionRate,
         LocalDate endsAt,
-        @Pattern(regexp = "^(draft|active|paused|terminated)$") String status
+        @Pattern(regexp = "^(draft|active|paused|terminated)$") @Size(min = 1, max = 64) String status
     ) {}
 
     // ─── Invoice ─────────────────────────────────────────────────────────────
@@ -49,7 +50,7 @@ public final class FinancialDtos {
 
     public record InvoiceCreateDto(
         @NotNull UUID restaurantId,
-        @NotBlank String invoiceNumber,
+        @NotBlank @Size(min = 1, max = 64) String invoiceNumber,
         @NotNull LocalDate periodStart,
         @NotNull LocalDate periodEnd
     ) {}
@@ -58,7 +59,7 @@ public final class FinancialDtos {
         BigDecimal subtotal,
         BigDecimal tvaAmount,
         BigDecimal totalTtc,
-        @Pattern(regexp = "^(draft|sent|paid|overdue|cancelled)$") String status,
+        @Pattern(regexp = "^(draft|sent|paid|overdue|cancelled)$") @Size(min = 1, max = 64) String status,
         LocalDate issuedAt,
         LocalDate dueAt
     ) {}
@@ -70,7 +71,7 @@ public final class FinancialDtos {
 
     public record InvoiceLineCreateDto(
         @NotNull UUID invoiceId,
-        @NotBlank String label,
+        @NotBlank @Size(min = 1, max = 128) String label,
         @NotNull @DecimalMin("0.00") BigDecimal quantity,
         @NotNull @DecimalMin("0.00") BigDecimal unitPrice,
         Integer sortOrder
@@ -84,11 +85,11 @@ public final class FinancialDtos {
 
     public record WalletTxCreateDto(
         @NotNull UUID restaurantId,
-        @NotNull @Pattern(regexp = "^(credit|debit|commission|payout|adjustment)$") String type,
+        @NotNull @Pattern(regexp = "^(credit|debit|commission|payout|adjustment)$") @Size(min = 1, max = 64) String type,
         @NotNull BigDecimal amount,
-        String reason,
+        @Size(min = 1, max = 1024) String reason,
         UUID referenceId,
-        String referenceType
+        @Size(min = 1, max = 64) String referenceType
     ) {}
 
     // ─── ContractTemplate (V13) ──────────────────────────────────────────────
@@ -106,19 +107,19 @@ public final class FinancialDtos {
 
     public record ContractTemplateCreateDto(
         UUID tenantId,
-        @NotBlank String code,
-        @NotBlank String name,
+        @NotBlank @Size(min = 1, max = 64) String code,
+        @NotBlank @Size(min = 1, max = 128) String name,
         @jakarta.validation.constraints.Positive Integer version,
-        @Pattern(regexp = "^(fr|en|ar)$") String language,
-        @NotBlank String title,
-        @NotBlank String body,
+        @Pattern(regexp = "^(fr|en|ar)$") @Size(min = 1, max = 64) String language,
+        @NotBlank @Size(min = 1, max = 128) String title,
+        @NotBlank @Size(min = 1, max = 1024) String body,
         Boolean isActive
     ) {}
 
     public record ContractTemplatePatchDto(
-        String name,
-        String title,
-        String body,
+        @Size(min = 1, max = 128) String name,
+        @Size(min = 1, max = 128) String title,
+        @Size(min = 1, max = 1024) String body,
         Boolean isActive
     ) {}
 }

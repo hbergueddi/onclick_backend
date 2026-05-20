@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.promotion.api;
 
 import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
@@ -28,17 +29,17 @@ import java.util.List;
  * persistée correspondante est {@code enabled} — un toggle booléen).
  */
 public record OfferPatchDto(
-    String title,
-    String description,
+    @Size(min = 1, max = 128) String title,
+    @Size(min = 1, max = 1024) String description,
     Instant startsAt,
     Instant expiresAt,
     @DecimalMin("0.00") @DecimalMax("100.00") BigDecimal discountPct,
     @DecimalMin("0.00") BigDecimal discountAmount,
     Boolean enabled,
-    @Pattern(regexp = "^(promo|bonus|reco)$") String type,
+    @Pattern(regexp = "^(promo|bonus|reco)$") @Size(min = 1, max = 64) String type,
     @Positive Integer pts,
     Boolean pushNotify,
-    String image,
+    @Size(min = 1, max = 512) String image,
     List<String> segments
 ) {
 }

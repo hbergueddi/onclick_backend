@@ -14,10 +14,10 @@ import jakarta.validation.constraints.Size;
  */
 public record PasswordChangeDto(
     @NotBlank(message = "currentPassword requis")
-    String currentPassword,
+    @Size(min = 1, max = 64) String currentPassword,
 
     @NotBlank(message = "newPassword requis")
     @Size(min = 8, max = 100, message = "newPassword doit faire entre 8 et 100 caractères")
-    String newPassword
+    @Size(min = 1, max = 64) String newPassword
 ) {
 }

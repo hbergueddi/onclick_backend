@@ -1,6 +1,7 @@
 package com.onesley.oneclick.core.configuration.api;
 
 import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -26,9 +27,9 @@ public final class ConfigurationDtos {
                                  Integer rolloutPct, Instant createdAt) {}
 
     public record FeatureFlagCreateDto(
-        @NotBlank String code,
-        @NotBlank String name,
-        String description,
+        @NotBlank @Size(min = 1, max = 64) String code,
+        @NotBlank @Size(min = 1, max = 128) String name,
+        @Size(min = 1, max = 1024) String description,
         Boolean enabled,
         @Min(0) @Max(100) Integer rolloutPct
     ) {}
@@ -36,7 +37,7 @@ public final class ConfigurationDtos {
     public record FeatureFlagUpdateDto(
         Boolean enabled,
         @Min(0) @Max(100) Integer rolloutPct,
-        String description
+        @Size(min = 1, max = 1024) String description
     ) {}
 
     // ─── FeatureFlagTarget ───────────────────────────────────────────────────
@@ -46,7 +47,7 @@ public final class ConfigurationDtos {
 
     public record FeatureFlagTargetCreateDto(
         @NotNull UUID featureFlagId,
-        @NotNull @Pattern(regexp = "^(user|tenant|role)$") String targetType,
+        @NotNull @Pattern(regexp = "^(user|tenant|role)$") @Size(min = 1, max = 64) String targetType,
         @NotNull UUID targetId,
         Boolean enabled
     ) {}
@@ -57,7 +58,7 @@ public final class ConfigurationDtos {
                                  boolean enabled, Instant createdAt) {}
 
     public record CacheConfigCreateDto(
-        @NotBlank String cacheName,
+        @NotBlank @Size(min = 1, max = 128) String cacheName,
         @NotNull @Min(1) Integer ttlSeconds,
         Integer maxEntries
     ) {}

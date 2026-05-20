@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.support.api;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 
@@ -36,21 +37,21 @@ public final class SupportDtos {
 
     public record TicketCreateDto(
         @NotNull UUID openedById,
-        @NotBlank String category,
-        @NotBlank String subject,
-        @Pattern(regexp = "^(low|normal|high|urgent)$") String priority,
+        @NotBlank @Size(min = 1, max = 64) String category,
+        @NotBlank @Size(min = 1, max = 128) String subject,
+        @Pattern(regexp = "^(low|normal|high|urgent)$") @Size(min = 1, max = 64) String priority,
         // V24 — Sprint K : corps + rattachement resto + statut initial optionnels
-        String message,
+        @Size(min = 1, max = 1024) String message,
         UUID restaurantId,
-        @Pattern(regexp = "^(open|in_progress|resolved|closed)$") String status
+        @Pattern(regexp = "^(open|in_progress|resolved|closed)$") @Size(min = 1, max = 64) String status
     ) {}
 
     public record TicketUpdateDto(
-        @Pattern(regexp = "^(open|in_progress|resolved|closed)$") String status,
-        @Pattern(regexp = "^(low|normal|high|urgent)$") String priority,
+        @Pattern(regexp = "^(open|in_progress|resolved|closed)$") @Size(min = 1, max = 64) String status,
+        @Pattern(regexp = "^(low|normal|high|urgent)$") @Size(min = 1, max = 64) String priority,
         UUID assignedToId,
         // V24 — Sprint K : dernière réponse staff
-        String lastReply
+        @Size(min = 1, max = 1024) String lastReply
     ) {}
 
     // ─── Message ─────────────────────────────────────────────────────────────
@@ -60,7 +61,7 @@ public final class SupportDtos {
     public record MessageCreateDto(
         @NotNull UUID ticketId,
         @NotNull UUID authorId,
-        @NotBlank String message
+        @NotBlank @Size(min = 1, max = 1024) String message
     ) {}
 
     // ─── Attachment ──────────────────────────────────────────────────────────
@@ -69,8 +70,8 @@ public final class SupportDtos {
 
     public record AttachmentCreateDto(
         @NotNull UUID ticketId,
-        @NotBlank String url,
-        String fileName,
-        String mimeType
+        @NotBlank @Size(min = 1, max = 512) String url,
+        @Size(min = 1, max = 128) String fileName,
+        @Size(min = 1, max = 64) String mimeType
     ) {}
 }

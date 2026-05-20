@@ -1,6 +1,7 @@
 package com.onesley.oneclick.core.audit_log.api;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 
@@ -29,12 +30,12 @@ public final class AuditLogDtos {
     public record AuditLogCreateDto(
         UUID userId,
         UUID tenantId,
-        @NotBlank String entityType,
+        @NotBlank @Size(min = 1, max = 64) String entityType,
         UUID entityId,
-        @NotBlank String action,
+        @NotBlank @Size(min = 1, max = 64) String action,
         Map<String, Object> diff,
-        String ipAddress,
-        String userAgent
+        @Size(min = 1, max = 256) String ipAddress,
+        @Size(min = 1, max = 512) String userAgent
     ) {}
 
     // ─── SystemEvent ─────────────────────────────────────────────────────────
@@ -43,7 +44,7 @@ public final class AuditLogDtos {
                                  Instant createdAt) {}
 
     public record SystemEventCreateDto(
-        @NotBlank String type,
+        @NotBlank @Size(min = 1, max = 64) String type,
         @NotNull Map<String, Object> payload
     ) {}
 
@@ -53,10 +54,10 @@ public final class AuditLogDtos {
                               Map<String, Object> metadata, Instant createdAt) {}
 
     public record ErrorLogCreateDto(
-        @NotBlank String serviceName,
-        @NotBlank String message,
-        String stacktrace,
-        @Pattern(regexp = "^(debug|info|warn|error|fatal)$") String severity
+        @NotBlank @Size(min = 1, max = 128) String serviceName,
+        @NotBlank @Size(min = 1, max = 1024) String message,
+        @Size(min = 1, max = 64) String stacktrace,
+        @Pattern(regexp = "^(debug|info|warn|error|fatal)$") @Size(min = 1, max = 64) String severity
     ) {}
 
     // ─── JobExecution ────────────────────────────────────────────────────────

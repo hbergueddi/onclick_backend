@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.reservation.api;
 
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotNull;
 
 import java.time.Instant;
@@ -14,6 +15,6 @@ public record ReservationCreateDto(
     UUID serviceId,
     @NotNull Instant reservationAt,
     @NotNull @Min(1) Integer guestCount,
-    String notes
+    @Size(min = 1, max = 1024) String notes
 ) {
 }

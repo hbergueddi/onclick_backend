@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.loyalty.api;
 
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
@@ -24,7 +25,7 @@ public record Snap2EarnDto(
     @NotNull UUID clientId,
     @NotNull UUID restaurantId,
     @NotNull @DecimalMin("0.00") BigDecimal amount,
-    String ticketRef,
-    String photoUrl
+    @Size(min = 1, max = 64) String ticketRef,
+    @Size(min = 1, max = 512) String photoUrl
 ) {
 }

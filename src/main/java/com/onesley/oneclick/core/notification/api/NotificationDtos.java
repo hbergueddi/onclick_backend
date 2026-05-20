@@ -1,6 +1,7 @@
 package com.onesley.oneclick.core.notification.api;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 
@@ -27,11 +28,11 @@ public final class NotificationDtos {
 
     public record NotificationCreateDto(
         @NotNull UUID recipientUserId,
-        @NotBlank @Pattern(regexp = "^(reservation|loyalty|promotion|community|support|system|announcement)$") String type,
-        @Pattern(regexp = "^(inapp|push|email|sms)$") String channel,
-        @NotBlank String title,
-        @NotBlank String body,
-        String link
+        @NotBlank @Pattern(regexp = "^(reservation|loyalty|promotion|community|support|system|announcement)$") @Size(min = 1, max = 64) String type,
+        @Pattern(regexp = "^(inapp|push|email|sms)$") @Size(min = 1, max = 64) String channel,
+        @NotBlank @Size(min = 1, max = 128) String title,
+        @NotBlank @Size(min = 1, max = 1024) String body,
+        @Size(min = 1, max = 512) String link
     ) {}
 
     /** Compteur de notifications non lues pour un user (badge cloche). */
@@ -48,9 +49,9 @@ public final class NotificationDtos {
 
     public record CampaignCreateDto(
         @NotNull UUID tenantId,
-        @NotBlank String title,
-        @NotBlank String message,
-        String targetSegment,
+        @NotBlank @Size(min = 1, max = 128) String title,
+        @NotBlank @Size(min = 1, max = 1024) String message,
+        @Size(min = 1, max = 64) String targetSegment,
         Instant scheduledAt
     ) {}
 
@@ -61,9 +62,9 @@ public final class NotificationDtos {
 
     public record DeviceTokenCreateDto(
         @NotNull UUID userId,
-        @NotBlank String token,
-        @Pattern(regexp = "^(ios|android|web)$") String platform,
-        String appId
+        @NotBlank @Size(min = 1, max = 512) String token,
+        @Pattern(regexp = "^(ios|android|web)$") @Size(min = 1, max = 64) String platform,
+        @Size(min = 1, max = 64) String appId
     ) {}
 
     // ─── Push notifications FCM (Phase B.8 — port send-*-push) ──────────────
@@ -81,9 +82,9 @@ public final class NotificationDtos {
     public record PushPromoDto(
         UUID campaignId,
         @NotNull java.util.List<UUID> userIds,
-        @NotBlank String title,
-        @NotBlank String body,
-        String link
+        @NotBlank @Size(min = 1, max = 128) String title,
+        @NotBlank @Size(min = 1, max = 1024) String body,
+        @Size(min = 1, max = 512) String link
     ) {}
 
     /**
@@ -100,10 +101,10 @@ public final class NotificationDtos {
     public record PushReservationDto(
         @NotNull UUID reservationId,
         @NotNull UUID recipientUserId,
-        @NotBlank String status,
-        @NotBlank String title,
-        @NotBlank String body,
-        String link
+        @NotBlank @Size(min = 1, max = 64) String status,
+        @NotBlank @Size(min = 1, max = 128) String title,
+        @NotBlank @Size(min = 1, max = 1024) String body,
+        @Size(min = 1, max = 512) String link
     ) {}
 
     /**

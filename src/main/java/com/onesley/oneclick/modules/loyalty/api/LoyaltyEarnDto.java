@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.loyalty.api;
 
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
@@ -14,6 +15,6 @@ public record LoyaltyEarnDto(
     @NotNull UUID restaurantId,
     @NotNull @Min(1) Integer points,
     BigDecimal amount,
-    String reason
+    @Size(min = 1, max = 1024) String reason
 ) {
 }

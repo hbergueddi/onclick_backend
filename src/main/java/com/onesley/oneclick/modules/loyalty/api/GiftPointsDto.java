@@ -26,6 +26,6 @@ public record GiftPointsDto(
     @NotNull UUID receiverId,
     @NotNull UUID restaurantId,
     @NotNull @Min(10) @Max(200) Integer points,
-    @Size(max = 200) String message
+    @Size(max = 200) @Size(min = 1, max = 1024) String message
 ) {
 }

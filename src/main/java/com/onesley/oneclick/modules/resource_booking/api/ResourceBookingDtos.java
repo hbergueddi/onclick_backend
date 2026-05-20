@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.resource_booking.api;
 
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -27,9 +28,9 @@ public final class ResourceBookingDtos {
 
     public record ResourceCreateDto(
         @NotNull UUID tenantId,
-        @NotBlank String resourceType,
-        @NotBlank String name,
-        String description,
+        @NotBlank @Size(min = 1, max = 64) String resourceType,
+        @NotBlank @Size(min = 1, max = 128) String name,
+        @Size(min = 1, max = 1024) String description,
         Integer capacity
     ) {}
 
@@ -40,7 +41,7 @@ public final class ResourceBookingDtos {
 
     public record PricingCreateDto(
         @NotNull UUID resourceId,
-        @NotBlank String name,
+        @NotBlank @Size(min = 1, max = 128) String name,
         @NotNull @DecimalMin("0.00") BigDecimal price,
         Integer durationMinutes
     ) {}
@@ -56,13 +57,13 @@ public final class ResourceBookingDtos {
         UUID pricingId,
         @NotNull Instant startAt,
         @NotNull Instant endAt,
-        @Pattern(regexp = "^(pending|confirmed|cancelled|no_show|completed)$") String status,
-        String notes
+        @Pattern(regexp = "^(pending|confirmed|cancelled|no_show|completed)$") @Size(min = 1, max = 64) String status,
+        @Size(min = 1, max = 1024) String notes
     ) {}
 
     public record BookingUpdateDto(
-        @Pattern(regexp = "^(pending|confirmed|cancelled|no_show|completed)$") String status,
-        String notes
+        @Pattern(regexp = "^(pending|confirmed|cancelled|no_show|completed)$") @Size(min = 1, max = 64) String status,
+        @Size(min = 1, max = 1024) String notes
     ) {}
 
     // ─── Guest ───────────────────────────────────────────────────────────────
@@ -72,6 +73,6 @@ public final class ResourceBookingDtos {
     public record GuestCreateDto(
         @NotNull UUID bookingId,
         UUID guestUserId,
-        String guestName
+        @Size(min = 1, max = 128) String guestName
     ) {}
 }

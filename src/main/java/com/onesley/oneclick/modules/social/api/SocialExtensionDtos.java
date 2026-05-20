@@ -1,5 +1,7 @@
 package com.onesley.oneclick.modules.social.api;
 
+import jakarta.validation.constraints.Size;
+
 import com.onesley.oneclick.modules.social.internal.EliteApplication;
 import com.onesley.oneclick.modules.social.internal.RestaurantGroup;
 
@@ -33,14 +35,14 @@ public final class SocialExtensionDtos {
 
     public record EliteApplicationCreateDto(
         UUID userId,
-        String motivation,
+        @Size(min = 1, max = 1024) String motivation,
         UUID referrerId
     ) {}
 
     public record EliteApplicationReviewDto(
-        String status,
+        @Size(min = 1, max = 64) String status,
         UUID reviewedBy,
-        String rejectionReason
+        @Size(min = 1, max = 1024) String rejectionReason
     ) {}
 
     public record RestaurantGroupDto(
@@ -63,9 +65,9 @@ public final class SocialExtensionDtos {
 
     public record RestaurantGroupCreateDto(
         UUID tenantId,
-        String name,
-        String description,
+        @Size(min = 1, max = 128) String name,
+        @Size(min = 1, max = 1024) String description,
         UUID ownerId,
-        String logoUrl
+        @Size(min = 1, max = 512) String logoUrl
     ) {}
 }

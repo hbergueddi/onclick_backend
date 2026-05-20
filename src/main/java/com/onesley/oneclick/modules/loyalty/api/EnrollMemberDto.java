@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.loyalty.api;
 
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
@@ -27,10 +28,10 @@ import java.util.UUID;
 public record EnrollMemberDto(
     @NotNull UUID restaurantId,
     UUID clientId,
-    @Email String email,
-    String phone,
-    String firstName,
-    String lastName,
+    @Email @Size(min = 1, max = 256) String email,
+    @Size(min = 1, max = 64) String phone,
+    @Size(min = 1, max = 128) String firstName,
+    @Size(min = 1, max = 128) String lastName,
     @NotNull @Min(0) Integer welcomePoints,
     /** Si true, le service tente d'envoyer un email d'invitation (TODO V2 SMTP). */
     Boolean sendInvite

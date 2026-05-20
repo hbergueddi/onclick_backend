@@ -17,11 +17,11 @@ import java.util.UUID;
 public record UserCreateDto(
     UUID tenantId,
     @NotNull UUID roleId,
-    @Email @NotBlank String email,
-    @Pattern(regexp = "^\\+?[0-9 ]{6,20}$") String phone,
-    @NotBlank @Size(min = 8, max = 100) String password,
-    @NotBlank @Size(max = 100) String firstName,
-    @NotBlank @Size(max = 100) String lastName,
-    @Pattern(regexp = "^(fr|en|ar)$") String language
+    @Email @NotBlank @Size(min = 1, max = 256) String email,
+    @Pattern(regexp = "^\\+?[0-9 ]{6,20}$") @Size(min = 1, max = 64) String phone,
+    @NotBlank @Size(min = 8, max = 100) @Size(min = 1, max = 64) String password,
+    @NotBlank @Size(max = 100) @Size(min = 1, max = 128) String firstName,
+    @NotBlank @Size(max = 100) @Size(min = 1, max = 128) String lastName,
+    @Pattern(regexp = "^(fr|en|ar)$") @Size(min = 1, max = 64) String language
 ) {
 }

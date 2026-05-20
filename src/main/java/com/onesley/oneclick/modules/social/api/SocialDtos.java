@@ -25,7 +25,7 @@ public final class SocialDtos {
 
     public record ReferralDto(UUID id, UUID referrerId, UUID referredUserId, String referralCode, String status, Instant activatedAt, Instant createdAt) {}
 
-    public record ReferralCreateDto(@NotNull UUID referrerId, @NotBlank String referralCode) {}
+    public record ReferralCreateDto(@NotNull UUID referrerId, @NotBlank @Size(min = 1, max = 64) String referralCode) {}
 
     // ─── Favoris (user_favorites) ────────────────────────────────────────────
 
@@ -51,15 +51,15 @@ public final class SocialDtos {
     ) {}
 
     public record FriendGroupCreateDto(
-        @NotBlank @Size(max = 500) String name,
-        String description,
-        String avatarUrl
+        @NotBlank @Size(max = 500) @Size(min = 1, max = 128) String name,
+        @Size(min = 1, max = 1024) String description,
+        @Size(min = 1, max = 512) String avatarUrl
     ) {}
 
     public record FriendGroupUpdateDto(
-        @Size(max = 500) String name,
-        String description,
-        String avatarUrl
+        @Size(max = 500) @Size(min = 1, max = 128) String name,
+        @Size(min = 1, max = 1024) String description,
+        @Size(min = 1, max = 512) String avatarUrl
     ) {}
 
     /** Junction users × friend_groups — appartenance + rôle. */
@@ -73,6 +73,6 @@ public final class SocialDtos {
 
     public record FriendGroupMemberAddDto(
         @NotNull UUID friendId,
-        @Pattern(regexp = "^(owner|admin|member)$") String role
+        @Pattern(regexp = "^(owner|admin|member)$") @Size(min = 1, max = 64) String role
     ) {}
 }

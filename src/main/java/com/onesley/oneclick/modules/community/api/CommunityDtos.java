@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.community.api;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 
@@ -22,13 +23,13 @@ public final class CommunityDtos {
 
     public record PostCreateDto(
         @NotNull UUID authorId,
-        @NotBlank String content,
-        @Pattern(regexp = "^(public|friends|private)$") String visibility
+        @NotBlank @Size(min = 1, max = 4096) String content,
+        @Pattern(regexp = "^(public|friends|private)$") @Size(min = 1, max = 64) String visibility
     ) {}
 
     public record CommentDto(UUID id, UUID postId, UUID authorId, String content, Instant createdAt) {}
 
-    public record CommentCreateDto(@NotNull UUID postId, @NotNull UUID authorId, @NotBlank String content) {}
+    public record CommentCreateDto(@NotNull UUID postId, @NotNull UUID authorId, @NotBlank @Size(min = 1, max = 4096) String content) {}
 
     public record PostLikeDto(UUID id, UUID postId, UUID userId, Instant createdAt) {}
 

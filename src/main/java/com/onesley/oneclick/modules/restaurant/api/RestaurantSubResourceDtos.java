@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.restaurant.api;
 
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
@@ -35,7 +36,7 @@ public final class RestaurantSubResourceDtos {
 
     public record RestaurantStaffCreateDto(
         @NotNull UUID userId,
-        @NotBlank String roleCode
+        @NotBlank @Size(min = 1, max = 64) String roleCode
     ) {}
 
     /**
@@ -48,7 +49,7 @@ public final class RestaurantSubResourceDtos {
      * </ul>
      */
     public record RestaurantStaffPatchDto(
-        String roleCode,
+        @Size(min = 1, max = 64) String roleCode,
         Boolean active
     ) {}
 
@@ -64,13 +65,13 @@ public final class RestaurantSubResourceDtos {
     ) {}
 
     public record MealServiceCreateDto(
-        @NotBlank String name,
+        @NotBlank @Size(min = 1, max = 128) String name,
         @NotNull LocalTime startTime,
         @NotNull LocalTime endTime
     ) {}
 
     public record MealServicePatchDto(
-        String name,
+        @Size(min = 1, max = 128) String name,
         LocalTime startTime,
         LocalTime endTime
     ) {}
@@ -85,7 +86,7 @@ public final class RestaurantSubResourceDtos {
     ) {}
 
     public record RestaurantZoneCreateDto(
-        @NotBlank String name
+        @NotBlank @Size(min = 1, max = 128) String name
     ) {}
 
     // ─── RestaurantTable (T01, T02, ... rattachées à une zone) ───────────────
@@ -100,7 +101,7 @@ public final class RestaurantSubResourceDtos {
 
     public record RestaurantTableCreateDto(
         @NotNull UUID zoneId,
-        @NotBlank String tableNumber,
+        @NotBlank @Size(min = 1, max = 64) String tableNumber,
         @NotNull @Min(1) Integer seats
     ) {}
 }

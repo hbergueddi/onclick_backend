@@ -8,6 +8,7 @@ import com.onesley.oneclick.modules.system.internal.SystemAlert;
 import com.onesley.oneclick.modules.system.internal.SystemAlertRule;
 import com.onesley.oneclick.modules.system.internal.SystemHealthCheck;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 import java.time.Instant;
 import java.util.List;
@@ -69,7 +70,7 @@ public final class SystemDtos {
     }
 
     /** Body PUT — upsert partiel du document courant. */
-    public record AppDocumentUpsertDto(String content, String version) {}
+    public record AppDocumentUpsertDto(@Size(min = 1, max = 4096) String content, @Size(min = 1, max = 64) String version) {}
 
     public record DocumentVersionDto(
         UUID id, String documentId, String version, String content,

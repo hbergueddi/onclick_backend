@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.analytics.api;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotNull;
 
 import java.time.Instant;
@@ -25,8 +26,8 @@ public final class AnalyticsDtos {
                                Instant createdAt) {}
 
     public record ApiClientCreateDto(
-        @NotBlank String name,
-        String description,
+        @NotBlank @Size(min = 1, max = 128) String name,
+        @Size(min = 1, max = 1024) String description,
         UUID tenantId
     ) {}
 
@@ -37,8 +38,8 @@ public final class AnalyticsDtos {
 
     public record ApiKeyCreateDto(
         @NotNull UUID apiClientId,
-        @NotBlank String keyHash,
-        @NotBlank String keyPrefix,
+        @NotBlank @Size(min = 1, max = 128) String keyHash,
+        @NotBlank @Size(min = 1, max = 64) String keyPrefix,
         Instant expiresAt
     ) {}
 
@@ -49,8 +50,8 @@ public final class AnalyticsDtos {
 
     public record WebhookCreateDto(
         @NotNull UUID apiClientId,
-        @NotBlank String url,
-        String secret
+        @NotBlank @Size(min = 1, max = 512) String url,
+        @Size(min = 1, max = 64) String secret
     ) {}
 
     // ─── WebhookDelivery ─────────────────────────────────────────────────────
@@ -61,7 +62,7 @@ public final class AnalyticsDtos {
 
     public record WebhookDeliveryCreateDto(
         @NotNull UUID webhookId,
-        @NotBlank String eventType,
+        @NotBlank @Size(min = 1, max = 64) String eventType,
         @NotNull Map<String, Object> payload
     ) {}
 }

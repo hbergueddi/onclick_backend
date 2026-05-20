@@ -1,6 +1,7 @@
 package com.onesley.oneclick.core.media.api;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 
@@ -26,11 +27,11 @@ public final class MediaDtos {
                            Instant createdAt) {}
 
     public record MediaCreateDto(
-        @NotBlank String entityType,
+        @NotBlank @Size(min = 1, max = 64) String entityType,
         @NotNull UUID entityId,
-        @NotBlank String url,
-        @NotNull @Pattern(regexp = "^(image|video|audio|pdf)$") String mediaType,
-        String mimeType,
+        @NotBlank @Size(min = 1, max = 512) String url,
+        @NotNull @Pattern(regexp = "^(image|video|audio|pdf)$") @Size(min = 1, max = 64) String mediaType,
+        @Size(min = 1, max = 64) String mimeType,
         Long sizeBytes,
         Integer sortOrder
     ) {}
@@ -41,11 +42,11 @@ public final class MediaDtos {
                           Long sizeBytes, String originalName, Instant createdAt, UUID createdById) {}
 
     public record FileCreateDto(
-        @NotBlank String entityType,
+        @NotBlank @Size(min = 1, max = 64) String entityType,
         @NotNull UUID entityId,
-        @NotBlank String path,
-        String mimeType,
+        @NotBlank @Size(min = 1, max = 512) String path,
+        @Size(min = 1, max = 64) String mimeType,
         Long sizeBytes,
-        String originalName
+        @Size(min = 1, max = 128) String originalName
     ) {}
 }

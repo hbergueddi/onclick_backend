@@ -1,6 +1,7 @@
 package com.onesley.oneclick.core.email.api;
 
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 
@@ -24,11 +25,11 @@ public final class EmailDtos {
      * @param variables      variables interpolées dans le template ({{firstName}}, {{link}}, etc.)
      */
     public record EmailSendDto(
-        @NotBlank String template,
-        @NotBlank String tenantSlug,
+        @NotBlank @Size(min = 1, max = 64) String template,
+        @NotBlank @Size(min = 1, max = 64) String tenantSlug,
         @NotEmpty List<@Email String> to,
-        @NotBlank String subjectFr,
-        String subjectEn,
+        @NotBlank @Size(min = 1, max = 128) String subjectFr,
+        @Size(min = 1, max = 128) String subjectEn,
         Map<String, Object> variables
     ) {}
 

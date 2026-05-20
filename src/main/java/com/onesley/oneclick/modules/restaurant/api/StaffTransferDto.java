@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.restaurant.api;
 
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import java.util.UUID;
 
@@ -23,16 +24,16 @@ public final class StaffTransferDto {
         @NotNull UUID staffId,
         @NotNull UUID sourceRestaurantId,
         @NotNull UUID targetRestaurantId,
-        String reason
+        @Size(min = 1, max = 1024) String reason
     ) {}
 
     /** Invitation team member par email/phone (port EF invite-team-member). */
     public record InviteDto(
         @NotNull UUID restaurantId,
-        String email,
-        String phone,
-        @NotNull String roleCode,
-        String invitationMessage
+        @Size(min = 1, max = 256) String email,
+        @Size(min = 1, max = 64) String phone,
+        @NotNull @Size(min = 1, max = 64) String roleCode,
+        @Size(min = 1, max = 1024) String invitationMessage
     ) {}
 
     /** Résultat invitation : si user existe → ajouté direct, sinon notif/email envoyée. */

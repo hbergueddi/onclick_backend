@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.reservation.api;
 
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.Pattern;
 
 import java.time.Instant;
@@ -37,10 +38,10 @@ public record ReservationGuestDto(
      */
     public record CreateDto(
         UUID guestUserId,
-        String guestName,
-        String guestPhone,
+        @Size(min = 1, max = 128) String guestName,
+        @Size(min = 1, max = 128) String guestPhone,
         UUID invitedBy,
-        @Pattern(regexp = "^(linked|invited|accepted|refused|cancelled)$") String status
+        @Pattern(regexp = "^(linked|invited|accepted|refused|cancelled)$") @Size(min = 1, max = 64) String status
     ) {}
 
     /**
@@ -48,6 +49,6 @@ public record ReservationGuestDto(
      * (typique : guest répond à l'invitation → accepted/refused).
      */
     public record StatusUpdateDto(
-        @NotNull @Pattern(regexp = "^(linked|invited|accepted|refused|cancelled)$") String status
+        @NotNull @Pattern(regexp = "^(linked|invited|accepted|refused|cancelled)$") @Size(min = 1, max = 64) String status
     ) {}
 }

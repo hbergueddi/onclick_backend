@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.loyalty.api;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 /**
  * DTO d'entrée pour {@code POST /api/loyalty/ocr-receipt}.
@@ -14,7 +15,7 @@ import jakarta.validation.constraints.NotBlank;
  * @param language code OCR.space — {@code fre} par défaut (cf {@code application.yml})
  */
 public record OcrReceiptRequestDto(
-    @NotBlank String imageUrl,
-    String language
+    @NotBlank @Size(min = 1, max = 512) String imageUrl,
+    @Size(min = 1, max = 64) String language
 ) {
 }
