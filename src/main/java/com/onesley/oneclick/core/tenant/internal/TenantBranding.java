@@ -18,7 +18,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.Size;
 
 /**
  * Branding visuel d'un tenant — 1-1 avec Tenant via {@code @MapsId} (la PK est tenant_id).
@@ -38,17 +37,17 @@ public class TenantBranding extends TimestampedEntity {
     @JoinColumn(name = "tenant_id")
     private Tenant tenant;
 
-    @Column(name = "logo_url")
-    @Setter @Size(max = 1024) private String logoUrl;
+    @Column(name = "logo_url", length = 512)
+    @Setter private String logoUrl;
 
-    @Column(name = "primary_color")
-    @Setter @Size(max = 255) private String primaryColor;
+    @Column(name = "primary_color", length = 64)
+    @Setter private String primaryColor;
 
-    @Column(name = "accent_color")
-    @Setter @Size(max = 255) private String accentColor;
+    @Column(name = "accent_color", length = 64)
+    @Setter private String accentColor;
 
-    @Column(name = "custom_domain", unique = true)
-    @Setter @Size(max = 512) private String customDomain;
+    @Column(name = "custom_domain", unique = true, length = 512)
+    @Setter private String customDomain;
 
     public TenantBranding(Tenant tenant) {
         this.tenant = tenant;

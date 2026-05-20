@@ -6,8 +6,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.util.Objects;
@@ -16,7 +14,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.Size;
 
 /**
  * Config TTL et taille pour les caches (Redis ou JVM in-memory).
@@ -32,11 +29,9 @@ public class CacheConfiguration extends TimestampedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
-    @NotBlank
-    @Column(name = "cache_name", nullable = false, unique = true)
-    @Size(max = 255) private String cacheName;
+    @Column(name = "cache_name", nullable = false, unique = true, length = 128)
+     private String cacheName;
 
-    @Min(1)
     @Column(name = "ttl_seconds", nullable = false)
     @Setter private Integer ttlSeconds;
 

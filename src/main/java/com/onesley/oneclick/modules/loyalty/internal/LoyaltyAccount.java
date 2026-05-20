@@ -7,7 +7,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-import jakarta.validation.constraints.Min;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.util.Objects;
@@ -16,7 +15,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.PositiveOrZero;
 
 /**
  * Compte fidélité — 1 par couple (client × restaurant).
@@ -52,9 +50,8 @@ public class LoyaltyAccount extends TimestampedEntity {
     @Column(name = "tenant_id", insertable = false, updatable = false)
     private UUID tenantId;
 
-    @Min(0)
     @Column(name = "balance", nullable = false)
-    @Setter @PositiveOrZero private Integer balance = 0;
+    @Setter private Integer balance = 0;
 
     public LoyaltyAccount(UUID id, UUID clientId, UUID restaurantId) {
         this.id = id;

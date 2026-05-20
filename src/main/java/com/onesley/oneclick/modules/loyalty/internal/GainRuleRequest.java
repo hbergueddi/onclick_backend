@@ -16,29 +16,22 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.DecimalMax;
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.PositiveOrZero;
-import jakarta.validation.constraints.Size;
 
 /**
  * Demande d'approbation d'une règle de gain de points (Sprint G.2.3).
  *
  * <p>Workflow :
  * <ol>
- *   <li>Restaurateur crée la demande via {@code POST /api/loyalty/gain-rule-requests}
- *     avec les paramètres souhaités (status = {@code pending})</li>
- *   <li>Admin reçoit notification, examine, puis :
- *     <ul>
- *       <li>{@code PATCH .../approve} → crée la GainRule (désactivée), met
- *         {@code status='approved'} + {@code createdRuleId}</li>
- *       <li>{@code PATCH .../reject} → met {@code status='rejected'} + {@code rejectionReason}</li>
- *     </ul>
- *   </li>
- *   <li>Restaurateur active manuellement la règle créée (cas approved).</li>
+ * <li>Restaurateur crée la demande via {@code POST /api/loyalty/gain-rule-requests}
+ * avec les paramètres souhaités (status = {@code pending})</li>
+ * <li>Admin reçoit notification, examine, puis :
+ * <ul>
+ * <li>{@code PATCH .../approve} → crée la GainRule (désactivée), met
+ * {@code status='approved'} + {@code createdRuleId}</li>
+ * <li>{@code PATCH .../reject} → met {@code status='rejected'} + {@code rejectionReason}</li>
+ * </ul>
+ * </li>
+ * <li>Restaurateur active manuellement la règle créée (cas approved).</li>
  * </ol>
  *
  * <p>Audit standard via {@link SoftDeletableAuditedEntity}.
@@ -60,32 +53,32 @@ public class GainRuleRequest extends SoftDeletableAuditedEntity {
     @Column(name = "tenant_id", insertable = false, updatable = false)
     private UUID tenantId;
 
-    @Column(name = "name", nullable = false)
-    @Setter @Size(max = 255) @NotBlank private String name;
+    @Column(name = "name", nullable = false, length = 128)
+    @Setter private String name;
 
-    @Column(name = "description")
-    @Setter @Size(max = 2000) private String description;
+    @Column(name = "description", length = 1024)
+    @Setter private String description;
 
-    @Column(name = "type", nullable = false)
-    @Setter @Size(max = 255) @NotBlank @Pattern(regexp = "^(standard|premium|event|loyalty)$") private String type = "standard";
+    @Column(name = "type", nullable = false, length = 64)
+    @Setter private String type = "standard";
 
     @Column(name = "conversion_rate", nullable = false, precision = 6, scale = 4)
-    @Setter @DecimalMin("0") @DecimalMax("1") private BigDecimal conversionRate = new BigDecimal("0.1000");
+    @Setter private BigDecimal conversionRate = new BigDecimal("0.1000");
 
     @Column(name = "cap_per_visit")
-    @Setter @Positive private Integer capPerVisit;
+    @Setter private Integer capPerVisit;
 
     @Column(name = "cap_per_month")
-    @Setter @Positive private Integer capPerMonth;
+    @Setter private Integer capPerMonth;
 
     @Column(name = "min_amount", precision = 10, scale = 2)
-    @Setter @PositiveOrZero private BigDecimal minAmount = BigDecimal.ZERO;
+    @Setter private BigDecimal minAmount = BigDecimal.ZERO;
 
-    @Column(name = "status", nullable = false)
-    @Setter @Size(max = 255) @NotBlank @Pattern(regexp = "^(pending|approved|rejected)$") private String status = "pending";
+    @Column(name = "status", nullable = false, length = 64)
+    @Setter private String status = "pending";
 
-    @Column(name = "rejection_reason")
-    @Setter @Size(max = 2000) private String rejectionReason;
+    @Column(name = "rejection_reason", length = 1024)
+    @Setter private String rejectionReason;
 
     @Column(name = "reviewed_by")
     @Setter private UUID reviewedById;

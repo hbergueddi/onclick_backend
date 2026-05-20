@@ -8,9 +8,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.DecimalMax;
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.NotBlank;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.math.BigDecimal;
@@ -21,7 +18,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.Size;
 
 /**
  * Configuration légale et facturation par tenant (raison sociale, ICE, RIB, TVA).
@@ -44,18 +40,15 @@ public class CompanySettings extends TimestampedEntity {
     @JoinColumn(name = "tenant_id", nullable = false, unique = true)
     private Tenant tenant;
 
-    @NotBlank
-    @Column(name = "raison_sociale", nullable = false)
-    @Setter @Size(max = 512) private String raisonSociale;
+    @Column(name = "raison_sociale", nullable = false, length = 64)
+    @Setter private String raisonSociale;
 
-    @Column(name = "ice")
-    @Setter @Size(max = 512) private String ice;
+    @Column(name = "ice", length = 64)
+    @Setter private String ice;
 
-    @Column(name = "rib")
-    @Setter @Size(max = 512) private String rib;
+    @Column(name = "rib", length = 64)
+    @Setter private String rib;
 
-    @DecimalMin("0.00")
-    @DecimalMax("100.00")
     @Column(name = "tva_rate", nullable = false, precision = 5, scale = 2)
     @Setter private BigDecimal tvaRate = new BigDecimal("20.00");
 

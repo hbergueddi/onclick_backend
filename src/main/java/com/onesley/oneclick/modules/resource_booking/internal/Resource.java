@@ -4,7 +4,6 @@ import com.onesley.oneclick.audit.SoftDeletableAuditedEntity;
 import com.onesley.oneclick.core.tenant.api.Tenant;
 import com.onesley.oneclick.modules.resource_booking.api.ResourceBookingDtos.ResourceDto;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.util.Objects;
@@ -13,7 +12,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.Size;
 
 /** Ressource bookable générique (padel, spa, golf, coiffeur, gym...). */
 @Entity
@@ -33,16 +31,14 @@ public class Resource extends SoftDeletableAuditedEntity {
     @JoinColumn(name = "tenant_id", nullable = false)
     private Tenant tenant;
 
-    @NotBlank
-    @Column(name = "resource_type", nullable = false)
-    @Size(max = 255) private String resourceType;
+    @Column(name = "resource_type", nullable = false, length = 64)
+     private String resourceType;
 
-    @NotBlank
-    @Column(name = "name", nullable = false)
-    @Setter @Size(max = 255) private String name;
+    @Column(name = "name", nullable = false, length = 128)
+    @Setter private String name;
 
-    @Column(name = "description")
-    @Setter @Size(max = 2000) private String description;
+    @Column(name = "description", length = 1024)
+    @Setter private String description;
 
     @Column(name = "capacity")
     @Setter private Integer capacity;

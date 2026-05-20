@@ -5,8 +5,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.type.SqlTypes;
@@ -18,8 +16,6 @@ import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 
 /**
  * Statut d'exécution d'un job/batch — tracking pour cron, retries, monitoring.
@@ -34,16 +30,14 @@ public class JobExecution {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
-    @NotBlank
-    @Column(name = "job_name", nullable = false)
-    @Size(max = 255) private String jobName;
+    @Column(name = "job_name", nullable = false, length = 128)
+     private String jobName;
 
-    @Pattern(regexp = "^(running|success|failed|cancelled)$")
-    @Column(name = "status", nullable = false)
-    @Size(max = 255) @NotBlank private String status = "running";
+    @Column(name = "status", nullable = false, length = 64)
+      private String status = "running";
 
     @Column(name = "started_at", nullable = false)
-    @NotNull private Instant startedAt = Instant.now();
+     private Instant startedAt = Instant.now();
 
     @Column(name = "finished_at")
     private Instant finishedAt;
@@ -52,8 +46,8 @@ public class JobExecution {
     @Column(name = "result", columnDefinition = "jsonb")
     private Map<String, Object> result;
 
-    @Column(name = "error_message", columnDefinition = "text")
-    @Size(max = 2000) private String errorMessage;
+    @Column(name = "error_message", columnDefinition = "text", length = 1024)
+     private String errorMessage;
 
     public JobExecution(UUID id, String jobName) {
         this.id = id;

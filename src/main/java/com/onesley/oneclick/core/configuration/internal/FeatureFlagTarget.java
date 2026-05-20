@@ -10,8 +10,6 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
 import org.hibernate.proxy.HibernateProxy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -23,7 +21,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.Size;
 
 /**
  * Targeting custom d'un feature flag — override par user / tenant / role.
@@ -53,10 +50,8 @@ public class FeatureFlagTarget {
     @JoinColumn(name = "feature_flag_id", nullable = false)
     private FeatureFlag featureFlag;
 
-    @NotBlank
-    @Pattern(regexp = "^(user|tenant|role)$")
-    @Column(name = "target_type", nullable = false)
-    @Size(max = 255) private String targetType;
+    @Column(name = "target_type", nullable = false, length = 64)
+     private String targetType;
 
     @Column(name = "target_id", nullable = false)
     private UUID targetId;

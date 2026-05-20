@@ -4,8 +4,6 @@ import com.onesley.oneclick.audit.TimestampedEntity;
 import com.onesley.oneclick.core.identity.api.User;
 import com.onesley.oneclick.modules.resource_booking.api.ResourceBookingDtos.BookingDto;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.time.Instant;
@@ -15,8 +13,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 
 /** Réservation d'une ressource (vs réservation restaurant). */
 @Entity
@@ -50,20 +46,17 @@ public class ResourceBooking extends TimestampedEntity {
     @JoinColumn(name = "pricing_id")
     @Setter private ResourcePricing pricing;
 
-    @NotNull
     @Column(name = "start_at", nullable = false)
     private Instant startAt;
 
-    @NotNull
     @Column(name = "end_at", nullable = false)
     private Instant endAt;
 
-    @Pattern(regexp = "^(pending|confirmed|cancelled|no_show|completed)$")
-    @Column(name = "status", nullable = false)
-    @Setter @Size(max = 255) @NotBlank private String status = "confirmed";
+    @Column(name = "status", nullable = false, length = 64)
+    @Setter private String status = "confirmed";
 
-    @Column(name = "notes")
-    @Setter @Size(max = 2000) private String notes;
+    @Column(name = "notes", length = 1024)
+    @Setter private String notes;
 
     @Column(name = "deleted_at")
     private Instant deletedAt;

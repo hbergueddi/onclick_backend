@@ -9,7 +9,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotBlank;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.util.Objects;
@@ -18,7 +17,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.Size;
 
 /**
  * Zone physique d'un restaurant (Terrasse, Salle principale, Bar, etc.).
@@ -40,9 +38,8 @@ public class RestaurantZone extends TimestampedEntity {
     @JoinColumn(name = "restaurant_id", nullable = false)
     private Restaurant restaurant;
 
-    @NotBlank
-    @Column(name = "name", nullable = false)
-    @Setter @Size(max = 255) private String name;
+    @Column(name = "name", nullable = false, length = 128)
+    @Setter private String name;
 
     public RestaurantZone(UUID id, Restaurant restaurant, String name) {
         this.id = id;

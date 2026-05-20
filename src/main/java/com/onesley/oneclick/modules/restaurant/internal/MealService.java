@@ -9,8 +9,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.time.LocalTime;
@@ -20,7 +18,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.Size;
 
 /**
  * Créneau de service d'un restaurant (brunch, déjeuner, dîner) avec horaires.
@@ -46,15 +43,12 @@ public class MealService extends TimestampedEntity {
     @JoinColumn(name = "restaurant_id", nullable = false)
     private Restaurant restaurant;
 
-    @NotBlank
-    @Column(name = "name", nullable = false)
-    @Setter @Size(max = 255) private String name;
+    @Column(name = "name", nullable = false, length = 128)
+    @Setter private String name;
 
-    @NotNull
     @Column(name = "start_time", nullable = false)
     @Setter private LocalTime startTime;
 
-    @NotNull
     @Column(name = "end_time", nullable = false)
     @Setter private LocalTime endTime;
 

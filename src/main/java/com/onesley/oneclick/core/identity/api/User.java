@@ -9,10 +9,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.time.Instant;
@@ -63,38 +59,30 @@ public class User extends SoftDeletableAuditedEntity {
     @Setter private Role role;
 
     // ─── Identité ────────────────────────────────────────────────────────────
-    @Email
-    @NotBlank
-    @Column(name = "email", nullable = false, unique = true)
-    @Setter @Size(max = 255) private String email;
+    
+    @Column(name = "email", nullable = false, unique = true, length = 256)
+    @Setter private String email;
 
-    @Pattern(regexp = "^\\+?[0-9 ]{6,20}$", message = "phone format invalid")
-    @Column(name = "phone", unique = true)
-    @Setter @Size(max = 255) private String phone;
+    @Column(name = "phone", unique = true, length = 64)
+    @Setter private String phone;
 
-    @NotBlank
-    @Column(name = "password_hash", nullable = false)
-    @Setter @Size(max = 512) private String passwordHash;
+    @Column(name = "password_hash", nullable = false, length = 128)
+    @Setter private String passwordHash;
 
-    @NotBlank
-    @Size(max = 100)
-    @Column(name = "first_name", nullable = false)
+    @Column(name = "first_name", nullable = false, length = 128)
     @Setter private String firstName;
 
-    @NotBlank
-    @Size(max = 100)
-    @Column(name = "last_name", nullable = false)
+    @Column(name = "last_name", nullable = false, length = 128)
     @Setter private String lastName;
 
-    @Column(name = "avatar_url")
-    @Setter @Size(max = 1024) private String avatarUrl;
+    @Column(name = "avatar_url", length = 512)
+    @Setter private String avatarUrl;
 
-    @Pattern(regexp = "^(fr|en|ar)$", message = "language must be fr/en/ar")
-    @Column(name = "language", nullable = false)
-    @Setter @Size(max = 255) @NotBlank private String language = "fr";
+    @Column(name = "language", nullable = false, length = 64)
+    @Setter private String language = "fr";
 
-    @Column(name = "status", nullable = false)
-    @Setter @Size(max = 255) @NotBlank private String status = "active";
+    @Column(name = "status", nullable = false, length = 64)
+    @Setter private String status = "active";
 
     // ─── Flags Spring Security (§2.1) ────────────────────────────────────────
     @Column(name = "account_non_expired", nullable = false)
@@ -116,8 +104,8 @@ public class User extends SoftDeletableAuditedEntity {
      * Code de parrainage public stable (8 chars uppercase) — généré depuis l'UUID
      * via migration V14. Lecture seule au niveau API : non modifiable via PATCH.
      */
-    @Column(name = "referral_code", unique = true)
-    @Setter @Size(max = 255) private String referralCode;
+    @Column(name = "referral_code", unique = true, length = 64)
+    @Setter private String referralCode;
 
     public User(UUID id, Role role, String email, String passwordHash, String firstName, String lastName) {
         this.id = id;

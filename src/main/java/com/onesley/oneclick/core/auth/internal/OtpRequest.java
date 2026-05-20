@@ -9,8 +9,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
 import org.hibernate.proxy.HibernateProxy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -21,8 +19,6 @@ import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 
 /**
  * Code OTP — purpose : signup / reset_password / verify_phone / verify_email / 2fa / redemption.
@@ -52,17 +48,14 @@ public class OtpRequest {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @NotBlank
-    @Pattern(regexp = "^(signup|reset_password|verify_phone|verify_email|2fa|redemption)$")
-    @Column(name = "purpose", nullable = false)
-    @Size(max = 512) private String purpose;
+    @Column(name = "purpose", nullable = false, length = 64)
+     private String purpose;
 
-    @NotBlank
-    @Column(name = "code", nullable = false)
-    @Size(max = 255) private String code;
+    @Column(name = "code", nullable = false, length = 64)
+     private String code;
 
     @Column(name = "expires_at", nullable = false)
-    @NotNull private Instant expiresAt;
+     private Instant expiresAt;
 
     @Column(name = "verified_at")
     private Instant verifiedAt;

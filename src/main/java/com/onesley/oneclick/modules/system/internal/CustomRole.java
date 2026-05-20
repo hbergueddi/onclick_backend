@@ -6,14 +6,12 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotBlank;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
-import jakarta.validation.constraints.Size;
 
 /**
  * Rôle personnalisé admin — page {@code GestionRoles}.
@@ -33,12 +31,11 @@ public class CustomRole extends TimestampedEntity {
     @Column(columnDefinition = "uuid")
     private UUID id;
 
-    @NotBlank
-    @Column(name = "name", nullable = false)
-    @Setter @Size(max = 255) private String name;
+    @Column(name = "name", nullable = false, length = 128)
+    @Setter private String name;
 
-    @Column(name = "description")
-    @Setter @Size(max = 2000) private String description;
+    @Column(name = "description", length = 1024)
+    @Setter private String description;
 
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(name = "permissions", columnDefinition = "text[]", nullable = false)

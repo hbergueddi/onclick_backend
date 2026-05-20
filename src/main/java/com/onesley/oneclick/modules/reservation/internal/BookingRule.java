@@ -6,7 +6,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.Min;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.util.Objects;
@@ -32,17 +31,16 @@ public class BookingRule extends TimestampedEntity {
     @Column(name = "restaurant_id", nullable = false)
     private UUID restaurantId;
 
-    @Min(1)
     @Column(name = "max_guest", nullable = false)
     @Setter private Integer maxGuest = 12;
 
     /** Durée d'un slot en minutes (90 par défaut). */
-    @Min(15)
+    
     @Column(name = "slot_duration", nullable = false)
     @Setter private Integer slotDuration = 90;
 
     /** Fenêtre d'annulation gratuite en heures avant reservation_at. */
-    @Min(0)
+    
     @Column(name = "cancellation_window_hours", nullable = false)
     @Setter private Integer cancellationWindowHours = 2;
 

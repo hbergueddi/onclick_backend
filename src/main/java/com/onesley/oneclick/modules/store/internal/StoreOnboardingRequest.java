@@ -7,9 +7,6 @@ import java.time.Instant;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
-import jakarta.validation.constraints.Pattern;
 
 @Entity
 @Table(name = "store_onboarding_requests")
@@ -24,31 +21,31 @@ public class StoreOnboardingRequest extends TimestampedEntity {
     @Column(name = "tenant_id")
     @Setter private UUID tenantId;
 
-    @Column(name = "restaurant_name", nullable = false, length = 255)
-    @Setter @Size(max = 255) @NotBlank private String restaurantName;
+    @Column(name = "restaurant_name", nullable = false, length = 128)
+    @Setter private String restaurantName;
 
-    @Column @Setter private String cuisine;
-    @Column @Setter private String city;
-    @Column @Setter private String address;
-    @Column @Setter private String phone;
+    @Column(length = 64) @Setter private String cuisine;
+    @Column(length = 128) @Setter private String city;
+    @Column(length = 256) @Setter private String address;
+    @Column(length = 64) @Setter private String phone;
 
     @Column(name = "owner_first_name", nullable = false, length = 128)
-    @Setter @Size(max = 128) @NotBlank private String ownerFirstName;
+    @Setter private String ownerFirstName;
 
     @Column(name = "owner_last_name", nullable = false, length = 128)
-    @Setter @Size(max = 128) @NotBlank private String ownerLastName;
+    @Setter private String ownerLastName;
 
-    @Column(name = "owner_email", nullable = false, length = 255)
-    @Setter @Size(max = 255) @NotBlank private String ownerEmail;
+    @Column(name = "owner_email", nullable = false, length = 256)
+    @Setter private String ownerEmail;
 
-    @Column(name = "owner_phone", length = 32)
-    @Setter @Size(max = 32) private String ownerPhone;
+    @Column(name = "owner_phone", length = 64)
+    @Setter private String ownerPhone;
 
-    @Column(nullable = false, length = 32)
-    @Setter @Size(max = 32) @NotBlank @Pattern(regexp = "^(pending|approved|rejected|onboarded)$") private String status = "pending";
+    @Column(nullable = false, length = 64)
+    @Setter private String status = "pending";
 
-    @Column(name = "rejection_reason")
-    @Setter @Size(max = 2000) private String rejectionReason;
+    @Column(name = "rejection_reason", length = 1024)
+    @Setter private String rejectionReason;
 
     @Column(name = "reviewed_by")
     @Setter private UUID reviewedBy;

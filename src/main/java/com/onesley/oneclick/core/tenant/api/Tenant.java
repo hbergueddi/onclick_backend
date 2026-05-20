@@ -6,8 +6,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.util.Objects;
@@ -16,7 +14,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.Size;
 
 /**
  * Racine multi-tenant. 1 ligne par marque whitelabel.
@@ -31,19 +28,14 @@ public class Tenant extends SoftDeletableAuditedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
-    @NotBlank
-    @Column(name = "name", nullable = false)
-    @Setter @Size(max = 255) private String name;
+    @Column(name = "name", nullable = false, length = 128)
+    @Setter private String name;
 
-    @NotBlank
-    @Pattern(regexp = "^[a-z0-9_-]+$", message = "slug doit être lowercase alphanumeric (a-z 0-9 _ -)")
-    @Column(name = "slug", nullable = false, unique = true)
-    @Size(max = 255) private String slug;
+    @Column(name = "slug", nullable = false, unique = true, length = 64)
+     private String slug;
 
-    @NotBlank
-    @Pattern(regexp = "^(active|paused|archived)$")
-    @Column(name = "status", nullable = false)
-    @Setter @Size(max = 255) private String status = "active";
+    @Column(name = "status", nullable = false, length = 64)
+    @Setter private String status = "active";
 
     public Tenant(UUID id, String name, String slug) {
         this.id = id;

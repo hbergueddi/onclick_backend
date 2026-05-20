@@ -11,9 +11,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.time.Instant;
@@ -23,9 +20,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.Size;
 
 /**
  * Réservation — workflow 7 statuts. {@code reservation_at} timestamptz UNIFIÉ.
@@ -67,20 +61,17 @@ public class Reservation extends SoftDeletableAuditedEntity {
     @Column(name = "service_id")
     @Setter private UUID serviceId;
 
-    @NotNull
     @Column(name = "reservation_at", nullable = false)
     @Setter private Instant reservationAt;
 
-    @Min(1)
     @Column(name = "guest_count", nullable = false)
-    @Setter @Positive private Integer guestCount;
+    @Setter private Integer guestCount;
 
-    @Pattern(regexp = "^(pending|confirmed|refused|counter_proposed|cancelled|honored|no_show)$")
-    @Column(name = "status", nullable = false)
-    @Setter @Size(max = 255) @NotBlank private String status = "pending";
+    @Column(name = "status", nullable = false, length = 64)
+    @Setter private String status = "pending";
 
-    @Column(name = "notes")
-    @Setter @Size(max = 2000) private String notes;
+    @Column(name = "notes", length = 1024)
+    @Setter private String notes;
 
     public Reservation(UUID id, Tenant tenant, User client, UUID restaurantId,
                        Instant reservationAt, Integer guestCount) {

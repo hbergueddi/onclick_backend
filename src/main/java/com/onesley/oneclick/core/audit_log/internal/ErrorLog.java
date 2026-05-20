@@ -6,8 +6,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.type.SqlTypes;
@@ -23,7 +21,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.Size;
 
 /**
  * Erreurs applicatives — log local centralisé. Équivalent persisté de Sentry.
@@ -39,20 +36,17 @@ public class ErrorLog {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
-    @NotBlank
-    @Column(name = "service_name", nullable = false)
-    @Size(max = 255) private String serviceName;
+    @Column(name = "service_name", nullable = false, length = 128)
+     private String serviceName;
 
-    @NotBlank
-    @Column(name = "message", nullable = false)
-    @Size(max = 2000) private String message;
+    @Column(name = "message", nullable = false, length = 1024)
+     private String message;
 
-    @Column(name = "stacktrace", columnDefinition = "text")
-    @Setter @Size(max = 512) private String stacktrace;
+    @Column(name = "stacktrace", columnDefinition = "text", length = 64)
+    @Setter private String stacktrace;
 
-    @Pattern(regexp = "^(debug|info|warn|error|fatal)$")
-    @Column(name = "severity", nullable = false)
-    @Size(max = 512) @NotBlank private String severity = "error";
+    @Column(name = "severity", nullable = false, length = 64)
+      private String severity = "error";
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "metadata", columnDefinition = "jsonb")

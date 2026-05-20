@@ -7,8 +7,6 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.util.HashSet;
@@ -36,14 +34,10 @@ public class Role extends TimestampedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
-    @NotBlank
-    @Size(max = 64)
-    @Column(name = "code", nullable = false, unique = true)
+    @Column(name = "code", nullable = false, unique = true, length = 64)
     private String code;
 
-    @NotBlank
-    @Size(max = 128)
-    @Column(name = "name", nullable = false)
+    @Column(name = "name", nullable = false, length = 128)
     @Setter private String name;
 
     /**

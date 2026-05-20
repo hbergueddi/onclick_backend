@@ -3,7 +3,6 @@ package com.onesley.oneclick.modules.event.internal;
 import com.onesley.oneclick.audit.TimestampedEntity;
 import com.onesley.oneclick.core.identity.api.User;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Pattern;
 
 import java.util.UUID;
 import com.onesley.oneclick.modules.event.api.Event;
@@ -12,8 +11,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 
 /** RSVP sur un Event. */
 @Entity
@@ -27,10 +24,10 @@ public class EventParticipation extends TimestampedEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "event_id", nullable = false) private Event event;
     @Column(name = "user_id", nullable = false, insertable = false, updatable = false) private UUID userId;
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "user_id", nullable = false) private User user;
-    @Pattern(regexp = "^(going|maybe|declined|attended)$") @Column(name = "status", nullable = false) @Setter @Size(max = 255) @NotBlank private String status = "going";
+     @Column(name = "status", nullable = false, length = 64) @Setter private String status = "going";
 
     // V20 — Sprint D : Elite +1 invité
-    @Column(name = "plus_one_name") @Setter @Size(max = 255) private String plusOneName;
+    @Column(name = "plus_one_name", length = 128) @Setter private String plusOneName;
     public EventParticipation(UUID id, Event event, User user, String status) {
         this.id = id; this.event = event; this.user = user; this.status = status;
     }

@@ -4,7 +4,6 @@ import com.onesley.oneclick.audit.TimestampedEntity;
 import com.onesley.oneclick.core.identity.api.User;
 import com.onesley.oneclick.modules.social.api.SocialDtos.FriendshipDto;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Pattern;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -12,8 +11,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 
 /** Amitié bidirectionnelle — 1 row par couple (user1 < user2 par convention). */
 @Entity
@@ -27,7 +24,7 @@ public class Friendship extends TimestampedEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "user1_id", nullable = false) private User user1;
     @Column(name = "user2_id", nullable = false, insertable = false, updatable = false) private UUID user2Id;
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "user2_id", nullable = false) private User user2;
-    @Pattern(regexp = "^(pending|accepted|declined|blocked)$") @Column(name = "status", nullable = false) @Setter @Size(max = 255) @NotBlank private String status = "pending";
+     @Column(name = "status", nullable = false, length = 64) @Setter private String status = "pending";
     @Column(name = "accepted_at") private Instant acceptedAt;
     public Friendship(UUID id, User user1, User user2) {
         // Convention canonique : user1.id < user2.id pour éviter doublons.

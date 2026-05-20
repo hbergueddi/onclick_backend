@@ -3,7 +3,6 @@ package com.onesley.oneclick.modules.payment.internal;
 import com.onesley.oneclick.audit.TimestampedEntity;
 import com.onesley.oneclick.modules.payment.api.PaymentDtos.PaymentMethodDto;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Pattern;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -12,8 +11,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 
 /** Moyen de paiement enregistré (carte tokenisée, wallet, etc.). */
 @Entity
@@ -24,10 +21,10 @@ public class PaymentMethod extends TimestampedEntity {
 
     @Id @Column(name = "id", nullable = false, updatable = false) private UUID id;
     @Column(name = "user_id", nullable = false) private UUID userId;
-    @Pattern(regexp = "^(card|bank_account|wallet|cash_on_site)$") @Column(name = "type", nullable = false) @Size(max = 255) @NotBlank private String type;
-    @Column(name = "last4") @Setter @Size(max = 512) private String last4;
-    @Column(name = "provider") @Setter @Size(max = 255) private String provider;
-    @Column(name = "provider_token") @Setter @Size(max = 4096) private String providerToken;
+     @Column(name = "type", nullable = false, length = 64) private String type;
+    @Column(name = "last4", length = 64) @Setter private String last4;
+    @Column(name = "provider", length = 64) @Setter private String provider;
+    @Column(name = "provider_token", length = 512) @Setter private String providerToken;
     @Column(name = "is_default", nullable = false) @Setter private boolean isDefault = false;
     @Column(name = "expires_at") @Setter private LocalDate expiresAt;
     @Column(name = "deleted_at") private Instant deletedAt;

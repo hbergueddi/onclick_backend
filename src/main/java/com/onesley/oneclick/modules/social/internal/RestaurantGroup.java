@@ -7,8 +7,6 @@ import java.time.Instant;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
-import jakarta.validation.constraints.Size;
-import jakarta.validation.constraints.NotBlank;
 
 @Entity
 @Table(name = "restaurant_groups")
@@ -23,19 +21,19 @@ public class RestaurantGroup extends TimestampedEntity {
     @Column(name = "tenant_id")
     @Setter private UUID tenantId;
 
-    @Column(nullable = false, length = 255)
-    @Setter @Size(max = 255) @NotBlank private String name;
+    @Column(nullable = false, length = 128)
+    @Setter private String name;
 
-    @Column @Setter private String description;
+    @Column(length = 1024) @Setter private String description;
 
     @Column(name = "owner_id")
     @Setter private UUID ownerId;
 
-    @Column(name = "logo_url")
-    @Setter @Size(max = 1024) private String logoUrl;
+    @Column(name = "logo_url", length = 512)
+    @Setter private String logoUrl;
 
-    @Column(nullable = false, length = 32)
-    @Setter @Size(max = 32) @NotBlank private String status = "actif";
+    @Column(nullable = false, length = 64)
+    @Setter private String status = "actif";
 
     @Column(name = "deleted_at")
     @Setter private Instant deletedAt;

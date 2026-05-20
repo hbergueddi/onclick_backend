@@ -3,7 +3,6 @@ package com.onesley.oneclick.modules.payment.internal;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.onesley.oneclick.modules.payment.api.PaymentDtos.TransactionDto;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedDate;
@@ -16,7 +15,6 @@ import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import jakarta.validation.constraints.Size;
 
 /** Journal des événements provider (Stripe webhook, CMI callback, etc.). */
 @Entity
@@ -29,7 +27,7 @@ public class PaymentTransaction {
     @Id @Column(name = "id", nullable = false, updatable = false) private UUID id;
     @Column(name = "payment_id", nullable = false) private UUID paymentId;
     @JdbcTypeCode(SqlTypes.JSON) @Column(name = "provider_response", columnDefinition = "jsonb") private Map<String, Object> providerResponse = new HashMap<>();
-    @NotBlank @Column(name = "event_type", nullable = false) @Size(max = 255) private String eventType;
+     @Column(name = "event_type", nullable = false, length = 64) private String eventType;
     @CreatedDate @Column(name = "created_at", updatable = false, nullable = false) private Instant createdAt;
     public PaymentTransaction(UUID id, UUID paymentId, String eventType, Map<String, Object> providerResponse) {
         this.id = id; this.paymentId = paymentId; this.eventType = eventType;

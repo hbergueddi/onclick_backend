@@ -2,9 +2,6 @@ package com.onesley.oneclick.modules.financial.internal;
 
 import com.onesley.oneclick.modules.financial.api.FinancialDtos.InvoiceLineDto;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.math.BigDecimal;
@@ -14,8 +11,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.PositiveOrZero;
-import jakarta.validation.constraints.Size;
 
 /** Ligne de facture (1 row par item). line_total = quantity × unit_price (GENERATED ALWAYS). */
 @Entity
@@ -35,16 +30,12 @@ public class InvoiceLine {
     @JoinColumn(name = "invoice_id", nullable = false)
     private Invoice invoice;
 
-    @NotBlank
-    @Column(name = "label", nullable = false)
-    @Size(max = 255) private String label;
+    @Column(name = "label", nullable = false, length = 128)
+     private String label;
 
-    @NotNull
-    @DecimalMin("0.00")
     @Column(name = "quantity", nullable = false, precision = 10, scale = 2)
-    @PositiveOrZero private BigDecimal quantity = BigDecimal.ONE;
+     private BigDecimal quantity = BigDecimal.ONE;
 
-    @NotNull
     @Column(name = "unit_price", nullable = false, precision = 12, scale = 2)
     private BigDecimal unitPrice = BigDecimal.ZERO;
 

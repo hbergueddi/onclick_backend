@@ -3,8 +3,6 @@ package com.onesley.oneclick.modules.financial.internal;
 import com.onesley.oneclick.core.identity.api.User;
 import com.onesley.oneclick.modules.financial.api.FinancialDtos.WalletTxDto;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
 import org.hibernate.proxy.HibernateProxy;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
@@ -18,8 +16,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 
 /** Mouvement du wallet restaurateur (crédit/débit/commission/payout/adjustment). */
 @Entity
@@ -36,25 +32,23 @@ public class WalletTransaction {
     @Column(name = "restaurant_id", nullable = false)
     private UUID restaurantId;
 
-    @Pattern(regexp = "^(credit|debit|commission|payout|adjustment)$")
-    @Column(name = "type", nullable = false)
-    @Size(max = 255) @NotBlank private String type;
+    @Column(name = "type", nullable = false, length = 64)
+      private String type;
 
-    @NotNull
     @Column(name = "amount", nullable = false, precision = 12, scale = 2)
     private BigDecimal amount;
 
     @Column(name = "balance_after", precision = 12, scale = 2)
     @Setter private BigDecimal balanceAfter;
 
-    @Column(name = "reason")
-    @Size(max = 2000) private String reason;
+    @Column(name = "reason", length = 1024)
+     private String reason;
 
     @Column(name = "reference_id")
     @Setter private UUID referenceId;
 
-    @Column(name = "reference_type")
-    @Setter @Size(max = 255) private String referenceType;
+    @Column(name = "reference_type", length = 64)
+    @Setter private String referenceType;
 
     @CreatedDate
     @Column(name = "created_at", updatable = false, nullable = false)

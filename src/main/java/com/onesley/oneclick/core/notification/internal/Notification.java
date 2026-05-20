@@ -6,9 +6,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.type.SqlTypes;
@@ -24,7 +21,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.Size;
 
 /**
  * Notification unitaire — multi-canal (§7).
@@ -44,30 +40,23 @@ public class Notification {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
-    @NotNull
     @Column(name = "recipient_user_id", nullable = false)
     private UUID recipientUserId;
 
-    @NotBlank
-    @Pattern(regexp = "^(reservation|loyalty|promotion|community|support|system|announcement)$")
-    @Column(name = "type", nullable = false)
-    @Size(max = 255) private String type;
+    @Column(name = "type", nullable = false, length = 64)
+     private String type;
 
-    @NotBlank
-    @Pattern(regexp = "^(inapp|push|email|sms)$")
-    @Column(name = "channel", nullable = false)
-    @Size(max = 512) private String channel = "inapp";
+    @Column(name = "channel", nullable = false, length = 64)
+     private String channel = "inapp";
 
-    @NotBlank
-    @Column(name = "title", nullable = false)
-    @Size(max = 255) private String title;
+    @Column(name = "title", nullable = false, length = 128)
+     private String title;
 
-    @NotBlank
-    @Column(name = "body", nullable = false)
-    @Size(max = 10000) private String body;
+    @Column(name = "body", nullable = false, length = 1024)
+     private String body;
 
-    @Column(name = "link")
-    @Setter @Size(max = 1024) private String link;
+    @Column(name = "link", length = 512)
+    @Setter private String link;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "metadata", columnDefinition = "jsonb")

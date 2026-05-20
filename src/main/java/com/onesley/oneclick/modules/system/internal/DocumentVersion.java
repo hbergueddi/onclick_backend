@@ -10,8 +10,6 @@ import jakarta.persistence.Table;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 
 /**
  * Révision archivée d'un {@link AppDocument} — historique append-only.
@@ -30,15 +28,15 @@ public class DocumentVersion extends CreatedAuthorEntity {
     @Column(columnDefinition = "uuid")
     private UUID id;
 
-    @Column(name = "document_id", nullable = false)
-    @Setter @Size(max = 512) @NotBlank private String documentId;
+    @Column(name = "document_id", nullable = false, length = 64)
+    @Setter private String documentId;
 
-    @Column(name = "version")
-    @Setter @Size(max = 512) private String version;
+    @Column(name = "version", length = 64)
+    @Setter private String version;
 
-    @Column(name = "content")
-    @Setter @Size(max = 10000) private String content;
+    @Column(name = "content", length = 4096)
+    @Setter private String content;
 
-    @Column(name = "notes")
-    @Setter @Size(max = 2000) private String notes;
+    @Column(name = "notes", length = 1024)
+    @Setter private String notes;
 }

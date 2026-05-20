@@ -9,8 +9,6 @@ import java.time.Instant;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 
 /**
  * Document interne versionné — page admin {@code DocumentExport}.
@@ -30,21 +28,21 @@ import jakarta.validation.constraints.Size;
 public class AppDocument {
 
     @Id
-    @Column(name = "id", nullable = false, updatable = false)
+    @Column(name = "id", nullable = false, updatable = false, length = 64)
     @Setter private String id;
 
-    @Column(name = "content")
-    @Setter @Size(max = 10000) private String content;
+    @Column(name = "content", length = 4096)
+    @Setter private String content;
 
-    @Column(name = "version")
-    @Setter @Size(max = 512) private String version;
+    @Column(name = "version", length = 64)
+    @Setter private String version;
 
     @Column(name = "updated_at", nullable = false)
-    @Setter @NotNull private Instant updatedAt = Instant.now();
+    @Setter private Instant updatedAt = Instant.now();
 
     @Column(name = "updated_by")
     @Setter private UUID updatedBy;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    @Setter @NotNull private Instant createdAt = Instant.now();
+    @Setter private Instant createdAt = Instant.now();
 }

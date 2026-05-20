@@ -6,9 +6,6 @@ import java.time.Instant;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 
 @Entity
 @Table(name = "quota_change_logs")
@@ -30,7 +27,7 @@ public class QuotaChangeLog {
     @Setter private UUID userId;
 
     @Column(name = "quota_type", nullable = false, length = 64)
-    @Setter @Size(max = 64) @NotBlank private String quotaType;
+    @Setter private String quotaType;
 
     @Column(name = "old_value")
     @Setter private Integer oldValue;
@@ -38,8 +35,8 @@ public class QuotaChangeLog {
     @Column(name = "new_value")
     @Setter private Integer newValue;
 
-    @Column @Setter private String reason;
+    @Column(length = 1024) @Setter private String reason;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    @NotNull private Instant createdAt = Instant.now();
+     private Instant createdAt = Instant.now();
 }

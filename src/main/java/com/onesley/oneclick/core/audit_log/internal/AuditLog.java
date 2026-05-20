@@ -11,7 +11,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotBlank;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.type.SqlTypes;
@@ -27,7 +26,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.Size;
 
 /**
  * Audit trail — qui a fait quoi sur quelle entité, avec diff.
@@ -61,26 +59,24 @@ public class AuditLog {
     @JoinColumn(name = "tenant_id")
     @Setter private Tenant tenant;
 
-    @NotBlank
-    @Column(name = "entity_type", nullable = false)
-    @Size(max = 255) private String entityType;
+    @Column(name = "entity_type", nullable = false, length = 64)
+     private String entityType;
 
     @Column(name = "entity_id")
     private UUID entityId;
 
-    @NotBlank
-    @Column(name = "action", nullable = false)
-    @Size(max = 512) private String action;
+    @Column(name = "action", nullable = false, length = 64)
+     private String action;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "diff", columnDefinition = "jsonb")
     private Map<String, Object> diff = new HashMap<>();
 
-    @Column(name = "ip_address")
-    @Setter @Size(max = 2000) private String ipAddress;
+    @Column(name = "ip_address", length = 256)
+    @Setter private String ipAddress;
 
-    @Column(name = "user_agent")
-    @Setter @Size(max = 512) private String userAgent;
+    @Column(name = "user_agent", length = 512)
+    @Setter private String userAgent;
 
     @CreatedDate
     @Column(name = "created_at", updatable = false, nullable = false)

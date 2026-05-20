@@ -8,7 +8,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotBlank;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.util.Objects;
@@ -17,7 +16,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.Size;
 
 /**
  * Entrée de menu applicatif (sidebar). Hiérarchique via {@code parent_id}.
@@ -32,19 +30,17 @@ public class Menu extends TimestampedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
-    @NotBlank
-    @Column(name = "code", nullable = false, unique = true)
-    @Size(max = 255) private String code;
+    @Column(name = "code", nullable = false, unique = true, length = 64)
+     private String code;
 
-    @NotBlank
-    @Column(name = "name", nullable = false)
-    @Size(max = 255) private String name;
+    @Column(name = "name", nullable = false, length = 128)
+     private String name;
 
-    @Column(name = "icon")
-    @Setter @Size(max = 1024) private String icon;
+    @Column(name = "icon", length = 64)
+    @Setter private String icon;
 
-    @Column(name = "path")
-    @Setter @Size(max = 512) private String path;
+    @Column(name = "path", length = 512)
+    @Setter private String path;
 
     // Self-reference parent — LAZY pour pouvoir naviguer l'arbre côté service
     @Column(name = "parent_id", insertable = false, updatable = false)

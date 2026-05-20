@@ -4,8 +4,6 @@ import com.onesley.oneclick.audit.SoftDeletableAuditedEntity;
 import com.onesley.oneclick.core.identity.api.User;
 import com.onesley.oneclick.modules.social.api.SocialDtos.FriendGroupDto;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 
 import java.util.UUID;
 import lombok.AccessLevel;
@@ -35,9 +33,9 @@ public class FriendGroup extends SoftDeletableAuditedEntity {
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
 
-    @NotBlank @Size(max = 500) @Column(name = "name", nullable = false) @Setter private String name;
-    @Column(name = "description") @Setter @Size(max = 2000) private String description;
-    @Column(name = "avatar_url") @Setter @Size(max = 1024) private String avatarUrl;
+      @Column(name = "name", nullable = false, length = 128) @Setter private String name;
+    @Column(name = "description", length = 1024) @Setter private String description;
+    @Column(name = "avatar_url", length = 512) @Setter private String avatarUrl;
 
     public FriendGroup(UUID id, User owner, String name) {
         this.id = id;

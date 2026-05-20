@@ -5,9 +5,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotNull;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.math.BigDecimal;
@@ -17,8 +14,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.PositiveOrZero;
 
 /**
  * Règle de calcul des points par restaurant.
@@ -39,29 +34,20 @@ public class LoyaltyRule extends TimestampedEntity {
     @Column(name = "restaurant_id", nullable = false)
     private UUID restaurantId;
 
-    @NotNull
-    @DecimalMin("0.0000")
     @Column(name = "conversion_rate", nullable = false, precision = 5, scale = 4)
-    @Setter @PositiveOrZero private BigDecimal conversionRate = new BigDecimal("0.0500");
+    @Setter private BigDecimal conversionRate = new BigDecimal("0.0500");
 
-    @NotNull
-    @Min(1)
     @Column(name = "max_points", nullable = false)
-    @Setter @Positive private Integer maxPoints = 1000;
+    @Setter private Integer maxPoints = 1000;
 
-    @NotNull
-    @DecimalMin("0.00")
     @Column(name = "min_ticket_amount", nullable = false, precision = 12, scale = 2)
-    @Setter @PositiveOrZero private BigDecimal minTicketAmount = new BigDecimal("100.00");
+    @Setter private BigDecimal minTicketAmount = new BigDecimal("100.00");
 
-    @NotNull
-    @DecimalMin("0.0000")
     @Column(name = "point_value", nullable = false, precision = 8, scale = 4)
     @Setter private BigDecimal pointValue = new BigDecimal("1.0000");
 
-    @Min(1)
     @Column(name = "expires_after_days", nullable = false)
-    @Setter @Positive private Integer expiresAfterDays = 365;
+    @Setter private Integer expiresAfterDays = 365;
 
     @Column(name = "enabled", nullable = false)
     @Setter private boolean enabled = true;

@@ -6,9 +6,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.util.Objects;
@@ -17,7 +14,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.Size;
 
 /**
  * Feature flag dynamique — peut être activé/désactivé sans redéploiement.
@@ -34,22 +30,18 @@ public class FeatureFlag extends TimestampedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
-    @NotBlank
-    @Column(name = "code", nullable = false, unique = true)
-    @Size(max = 255) private String code;
+    @Column(name = "code", nullable = false, unique = true, length = 64)
+     private String code;
 
-    @NotBlank
-    @Column(name = "name", nullable = false)
-    @Setter @Size(max = 255) private String name;
+    @Column(name = "name", nullable = false, length = 128)
+    @Setter private String name;
 
-    @Column(name = "description")
-    @Setter @Size(max = 2000) private String description;
+    @Column(name = "description", length = 1024)
+    @Setter private String description;
 
     @Column(name = "enabled", nullable = false)
     @Setter private boolean enabled = false;
 
-    @Min(0)
-    @Max(100)
     @Column(name = "rollout_pct", nullable = false)
     @Setter private Integer rolloutPct = 0;
 

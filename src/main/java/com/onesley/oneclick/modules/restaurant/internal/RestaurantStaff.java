@@ -11,7 +11,6 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-import jakarta.validation.constraints.NotBlank;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.time.Instant;
@@ -21,7 +20,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.Size;
 
 /**
  * Junction user × restaurant avec role_code applicatif (owner, manager, server, host, etc.).
@@ -55,9 +53,8 @@ public class RestaurantStaff extends TimestampedEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @NotBlank
-    @Column(name = "role_code", nullable = false)
-    @Setter @Size(max = 255) private String roleCode;
+    @Column(name = "role_code", nullable = false, length = 64)
+    @Setter private String roleCode;
 
     @Column(name = "deleted_at")
     private Instant deletedAt;

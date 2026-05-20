@@ -10,8 +10,6 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.util.Objects;
@@ -20,8 +18,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.Size;
 
 /**
  * Table physique d'un restaurant (T01, T02...) rattachée à une zone.
@@ -47,13 +43,11 @@ public class RestaurantTable extends TimestampedEntity {
     @JoinColumn(name = "zone_id", nullable = false)
     private RestaurantZone zone;
 
-    @NotBlank
-    @Column(name = "table_number", nullable = false)
-    @Setter @Size(max = 255) private String tableNumber;
+    @Column(name = "table_number", nullable = false, length = 64)
+    @Setter private String tableNumber;
 
-    @Min(1)
     @Column(name = "seats", nullable = false)
-    @Setter @Positive private Integer seats;
+    @Setter private Integer seats;
 
     public RestaurantTable(UUID id, RestaurantZone zone, String tableNumber, Integer seats) {
         this.id = id;

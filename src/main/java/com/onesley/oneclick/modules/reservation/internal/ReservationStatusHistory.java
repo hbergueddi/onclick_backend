@@ -8,7 +8,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotBlank;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.time.Instant;
@@ -18,8 +17,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 
 /**
  * Audit workflow d'une réservation — 1 ligne par changement de statut.
@@ -44,12 +41,11 @@ public class ReservationStatusHistory {
     @JoinColumn(name = "reservation_id", nullable = false)
     private Reservation reservation;
 
-    @Column(name = "old_status")
-    @Size(max = 255) private String oldStatus;
+    @Column(name = "old_status", length = 64)
+     private String oldStatus;
 
-    @NotBlank
-    @Column(name = "new_status", nullable = false)
-    @Size(max = 255) private String newStatus;
+    @Column(name = "new_status", nullable = false, length = 64)
+     private String newStatus;
 
     @Column(name = "changed_by", insertable = false, updatable = false)
     private UUID changedById;
@@ -58,11 +54,11 @@ public class ReservationStatusHistory {
     @JoinColumn(name = "changed_by")
     private User changedBy;
 
-    @Column(name = "reason")
-    @Setter @Size(max = 2000) private String reason;
+    @Column(name = "reason", length = 1024)
+    @Setter private String reason;
 
     @Column(name = "changed_at", nullable = false)
-    @NotNull private Instant changedAt = Instant.now();
+     private Instant changedAt = Instant.now();
 
     public ReservationStatusHistory(UUID id, Reservation reservation, String oldStatus, String newStatus, User changedBy) {
         this.id = id;

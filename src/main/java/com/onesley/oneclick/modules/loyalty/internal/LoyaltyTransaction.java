@@ -6,9 +6,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
 import org.hibernate.proxy.HibernateProxy;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
@@ -22,18 +19,17 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.Size;
 
 /**
  * Mouvement de points — typé pour expliquer la modification de balance.
  *
  * <p>Types :
  * <ul>
- *   <li>{@code earn} — gagné via scan ticket (points > 0)</li>
- *   <li>{@code spend} — utilisé en redemption (points < 0)</li>
- *   <li>{@code expire} — expiré (points < 0)</li>
- *   <li>{@code gift} — transféré depuis un autre user (points > 0 ou < 0 selon sens)</li>
- *   <li>{@code adjust} — ajustement manuel admin</li>
+ * <li>{@code earn} — gagné via scan ticket (points > 0)</li>
+ * <li>{@code spend} — utilisé en redemption (points < 0)</li>
+ * <li>{@code expire} — expiré (points < 0)</li>
+ * <li>{@code gift} — transféré depuis un autre user (points > 0 ou < 0 selon sens)</li>
+ * <li>{@code adjust} — ajustement manuel admin</li>
  * </ul>
  */
 @Entity
@@ -50,20 +46,17 @@ public class LoyaltyTransaction {
     @Column(name = "account_id", nullable = false)
     private UUID accountId;
 
-    @NotBlank
-    @Pattern(regexp = "^(earn|spend|expire|gift|adjust)$")
-    @Column(name = "type", nullable = false)
-    @Size(max = 255) private String type;
+    @Column(name = "type", nullable = false, length = 64)
+     private String type;
 
-    @NotNull
     @Column(name = "points", nullable = false)
     private Integer points;
 
     @Column(name = "amount", precision = 12, scale = 2)
     @Setter private BigDecimal amount;
 
-    @Column(name = "reason")
-    @Size(max = 2000) private String reason;
+    @Column(name = "reason", length = 1024)
+     private String reason;
 
     @Column(name = "expires_at")
     @Setter private Instant expiresAt;

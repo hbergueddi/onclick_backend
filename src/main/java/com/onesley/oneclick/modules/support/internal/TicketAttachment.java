@@ -2,7 +2,6 @@ package com.onesley.oneclick.modules.support.internal;
 
 import com.onesley.oneclick.modules.support.api.SupportDtos.AttachmentDto;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
@@ -12,7 +11,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.Size;
 
 /** Pièce jointe d'un ticket support. */
 @Entity
@@ -25,9 +23,9 @@ public class TicketAttachment {
     @Id @Column(name = "id", nullable = false, updatable = false) private UUID id;
     @Column(name = "ticket_id", nullable = false, insertable = false, updatable = false) private UUID ticketId;
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "ticket_id", nullable = false) private SupportTicket ticket;
-    @NotBlank @Column(name = "url", nullable = false) @Size(max = 1024) private String url;
-    @Column(name = "file_name") @Setter @Size(max = 255) private String fileName;
-    @Column(name = "mime_type") @Setter @Size(max = 255) private String mimeType;
+     @Column(name = "url", nullable = false, length = 512) private String url;
+    @Column(name = "file_name", length = 128) @Setter private String fileName;
+    @Column(name = "mime_type", length = 64) @Setter private String mimeType;
     @CreatedDate @Column(name = "created_at", updatable = false, nullable = false) private Instant createdAt;
     public TicketAttachment(UUID id, SupportTicket ticket, String url) {
         this.id = id; this.ticket = ticket; this.url = url;

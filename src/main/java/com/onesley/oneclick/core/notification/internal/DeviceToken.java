@@ -6,10 +6,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.time.Instant;
@@ -35,21 +31,16 @@ public class DeviceToken extends TimestampedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
-    @NotNull
     @Column(name = "user_id", nullable = false)
     private UUID userId;
 
-    @NotBlank
-    @Size(max = 4096)
-    @Column(name = "token", nullable = false, unique = true)
+    @Column(name = "token", nullable = false, unique = true, length = 512)
     private String token;
 
-    @Pattern(regexp = "^(ios|android|web)$")
-    @Column(name = "platform")
-    @Size(max = 255) private String platform;
+    @Column(name = "platform", length = 64)
+     private String platform;
 
-    @Size(max = 255)
-    @Column(name = "app_id")
+    @Column(name = "app_id", length = 64)
     @Setter private String appId;
 
     @Column(name = "last_used_at")

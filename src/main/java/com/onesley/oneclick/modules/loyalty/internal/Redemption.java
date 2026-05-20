@@ -5,9 +5,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotNull;
 import org.hibernate.proxy.HibernateProxy;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
@@ -21,7 +18,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.Positive;
 
 /**
  * Redemption — utilisation de points pour obtenir une réduction.
@@ -44,15 +40,11 @@ public class Redemption {
     @Column(name = "account_id", nullable = false)
     private UUID accountId;
 
-    @NotNull
-    @Min(1)
     @Column(name = "points_used", nullable = false)
-    @Positive private Integer pointsUsed;
+     private Integer pointsUsed;
 
-    @NotNull
-    @DecimalMin("0.01")
     @Column(name = "discount_amount", nullable = false, precision = 12, scale = 2)
-    @Positive private BigDecimal discountAmount;
+     private BigDecimal discountAmount;
 
     @Column(name = "otp_validated", nullable = false)
     @Setter private boolean otpValidated = false;

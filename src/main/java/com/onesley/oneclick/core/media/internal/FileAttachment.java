@@ -10,7 +10,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotBlank;
 import org.hibernate.proxy.HibernateProxy;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
@@ -23,7 +22,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.Size;
 
 /**
  * Fichier (PDF, docs) polymorphique attaché à une entité.
@@ -42,25 +40,23 @@ public class FileAttachment {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
-    @NotBlank
-    @Column(name = "entity_type", nullable = false)
-    @Size(max = 255) private String entityType;
+    @Column(name = "entity_type", nullable = false, length = 64)
+     private String entityType;
 
     @Column(name = "entity_id", nullable = false)
     private UUID entityId;
 
-    @NotBlank
-    @Column(name = "path", nullable = false)
-    @Size(max = 512) private String path;
+    @Column(name = "path", nullable = false, length = 512)
+     private String path;
 
-    @Column(name = "mime_type")
-    @Size(max = 255) private String mimeType;
+    @Column(name = "mime_type", length = 64)
+     private String mimeType;
 
     @Column(name = "size_bytes")
     @Setter private Long sizeBytes;
 
-    @Column(name = "original_name")
-    @Setter @Size(max = 255) private String originalName;
+    @Column(name = "original_name", length = 128)
+    @Setter private String originalName;
 
     @CreatedDate
     @Column(name = "created_at", updatable = false, nullable = false)

@@ -5,10 +5,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.time.LocalTime;
@@ -17,7 +13,6 @@ import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import jakarta.validation.constraints.Size;
 
 /**
  * Horaires polymorphiques — utilisable pour restaurant ET resource (§4).
@@ -38,23 +33,18 @@ public class BusinessHour extends TimestampedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
-    @NotBlank
-    @Column(name = "entity_type", nullable = false)
-    @Size(max = 255) private String entityType;
+    @Column(name = "entity_type", nullable = false, length = 64)
+     private String entityType;
 
     @Column(name = "entity_id", nullable = false)
     private UUID entityId;
 
-    @Min(0)
-    @Max(6)
     @Column(name = "day_of_week", nullable = false)
     private Integer dayOfWeek;
 
-    @NotNull
     @Column(name = "start_time", nullable = false)
     private LocalTime startTime;
 
-    @NotNull
     @Column(name = "end_time", nullable = false)
     private LocalTime endTime;
 

@@ -4,8 +4,6 @@ import com.onesley.oneclick.audit.TimestampedEntity;
 import com.onesley.oneclick.core.identity.api.User;
 import com.onesley.oneclick.modules.social.api.SocialDtos.ReferralDto;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -13,7 +11,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.Size;
 
 /** Parrainage avec code et status d'activation. */
 @Entity
@@ -27,8 +24,8 @@ public class Referral extends TimestampedEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "referrer_id", nullable = false) private User referrer;
     @Column(name = "referred_user_id", insertable = false, updatable = false) private UUID referredUserId;
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "referred_user_id") @Setter private User referredUser;
-    @NotBlank @Column(name = "referral_code", nullable = false) @Size(max = 255) private String referralCode;
-    @Pattern(regexp = "^(pending|activated|expired)$") @Column(name = "status", nullable = false) @Setter @Size(max = 255) @NotBlank private String status = "pending";
+     @Column(name = "referral_code", nullable = false, length = 64) private String referralCode;
+     @Column(name = "status", nullable = false, length = 64) @Setter private String status = "pending";
     @Column(name = "activated_at") private Instant activatedAt;
     public Referral(UUID id, User referrer, String referralCode) {
         this.id = id; this.referrer = referrer; this.referralCode = referralCode;

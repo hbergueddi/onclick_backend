@@ -7,9 +7,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.math.BigDecimal;
@@ -19,8 +16,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.PositiveOrZero;
-import jakarta.validation.constraints.Size;
 
 /**
  * Niveau de fidélité (Ruby, Sapphire, Emeraude, ...) par tenant.
@@ -41,17 +36,14 @@ public class Tier extends TimestampedEntity {
     @Column(name = "tenant_id", nullable = false)
     private UUID tenantId;
 
-    @NotBlank
-    @Column(name = "name", nullable = false)
-    @Size(max = 255) private String name;
+    @Column(name = "name", nullable = false, length = 128)
+     private String name;
 
-    @Min(0)
     @Column(name = "min_points", nullable = false)
-    @PositiveOrZero private Integer minPoints = 0;
+     private Integer minPoints = 0;
 
-    @DecimalMin("0.00")
     @Column(name = "bonus_percent", nullable = false, precision = 5, scale = 2)
-    @PositiveOrZero private BigDecimal bonusPercent = BigDecimal.ZERO;
+     private BigDecimal bonusPercent = BigDecimal.ZERO;
 
     @Column(name = "sort_order", nullable = false)
     @Setter private Integer sortOrder = 0;

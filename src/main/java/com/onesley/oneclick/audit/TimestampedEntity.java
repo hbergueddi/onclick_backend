@@ -19,8 +19,8 @@ import lombok.Getter;
  *
  * <p>Une entité qui hérite de {@code TimestampedEntity} obtient :
  * <ul>
- *   <li>{@code created_at} — renseigné à l'INSERT, immuable, UTC ({@link Instant})</li>
- *   <li>{@code updated_at} — renseigné à l'INSERT et à chaque UPDATE, UTC</li>
+ * <li>{@code created_at} — renseigné à l'INSERT, immuable, UTC ({@link Instant})</li>
+ * <li>{@code updated_at} — renseigné à l'INSERT et à chaque UPDATE, UTC</li>
  * </ul>
  *
  * <p><b>ddl-auto=validate</b> : pour qu'une entité étende cette classe, sa table SQL

@@ -3,7 +3,6 @@ package com.onesley.oneclick.modules.social.internal;
 import com.onesley.oneclick.core.identity.api.User;
 import com.onesley.oneclick.modules.social.api.SocialDtos.FriendGroupMemberDto;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Pattern;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
@@ -13,8 +12,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 
 /**
  * Junction {@code users × friend_groups} — appartenance + rôle dans le groupe.
@@ -47,9 +44,8 @@ public class FriendGroupMember {
     @JoinColumn(name = "friend_id", nullable = false)
     private User friend;
 
-    @Pattern(regexp = "^(owner|admin|member)$")
-    @Column(name = "role", nullable = false)
-    @Setter @Size(max = 255) @NotBlank private String role = "member";
+    @Column(name = "role", nullable = false, length = 64)
+    @Setter private String role = "member";
 
     @CreatedDate
     @Column(name = "joined_at", updatable = false, nullable = false)

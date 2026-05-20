@@ -3,7 +3,6 @@ package com.onesley.oneclick.modules.analytics.internal;
 import com.onesley.oneclick.audit.TimestampedEntity;
 import com.onesley.oneclick.modules.analytics.api.AnalyticsDtos.WebhookDto;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -14,7 +13,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.Size;
 
 /** Webhook sortant — URL à appeler quand un event se produit. */
 @Entity
@@ -26,8 +24,8 @@ public class Webhook extends TimestampedEntity {
     @Id @Column(name = "id", nullable = false, updatable = false) private UUID id;
     @Column(name = "api_client_id", nullable = false, insertable = false, updatable = false) private UUID apiClientId;
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "api_client_id", nullable = false) private ApiClient apiClient;
-    @NotBlank @Column(name = "url", nullable = false) @Setter @Size(max = 1024) private String url;
-    @Column(name = "secret") @Setter @Size(max = 512) private String secret;
+     @Column(name = "url", nullable = false, length = 512) @Setter private String url;
+    @Column(name = "secret", length = 64) @Setter private String secret;
     @JdbcTypeCode(SqlTypes.JSON) @Column(name = "event_types", columnDefinition = "jsonb") private List<String> eventTypes = new ArrayList<>();
     @Column(name = "enabled", nullable = false) @Setter private boolean enabled = true;
     public Webhook(UUID id, ApiClient apiClient, String url) {

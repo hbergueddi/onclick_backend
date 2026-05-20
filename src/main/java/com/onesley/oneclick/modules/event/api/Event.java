@@ -3,12 +3,6 @@ package com.onesley.oneclick.modules.event.api;
 import com.onesley.oneclick.audit.SoftDeletableAuditedEntity;
 import com.onesley.oneclick.core.tenant.api.Tenant;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.PositiveOrZero;
-import jakarta.validation.constraints.Size;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -28,17 +22,17 @@ public class Event extends SoftDeletableAuditedEntity {
     @Column(name = "tenant_id", nullable = false, insertable = false, updatable = false) private UUID tenantId;
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "tenant_id", nullable = false) private Tenant tenant;
     @Column(name = "restaurant_id") @Setter private UUID restaurantId;
-    @NotBlank @Size(max = 255) @Column(name = "title", nullable = false) @Setter private String title;
-    @Size(max = 2000) @Column(name = "description") @Setter private String description;
-    @Size(max = 255) @Column(name = "event_type") @Setter private String eventType;
-    @NotNull @Column(name = "event_at", nullable = false) @Setter private Instant eventAt;
-    @Positive @Column(name = "capacity") @Setter private Integer capacity;
+      @Column(name = "title", nullable = false, length = 128) @Setter private String title;
+     @Column(name = "description", length = 1024) @Setter private String description;
+     @Column(name = "event_type", length = 64) @Setter private String eventType;
+     @Column(name = "event_at", nullable = false) @Setter private Instant eventAt;
+     @Column(name = "capacity") @Setter private Integer capacity;
 
     // ─── V20 — Sprint D Elite enrich ────────────────────────────────────
-    @Pattern(regexp = "^(Ruby|Sapphire|Émeraude|Black)$") @Column(name = "min_tier") @Setter @Size(max = 255) private String minTier;
-    @NotNull @PositiveOrZero @Column(name = "places_taken", nullable = false) @Setter private Integer placesTaken = 0;
-    @Size(max = 1024) @Column(name = "image_url") @Setter private String imageUrl;
-    @Size(max = 255) @Column(name = "location_name") @Setter private String locationName;
+     @Column(name = "min_tier", length = 128) @Setter private String minTier;
+      @Column(name = "places_taken", nullable = false) @Setter private Integer placesTaken = 0;
+     @Column(name = "image_url", length = 512) @Setter private String imageUrl;
+     @Column(name = "location_name", length = 128) @Setter private String locationName;
     @Column(name = "is_active", nullable = false) @Setter private boolean isActive = true;
     @Column(name = "event_end") @Setter private Instant eventEnd;
     public Event(UUID id, Tenant tenant, String title, Instant eventAt) {

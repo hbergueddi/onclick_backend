@@ -9,7 +9,6 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-import jakarta.validation.constraints.NotBlank;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.util.Objects;
@@ -19,7 +18,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.Size;
 
 /**
  * Feature flag par tenant. Pattern : un couple (tenant_id, feature_code) est UNIQUE.
@@ -44,9 +42,8 @@ public class TenantFeature extends TimestampedEntity {
     @JoinColumn(name = "tenant_id", nullable = false)
     private Tenant tenant;
 
-    @NotBlank
-    @Column(name = "feature_code", nullable = false)
-    @Size(max = 255) private String featureCode;
+    @Column(name = "feature_code", nullable = false, length = 64)
+     private String featureCode;
 
     @Column(name = "enabled", nullable = false)
     @Setter private boolean enabled = false;

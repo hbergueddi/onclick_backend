@@ -4,14 +4,12 @@ import com.onesley.oneclick.audit.TimestampedEntity;
 import com.onesley.oneclick.core.tenant.api.Tenant;
 import com.onesley.oneclick.modules.analytics.api.AnalyticsDtos.ApiClientDto;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
 
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.Size;
 
 /** Client API (intégration partenaire). */
 @Entity
@@ -23,8 +21,8 @@ public class ApiClient extends TimestampedEntity {
     @Id @Column(name = "id", nullable = false, updatable = false) private UUID id;
     @Column(name = "tenant_id", insertable = false, updatable = false) private UUID tenantId;
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "tenant_id") @Setter private Tenant tenant;
-    @NotBlank @Column(name = "name", nullable = false) @Setter @Size(max = 255) private String name;
-    @Column(name = "description") @Setter @Size(max = 2000) private String description;
+     @Column(name = "name", nullable = false, length = 128) @Setter private String name;
+    @Column(name = "description", length = 1024) @Setter private String description;
     @Column(name = "enabled", nullable = false) @Setter private boolean enabled = true;
     public ApiClient(UUID id, String name) { this.id = id; this.name = name; }
 

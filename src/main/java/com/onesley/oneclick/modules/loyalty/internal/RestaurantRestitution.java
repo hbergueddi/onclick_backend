@@ -7,9 +7,6 @@ import java.math.BigDecimal;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 
 @Entity
 @Table(name = "restaurant_restitutions")
@@ -33,8 +30,8 @@ public class RestaurantRestitution extends TimestampedEntity {
     @Column(nullable = false)
     @Setter private Integer points = 0;
 
-    @Column @Setter private String reason;
+    @Column(length = 1024) @Setter private String reason;
 
-    @Column(nullable = false, length = 32)
-    @Setter @Size(max = 32) @NotBlank @Pattern(regexp = "^(pending|approved|rejected|paid)$") private String status = "pending";
+    @Column(nullable = false, length = 64)
+    @Setter private String status = "pending";
 }

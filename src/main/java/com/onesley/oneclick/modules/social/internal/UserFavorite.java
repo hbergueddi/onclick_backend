@@ -3,7 +3,6 @@ package com.onesley.oneclick.modules.social.internal;
 import com.onesley.oneclick.core.identity.api.User;
 import com.onesley.oneclick.modules.social.api.SocialDtos.UserFavoriteDto;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotNull;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
@@ -41,7 +40,7 @@ public class UserFavorite {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @NotNull @Column(name = "restaurant_id", nullable = false) private UUID restaurantId;
+     @Column(name = "restaurant_id", nullable = false) private UUID restaurantId;
 
     @CreatedDate
     @Column(name = "created_at", updatable = false, nullable = false)

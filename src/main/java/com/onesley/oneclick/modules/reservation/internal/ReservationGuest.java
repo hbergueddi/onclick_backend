@@ -21,23 +21,20 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 
 /**
  * Invité d'une réservation — un des 3 identifiants au minimum (CHECK constraint V17) :
- *  - {@code guestUser} : user OneClick existant (FK)
- *  - {@code guestPhone} : téléphone d'un user pas encore inscrit (futur signup)
- *  - {@code guestName} : nom libre (placeholder informatif)
+ * - {@code guestUser} : user OneClick existant (FK)
+ * - {@code guestPhone} : téléphone d'un user pas encore inscrit (futur signup)
+ * - {@code guestName} : nom libre (placeholder informatif)
  *
  * <p>Workflow {@code status} (V17) :
  * <pre>
- *  linked   → auto-attaché à une résa (default, ex: organisateur ajoute un user OneClick)
- *  invited  → invitation envoyée par notif/SMS, en attente de réponse
- *  accepted → guest a accepté de participer
- *  refused  → guest a décliné (notifier organisateur)
- *  cancelled → guest s'est désisté APRÈS avoir accepté (notifier organisateur)
+ * linked → auto-attaché à une résa (default, ex: organisateur ajoute un user OneClick)
+ * invited → invitation envoyée par notif/SMS, en attente de réponse
+ * accepted → guest a accepté de participer
+ * refused → guest a décliné (notifier organisateur)
+ * cancelled → guest s'est désisté APRÈS avoir accepté (notifier organisateur)
  * </pre>
  *
  * <p>{@code seenByHost} : marque que l'organisateur a vu la réponse (badge UI). MAJ
@@ -68,11 +65,11 @@ public class ReservationGuest {
     @JoinColumn(name = "guest_user_id")
     private User guestUser;
 
-    @Column(name = "guest_name")
-    @Setter @Size(max = 255) private String guestName;
+    @Column(name = "guest_name", length = 128)
+    @Setter private String guestName;
 
-    @Column(name = "guest_phone")
-    @Size(max = 255) private String guestPhone;
+    @Column(name = "guest_phone", length = 128)
+     private String guestPhone;
 
     @Column(name = "invited_by", insertable = false, updatable = false)
     private UUID invitedById;
@@ -81,8 +78,8 @@ public class ReservationGuest {
     @JoinColumn(name = "invited_by")
     private User invitedBy;
 
-    @Column(name = "status", nullable = false)
-    @Setter @Size(max = 255) @NotBlank @Pattern(regexp = "^(linked|invited|accepted|refused|cancelled)$") private String status = "linked";
+    @Column(name = "status", nullable = false, length = 64)
+    @Setter private String status = "linked";
 
     @Column(name = "seen_by_host", nullable = false)
     @Setter private boolean seenByHost = false;

@@ -6,10 +6,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Positive;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.util.Objects;
@@ -18,7 +14,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.Size;
 
 /**
  * Template contractuel versionné & multilangue — utilisé par ContractDownload
@@ -43,36 +38,34 @@ public class ContractTemplate extends SoftDeletableAuditedEntity {
     private UUID tenantId;
 
     /** Code fonctionnel (ex: {@code "partner_contract"}, {@code "tos"}). */
-    @NotBlank
-    @Column(name = "code", nullable = false)
-    @Size(max = 255) private String code;
+    
+    @Column(name = "code", nullable = false, length = 64)
+     private String code;
 
     /** Libellé interne (admin-facing). */
-    @NotBlank
-    @Column(name = "name", nullable = false)
-    @Setter @Size(max = 255) private String name;
+    
+    @Column(name = "name", nullable = false, length = 128)
+    @Setter private String name;
 
     /** Numéro de version — incrément à chaque révision juridique. */
-    @NotNull
-    @Positive
+    
     @Column(name = "version", nullable = false)
     private Integer version = 1;
 
     /** Langue ISO 639-1 — {@code fr | en | ar} (CHECK V13). */
-    @NotBlank
-    @Pattern(regexp = "^(fr|en|ar)$")
-    @Column(name = "language", nullable = false)
-    @Size(max = 255) private String language = "fr";
+    
+    @Column(name = "language", nullable = false, length = 64)
+     private String language = "fr";
 
     /** Titre affiché dans le PDF. */
-    @NotBlank
-    @Column(name = "title", nullable = false)
-    @Setter @Size(max = 255) private String title;
+    
+    @Column(name = "title", nullable = false, length = 128)
+    @Setter private String title;
 
     /** Corps du contrat — markdown ou texte brut, rendu par le générateur PDF. */
-    @NotBlank
-    @Column(name = "body", nullable = false, columnDefinition = "text")
-    @Setter @Size(max = 10000) private String body;
+    
+    @Column(name = "body", nullable = false, columnDefinition = "text", length = 1024)
+    @Setter private String body;
 
     @Column(name = "is_active", nullable = false)
     @Setter private boolean active = true;

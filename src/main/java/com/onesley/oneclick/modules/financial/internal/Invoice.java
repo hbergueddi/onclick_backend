@@ -3,9 +3,6 @@ package com.onesley.oneclick.modules.financial.internal;
 import com.onesley.oneclick.audit.TimestampedEntity;
 import com.onesley.oneclick.modules.financial.api.FinancialDtos.InvoiceDto;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.math.BigDecimal;
@@ -17,7 +14,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.Size;
 
 /** Facture mensuelle par restaurant. */
 @Entity
@@ -33,15 +29,12 @@ public class Invoice extends TimestampedEntity {
     @Column(name = "restaurant_id", nullable = false)
     private UUID restaurantId;
 
-    @NotBlank
-    @Column(name = "invoice_number", nullable = false, unique = true)
-    @Size(max = 255) private String invoiceNumber;
+    @Column(name = "invoice_number", nullable = false, unique = true, length = 64)
+     private String invoiceNumber;
 
-    @NotNull
     @Column(name = "period_start", nullable = false)
     private LocalDate periodStart;
 
-    @NotNull
     @Column(name = "period_end", nullable = false)
     private LocalDate periodEnd;
 
@@ -54,9 +47,8 @@ public class Invoice extends TimestampedEntity {
     @Column(name = "total_ttc", nullable = false, precision = 12, scale = 2)
     @Setter private BigDecimal totalTtc = BigDecimal.ZERO;
 
-    @Pattern(regexp = "^(draft|sent|paid|overdue|cancelled)$")
-    @Column(name = "status", nullable = false)
-    @Setter @Size(max = 255) @NotBlank private String status = "draft";
+    @Column(name = "status", nullable = false, length = 64)
+    @Setter private String status = "draft";
 
     @Column(name = "issued_at")
     @Setter private LocalDate issuedAt;

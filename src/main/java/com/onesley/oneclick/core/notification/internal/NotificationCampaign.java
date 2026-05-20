@@ -6,9 +6,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.time.Instant;
@@ -18,7 +15,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.Size;
 
 /**
  * Campagne marketing programmée — envoi batch à un segment de users.
@@ -36,20 +32,17 @@ public class NotificationCampaign extends TimestampedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
-    @NotNull
     @Column(name = "tenant_id", nullable = false)
     private UUID tenantId;
 
-    @NotBlank
-    @Column(name = "title", nullable = false)
-    @Size(max = 255) private String title;
+    @Column(name = "title", nullable = false, length = 128)
+     private String title;
 
-    @NotBlank
-    @Column(name = "message", nullable = false)
-    @Size(max = 2000) private String message;
+    @Column(name = "message", nullable = false, length = 1024)
+     private String message;
 
-    @Column(name = "target_segment")
-    @Setter @Size(max = 512) private String targetSegment;
+    @Column(name = "target_segment", length = 64)
+    @Setter private String targetSegment;
 
     @Column(name = "scheduled_at")
     @Setter private Instant scheduledAt;
@@ -57,9 +50,8 @@ public class NotificationCampaign extends TimestampedEntity {
     @Column(name = "sent_at")
     private Instant sentAt;
 
-    @Pattern(regexp = "^(draft|scheduled|sending|sent|cancelled|failed)$")
-    @Column(name = "status", nullable = false)
-    @Setter @Size(max = 255) @NotBlank private String status = "draft";
+    @Column(name = "status", nullable = false, length = 64)
+    @Setter private String status = "draft";
 
     @Column(name = "created_by")
     @Setter private UUID createdById;

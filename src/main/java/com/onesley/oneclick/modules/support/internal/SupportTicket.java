@@ -4,9 +4,6 @@ import com.onesley.oneclick.audit.TimestampedEntity;
 import com.onesley.oneclick.core.identity.api.User;
 import com.onesley.oneclick.modules.support.api.SupportDtos.TicketDto;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -25,10 +22,10 @@ public class SupportTicket extends TimestampedEntity {
     @Id @Column(name = "id", nullable = false, updatable = false) private UUID id;
     @Column(name = "opened_by", nullable = false, insertable = false, updatable = false) private UUID openedById;
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "opened_by", nullable = false) private User openedBy;
-    @NotBlank @Size(max = 255) @Column(name = "category", nullable = false) private String category;
-    @NotBlank @Pattern(regexp = "^(low|normal|high|urgent)$") @Column(name = "priority", nullable = false) @Setter @Size(max = 512) private String priority = "normal";
-    @NotBlank @Pattern(regexp = "^(open|in_progress|resolved|closed)$") @Column(name = "status", nullable = false) @Setter @Size(max = 255) private String status = "open";
-    @NotBlank @Size(max = 255) @Column(name = "subject", nullable = false) @Setter private String subject;
+      @Column(name = "category", nullable = false, length = 64) private String category;
+      @Column(name = "priority", nullable = false, length = 64) @Setter private String priority = "normal";
+      @Column(name = "status", nullable = false, length = 64) @Setter private String status = "open";
+      @Column(name = "subject", nullable = false, length = 128) @Setter private String subject;
     @Column(name = "resolved_at") private Instant resolvedAt;
     @Column(name = "closed_at") private Instant closedAt;
     @Column(name = "assigned_to", insertable = false, updatable = false) private UUID assignedToId;
@@ -39,12 +36,12 @@ public class SupportTicket extends TimestampedEntity {
     @Column(name = "photos", columnDefinition = "text[]") @Setter private String[] photos;
     @Column(name = "internal", nullable = false) @Setter private boolean internal = false;
     @Column(name = "escalated_to_admin", nullable = false) @Setter private boolean escalatedToAdmin = false;
-    @Size(max = 2000) @Column(name = "last_reply") @Setter private String lastReply;
+     @Column(name = "last_reply", length = 1024) @Setter private String lastReply;
     @Column(name = "ai_handled", nullable = false) @Setter private boolean aiHandled = false;
-    @Size(max = 2000) @Column(name = "ai_summary") @Setter private String aiSummary;
+     @Column(name = "ai_summary", length = 1024) @Setter private String aiSummary;
 
     // ─── V24 — Sprint K : corps initial du ticket (legacy parity) ────────────
-    @Size(max = 2000) @Column(name = "message") @Setter private String message;
+     @Column(name = "message", length = 1024) @Setter private String message;
     public SupportTicket(UUID id, User openedBy, String category, String subject) {
         this.id = id; this.openedBy = openedBy; this.category = category; this.subject = subject;
     }

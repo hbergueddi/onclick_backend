@@ -3,9 +3,6 @@ package com.onesley.oneclick.modules.resource_booking.internal;
 import com.onesley.oneclick.audit.TimestampedEntity;
 import com.onesley.oneclick.modules.resource_booking.api.ResourceBookingDtos.PricingDto;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.math.BigDecimal;
@@ -15,8 +12,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.PositiveOrZero;
-import jakarta.validation.constraints.Size;
 
 /** Grille tarifaire par ressource (1h padel, 30 min coiffeur, ...). */
 @Entity
@@ -36,14 +31,11 @@ public class ResourcePricing extends TimestampedEntity {
     @JoinColumn(name = "resource_id", nullable = false)
     private Resource resource;
 
-    @NotBlank
-    @Column(name = "name", nullable = false)
-    @Size(max = 255) private String name;
+    @Column(name = "name", nullable = false, length = 128)
+     private String name;
 
-    @NotNull
-    @DecimalMin("0.00")
     @Column(name = "price", nullable = false, precision = 12, scale = 2)
-    @Setter @PositiveOrZero private BigDecimal price;
+    @Setter private BigDecimal price;
 
     @Column(name = "duration_minutes")
     @Setter private Integer durationMinutes;

@@ -7,10 +7,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-import jakarta.validation.constraints.DecimalMax;
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotNull;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.math.BigDecimal;
@@ -20,18 +16,16 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.PositiveOrZero;
 
 /**
  * Règle de gain de points PAR restaurant — override des {@link LoyaltyRule} globaux.
  *
  * <p>Modèle introduit par la migration V13 (Sprint B) :
  * <ul>
- *   <li>{@code conversion_rate} — taux MAD → points (0..1)</li>
- *   <li>{@code cap_per_visit} — plafond points par visite (optionnel)</li>
- *   <li>{@code cap_per_month} — plafond points par mois (optionnel)</li>
- *   <li>{@code min_amount} — montant minimum ticket éligible (optionnel)</li>
+ * <li>{@code conversion_rate} — taux MAD → points (0..1)</li>
+ * <li>{@code cap_per_visit} — plafond points par visite (optionnel)</li>
+ * <li>{@code cap_per_month} — plafond points par mois (optionnel)</li>
+ * <li>{@code min_amount} — montant minimum ticket éligible (optionnel)</li>
  * </ul>
  *
  * <p>{@code tenant_id} est rempli par trigger DB depuis {@code restaurants.tenant_id}
@@ -61,23 +55,17 @@ public class GainRule extends SoftDeletableAuditedEntity {
     @Column(name = "tenant_id", insertable = false, updatable = false)
     private UUID tenantId;
 
-    @NotNull
-    @DecimalMin("0.0000")
-    @DecimalMax("1.0000")
     @Column(name = "conversion_rate", nullable = false, precision = 6, scale = 4)
     @Setter private BigDecimal conversionRate = new BigDecimal("0.1000");
 
-    @Min(1)
     @Column(name = "cap_per_visit")
-    @Setter @Positive private Integer capPerVisit;
+    @Setter private Integer capPerVisit;
 
-    @Min(1)
     @Column(name = "cap_per_month")
-    @Setter @Positive private Integer capPerMonth;
+    @Setter private Integer capPerMonth;
 
-    @DecimalMin("0.00")
     @Column(name = "min_amount", precision = 10, scale = 2)
-    @Setter @PositiveOrZero private BigDecimal minAmount = BigDecimal.ZERO;
+    @Setter private BigDecimal minAmount = BigDecimal.ZERO;
 
     @Column(name = "is_active", nullable = false)
     @Setter private boolean isActive = true;
@@ -86,15 +74,15 @@ public class GainRule extends SoftDeletableAuditedEntity {
      * Bonus de bienvenue par défaut crédité à l'inscription d'un nouveau membre
      * (cf. V28 + EnrollmentService). Pré-rempli dans le formulaire EnrollMember.
      */
-    @Min(0)
+    
     @Column(name = "welcome_points_default", nullable = false)
-    @Setter @PositiveOrZero private int welcomePointsDefault = 100;
+    @Setter private int welcomePointsDefault = 100;
 
     /**
      * Plafond du bonus de bienvenue. EnrollmentService rejette toute demande
      * &gt; welcomePointsMax (anti-abus staff). DB CHECK garantit max &gt;= default.
      */
-    @Min(0)
+    
     @Column(name = "welcome_points_max", nullable = false)
     @Setter private int welcomePointsMax = 500;
 

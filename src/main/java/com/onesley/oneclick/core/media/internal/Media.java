@@ -6,8 +6,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.type.SqlTypes;
@@ -20,7 +18,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.Size;
 
 /**
  * Média polymorphique (image/video/audio/pdf) attaché à n'importe quelle entité.
@@ -39,24 +36,20 @@ public class Media extends SoftDeletableAuditedEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
-    @NotBlank
-    @Column(name = "entity_type", nullable = false)
-    @Size(max = 255) private String entityType;
+    @Column(name = "entity_type", nullable = false, length = 64)
+     private String entityType;
 
     @Column(name = "entity_id", nullable = false)
     private UUID entityId;
 
-    @NotBlank
-    @Column(name = "url", nullable = false)
-    @Setter @Size(max = 1024) private String url;
+    @Column(name = "url", nullable = false, length = 512)
+    @Setter private String url;
 
-    @NotBlank
-    @Pattern(regexp = "^(image|video|audio|pdf)$")
-    @Column(name = "media_type", nullable = false)
-    @Size(max = 255) private String mediaType;
+    @Column(name = "media_type", nullable = false, length = 64)
+     private String mediaType;
 
-    @Column(name = "mime_type")
-    @Setter @Size(max = 255) private String mimeType;
+    @Column(name = "mime_type", length = 64)
+    @Setter private String mimeType;
 
     @Column(name = "size_bytes")
     @Setter private Long sizeBytes;

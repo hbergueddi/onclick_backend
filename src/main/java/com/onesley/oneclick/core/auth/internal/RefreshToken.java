@@ -9,7 +9,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotBlank;
 import org.hibernate.proxy.HibernateProxy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -20,8 +19,6 @@ import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 
 /**
  * Refresh token JWT — supporte rotation et révocation.
@@ -48,12 +45,11 @@ public class RefreshToken {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @NotBlank
-    @Column(name = "token", nullable = false, unique = true)
-    @Size(max = 4096) private String token;
+    @Column(name = "token", nullable = false, unique = true, length = 512)
+     private String token;
 
     @Column(name = "expires_at", nullable = false)
-    @NotNull private Instant expiresAt;
+     private Instant expiresAt;
 
     @Column(name = "revoked_at")
     private Instant revokedAt;

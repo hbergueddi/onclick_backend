@@ -39,9 +39,9 @@ import lombok.Getter;
  * <pre>
  * CreatedAtEntity (created_at) ← cette classe
  * ├── CreatedAuthorEntity (+ created_by) ← document_versions
- * │   └── CreatedAuditedEntity (+ modified_by) ← admin_audit_log, scanned_tickets, …
+ * │ └── CreatedAuditedEntity (+ modified_by) ← admin_audit_log, scanned_tickets, …
  * └── TimestampedEntity (+ updated_at)
- *     └── AuditedEntity (+ created_by + modified_by)
+ * └── AuditedEntity (+ created_by + modified_by)
  * </pre>
  *
  * @see CreatedAuthorEntity

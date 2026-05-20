@@ -3,12 +3,6 @@ package com.onesley.oneclick.modules.promotion.internal;
 import com.onesley.oneclick.audit.SoftDeletableAuditedEntity;
 import com.onesley.oneclick.modules.promotion.api.OfferDto;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.DecimalMax;
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Positive;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -20,7 +14,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.Size;
 
 /** Offre / promotion par restaurant. */
 @Entity
@@ -31,21 +24,20 @@ public class Offer extends SoftDeletableAuditedEntity {
 
     @Id @Column(name = "id", nullable = false, updatable = false) private UUID id;
     @Column(name = "restaurant_id", nullable = false) private UUID restaurantId;
-    @NotBlank @Column(name = "title", nullable = false) @Setter @Size(max = 255) private String title;
-    @Column(name = "description") @Setter @Size(max = 2000) private String description;
-    @NotNull @Column(name = "starts_at", nullable = false) @Setter private Instant startsAt;
-    @NotNull @Column(name = "expires_at", nullable = false) @Setter private Instant expiresAt;
-    @DecimalMin("0.00") @DecimalMax("100.00") @Column(name = "discount_pct", precision = 5, scale = 2) @Setter private BigDecimal discountPct;
+     @Column(name = "title", nullable = false, length = 128) @Setter private String title;
+    @Column(name = "description", length = 1024) @Setter private String description;
+     @Column(name = "starts_at", nullable = false) @Setter private Instant startsAt;
+     @Column(name = "expires_at", nullable = false) @Setter private Instant expiresAt;
+      @Column(name = "discount_pct", precision = 5, scale = 2) @Setter private BigDecimal discountPct;
     @Column(name = "discount_amount", precision = 12, scale = 2) @Setter private BigDecimal discountAmount;
     @Column(name = "enabled", nullable = false) @Setter private boolean enabled = true;
 
     /** Catégorie d'offre — promo | bonus | reco. */
-    @NotBlank
-    @Pattern(regexp = "^(promo|bonus|reco)$")
-    @Column(name = "type", nullable = false) @Setter @Size(max = 255) private String type = "promo";
+    
+    @Column(name = "type", nullable = false, length = 64) @Setter private String type = "promo";
 
     /** Bonus points fidélité — renseigné uniquement quand type='bonus'. */
-    @Positive
+    
     @Column(name = "pts") @Setter private Integer pts;
 
     // ─── V24 — Sprint K : champs exploités par l'admin (PromotionsLounge / OfferJet) ──
@@ -54,7 +46,7 @@ public class Offer extends SoftDeletableAuditedEntity {
     @Column(name = "push_notify", nullable = false) @Setter private boolean pushNotify = false;
 
     /** URL de la bannière promo. */
-    @Column(name = "image") @Setter @Size(max = 1024) private String image;
+    @Column(name = "image", length = 512) @Setter private String image;
 
     /** Segments clients ciblés (tous, fideles, nouveaux, inactifs, ruby, …). */
     @JdbcTypeCode(SqlTypes.ARRAY)
