@@ -6,6 +6,29 @@
 > liste ce qui est livré, et le punch-list de ce qui reste (avec l'étape pour
 > débloquer chaque cas).
 
+## Statut — travaux EN PAUSE (2026-05-20)
+
+Pilote + rollout admin **livrés et validés**, puis mis en pause à la demande
+(on enchaîne sur d'autres retours du dev senior). Rien n'est poussé : tout est
+commité localement sur `4click_spring` dans les 2 repos.
+
+- **Livré** : infra partagée + **7 pages admin live / 5 topics** (cf. tableau plus bas).
+- **Validé** : suite back 65 tests / 0 échec, `ModularityTests` vert, build front OK.
+- **À valider en live** (au prochain `up`) : la requête native d'empreinte ne
+  s'exécute qu'à l'abonnement → ouvrir chaque dashboard et vérifier la pastille
+  LIVE + un changement qui rafraîchit (ex. acquitter une alerte).
+- **Commits clés** — back : `06cba28` (base) → `5edaebb` (referral/lounge/hi) →
+  `e78e0d9` (alertes + overload + ce doc) ; front : `3e2e663` (infra) →
+  `a4576c6` → `9002804`.
+
+**Reprise = piocher dans la punch-list ci-dessous.** Ordre de valeur conseillé :
+1. Dashboards resto/groupe (ProDesk) — d'abord étendre `StompAuthChannelInterceptor`
+   (topic par tenant + authz d'abonnement par propriété), **puis** publishers.
+2. Multi-sources admin (AdminWallet, Cohortes, TableauxPulse) — empreinte composite.
+3. Support KPI / Tickets OCR — bloqués sur la migration du read path hors Supabase.
+
+---
+
 ## Principe — bridge d'invalidation (pas de métier sur le WS)
 
 Le WS ne transporte **pas** la donnée métier. Il transporte un signal *« ce
