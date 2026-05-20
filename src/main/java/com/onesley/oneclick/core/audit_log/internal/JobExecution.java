@@ -46,7 +46,7 @@ public class JobExecution {
     @Column(name = "result", columnDefinition = "jsonb")
     private Map<String, Object> result;
 
-    @Column(name = "error_message", columnDefinition = "text", length = 1024)
+    @Column(name = "error_message", columnDefinition = "text")
      private String errorMessage;
 
     public JobExecution(UUID id, String jobName) {

@@ -30,7 +30,7 @@ public class WebhookDelivery {
      @Column(name = "event_type", nullable = false, length = 64) private String eventType;
      @JdbcTypeCode(SqlTypes.JSON) @Column(name = "payload", nullable = false, columnDefinition = "jsonb") private Map<String, Object> payload = new HashMap<>();
     @Column(name = "status_code") @Setter private Integer statusCode;
-    @Column(name = "response_body", columnDefinition = "text", length = 1024) @Setter private String responseBody;
+    @Column(name = "response_body", columnDefinition = "text") @Setter private String responseBody;
     @Column(name = "attempts", nullable = false) private Integer attempts = 0;
     @Column(name = "succeeded_at") private Instant succeededAt;
     @Column(name = "failed_at") private Instant failedAt;

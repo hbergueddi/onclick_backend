@@ -64,7 +64,7 @@ public class ContractTemplate extends SoftDeletableAuditedEntity {
 
     /** Corps du contrat — markdown ou texte brut, rendu par le générateur PDF. */
     
-    @Column(name = "body", nullable = false, columnDefinition = "text", length = 1024)
+    @Column(name = "body", nullable = false, columnDefinition = "text")
     @Setter private String body;
 
     @Column(name = "is_active", nullable = false)

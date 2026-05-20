@@ -42,7 +42,7 @@ public class ErrorLog {
     @Column(name = "message", nullable = false, length = 1024)
      private String message;
 
-    @Column(name = "stacktrace", columnDefinition = "text", length = 64)
+    @Column(name = "stacktrace", columnDefinition = "text")
     @Setter private String stacktrace;
 
     @Column(name = "severity", nullable = false, length = 64)
