@@ -20,6 +20,7 @@ import com.onesley.oneclick.core.identity.api.PasswordChangeDto;
 import com.onesley.oneclick.core.identity.api.UserCreateDto;
 import com.onesley.oneclick.core.identity.api.UserDto;
 import com.onesley.oneclick.core.identity.api.UserUpdateDto;
+import com.onesley.oneclick.core.identity.api.MeContextDto;
 import com.onesley.oneclick.core.identity.api.User;
 import com.onesley.oneclick.core.identity.api.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -83,6 +84,18 @@ public class UserController {
             .filter(a -> a != null && a.contains(":"))
             .sorted()
             .toList();
+    }
+
+    @GetMapping("/me/context")
+    @Operation(
+        summary = "Contexte complet du user courant — profil + rôle + menus + permissions (1 appel).",
+        description = "Amorçage front consolidé : remplace les multiples appels (/me + /me/permissions) " +
+                      "et expose les menus (sidebar) accessibles selon le rôle. Construit côté domaine " +
+                      "identity, indépendamment de l'adaptateur Spring Security."
+    )
+    @PreAuthorize("isAuthenticated()")
+    public MeContextDto meContext() {
+        return service.findMeContext();
     }
 
     @GetMapping("/{id}")

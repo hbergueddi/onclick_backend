@@ -92,4 +92,19 @@ public class OneClickUserDetailsService implements UserDetailsService {
         // No-op — l'annotation fait le travail. La méthode existe pour servir
         // de hook explicite côté UserService (cherche grep evictUser).
     }
+
+    /**
+     * Eviction GLOBALE du cache {@code userDetails}. Pour les changements de
+     * <strong>structure RBAC</strong> (permissions d'un rôle, menus) qui
+     * impactent plusieurs users d'un coup — là où l'eviction par-user ne suffit
+     * pas (cf. exemple senior {@code @CacheEvict(allEntries=true)}).
+     *
+     * <p>La matrice RBAC est aujourd'hui seedée par migration (pas de mutation
+     * runtime) : ce hook sert d'API explicite (flush post-migration de
+     * permissions, ou futur éditeur de rôles/permissions runtime).
+     */
+    @CacheEvict(value = CacheConfig.CACHE_USER_DETAILS, allEntries = true)
+    public void evictAll() {
+        // No-op — l'annotation fait le travail.
+    }
 }

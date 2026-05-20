@@ -27,6 +27,9 @@ import com.onesley.oneclick.core.identity.api.UserCreateDto;
 import com.onesley.oneclick.core.identity.api.UserDto;
 import com.onesley.oneclick.core.identity.api.UserUpdateDto;
 import com.onesley.oneclick.core.identity.api.Role;
+import com.onesley.oneclick.core.identity.api.Permission;
+import com.onesley.oneclick.core.identity.api.Menu;
+import com.onesley.oneclick.core.identity.api.MeContextDto;
 import com.onesley.oneclick.core.identity.api.User;
 import com.onesley.oneclick.core.identity.api.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -276,5 +279,54 @@ public class UserService {
             throw new BadRequestException("Authentification requise");
         }
         return findById(currentId);
+    }
+
+    /**
+     * Contexte complet du user courant <strong>consolidé</strong> en une réponse :
+     * profil + rôle + menus (sidebar) + permissions. Évite au front d'enchaîner
+     * {@code /me} + {@code /me/permissions} et expose enfin les menus.
+     *
+     * <p>Construit ICI, dans le domaine identity, depuis {@code findByIdWithRoleAndPermissions}
+     * (le graphe role→permissions→menu/action) — sans dépendre de l'adaptateur
+     * Spring Security {@code OneClickUserDetails}. {@code @Transactional(readOnly)}
+     * (hérité de la classe) ⇒ accès LAZY en session, on renvoie un DTO plat.
+     */
+    public MeContextDto findMeContext() {
+        UUID currentId = SecurityHelper.currentUserId();
+        if (currentId == null) {
+            throw new BadRequestException("Authentification requise");
+        }
+        User u = repository.findByIdWithRoleAndPermissions(currentId)
+            .filter(x -> x.getDeletedAt() == null)
+            .orElseThrow(() -> new NotFoundException("User", currentId));
+
+        Role role = u.getRole();
+        var permissions = new java.util.TreeSet<String>();
+        var menusById = new java.util.LinkedHashMap<UUID, MeContextDto.MenuSummary>();
+        if (role != null) {
+            for (Permission p : role.getPermissions()) {
+                if (p.getAction() != null && p.getMenu() != null) {
+                    permissions.add(p.getAction().getCode() + ":" + p.getMenu().getCode());
+                }
+                Menu m = p.getMenu();
+                if (m != null) {
+                    menusById.putIfAbsent(m.getId(), new MeContextDto.MenuSummary(
+                        m.getId(), m.getCode(), m.getName(), m.getIcon(), m.getPath(),
+                        m.getParentId(), m.getSortOrder()));
+                }
+            }
+        }
+        var menus = menusById.values().stream()
+            .sorted(java.util.Comparator.comparing(
+                m -> m.sortOrder() == null ? Integer.MAX_VALUE : m.sortOrder()))
+            .toList();
+
+        return new MeContextDto(
+            new MeContextDto.UserSummary(u.getId(), u.getEmail(), u.getFirstName(), u.getLastName(),
+                u.getPhone(), u.getAvatarUrl(), u.getLanguage(), u.getStatus(), u.getTenantId()),
+            role != null ? new MeContextDto.RoleSummary(role.getCode(), role.getName()) : null,
+            menus,
+            List.copyOf(permissions)
+        );
     }
 }
