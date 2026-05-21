@@ -1,0 +1,339 @@
+package com.onesley.oneclick.modules.social.internal;
+
+import com.onesley.oneclick.core.identity.api.User;
+import com.onesley.oneclick.exception.ConflictException;
+import com.onesley.oneclick.exception.ForbiddenException;
+import com.onesley.oneclick.exception.NotFoundException;
+import com.onesley.oneclick.modules.social.api.SocialDtos.FriendGroupCreateDto;
+import com.onesley.oneclick.modules.social.api.SocialDtos.FriendGroupMemberAddDto;
+import com.onesley.oneclick.modules.social.api.SocialDtos.FriendGroupUpdateDto;
+import com.onesley.oneclick.modules.social.api.SocialDtos.FriendshipCreateDto;
+import com.onesley.oneclick.modules.social.api.SocialDtos.ReferralCreateDto;
+import com.onesley.oneclick.modules.social.api.SocialDtos.UserFavoriteCreateDto;
+import com.onesley.oneclick.security.SecurityHelper;
+import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockedStatic;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.quality.Strictness;
+import org.springframework.test.util.ReflectionTestUtils;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+/**
+ * Tests unitaires Mockito de {@link SocialService} (L3 — modules.social).
+ * Friendships (request/accept/decline + RBAC partie), referrals, favoris (conflit/
+ * owner), friend groups (CRUD + membres + RBAC owner/admin/membre). SecurityHelper
+ * statique via mockStatic ; champs *_id (insertable=false) posés par réflexion.
+ */
+@ExtendWith(MockitoExtension.class)
+@org.mockito.junit.jupiter.MockitoSettings(strictness = Strictness.LENIENT)
+class SocialServiceTest {
+
+    @Mock FriendshipRepository friendshipRepo;
+    @Mock ReferralRepository referralRepo;
+    @Mock UserFavoriteRepository favoriteRepo;
+    @Mock FriendGroupRepository groupRepo;
+    @Mock FriendGroupMemberRepository groupMemberRepo;
+    @Mock EntityManager entityManager;
+    @InjectMocks SocialService service;
+
+    private final UUID me = UUID.randomUUID();
+
+    @BeforeEach
+    void setup() {
+        ReflectionTestUtils.setField(service, "entityManager", entityManager);
+        lenient().when(entityManager.getReference(eq(User.class), any()))
+            .thenReturn(new User(UUID.randomUUID(), null, "x@x.ma", "h", "X", "Y"));
+        lenient().when(friendshipRepo.save(any())).thenAnswer(i -> i.getArgument(0));
+        lenient().when(referralRepo.save(any())).thenAnswer(i -> i.getArgument(0));
+        lenient().when(favoriteRepo.save(any())).thenAnswer(i -> i.getArgument(0));
+        lenient().when(groupRepo.save(any())).thenAnswer(i -> i.getArgument(0));
+        lenient().when(groupMemberRepo.save(any())).thenAnswer(i -> i.getArgument(0));
+        lenient().when(groupMemberRepo.countByFriendGroupId(any())).thenReturn(1L);
+    }
+
+    private Friendship friendship(String status, UUID u1, UUID u2) {
+        Friendship f = new Friendship(UUID.randomUUID(),
+            new User(UUID.randomUUID(), null, "a@x.ma", "h", "A", "A"),
+            new User(UUID.randomUUID(), null, "b@x.ma", "h", "B", "B"));
+        f.setStatus(status);
+        if (u1 != null) ReflectionTestUtils.setField(f, "user1Id", u1);
+        if (u2 != null) ReflectionTestUtils.setField(f, "user2Id", u2);
+        return f;
+    }
+
+    private FriendGroup group(UUID ownerId) {
+        FriendGroup g = new FriendGroup(UUID.randomUUID(),
+            new User(UUID.randomUUID(), null, "o@x.ma", "h", "O", "W"), "Squad");
+        if (ownerId != null) ReflectionTestUtils.setField(g, "ownerId", ownerId);
+        return g;
+    }
+
+    // ─── friendships ─────────────────────────────────────────────────────────
+
+    @Test
+    void findFriendsOf_filtersAccepted() {
+        when(friendshipRepo.findAllByUser1Id(me)).thenReturn(List.of(friendship("accepted", null, null), friendship("pending", null, null)));
+        when(friendshipRepo.findAllByUser2Id(me)).thenReturn(List.of(friendship("accepted", null, null)));
+        assertThat(service.findFriendsOf(me)).hasSize(2);
+    }
+
+    @Test
+    void request_savesFriendship_bothOrderings() {
+        UUID lo = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        UUID hi = UUID.fromString("ffffffff-ffff-ffff-ffff-ffffffffffff");
+        assertThat(service.request(new FriendshipCreateDto(hi, lo))).isNotNull(); // swap
+        assertThat(service.request(new FriendshipCreateDto(lo, hi))).isNotNull(); // déjà ordonné
+        verify(friendshipRepo, org.mockito.Mockito.times(2)).save(any());
+    }
+
+    @Test
+    void accept_notFound_throwsNotFound() {
+        when(friendshipRepo.findById(any())).thenReturn(Optional.empty());
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            assertThatThrownBy(() -> service.accept(UUID.randomUUID())).isInstanceOf(NotFoundException.class);
+        }
+    }
+
+    @Test
+    void accept_asParty_marksAccepted() {
+        Friendship f = friendship("pending", me, UUID.randomUUID());
+        when(friendshipRepo.findById(any())).thenReturn(Optional.of(f));
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::currentUserId).thenReturn(me);
+            service.accept(f.getId());
+        }
+        assertThat(f.getStatus()).isEqualTo("accepted");
+    }
+
+    @Test
+    void decline_asAdmin_setsDeclined() {
+        Friendship f = friendship("pending", UUID.randomUUID(), UUID.randomUUID());
+        when(friendshipRepo.findById(any())).thenReturn(Optional.of(f));
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::currentUserId).thenReturn(UUID.randomUUID());
+            sec.when(SecurityHelper::isAdmin).thenReturn(true);
+            service.decline(f.getId());
+        }
+        assertThat(f.getStatus()).isEqualTo("declined");
+    }
+
+    @Test
+    void accept_notPartyNorAdmin_throwsForbidden() {
+        Friendship f = friendship("pending", UUID.randomUUID(), UUID.randomUUID());
+        when(friendshipRepo.findById(any())).thenReturn(Optional.of(f));
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::currentUserId).thenReturn(UUID.randomUUID());
+            sec.when(SecurityHelper::isAdmin).thenReturn(false);
+            assertThatThrownBy(() -> service.accept(f.getId())).isInstanceOf(ForbiddenException.class);
+        }
+    }
+
+    @Test
+    void accept_notAuthenticated_throwsForbidden() {
+        Friendship f = friendship("pending", UUID.randomUUID(), UUID.randomUUID());
+        when(friendshipRepo.findById(any())).thenReturn(Optional.of(f));
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::currentUserId).thenReturn(null);
+            assertThatThrownBy(() -> service.accept(f.getId())).isInstanceOf(ForbiddenException.class);
+        }
+    }
+
+    // ─── referrals ─────────────────────────────────────────────────────────────
+
+    @Test
+    void findByReferrer_maps() {
+        when(referralRepo.findAllByReferrerId(me)).thenReturn(List.of(
+            new Referral(UUID.randomUUID(), new User(me, null, "r@x.ma", "h", "R", "R"), "OC-ABC")));
+        assertThat(service.findByReferrer(me)).hasSize(1);
+    }
+
+    @Test
+    void createReferral_saves() {
+        assertThat(service.create(new ReferralCreateDto(me, "OC-XYZ"))).isNotNull();
+    }
+
+    @Test
+    void activateReferral_notFoundAndSuccess() {
+        when(referralRepo.findById(any())).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.activate(UUID.randomUUID(), UUID.randomUUID())).isInstanceOf(NotFoundException.class);
+
+        Referral r = new Referral(UUID.randomUUID(), new User(me, null, "r@x.ma", "h", "R", "R"), "OC-XYZ");
+        when(referralRepo.findById(r.getId())).thenReturn(Optional.of(r));
+        service.activate(r.getId(), UUID.randomUUID());
+        assertThat(r.getStatus()).isEqualTo("activated");
+    }
+
+    // ─── favoris ───────────────────────────────────────────────────────────────
+
+    @Test
+    void addFavorite_conflict_whenExists() {
+        when(favoriteRepo.existsByUserIdAndRestaurantId(any(), any())).thenReturn(true);
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            assertThatThrownBy(() -> service.addFavorite(new UserFavoriteCreateDto(me, UUID.randomUUID())))
+                .isInstanceOf(ConflictException.class);
+        }
+    }
+
+    @Test
+    void addFavorite_success() {
+        when(favoriteRepo.existsByUserIdAndRestaurantId(any(), any())).thenReturn(false);
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            assertThat(service.addFavorite(new UserFavoriteCreateDto(me, UUID.randomUUID()))).isNotNull();
+        }
+    }
+
+    @Test
+    void removeFavorite_notFoundAndSuccess() {
+        when(favoriteRepo.findById(any())).thenReturn(Optional.empty());
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            assertThatThrownBy(() -> service.removeFavorite(UUID.randomUUID())).isInstanceOf(NotFoundException.class);
+        }
+        UserFavorite f = new UserFavorite(UUID.randomUUID(), new User(me, null, "u@x.ma", "h", "U", "U"), UUID.randomUUID());
+        when(favoriteRepo.findById(f.getId())).thenReturn(Optional.of(f));
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            service.removeFavorite(f.getId());
+        }
+        verify(favoriteRepo).delete(f);
+    }
+
+    // ─── friend groups ───────────────────────────────────────────────────────────
+
+    @Test
+    void createGroup_notAuthenticated_throwsForbidden() {
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::currentUserId).thenReturn(null);
+            assertThatThrownBy(() -> service.createGroup(new FriendGroupCreateDto("Squad", null, null)))
+                .isInstanceOf(ForbiddenException.class);
+        }
+    }
+
+    @Test
+    void createGroup_success_addsOwnerMember() {
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::currentUserId).thenReturn(me);
+            assertThat(service.createGroup(new FriendGroupCreateDto("Squad", "desc", "http://a"))).isNotNull();
+        }
+        verify(groupMemberRepo).save(any(FriendGroupMember.class)); // owner ajouté comme membre
+    }
+
+    @Test
+    void updateGroup_deletedGroup_throwsNotFound() {
+        FriendGroup g = group(me);
+        ReflectionTestUtils.setField(g, "deletedAt", java.time.Instant.now());
+        when(groupRepo.findById(any())).thenReturn(Optional.of(g));
+        assertThatThrownBy(() -> service.updateGroup(g.getId(), new FriendGroupUpdateDto("New", null, null)))
+            .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void updateGroup_success() {
+        FriendGroup g = group(me);
+        when(groupRepo.findById(any())).thenReturn(Optional.of(g));
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            service.updateGroup(g.getId(), new FriendGroupUpdateDto("Nouveau", "desc2", "http://b"));
+        }
+        assertThat(g.getName()).isEqualTo("Nouveau");
+    }
+
+    @Test
+    void deleteGroup_marksDeleted() {
+        FriendGroup g = group(me);
+        when(groupRepo.findById(any())).thenReturn(Optional.of(g));
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            service.deleteGroup(g.getId());
+        }
+        assertThat(g.isDeleted()).isTrue();
+    }
+
+    @Test
+    void findGroupById_asAdmin_returnsDto() {
+        FriendGroup g = group(UUID.randomUUID());
+        when(groupRepo.findById(any())).thenReturn(Optional.of(g));
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::currentUserId).thenReturn(me);
+            sec.when(SecurityHelper::isAdmin).thenReturn(true);
+            assertThat(service.findGroupById(g.getId())).isNotNull();
+        }
+    }
+
+    @Test
+    void addGroupMember_conflict_whenAlreadyMember() {
+        FriendGroup g = group(me);
+        when(groupRepo.findById(any())).thenReturn(Optional.of(g));
+        when(groupMemberRepo.existsByFriendGroupIdAndFriendId(any(), any())).thenReturn(true);
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::currentUserId).thenReturn(me);
+            sec.when(SecurityHelper::isAdmin).thenReturn(true);
+            assertThatThrownBy(() -> service.addGroupMember(g.getId(), new FriendGroupMemberAddDto(UUID.randomUUID(), "member")))
+                .isInstanceOf(ConflictException.class);
+        }
+    }
+
+    @Test
+    void addGroupMember_success_defaultRole() {
+        FriendGroup g = group(me);
+        when(groupRepo.findById(any())).thenReturn(Optional.of(g));
+        when(groupMemberRepo.existsByFriendGroupIdAndFriendId(any(), any())).thenReturn(false);
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::isAdmin).thenReturn(true);
+            sec.when(SecurityHelper::currentUserId).thenReturn(me);
+            assertThat(service.addGroupMember(g.getId(), new FriendGroupMemberAddDto(UUID.randomUUID(), null))).isNotNull();
+        }
+    }
+
+    @Test
+    void removeGroupMember_ownerCannotBeRemoved_throwsConflict() {
+        UUID owner = UUID.randomUUID();
+        FriendGroup g = group(owner);
+        when(groupRepo.findById(any())).thenReturn(Optional.of(g));
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::currentUserId).thenReturn(me);
+            assertThatThrownBy(() -> service.removeGroupMember(g.getId(), owner)).isInstanceOf(ConflictException.class);
+        }
+    }
+
+    @Test
+    void removeGroupMember_self_success() {
+        FriendGroup g = group(UUID.randomUUID());
+        when(groupRepo.findById(any())).thenReturn(Optional.of(g));
+        when(groupMemberRepo.deleteByFriendGroupIdAndFriendId(any(), eq(me))).thenReturn(1);
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::currentUserId).thenReturn(me);
+            service.removeGroupMember(g.getId(), me);
+        }
+        verify(groupMemberRepo).deleteByFriendGroupIdAndFriendId(any(), eq(me));
+    }
+
+    @Test
+    void findGroupsByOwner_byMember_andMembers_map() {
+        FriendGroup g = group(me);
+        when(groupRepo.findAllByOwnerIdAndDeletedAtIsNull(me)).thenReturn(List.of(g));
+        when(groupRepo.findAllByMemberUserId(me)).thenReturn(List.of(g));
+        when(groupRepo.findById(any())).thenReturn(Optional.of(g));
+        when(groupMemberRepo.findAllByFriendGroupId(any())).thenReturn(List.of());
+        assertThat(service.findGroupsByOwner(me)).hasSize(1);
+        assertThat(service.findGroupsByMember(me)).hasSize(1);
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::currentUserId).thenReturn(me);
+            sec.when(SecurityHelper::isAdmin).thenReturn(true);
+            assertThat(service.findGroupMembers(g.getId())).isEmpty();
+        }
+    }
+}
