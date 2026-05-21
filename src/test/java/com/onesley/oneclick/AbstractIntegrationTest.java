@@ -6,7 +6,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.web.client.DefaultResponseErrorHandler;
@@ -85,10 +85,31 @@ public abstract class AbstractIntegrationTest {
         return jwtIssuer.issueAccessToken(SEED_SUPERADMIN_ID, "SUPERADMIN").token();
     }
 
+    @Autowired
+    protected org.springframework.jdbc.core.JdbcTemplate jdbc;
+
+    /**
+     * Bearer signé pour un user RÉEL du rôle donné (lookup DB). Les authorities
+     * ne viennent PAS du claim {@code role} mais du graphe role→permissions chargé
+     * en DB par {@link com.onesley.oneclick.security.UserRoleAuthoritiesConverter} —
+     * d'où un user existant requis (CLIENT, RESTAURATEUR, GROUP_ADMIN seedés).
+     */
+    protected String bearerForRole(String roleCode) {
+        String id = jdbc.queryForObject(
+            "SELECT u.id::text FROM users u JOIN roles r ON r.id = u.role_id "
+            + "WHERE r.code = ? AND u.deleted_at IS NULL LIMIT 1", String.class, roleCode);
+        return jwtIssuer.issueAccessToken(java.util.UUID.fromString(id), roleCode).token();
+    }
+
     private static RestTemplate buildLenientRestTemplate() {
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(5_000);
-        factory.setReadTimeout(10_000);
+        // JDK HttpClient (pas HttpURLConnection) : supporte PATCH, utilisé par
+        // de nombreux endpoints OneClick. SimpleClientHttpRequestFactory lève
+        // "Invalid HTTP method: PATCH".
+        java.net.http.HttpClient client = java.net.http.HttpClient.newBuilder()
+            .connectTimeout(java.time.Duration.ofSeconds(5))
+            .build();
+        JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(client);
+        factory.setReadTimeout(java.time.Duration.ofSeconds(10));
         RestTemplate rt = new RestTemplate(factory);
         rt.setErrorHandler(new DefaultResponseErrorHandler() {
             @Override
