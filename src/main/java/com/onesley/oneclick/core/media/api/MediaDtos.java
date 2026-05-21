@@ -1,6 +1,7 @@
 package com.onesley.oneclick.core.media.api;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -32,8 +33,8 @@ public final class MediaDtos {
         @NotBlank @Size(min = 1, max = 512) String url,
         @NotNull @Pattern(regexp = "^(image|video|audio|pdf)$") @Size(min = 1, max = 64) String mediaType,
         @Size(min = 1, max = 64) String mimeType,
-        Long sizeBytes,
-        Integer sortOrder
+        @PositiveOrZero Long sizeBytes,
+        @PositiveOrZero Integer sortOrder
     ) {}
 
     // ─── FileAttachment ──────────────────────────────────────────────────────
@@ -46,7 +47,7 @@ public final class MediaDtos {
         @NotNull UUID entityId,
         @NotBlank @Size(min = 1, max = 512) String path,
         @Size(min = 1, max = 64) String mimeType,
-        Long sizeBytes,
+        @PositiveOrZero Long sizeBytes,
         @Size(min = 1, max = 128) String originalName
     ) {}
 }

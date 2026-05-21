@@ -1,7 +1,10 @@
 package com.onesley.oneclick.modules.restaurant.api;
 
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -21,13 +24,13 @@ import java.util.UUID;
  * {@code budget} : {@code €} | {@code €€} | {@code €€€} (V16).
  */
 public record RestaurantPatchDto(
-    String name,
-    String description,
-    String phone,
-    String address,
-    String city,
-    BigDecimal latitude,
-    BigDecimal longitude,
+    @Size(min = 1, max = 128) String name,
+    @Size(min = 1, max = 1024) String description,
+    @Size(min = 1, max = 64) String phone,
+    @Size(min = 1, max = 256) String address,
+    @Size(min = 1, max = 128) String city,
+    @DecimalMin("-90.0") @DecimalMax("90.0") BigDecimal latitude,
+    @DecimalMin("-180.0") @DecimalMax("180.0") BigDecimal longitude,
     // Bug 30 — Aligné sur la canonique DB EN du Restaurant entity
     // (@Pattern("^(active|paused|archived)$") ligne 65). Le legacy Supabase
     // utilisait 'actif|inactif|suspendu|archive' (FR) — toute PATCH avec ces
@@ -37,9 +40,9 @@ public record RestaurantPatchDto(
     @Pattern(regexp = "^(active|paused|archived)$") String status,
     @Pattern(regexp = "^(€|€€|€€€)$") String budget,
     List<String> tags,
-    Integer loungePts,
-    String image,
-    String cuisine,
+    @Min(0) Integer loungePts,
+    @Size(min = 1, max = 512) String image,
+    @Size(min = 1, max = 64) String cuisine,
     @Min(0) Integer maxStaff,
     UUID groupId
 ) {

@@ -1,5 +1,6 @@
 package com.onesley.oneclick.modules.oneclickhi.api;
 
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Size;
 
 import com.onesley.oneclick.modules.oneclickhi.internal.OneClickHIInvoice;
@@ -47,18 +48,18 @@ public final class OneClickHIDtos {
         UUID restaurantId,
         @Size(min = 1, max = 64) String invoiceNumber,
         @Size(min = 1, max = 64) String periodMonth,
-        BigDecimal totalAmount,
-        BigDecimal vatAmount,
+        @DecimalMin("0.00") BigDecimal totalAmount,
+        @DecimalMin("0.00") BigDecimal vatAmount,
         @Size(min = 1, max = 512) String pdfUrl,
-        BigDecimal credit3pct
+        @DecimalMin("0.00") BigDecimal credit3pct
     ) {}
 
     public record OneClickHIInvoicePatchDto(
         @Size(min = 1, max = 64) String status,
-        BigDecimal totalAmount,
-        BigDecimal vatAmount,
+        @DecimalMin("0.00") BigDecimal totalAmount,
+        @DecimalMin("0.00") BigDecimal vatAmount,
         @Size(min = 1, max = 512) String pdfUrl,
-        BigDecimal credit3pct,
+        @DecimalMin("0.00") BigDecimal credit3pct,
         Instant validatedAt,
         UUID validatedBy,
         Instant sentAt,

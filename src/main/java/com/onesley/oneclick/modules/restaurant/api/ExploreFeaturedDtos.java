@@ -2,6 +2,8 @@ package com.onesley.oneclick.modules.restaurant.api;
 
 import com.onesley.oneclick.modules.restaurant.internal.ExploreFeatured;
 
+import jakarta.validation.constraints.PositiveOrZero;
+
 import java.time.Instant;
 import java.util.UUID;
 
@@ -28,7 +30,7 @@ public final class ExploreFeaturedDtos {
 
     public record ExploreFeaturedCreateDto(
         UUID restaurantId,
-        Integer rank,
+        @PositiveOrZero Integer rank,
         Boolean enabled,
         Instant startsAt,
         Instant endsAt

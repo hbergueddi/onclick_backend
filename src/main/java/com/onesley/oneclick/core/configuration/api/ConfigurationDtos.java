@@ -60,6 +60,6 @@ public final class ConfigurationDtos {
     public record CacheConfigCreateDto(
         @NotBlank @Size(min = 1, max = 128) String cacheName,
         @NotNull @Min(1) Integer ttlSeconds,
-        Integer maxEntries
+        @Min(1) Integer maxEntries
     ) {}
 }

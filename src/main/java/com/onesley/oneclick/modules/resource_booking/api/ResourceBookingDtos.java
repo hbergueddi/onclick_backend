@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.resource_booking.api;
 
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -31,7 +32,7 @@ public final class ResourceBookingDtos {
         @NotBlank @Size(min = 1, max = 64) String resourceType,
         @NotBlank @Size(min = 1, max = 128) String name,
         @Size(min = 1, max = 1024) String description,
-        Integer capacity
+        @PositiveOrZero Integer capacity
     ) {}
 
     // ─── Pricing ─────────────────────────────────────────────────────────────
@@ -43,7 +44,7 @@ public final class ResourceBookingDtos {
         @NotNull UUID resourceId,
         @NotBlank @Size(min = 1, max = 128) String name,
         @NotNull @DecimalMin("0.00") BigDecimal price,
-        Integer durationMinutes
+        @PositiveOrZero Integer durationMinutes
     ) {}
 
     // ─── Booking ─────────────────────────────────────────────────────────────

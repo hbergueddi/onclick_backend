@@ -6,6 +6,7 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.PositiveOrZero;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -56,9 +57,9 @@ public final class FinancialDtos {
     ) {}
 
     public record InvoiceUpdateDto(
-        BigDecimal subtotal,
-        BigDecimal tvaAmount,
-        BigDecimal totalTtc,
+        @DecimalMin("0.00") BigDecimal subtotal,
+        @DecimalMin("0.00") BigDecimal tvaAmount,
+        @DecimalMin("0.00") BigDecimal totalTtc,
         @Pattern(regexp = "^(draft|sent|paid|overdue|cancelled)$") @Size(min = 1, max = 64) String status,
         LocalDate issuedAt,
         LocalDate dueAt
@@ -74,7 +75,7 @@ public final class FinancialDtos {
         @NotBlank @Size(min = 1, max = 128) String label,
         @NotNull @DecimalMin("0.00") BigDecimal quantity,
         @NotNull @DecimalMin("0.00") BigDecimal unitPrice,
-        Integer sortOrder
+        @PositiveOrZero Integer sortOrder
     ) {}
 
     // ─── WalletTransaction ───────────────────────────────────────────────────

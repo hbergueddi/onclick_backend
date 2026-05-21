@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.event.api;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -37,7 +38,7 @@ public final class EventDtos {
         @Size(min = 1, max = 64) String eventType,
         @NotNull Instant eventAt,
         Instant eventEnd,
-        Integer capacity,
+        @PositiveOrZero Integer capacity,
         // V20 — Elite fields (optionnels)
         @Pattern(regexp = "^(Ruby|Sapphire|Émeraude|Black)$") @Size(min = 1, max = 128) String minTier,
         @Size(min = 1, max = 512) String imageUrl,
@@ -51,7 +52,7 @@ public final class EventDtos {
         @Size(min = 1, max = 64) String eventType,
         Instant eventAt,
         Instant eventEnd,
-        Integer capacity,
+        @PositiveOrZero Integer capacity,
         @Pattern(regexp = "^(Ruby|Sapphire|Émeraude|Black)$") @Size(min = 1, max = 128) String minTier,
         @Size(min = 1, max = 512) String imageUrl,
         @Size(min = 1, max = 128) String locationName,
