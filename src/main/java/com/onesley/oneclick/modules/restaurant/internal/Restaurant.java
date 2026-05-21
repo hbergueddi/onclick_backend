@@ -126,6 +126,7 @@ public class Restaurant extends SoftDeletableAuditedEntity {
      * Horaires d'ouverture (JSONB structure regularOpeningHours Google).
      * Mappé en String brut — le frontend désérialise.
      */
+    @org.hibernate.annotations.Type(com.onesley.oneclick.shared.persistence.JsonStringUserType.class)
     @Column(name = "opening_hours", columnDefinition = "jsonb")
      private String openingHours;
 
