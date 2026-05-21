@@ -33,9 +33,10 @@ class AnalyticsFlowIntegrationTest extends AbstractIntegrationTest {
         assertThat(restTemplate.exchange(url("/api/analytics/api-clients/" + clientId), HttpMethod.GET, jwtEntity(admin), String.class)
             .getStatusCode()).isEqualTo(HttpStatus.OK);
 
-        // key
+        // key — keyHash/keyPrefix uniques par run (contrainte d'unicité en DB)
+        String rand = UUID.randomUUID().toString().substring(0, 8);
         ResponseEntity<String> kPost = restTemplate.exchange(url("/api/analytics/api-keys"), HttpMethod.POST,
-            jsonJwtEntity(Map.of("apiClientId", clientId, "keyHash", "h", "keyPrefix", "pref_"), admin), String.class);
+            jsonJwtEntity(Map.of("apiClientId", clientId, "keyHash", "h-" + rand, "keyPrefix", "pref-" + rand), admin), String.class);
         assertThat(kPost.getStatusCode().is2xxSuccessful()).isTrue();
         String keyId = om.readTree(kPost.getBody()).get("id").asText();
         assertThat(restTemplate.exchange(url("/api/analytics/api-clients/" + clientId + "/keys"), HttpMethod.GET, jwtEntity(admin), String.class)
