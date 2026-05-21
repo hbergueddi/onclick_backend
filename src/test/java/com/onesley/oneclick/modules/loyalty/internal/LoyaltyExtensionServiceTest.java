@@ -1,0 +1,228 @@
+package com.onesley.oneclick.modules.loyalty.internal;
+
+import com.onesley.oneclick.exception.BadRequestException;
+import com.onesley.oneclick.exception.ForbiddenException;
+import com.onesley.oneclick.security.SecurityHelper;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockedStatic;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.quality.Strictness;
+import org.springframework.test.util.ReflectionTestUtils;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+/**
+ * Tests unitaires Mockito de {@link LoyaltyExtensionService} (L3 — modules.loyalty).
+ * Ratings/scores, rate-limit AI (reset 24h), restitutions, tier status, vues admin
+ * expired/distributions (native SQL + RBAC staff).
+ */
+@ExtendWith(MockitoExtension.class)
+@org.mockito.junit.jupiter.MockitoSettings(strictness = Strictness.LENIENT)
+class LoyaltyExtensionServiceTest {
+
+    @Mock ClientRatingRepository ratingRepo;
+    @Mock AIUsageRepository aiUsageRepo;
+    @Mock RestaurantRestitutionRepository restitutionRepo;
+    @Mock RestaurantTierStatusRepository tierStatusRepo;
+    @Mock EntityManager em;
+    @Mock Query query;
+    @InjectMocks LoyaltyExtensionService service;
+
+    private final UUID resto = UUID.randomUUID();
+    private final UUID user = UUID.randomUUID();
+
+    @BeforeEach
+    void setup() {
+        ReflectionTestUtils.setField(service, "em", em);
+        lenient().when(em.createNativeQuery(anyString())).thenReturn(query);
+        lenient().when(query.setParameter(anyString(), any())).thenReturn(query);
+        lenient().when(ratingRepo.save(any())).thenAnswer(i -> i.getArgument(0));
+        lenient().when(aiUsageRepo.save(any())).thenAnswer(i -> i.getArgument(0));
+        lenient().when(restitutionRepo.save(any())).thenAnswer(i -> i.getArgument(0));
+    }
+
+    private ClientRating rating(String visible) {
+        ClientRating r = new ClientRating();
+        r.setUserId(user);
+        r.setRating(new BigDecimal(visible));
+        r.setVisibleRating(new BigDecimal(visible));
+        return r;
+    }
+
+    // ─── ratings / score ─────────────────────────────────────────────────────
+
+    @Test
+    void findUserRatings_maps() {
+        when(ratingRepo.findByUser(user)).thenReturn(List.of(rating("5.0")));
+        assertThat(service.findUserRatings(user)).hasSize(1);
+    }
+
+    @Test
+    void computeUserScore_noRatings_defaultsFive() {
+        when(ratingRepo.averageVisibleRating(user)).thenReturn(null);
+        when(ratingRepo.countByUser(user)).thenReturn(null);
+        var s = service.computeUserScore(user);
+        assertThat(s.averageRating()).isEqualByComparingTo("5.0");
+        assertThat(s.score()).isEqualByComparingTo("100.00");
+    }
+
+    @Test
+    void computeUserScore_withRatings() {
+        when(ratingRepo.averageVisibleRating(user)).thenReturn(4.0);
+        when(ratingRepo.countByUser(user)).thenReturn(10L);
+        var s = service.computeUserScore(user);
+        assertThat(s.averageRating()).isEqualByComparingTo("4.00");
+        assertThat(s.score()).isEqualByComparingTo("80.00");
+    }
+
+    @Test
+    void recordRating_firstRating_startsAtFive_appliesDelta() {
+        when(ratingRepo.findByUser(user)).thenReturn(List.of());
+        service.recordRating(user, UUID.randomUUID(), new BigDecimal("-0.5"), "no_show");
+        ArgumentCaptor<ClientRating> cap = ArgumentCaptor.forClass(ClientRating.class);
+        verify(ratingRepo).save(cap.capture());
+        assertThat(cap.getValue().getRating()).isEqualByComparingTo("4.5");
+    }
+
+    @Test
+    void recordRating_existing_usesVisibleRating() {
+        when(ratingRepo.findByUser(user)).thenReturn(List.of(rating("3.0")));
+        service.recordRating(user, UUID.randomUUID(), new BigDecimal("1.0"), "honored");
+        ArgumentCaptor<ClientRating> cap = ArgumentCaptor.forClass(ClientRating.class);
+        verify(ratingRepo).save(cap.capture());
+        assertThat(cap.getValue().getRating()).isEqualByComparingTo("4.0");
+    }
+
+    @Test
+    void recordRating_clampsToFiveMax() {
+        when(ratingRepo.findByUser(user)).thenReturn(List.of(rating("4.8")));
+        service.recordRating(user, UUID.randomUUID(), new BigDecimal("1.0"), "honored");
+        ArgumentCaptor<ClientRating> cap = ArgumentCaptor.forClass(ClientRating.class);
+        verify(ratingRepo).save(cap.capture());
+        assertThat(cap.getValue().getRating()).isEqualByComparingTo("5.0");
+    }
+
+    // ─── AI usage ──────────────────────────────────────────────────────────────
+
+    @Test
+    void findUsage_noRecord_returnsDto() {
+        when(aiUsageRepo.findByUserId(user)).thenReturn(Optional.empty());
+        assertThat(service.findUsage(user)).isNotNull();
+    }
+
+    @Test
+    void findUsage_resetsAfter24h() {
+        AIUsage u = new AIUsage();
+        u.setUserId(user);
+        u.setPromptCount(5);
+        u.setLastPromptAt(Instant.now().minusSeconds(90_000)); // > 24h
+        when(aiUsageRepo.findByUserId(user)).thenReturn(Optional.of(u));
+        service.findUsage(user);
+        assertThat(u.getPromptCount()).isZero();
+        verify(aiUsageRepo).save(u);
+    }
+
+    @Test
+    void incrementUsage_newRecord_countsOne() {
+        when(aiUsageRepo.findByUserId(user)).thenReturn(Optional.empty());
+        var dto = service.incrementUsage(user);
+        assertThat(dto).isNotNull();
+        ArgumentCaptor<AIUsage> cap = ArgumentCaptor.forClass(AIUsage.class);
+        verify(aiUsageRepo).save(cap.capture());
+        assertThat(cap.getValue().getPromptCount()).isEqualTo(1);
+    }
+
+    @Test
+    void incrementUsage_existingAfter24h_resetsThenIncrements() {
+        AIUsage u = new AIUsage();
+        u.setUserId(user);
+        u.setPromptCount(9);
+        u.setLastPromptAt(Instant.now().minusSeconds(90_000));
+        when(aiUsageRepo.findByUserId(user)).thenReturn(Optional.of(u));
+        service.incrementUsage(user);
+        assertThat(u.getPromptCount()).isEqualTo(1); // reset 0 puis +1
+    }
+
+    // ─── restitutions / tier ───────────────────────────────────────────────────
+
+    @Test
+    void createRestitution_andList() {
+        assertThat(service.createRestitution(resto, new BigDecimal("100.00"), 50, "geste commercial")).isNotNull();
+        when(restitutionRepo.findByRestaurant(resto)).thenReturn(List.of());
+        assertThat(service.findRestaurantRestitutions(resto)).isEmpty();
+    }
+
+    @Test
+    void getRestaurantTier_default_whenAbsent() {
+        when(tierStatusRepo.findByRestaurantId(resto)).thenReturn(Optional.empty());
+        assertThat(service.getRestaurantTier(resto)).isNotNull();
+    }
+
+    // ─── admin views (native SQL + RBAC) ────────────────────────────────────────
+
+    @Test
+    void findExpiredPointsAdmin_notAdminNoCaller_throwsForbidden() {
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::isAdmin).thenReturn(false);
+            sec.when(SecurityHelper::currentUserId).thenReturn(null);
+            assertThatThrownBy(() -> service.findExpiredPointsAdmin(resto, 10)).isInstanceOf(ForbiddenException.class);
+        }
+    }
+
+    @Test
+    void findExpiredPointsAdmin_staffNoRestaurantId_throwsBadRequest() {
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::isAdmin).thenReturn(false);
+            sec.when(SecurityHelper::currentUserId).thenReturn(user);
+            assertThatThrownBy(() -> service.findExpiredPointsAdmin(null, 10)).isInstanceOf(BadRequestException.class);
+        }
+    }
+
+    @Test
+    void findExpiredPointsAdmin_staffNotOfRestaurant_throwsForbidden() {
+        when(query.getSingleResult()).thenReturn(0L);
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::isAdmin).thenReturn(false);
+            sec.when(SecurityHelper::currentUserId).thenReturn(user);
+            assertThatThrownBy(() -> service.findExpiredPointsAdmin(resto, 10)).isInstanceOf(ForbiddenException.class);
+        }
+    }
+
+    @Test
+    void findExpiredPointsAdmin_admin_mapsRows() {
+        Object[] row = { UUID.randomUUID(), "Ada L", 30, Instant.now(), resto, "Resto" };
+        when(query.getResultList()).thenReturn(Collections.singletonList(row));
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::isAdmin).thenReturn(true);
+            assertThat(service.findExpiredPointsAdmin(resto, 10)).hasSize(1);
+        }
+    }
+
+    @Test
+    void findPointDistributions_mapsRows_withFilters() {
+        Object[] row = { UUID.randomUUID(), UUID.randomUUID(), resto, 25, "snap2earn", Instant.now() };
+        when(query.getResultList()).thenReturn(Collections.singletonList(row));
+        assertThat(service.findPointDistributions(resto, user, 10)).hasSize(1);
+    }
+}
