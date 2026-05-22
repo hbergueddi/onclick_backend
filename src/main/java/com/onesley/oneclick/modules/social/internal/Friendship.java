@@ -27,8 +27,12 @@ public class Friendship extends TimestampedEntity {
      @Column(name = "status", nullable = false, length = 64) @Setter private String status = "pending";
     @Column(name = "accepted_at") private Instant acceptedAt;
     public Friendship(UUID id, User user1, User user2) {
-        // Convention canonique : user1.id < user2.id pour éviter doublons.
-        if (user1.getId().compareTo(user2.getId()) < 0) { this.user1 = user1; this.user2 = user2; }
+        // Convention canonique : user1_id < user2_id pour respecter le CHECK `friendships_check`.
+        // IMPORTANT : Postgres compare les UUID en BYTE-WISE (= hex lexicographique), PAS comme
+        // UUID#compareTo (signé sur les long internes). On normalise donc via toString() pour que
+        // l'ordre Java corresponde exactement à celui du CHECK en base — sinon ~50% des INSERT
+        // sont rejetés selon le bit de signe des UUID (cf SocialService#request, même convention).
+        if (user1.getId().toString().compareTo(user2.getId().toString()) < 0) { this.user1 = user1; this.user2 = user2; }
         else { this.user1 = user2; this.user2 = user1; }
         this.id = id;
     }

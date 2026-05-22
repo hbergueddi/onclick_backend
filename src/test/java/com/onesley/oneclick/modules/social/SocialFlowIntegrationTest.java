@@ -38,7 +38,9 @@ class SocialFlowIntegrationTest extends AbstractIntegrationTest {
         String a = createUser(admin), b = createUser(admin); // users jetables, pas de seed
         ResponseEntity<String> post = restTemplate.exchange(url("/api/social/friendships"), HttpMethod.POST,
             jsonJwtEntity(Map.of("user1Id", a, "user2Id", b), admin), String.class);
-        assertThat(post.getStatusCode().is2xxSuccessful()).isTrue();
+        // diagnostic : si non-2xx (flake observé sous charge pleine suite), on expose statut + corps RFC7807
+        assertThat(post.getStatusCode().is2xxSuccessful())
+            .as("friendship create attendu 2xx — reçu %s, body=%s", post.getStatusCode(), post.getBody()).isTrue();
         String id = om.readTree(post.getBody()).get("id").asText();
         assertThat(restTemplate.exchange(url("/api/social/friendships/by-user/" + a), HttpMethod.GET, jwtEntity(admin), String.class)
             .getStatusCode()).isEqualTo(HttpStatus.OK);
