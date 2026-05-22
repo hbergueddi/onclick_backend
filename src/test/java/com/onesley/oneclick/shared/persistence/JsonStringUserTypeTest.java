@@ -7,6 +7,7 @@ import java.sql.ResultSet;
 import java.sql.Types;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -49,5 +50,16 @@ class JsonStringUserTypeTest {
         verify(st).setNull(1, Types.OTHER);
         type.nullSafeSet(st, "{\"a\":1}", 2, null);
         verify(st).setObject(eq(2), eq("{\"a\":1}"), eq(Types.OTHER));
+    }
+
+    @Test
+    void nullSafeSet_malformedJson_failsFastWithClearError() throws Exception {
+        PreparedStatement st = mock(PreparedStatement.class);
+        assertThatThrownBy(() -> type.nullSafeSet(st, "ceci n'est pas du json", 1, null))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("non-JSON");
+        // un scalaire JSON valide (string quotée) reste accepté
+        type.nullSafeSet(st, "\"ok\"", 2, null);
+        verify(st).setObject(eq(2), eq("\"ok\""), eq(Types.OTHER));
     }
 }

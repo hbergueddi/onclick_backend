@@ -27,19 +27,18 @@ class InfraControllersAuthIntegrationTest extends AbstractIntegrationTest {
     }
 
     // ─── AI (Groq) ────────────────────────────────────────────────────────────
-    // NB: @Valid s'exécute à la résolution d'argument (avant @PreAuthorize), donc une
-    // requête non authentifiée avec corps incomplet renvoie 400 ; avec corps valide → 401.
-    // On assert la frontière déterministe : la requête non authentifiée est rejetée (4xx).
+    // Corps VALIDE (passe @Valid) + sans bearer → la garde de sécurité tranche → 401 stable.
+    // (Avec corps invalide, @Valid lèverait 400 avant la garde — d'où les variantes 4xx ci-dessous.)
     @Test
-    void ai_careChat_unauthenticated_4xx() {
+    void ai_careChat_validBody_noBearer_401() {
         assertThat(restTemplate.exchange(url("/api/ai/care-chat"), HttpMethod.POST,
-            jsonJwtEntity(Map.of("message", "bonjour"), null), String.class).getStatusCode().is4xxClientError()).isTrue();
+            jsonJwtEntity(Map.of("message", "bonjour"), null), String.class).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
     @Test
-    void ai_assistant_unauthenticated_4xx() {
+    void ai_assistant_validBody_noBearer_401() {
         assertThat(restTemplate.exchange(url("/api/ai/assistant"), HttpMethod.POST,
-            jsonJwtEntity(Map.of("message", "bonjour"), null), String.class).getStatusCode().is4xxClientError()).isTrue();
+            jsonJwtEntity(Map.of("prompt", "bonjour"), null), String.class).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
     // ─── Email (Resend) ──────────────────────────────────────────────────────

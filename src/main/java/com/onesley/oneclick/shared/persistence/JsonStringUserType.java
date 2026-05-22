@@ -1,5 +1,6 @@
 package com.onesley.oneclick.shared.persistence;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.usertype.UserType;
 
@@ -24,8 +25,16 @@ import java.util.Objects;
  * (cf {@code Restaurant.openingHours}). Contrairement à {@code @JdbcTypeCode(SqlTypes.JSON)}
  * (qui (dé)sérialise via Jackson et casse la lecture d'un objet jsonb vers un String),
  * ce type est un passthrough pur.
+ *
+ * <p><b>Invariant</b> : la {@code String} fournie en écriture doit être du JSON valide
+ * (objet, tableau, ou scalaire JSON). Une valeur non-JSON serait rejetée par Postgres
+ * au cast {@code ::jsonb} avec une erreur SQL opaque (500) ; on la transforme ici en
+ * {@link IllegalArgumentException} explicite, levée au point de binding (debuggable).
  */
 public class JsonStringUserType implements UserType<String> {
+
+    /** Validation de bonne-formation JSON (alignée sur ce que Postgres accepte en jsonb). */
+    private static final ObjectMapper JSON = new ObjectMapper();
 
     @Override
     public int getSqlType() {
@@ -59,7 +68,18 @@ public class JsonStringUserType implements UserType<String> {
         if (value == null) {
             st.setNull(index, Types.OTHER);
         } else {
+            assertWellFormedJson(value);
             st.setObject(index, value, Types.OTHER);
+        }
+    }
+
+    /** Échec rapide et explicite si la valeur n'est pas du JSON valide (sinon 500 opaque côté Postgres). */
+    private static void assertWellFormedJson(String value) {
+        try {
+            JSON.readTree(value);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            throw new IllegalArgumentException(
+                "JsonStringUserType : valeur non-JSON pour une colonne jsonb (longueur=" + value.length() + ") : " + e.getOriginalMessage(), e);
         }
     }
 

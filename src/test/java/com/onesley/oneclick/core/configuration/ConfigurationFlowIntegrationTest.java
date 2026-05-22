@@ -45,11 +45,17 @@ class ConfigurationFlowIntegrationTest extends AbstractIntegrationTest {
             .getStatusCode()).isEqualTo(HttpStatus.OK);
 
         // cache configs
+        String cacheName = "l4-" + UUID.randomUUID().toString().substring(0, 8);
         assertThat(restTemplate.exchange(url("/api/configuration/cache-configs"), HttpMethod.POST,
-            jsonJwtEntity(Map.of("cacheName", "l4-" + UUID.randomUUID().toString().substring(0, 8), "ttlSeconds", 60, "maxEntries", 100), admin), String.class)
+            jsonJwtEntity(Map.of("cacheName", cacheName, "ttlSeconds", 60, "maxEntries", 100), admin), String.class)
             .getStatusCode().is2xxSuccessful()).isTrue();
         assertThat(restTemplate.exchange(url("/api/configuration/cache-configs"), HttpMethod.GET, jwtEntity(admin), String.class)
             .getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        // self-clean (pas d'endpoint DELETE) : target (FK) → flag → cache-config
+        jdbc.update("DELETE FROM feature_flag_targets WHERE feature_flag_id = ?::uuid", UUID.fromString(id));
+        jdbc.update("DELETE FROM feature_flags WHERE id = ?::uuid", UUID.fromString(id));
+        jdbc.update("DELETE FROM cache_configurations WHERE cache_name = ?", cacheName);
     }
 
     @Test

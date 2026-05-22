@@ -19,22 +19,34 @@ class SocialExtensionFlowIntegrationTest extends AbstractIntegrationTest {
     private String userId() { return jdbc.queryForObject("SELECT id::text FROM users WHERE deleted_at IS NULL LIMIT 1", String.class); }
     private String tenantId() { return jdbc.queryForObject("SELECT tenant_id::text FROM restaurants WHERE tenant_id IS NOT NULL LIMIT 1", String.class); }
 
+    /** User CLIENT jetable (évite de toucher/supprimer les données seed). */
+    private String createUser(String admin) throws Exception {
+        String roleId = jdbc.queryForObject("SELECT id::text FROM roles WHERE code='CLIENT' LIMIT 1", String.class);
+        var r = restTemplate.exchange(url("/api/users"), HttpMethod.POST, jsonJwtEntity(Map.of(
+            "roleId", roleId, "email", "l4-elite-" + UUID.randomUUID() + "@x.ma",
+            "password", "password1234", "firstName", "L4", "lastName", "Elite"), admin), String.class);
+        assertThat(r.getStatusCode().is2xxSuccessful()).as("création user jetable").isTrue();
+        return om.readTree(r.getBody()).get("id").asText();
+    }
+
     @Test
     void eliteApplications_flow() throws Exception {
         String admin = adminBearer();
         assertThat(restTemplate.exchange(url("/api/social/elite-applications?page=0&size=5"), HttpMethod.GET, jwtEntity(admin), String.class)
             .getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(restTemplate.exchange(url("/api/social/elite-applications/by-user/" + userId()), HttpMethod.GET, jwtEntity(admin), String.class)
+        // user jetable → pas de collision sur l'unicité par user, ni de suppression de données seed
+        String uid = createUser(admin);
+        assertThat(restTemplate.exchange(url("/api/social/elite-applications/by-user/" + uid), HttpMethod.GET, jwtEntity(admin), String.class)
             .getStatusCode()).isEqualTo(HttpStatus.OK);
-        // pré-nettoyage : un user ne peut avoir qu'une candidature active → re-run sinon bloqué
-        String uid = userId();
-        jdbc.update("DELETE FROM elite_applications WHERE user_id = ?::uuid", uid);
         ResponseEntity<String> post = restTemplate.exchange(url("/api/social/elite-applications"), HttpMethod.POST,
             jsonJwtEntity(Map.of("userId", uid, "motivation", "Candidature L4"), admin), String.class);
         assertThat(post.getStatusCode().is2xxSuccessful()).isTrue();
         String id = om.readTree(post.getBody()).get("id").asText();
         assertThat(restTemplate.exchange(url("/api/social/elite-applications/" + id + "/review"), HttpMethod.PATCH,
-            jsonJwtEntity(Map.of("status", "approved", "reviewedBy", userId()), admin), String.class).getStatusCode()).isEqualTo(HttpStatus.OK);
+            jsonJwtEntity(Map.of("status", "approved", "reviewedBy", uid), admin), String.class).getStatusCode()).isEqualTo(HttpStatus.OK);
+        // self-clean : candidature des users jetables + le user
+        jdbc.update("DELETE FROM elite_applications WHERE user_id = ?::uuid", java.util.UUID.fromString(uid));
+        restTemplate.exchange(url("/api/users/" + uid), HttpMethod.DELETE, jwtEntity(admin), String.class);
     }
 
     @Test

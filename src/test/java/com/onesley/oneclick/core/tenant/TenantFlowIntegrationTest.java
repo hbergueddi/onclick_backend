@@ -28,14 +28,17 @@ class TenantFlowIntegrationTest extends AbstractIntegrationTest {
         assertThat(restTemplate.exchange(url("/api/tenants/by-slug?slug=" + existingSlug()), HttpMethod.GET, jwtEntity(admin), String.class)
             .getStatusCode()).isEqualTo(HttpStatus.OK);
 
-        // CREATE (slug unique, pas d'endpoint delete → laissé)
+        // CREATE (slug unique ; pas d'endpoint DELETE → self-clean jdbc par slug)
+        String slug = "l4-" + UUID.randomUUID().toString().substring(0, 8);
         ResponseEntity<String> post = restTemplate.exchange(url("/api/tenants"), HttpMethod.POST,
-            jsonJwtEntity(Map.of("name", "L4 Tenant", "slug", "l4-" + UUID.randomUUID().toString().substring(0, 8)), admin), String.class);
+            jsonJwtEntity(Map.of("name", "L4 Tenant", "slug", slug), admin), String.class);
         assertThat(post.getStatusCode().is2xxSuccessful()).isTrue();
 
         assertThat(restTemplate.exchange(url("/api/tenants/search"), HttpMethod.POST,
             jsonJwtEntity(Map.of("criteria", List.of(), "page", 0, "size", 5), admin), String.class)
             .getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        jdbc.update("DELETE FROM tenants WHERE slug = ?", slug);
     }
 
     @Test

@@ -22,23 +22,34 @@ class SocialFlowIntegrationTest extends AbstractIntegrationTest {
     }
     private String restaurantId() { return jdbc.queryForObject("SELECT id::text FROM restaurants WHERE deleted_at IS NULL LIMIT 1", String.class); }
 
+    /** User CLIENT jetable (évite de toucher/supprimer les données seed). Échoue clairement si la création rate. */
+    private String createUser(String admin) throws Exception {
+        String roleId = jdbc.queryForObject("SELECT id::text FROM roles WHERE code='CLIENT' LIMIT 1", String.class);
+        var r = restTemplate.exchange(url("/api/users"), HttpMethod.POST, jsonJwtEntity(Map.of(
+            "roleId", roleId, "email", "l4-soc-" + UUID.randomUUID() + "@x.ma",
+            "password", "password1234", "firstName", "L4", "lastName", "Soc"), admin), String.class);
+        assertThat(r.getStatusCode().is2xxSuccessful()).as("création user jetable").isTrue();
+        return om.readTree(r.getBody()).get("id").asText();
+    }
+
     @Test
     void friendships_create_accept_decline() throws Exception {
         String admin = adminBearer();
-        List<String> u = twoUsers();
-        // pré-nettoyage : la contrainte unique (user1_id,user2_id) bloquerait un re-run
-        jdbc.update("DELETE FROM friendships WHERE (user1_id = ?::uuid AND user2_id = ?::uuid) OR (user1_id = ?::uuid AND user2_id = ?::uuid)",
-            u.get(0), u.get(1), u.get(1), u.get(0));
+        String a = createUser(admin), b = createUser(admin); // users jetables, pas de seed
         ResponseEntity<String> post = restTemplate.exchange(url("/api/social/friendships"), HttpMethod.POST,
-            jsonJwtEntity(Map.of("user1Id", u.get(0), "user2Id", u.get(1)), admin), String.class);
+            jsonJwtEntity(Map.of("user1Id", a, "user2Id", b), admin), String.class);
         assertThat(post.getStatusCode().is2xxSuccessful()).isTrue();
         String id = om.readTree(post.getBody()).get("id").asText();
-        assertThat(restTemplate.exchange(url("/api/social/friendships/by-user/" + u.get(0)), HttpMethod.GET, jwtEntity(admin), String.class)
+        assertThat(restTemplate.exchange(url("/api/social/friendships/by-user/" + a), HttpMethod.GET, jwtEntity(admin), String.class)
             .getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(restTemplate.exchange(url("/api/social/friendships/" + id + "/accept"), HttpMethod.PATCH, jwtEntity(admin), String.class)
             .getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(restTemplate.exchange(url("/api/social/friendships/" + id + "/decline"), HttpMethod.PATCH, jwtEntity(admin), String.class)
             .getStatusCode()).isEqualTo(HttpStatus.OK);
+        // self-clean : friendship des users jetables + les users
+        jdbc.update("DELETE FROM friendships WHERE id = ?::uuid", java.util.UUID.fromString(id));
+        restTemplate.exchange(url("/api/users/" + a), HttpMethod.DELETE, jwtEntity(admin), String.class);
+        restTemplate.exchange(url("/api/users/" + b), HttpMethod.DELETE, jwtEntity(admin), String.class);
     }
 
     @Test

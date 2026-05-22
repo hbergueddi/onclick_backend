@@ -34,6 +34,7 @@ class StoreOnboardingFlowIntegrationTest extends AbstractIntegrationTest {
         ResponseEntity<String> decision = restTemplate.exchange(url("/api/store/onboarding/" + id + "/decision"), HttpMethod.PATCH,
             jsonJwtEntity(Map.of("status", "approved", "reviewedBy", userId()), admin), String.class);
         assertThat(decision.getStatusCode()).isEqualTo(HttpStatus.OK);
+        jdbc.update("DELETE FROM store_onboarding_requests WHERE id = ?::uuid", UUID.fromString(id)); // self-clean
     }
 
     @Test

@@ -43,6 +43,7 @@ class PromoNotificationFlowIntegrationTest extends AbstractIntegrationTest {
             HttpMethod.PATCH, jwtEntity(admin), String.class).getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(restTemplate.exchange(url("/api/notifications/promo-requests/stats"), HttpMethod.GET, jwtEntity(admin), String.class)
             .getStatusCode()).isEqualTo(HttpStatus.OK);
+        jdbc.update("DELETE FROM promo_notification_requests WHERE id = ?::uuid", UUID.fromString(id)); // self-clean
     }
 
     @Test

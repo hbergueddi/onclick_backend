@@ -34,6 +34,7 @@ class FinancialFlowIntegrationTest extends AbstractIntegrationTest {
             .getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(restTemplate.exchange(url("/api/financial/contracts/" + id), HttpMethod.PATCH,
             jsonJwtEntity(Map.of("commissionRate", 4.5), admin), String.class).getStatusCode()).isEqualTo(HttpStatus.OK);
+        jdbc.update("DELETE FROM contracts WHERE id = ?::uuid", UUID.fromString(id)); // self-clean (pas d'endpoint DELETE)
     }
 
     @Test
@@ -52,6 +53,7 @@ class FinancialFlowIntegrationTest extends AbstractIntegrationTest {
             jsonJwtEntity(Map.of("subtotal", 1000.0), admin), String.class).getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(restTemplate.exchange(url("/api/financial/invoices/" + id + "/lines"), HttpMethod.GET, jwtEntity(admin), String.class)
             .getStatusCode()).isEqualTo(HttpStatus.OK);
+        jdbc.update("DELETE FROM invoices WHERE id = ?::uuid", UUID.fromString(id)); // self-clean (pas d'endpoint DELETE)
     }
 
     @Test

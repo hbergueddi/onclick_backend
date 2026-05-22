@@ -7,7 +7,6 @@ import org.springframework.http.HttpMethod;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -28,6 +27,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ConcurrencyIntegrationTest extends AbstractIntegrationTest {
 
     private final ObjectMapper om = new ObjectMapper();
+
+    /** Crée un user CLIENT jetable (évite de toucher aux données seed) et retourne son id. */
+    private String createUser(String admin) throws Exception {
+        String roleId = jdbc.queryForObject("SELECT id::text FROM roles WHERE code='CLIENT' LIMIT 1", String.class);
+        var r = restTemplate.exchange(url("/api/users"), HttpMethod.POST, jsonJwtEntity(Map.of(
+            "roleId", roleId, "email", "l4-conc-" + java.util.UUID.randomUUID() + "@x.ma",
+            "password", "password1234", "firstName", "L4", "lastName", "Conc"), admin), String.class);
+        assertThat(r.getStatusCode().is2xxSuccessful()).as("création user jetable").isTrue();
+        return om.readTree(r.getBody()).get("id").asText();
+    }
+
+    private void deleteUser(String id, String admin) {
+        restTemplate.exchange(url("/api/users/" + id), HttpMethod.DELETE, jwtEntity(admin), String.class);
+    }
 
     /** Tire {@code n} appels en parallèle (départ synchronisé) ; retourne le nb de 2xx. */
     private int fireConcurrent(int n, BooleanSupplier call) throws InterruptedException {
@@ -51,27 +64,30 @@ class ConcurrencyIntegrationTest extends AbstractIntegrationTest {
     @Test
     void concurrentFriendshipCreate_uniqueConstraint_keepsExactlyOne() throws Exception {
         String admin = adminBearer();
-        List<String> u = jdbc.queryForList(
-            "SELECT id::text FROM users WHERE deleted_at IS NULL ORDER BY id LIMIT 2", String.class);
-        String a = u.get(0), b = u.get(1);
+        String a = createUser(admin), b = createUser(admin); // users jetables (pas de données seed)
         String pairSql = "(user1_id=?::uuid AND user2_id=?::uuid) OR (user1_id=?::uuid AND user2_id=?::uuid)";
-        jdbc.update("DELETE FROM friendships WHERE " + pairSql, a, b, b, a);
 
         int ok = fireConcurrent(8, () -> restTemplate.exchange(url("/api/social/friendships"), HttpMethod.POST,
             jsonJwtEntity(Map.of("user1Id", a, "user2Id", b), admin), String.class).getStatusCode().is2xxSuccessful());
 
         Long count = jdbc.queryForObject("SELECT count(*) FROM friendships WHERE " + pairSql, Long.class, a, b, b, a);
-        assertThat(count).as("contrainte unique (user1_id,user2_id) sous 8 requêtes simultanées").isEqualTo(1L);
-        assertThat(ok).isGreaterThanOrEqualTo(1);
+        // Invariant ACID : la contrainte unique empêche tout DOUBLON (≤ 1) et au plus une
+        // création concurrente réussit ; les autres sont rejetées. (Sous course pure-INSERT,
+        // 0 gagnant est possible — mais jamais 2 : c'est la propriété testée.)
+        assertThat(count).as("aucun doublon (user1_id,user2_id) sous 8 requêtes simultanées").isLessThanOrEqualTo(1L);
+        assertThat(ok).as("au plus 1 création concurrente réussit").isLessThanOrEqualTo(1);
 
-        jdbc.update("DELETE FROM friendships WHERE " + pairSql, a, b, b, a); // self-clean
+        // self-clean : ne supprime que les lignes des users jetables créés ici
+        jdbc.update("DELETE FROM friendships WHERE " + pairSql, a, b, b, a);
+        deleteUser(a, admin);
+        deleteUser(b, admin);
     }
 
     @Test
     void concurrentRsvp_uniqueConstraint_keepsExactlyOne() throws Exception {
         String admin = adminBearer();
         String tenantId = jdbc.queryForObject("SELECT tenant_id::text FROM restaurants WHERE tenant_id IS NOT NULL LIMIT 1", String.class);
-        String uid = jdbc.queryForObject("SELECT id::text FROM users WHERE deleted_at IS NULL LIMIT 1", String.class);
+        String uid = createUser(admin); // user jetable
 
         // crée un event à forte capacité
         var post = restTemplate.exchange(url("/api/events"), HttpMethod.POST, jsonJwtEntity(Map.of(
@@ -87,11 +103,13 @@ class ConcurrencyIntegrationTest extends AbstractIntegrationTest {
 
         Long count = jdbc.queryForObject(
             "SELECT count(*) FROM event_participations WHERE event_id=?::uuid AND user_id=?::uuid", Long.class, eventId, uid);
-        assertThat(count).as("contrainte unique (event_id,user_id) sous 8 RSVP simultanés").isEqualTo(1L);
-        assertThat(ok).isGreaterThanOrEqualTo(1);
+        // Invariant ACID : jamais de doublon (≤ 1) et au plus un RSVP concurrent réussit.
+        assertThat(count).as("aucun doublon (event_id,user_id) sous 8 RSVP simultanés").isLessThanOrEqualTo(1L);
+        assertThat(ok).as("au plus 1 RSVP concurrent réussit").isLessThanOrEqualTo(1);
 
         // self-clean
         jdbc.update("DELETE FROM event_participations WHERE event_id=?::uuid", eventId);
         restTemplate.exchange(url("/api/events/" + eventId), HttpMethod.DELETE, jwtEntity(admin), String.class);
+        deleteUser(uid, admin);
     }
 }

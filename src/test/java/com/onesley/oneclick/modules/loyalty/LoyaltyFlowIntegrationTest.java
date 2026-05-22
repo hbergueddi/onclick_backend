@@ -96,6 +96,7 @@ class LoyaltyFlowIntegrationTest extends AbstractIntegrationTest {
             .getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(restTemplate.exchange(url("/api/loyalty/gain-rule-requests/" + id), HttpMethod.GET, jwtEntity(admin), String.class)
             .getStatusCode()).isEqualTo(HttpStatus.OK);
+        jdbc.update("DELETE FROM gain_rule_requests WHERE id = ?::uuid", UUID.fromString(id)); // self-clean
     }
 
     @Test

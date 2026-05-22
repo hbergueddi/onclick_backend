@@ -42,9 +42,10 @@ class NotificationFlowIntegrationTest extends AbstractIntegrationTest {
             .getStatusCode()).isEqualTo(HttpStatus.OK);
 
         // campaigns
-        assertThat(restTemplate.exchange(url("/api/notifications/campaigns"), HttpMethod.POST,
-            jsonJwtEntity(Map.of("tenantId", tenantId(), "title", "Camp L4", "message", "msg"), admin), String.class)
-            .getStatusCode().is2xxSuccessful()).isTrue();
+        ResponseEntity<String> camp = restTemplate.exchange(url("/api/notifications/campaigns"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("tenantId", tenantId(), "title", "Camp L4", "message", "msg"), admin), String.class);
+        assertThat(camp.getStatusCode().is2xxSuccessful()).isTrue();
+        String campId = om.readTree(camp.getBody()).get("id").asText();
         assertThat(restTemplate.exchange(url("/api/notifications/campaigns/by-tenant/" + tenantId()), HttpMethod.GET, jwtEntity(admin), String.class)
             .getStatusCode()).isEqualTo(HttpStatus.OK);
 
@@ -66,6 +67,10 @@ class NotificationFlowIntegrationTest extends AbstractIntegrationTest {
             jsonJwtEntity(Map.of("reservationId", UUID.randomUUID().toString(), "recipientUserId", uid,
                 "status", "confirmed", "title", "T", "body", "B"), admin), String.class)
             .getStatusCode().is2xxSuccessful()).isTrue();
+
+        // self-clean (notification + campaign n'ont pas d'endpoint DELETE)
+        jdbc.update("DELETE FROM notifications WHERE id = ?::uuid", UUID.fromString(id));
+        jdbc.update("DELETE FROM notification_campaigns WHERE id = ?::uuid", UUID.fromString(campId));
     }
 
     @Test
