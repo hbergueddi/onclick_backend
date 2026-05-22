@@ -13,6 +13,7 @@ import com.onesley.oneclick.modules.loyalty.api.EnrollmentRecordDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyEarnDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyTransactionDto;
 import com.onesley.oneclick.security.SecurityHelper;
+import static com.onesley.oneclick.shared.Temporals.toInstant;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -203,14 +204,6 @@ public class EnrollmentService {
      * {@link LoyaltyExtensionService}, {@link com.onesley.oneclick.modules.analytics.internal.AdminViewsService},
      * {@link com.onesley.oneclick.modules.oneclickhi.internal.OneClickHIService}.
      */
-    private static java.time.Instant toInstant(Object o) {
-        if (o == null) return null;
-        if (o instanceof java.time.Instant i) return i;
-        if (o instanceof java.sql.Timestamp ts) return ts.toInstant();
-        if (o instanceof java.time.OffsetDateTime odt) return odt.toInstant();
-        return java.time.Instant.parse(o.toString());
-    }
-
     // ─── HELPERS PRIVÉS ───────────────────────────────────────────────────
 
     /**

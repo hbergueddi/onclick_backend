@@ -5,6 +5,7 @@ import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyExtensionDtos.*;
 import com.onesley.oneclick.security.SecurityHelper;
+import static com.onesley.oneclick.shared.Temporals.toInstant;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Service;
@@ -183,14 +184,6 @@ public class LoyaltyExtensionService {
             row[4] != null ? (UUID) row[4] : null,
             (String) row[5]
         )).toList();
-    }
-
-    private static java.time.Instant toInstant(Object o) {
-        if (o == null) return null;
-        if (o instanceof java.time.Instant i) return i;
-        if (o instanceof java.sql.Timestamp ts) return ts.toInstant();
-        if (o instanceof java.time.OffsetDateTime odt) return odt.toInstant();
-        return java.time.Instant.parse(o.toString());
     }
 
     @SuppressWarnings("unchecked")

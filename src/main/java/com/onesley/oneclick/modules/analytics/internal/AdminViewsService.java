@@ -4,6 +4,7 @@ import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.modules.analytics.api.AdminViewsDtos.*;
 import com.onesley.oneclick.security.SecurityHelper;
+import static com.onesley.oneclick.shared.Temporals.toInstant;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Service;
@@ -68,14 +69,6 @@ public class AdminViewsService {
             row[9] != null ? ((Number) row[9]).longValue() : 0L,
             row[10] != null ? toInstant(row[10]) : null
         )).toList();
-    }
-
-    private static java.time.Instant toInstant(Object o) {
-        if (o == null) return null;
-        if (o instanceof java.time.Instant i) return i;
-        if (o instanceof java.sql.Timestamp ts) return ts.toInstant();
-        if (o instanceof java.time.OffsetDateTime odt) return odt.toInstant();
-        return java.time.Instant.parse(o.toString());
     }
 
     public AdminWalletSummaryDto walletSummary() {

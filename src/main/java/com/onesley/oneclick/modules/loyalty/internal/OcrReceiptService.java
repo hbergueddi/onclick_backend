@@ -92,7 +92,7 @@ public class OcrReceiptService {
     }
 
     @SuppressWarnings("unchecked")
-    private String extractParsedText(Map<String, Object> response) {
+    static String extractParsedText(Map<String, Object> response) {
         if (response == null) return "";
         Object parsedResults = response.get("ParsedResults");
         if (!(parsedResults instanceof List<?> list) || list.isEmpty()) return "";

@@ -7,7 +7,12 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
+import java.util.List;
+import java.util.Map;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -115,5 +120,45 @@ class OcrReceiptServiceTest {
         assertThat(r.ocrText()).contains("OCR call failed");
         assertThat(r.amountDetected()).isNull();
         assertThat(r.confidence()).isEqualTo("none");
+    }
+
+    // ─── extractParsedText : parsing de la réponse OCR.space (toutes branches) ───
+
+    @Test
+    void extractParsedText_variants() {
+        assertThat(OcrReceiptService.extractParsedText(null)).isEmpty();                                   // response null
+        assertThat(OcrReceiptService.extractParsedText(java.util.Map.of("ParsedResults", "x"))).isEmpty(); // pas une liste
+        assertThat(OcrReceiptService.extractParsedText(java.util.Map.of("ParsedResults", java.util.List.of()))).isEmpty(); // liste vide
+        assertThat(OcrReceiptService.extractParsedText(java.util.Map.of("ParsedResults", java.util.List.of("x")))).isEmpty(); // 1er élément pas une map
+        assertThat(OcrReceiptService.extractParsedText(java.util.Map.of("ParsedResults", java.util.List.of(java.util.Map.of("autre", "v"))))).isEmpty(); // ParsedText absent
+        assertThat(OcrReceiptService.extractParsedText(java.util.Map.of("ParsedResults",
+            java.util.List.of(java.util.Map.of("ParsedText", "NET A PAYER 150,00"))))).isEqualTo("NET A PAYER 150,00"); // nominal
+    }
+
+    // ─── ocr() chemin succès : RestClient mocké → parse réponse + extraction montant ───
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void ocr_success_parsesResponseAndExtractsAmount() {
+        OcrReceiptService svc = new OcrReceiptService("KEY", "https://ocr/parse", "fre");
+        RestClient client = mock(RestClient.class);
+        RestClient.RequestBodyUriSpec uriSpec = mock(RestClient.RequestBodyUriSpec.class);
+        RestClient.RequestBodySpec bodySpec = mock(RestClient.RequestBodySpec.class);
+        RestClient.ResponseSpec responseSpec = mock(RestClient.ResponseSpec.class);
+        when(client.post()).thenReturn(uriSpec);
+        when(uriSpec.uri(anyString())).thenReturn(bodySpec);
+        when(bodySpec.header(anyString(), any())).thenReturn(bodySpec);
+        when(bodySpec.contentType(any())).thenReturn(bodySpec);
+        when(bodySpec.body(any(org.springframework.util.MultiValueMap.class))).thenReturn(bodySpec); // overload body(T) explicite
+
+        when(bodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.body(Map.class)).thenReturn(
+            Map.of("ParsedResults", List.of(Map.of("ParsedText", "NET A PAYER : 150,00"))));
+        ReflectionTestUtils.setField(svc, "restClient", client);
+
+        OcrReceiptResultDto r = svc.ocr(new OcrReceiptRequestDto("https://img/x.png", null)); // language null → defaultLanguage
+        assertThat(r.ocrText()).contains("NET A PAYER");
+        assertThat(r.amountDetected()).isEqualByComparingTo("150.00");
+        assertThat(r.confidence()).isEqualTo("high");
     }
 }
