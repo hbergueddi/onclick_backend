@@ -1,17 +1,33 @@
 package com.onesley.oneclick.modules.loyalty;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.onesley.oneclick.AbstractIntegrationTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+
+import java.util.Map;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /** L4 « profondeur » — {@code /api/loyalty} extensions : ratings/scores/ai-usage/restitutions/tier-status/distributions. */
 class LoyaltyExtensionFlowIntegrationTest extends AbstractIntegrationTest {
 
+    private final ObjectMapper om = new ObjectMapper();
     private String userId() { return jdbc.queryForObject("SELECT id::text FROM users WHERE deleted_at IS NULL LIMIT 1", String.class); }
     private String restaurantId() { return jdbc.queryForObject("SELECT id::text FROM restaurants WHERE deleted_at IS NULL LIMIT 1", String.class); }
+
+    /** User CLIENT jetable (évite de muter le rating d'un user seed). */
+    private String createUser(String admin) throws Exception {
+        String roleId = jdbc.queryForObject("SELECT id::text FROM roles WHERE code='CLIENT' LIMIT 1", String.class);
+        var r = restTemplate.exchange(url("/api/users"), HttpMethod.POST, jsonJwtEntity(Map.of(
+            "roleId", roleId, "email", "l4-lext-" + UUID.randomUUID() + "@x.ma",
+            "password", "password1234", "firstName", "L4", "lastName", "Lext"), admin), String.class);
+        assertThat(r.getStatusCode().is2xxSuccessful()).as("création user jetable").isTrue();
+        return om.readTree(r.getBody()).get("id").asText();
+    }
 
     @Test
     void reads_200() {
@@ -40,5 +56,29 @@ class LoyaltyExtensionFlowIntegrationTest extends AbstractIntegrationTest {
     void reads_noBearer_401() {
         assertThat(restTemplate.exchange(url("/api/loyalty/point-distributions"), HttpMethod.GET, jwtEntity(null), String.class)
             .getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    // ─── Écritures jusqu'ici non couvertes au L4 (recordRating / createRestitution) ───
+
+    @Test
+    void recordRating_create() throws Exception {
+        String admin = adminBearer();
+        String uid = createUser(admin); // user jetable → pas de mutation de rating seed
+        assertThat(restTemplate.exchange(url("/api/loyalty/ratings"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("userId", uid, "delta", 0.1, "reason", "L4 honorée"), admin), String.class)
+            .getStatusCode().is2xxSuccessful()).isTrue();
+        jdbc.update("DELETE FROM client_ratings WHERE user_id = ?::uuid", UUID.fromString(uid)); // self-clean
+        restTemplate.exchange(url("/api/users/" + uid), HttpMethod.DELETE, jwtEntity(admin), String.class);
+    }
+
+    @Test
+    void createRestitution_create() throws Exception {
+        String admin = adminBearer();
+        ResponseEntity<String> r = restTemplate.exchange(url("/api/loyalty/restitutions"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("restaurantId", restaurantId(), "amount", 50.0, "points", 100, "reason", "L4 restitution"), admin), String.class);
+        assertThat(r.getStatusCode().is2xxSuccessful()).isTrue();
+        String id = om.readTree(r.getBody()).get("id").asText();
+        jdbc.update("DELETE FROM wallet_transactions WHERE reference_id = ?::uuid", UUID.fromString(id)); // side-effect éventuel
+        jdbc.update("DELETE FROM restaurant_restitutions WHERE id = ?::uuid", UUID.fromString(id));
     }
 }

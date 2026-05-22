@@ -65,4 +65,38 @@ class AuthFlowIntegrationTest extends AbstractIntegrationTest {
             jsonJwtEntity(Map.of("email", "inconnu-" + UUID.randomUUID() + "@x.ma", "password", "mauvais"), null), String.class);
         assertThat(r.getStatusCode().is4xxClientError()).isTrue();
     }
+
+    /** OTP : request (202) → lecture du code (stocké en clair) → verify OK (200) + verify mauvais code (400). */
+    @Test
+    void otp_request_verify_andWrongCode() throws Exception {
+        String admin = adminBearer();
+        String email = "l4-otp-" + UUID.randomUUID().toString().substring(0, 8) + "@x.ma";
+        ResponseEntity<String> create = restTemplate.exchange(url("/api/users"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("roleId", clientRoleId(), "email", email, "password", "password1234",
+                "firstName", "L4", "lastName", "Otp"), admin), String.class);
+        String userId = om.readTree(create.getBody()).get("id").asText();
+
+        // request → 202 + otpId
+        ResponseEntity<String> req = restTemplate.exchange(url("/api/auth/otp/request"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("email", email, "purpose", "2fa"), null), String.class);
+        assertThat(req.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+        String otpId = om.readTree(req.getBody()).get("otpId").asText();
+
+        // verify avec le vrai code → 200
+        String code = jdbc.queryForObject("SELECT code FROM otp_requests WHERE id = ?::uuid", String.class, UUID.fromString(otpId));
+        assertThat(restTemplate.exchange(url("/api/auth/otp/verify"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("otpId", otpId, "code", code), null), String.class).getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        // nouvelle demande + mauvais code → 400
+        String otpId2 = om.readTree(restTemplate.exchange(url("/api/auth/otp/request"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("email", email, "purpose", "2fa"), null), String.class).getBody()).get("otpId").asText();
+        String real2 = jdbc.queryForObject("SELECT code FROM otp_requests WHERE id = ?::uuid", String.class, UUID.fromString(otpId2));
+        String wrong = real2.equals("000000") ? "111111" : "000000";
+        assertThat(restTemplate.exchange(url("/api/auth/otp/verify"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("otpId", otpId2, "code", wrong), null), String.class).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+
+        // cleanup : OTPs (FK user) puis user
+        jdbc.update("DELETE FROM otp_requests WHERE user_id = ?::uuid", UUID.fromString(userId));
+        restTemplate.exchange(url("/api/users/" + userId), HttpMethod.DELETE, jwtEntity(admin), String.class);
+    }
 }

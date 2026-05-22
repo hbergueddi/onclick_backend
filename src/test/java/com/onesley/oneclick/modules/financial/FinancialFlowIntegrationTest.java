@@ -84,4 +84,60 @@ class FinancialFlowIntegrationTest extends AbstractIntegrationTest {
                 "startsAt", LocalDate.now().toString()), bearerForRole("CLIENT")), String.class)
             .getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
+
+    // ─── Endpoints jusqu'ici non couverts (templates CRUD, line, wallet-tx, generate) ───
+
+    @Test
+    void contractTemplate_crud() throws Exception {
+        String admin = adminBearer();
+        String code = "L4-CT-" + rand();
+        ResponseEntity<String> post = restTemplate.exchange(url("/api/financial/contract-templates"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("code", code, "name", "L4 Template", "version", 1, "language", "fr",
+                "title", "Titre L4", "body", "Corps du contrat L4", "isActive", true), admin), String.class);
+        assertThat(post.getStatusCode().is2xxSuccessful()).isTrue();
+        String id = om.readTree(post.getBody()).get("id").asText();
+        assertThat(restTemplate.exchange(url("/api/financial/contract-templates/" + id), HttpMethod.GET, jwtEntity(admin), String.class)
+            .getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(restTemplate.exchange(url("/api/financial/contract-templates/by-code/" + code + "?language=fr&version=1"),
+            HttpMethod.GET, jwtEntity(admin), String.class).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(restTemplate.exchange(url("/api/financial/contract-templates/" + id), HttpMethod.PATCH,
+            jsonJwtEntity(Map.of("name", "L4 Template renommé"), admin), String.class).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(restTemplate.exchange(url("/api/financial/contract-templates/" + id), HttpMethod.DELETE, jwtEntity(admin), String.class)
+            .getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        jdbc.update("DELETE FROM contract_templates WHERE id = ?::uuid", UUID.fromString(id)); // hard-clean après soft-delete
+    }
+
+    @Test
+    void invoiceLine_create() throws Exception {
+        String admin = adminBearer();
+        ResponseEntity<String> inv = restTemplate.exchange(url("/api/financial/invoices"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("restaurantId", restaurantId(), "invoiceNumber", "L4-IL-" + rand(),
+                "periodStart", LocalDate.now().withDayOfMonth(1).toString(), "periodEnd", LocalDate.now().toString()), admin), String.class);
+        String invoiceId = om.readTree(inv.getBody()).get("id").asText();
+        ResponseEntity<String> line = restTemplate.exchange(url("/api/financial/lines"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("invoiceId", invoiceId, "label", "Commission L4", "quantity", 2, "unitPrice", 150.0, "sortOrder", 0), admin), String.class);
+        assertThat(line.getStatusCode().is2xxSuccessful()).isTrue();
+        // self-clean : lignes (FK) puis facture
+        jdbc.update("DELETE FROM invoice_lines WHERE invoice_id = ?::uuid", UUID.fromString(invoiceId));
+        jdbc.update("DELETE FROM invoices WHERE id = ?::uuid", UUID.fromString(invoiceId));
+    }
+
+    @Test
+    void walletTx_create() throws Exception {
+        String admin = adminBearer();
+        ResponseEntity<String> post = restTemplate.exchange(url("/api/financial/wallet-tx"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("restaurantId", restaurantId(), "type", "credit", "amount", 100.0, "reason", "L4 test"), admin), String.class);
+        assertThat(post.getStatusCode().is2xxSuccessful()).isTrue();
+        String id = om.readTree(post.getBody()).get("id").asText();
+        jdbc.update("DELETE FROM wallet_transactions WHERE id = ?::uuid", UUID.fromString(id)); // self-clean
+    }
+
+    @Test
+    void generateMonthlyInvoices_futurePeriod_noop() {
+        String admin = adminBearer();
+        // période lointaine → aucun contrat actif → 0 généré (exerce l'endpoint sans polluer la base)
+        assertThat(restTemplate.exchange(url("/api/financial/invoices/generate-monthly?periodMonth=2099-12"),
+            HttpMethod.POST, jwtEntity(admin), String.class).getStatusCode()).isEqualTo(HttpStatus.OK);
+        jdbc.update("DELETE FROM invoices WHERE period_start >= DATE '2099-12-01'"); // défensif
+    }
 }

@@ -117,4 +117,88 @@ class LoyaltyFlowIntegrationTest extends AbstractIntegrationTest {
         assertThat(restTemplate.exchange(url("/api/loyalty/accounts?page=0&size=5"), HttpMethod.GET, jwtEntity(null), String.class)
             .getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
+
+    // ─── Mutations jusqu'ici non couvertes au L4 (spend/gift/gain-rules/approve/reject) ───
+
+    /** Restaurant sans gain rule active (la contrainte UNIQUE par resto interdit un doublon). */
+    private String restaurantWithoutGainRule() {
+        return jdbc.queryForObject(
+            "SELECT r.id::text FROM restaurants r WHERE r.deleted_at IS NULL " +
+            "AND NOT EXISTS (SELECT 1 FROM gain_rules g WHERE g.restaurant_id = r.id AND g.deleted_at IS NULL) LIMIT 1",
+            String.class);
+    }
+
+    @Test
+    void spend_afterEarn() {
+        String admin = adminBearer();
+        String[] rt = restoTenant();
+        String restaurantId = rt[0], clientId = userId();
+        restTemplate.exchange(url("/api/loyalty/earn"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("clientId", clientId, "restaurantId", restaurantId, "points", 30, "amount", 60, "reason", "L4 earn-for-spend"), admin), String.class);
+        assertThat(restTemplate.exchange(url("/api/loyalty/spend"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("clientId", clientId, "restaurantId", restaurantId, "points", 10, "reason", "L4 spend"), admin), String.class)
+            .getStatusCode().is2xxSuccessful()).isTrue();
+    }
+
+    @Test
+    void gift_debitsSenderCreditsReceiver() {
+        String admin = adminBearer();
+        String restaurantId = restoTenant()[0];
+        String receiverId = jdbc.queryForObject(
+            "SELECT id::text FROM users WHERE deleted_at IS NULL AND id <> ?::uuid ORDER BY id LIMIT 1", String.class, SEED_SUPERADMIN_ID);
+        // finance le sender (= admin courant = SEED_SUPERADMIN_ID) avant le don
+        restTemplate.exchange(url("/api/loyalty/earn"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("clientId", SEED_SUPERADMIN_ID, "restaurantId", restaurantId, "points", 20, "amount", 40, "reason", "L4 gift-fund"), admin), String.class);
+        assertThat(restTemplate.exchange(url("/api/loyalty/gift"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("receiverId", receiverId, "restaurantId", restaurantId, "points", 10, "message", "L4 gift"), admin), String.class)
+            .getStatusCode().is2xxSuccessful()).isTrue();
+    }
+
+    @Test
+    void gainRule_crud() throws Exception {
+        String admin = adminBearer();
+        String resto = restaurantWithoutGainRule();
+        ResponseEntity<String> create = restTemplate.exchange(url("/api/loyalty/gain-rules"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("restaurantId", resto, "conversionRate", 0.1), admin), String.class);
+        assertThat(create.getStatusCode().is2xxSuccessful()).isTrue();
+        String id = om.readTree(create.getBody()).get("id").asText();
+        assertThat(restTemplate.exchange(url("/api/loyalty/gain-rules/" + id), HttpMethod.PATCH,
+            jsonJwtEntity(Map.of("conversionRate", 0.15, "isActive", true), admin), String.class).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(restTemplate.exchange(url("/api/loyalty/gain-rules/" + id), HttpMethod.DELETE, jwtEntity(admin), String.class)
+            .getStatusCode().is2xxSuccessful()).isTrue();
+        jdbc.update("DELETE FROM gain_rules WHERE id = ?::uuid", UUID.fromString(id)); // hard-clean après soft-delete
+    }
+
+    @Test
+    void gainRuleRequest_reject() throws Exception {
+        String admin = adminBearer();
+        ResponseEntity<String> req = restTemplate.exchange(url("/api/loyalty/gain-rule-requests"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("restaurantId", restoTenant()[0], "name", "Règle L4 rejet", "conversionRate", 0.1), admin), String.class);
+        String id = om.readTree(req.getBody()).get("id").asText();
+        assertThat(restTemplate.exchange(url("/api/loyalty/gain-rule-requests/" + id + "/reject"), HttpMethod.PATCH,
+            jsonJwtEntity(Map.of("rejectionReason", "Motif L4"), admin), String.class).getStatusCode()).isEqualTo(HttpStatus.OK);
+        jdbc.update("DELETE FROM gain_rule_requests WHERE id = ?::uuid", UUID.fromString(id)); // self-clean
+    }
+
+    @Test
+    void gainRuleRequest_approve_createsRule() throws Exception {
+        String admin = adminBearer();
+        String resto = restaurantWithoutGainRule();
+        ResponseEntity<String> req = restTemplate.exchange(url("/api/loyalty/gain-rule-requests"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("restaurantId", resto, "name", "Règle L4 appro", "conversionRate", 0.1), admin), String.class);
+        String id = om.readTree(req.getBody()).get("id").asText();
+        assertThat(restTemplate.exchange(url("/api/loyalty/gain-rule-requests/" + id + "/approve"), HttpMethod.PATCH, jwtEntity(admin), String.class)
+            .getStatusCode()).isEqualTo(HttpStatus.OK);
+        // self-clean : la demande (FK created_rule_id) puis la gain rule créée
+        jdbc.update("DELETE FROM gain_rule_requests WHERE id = ?::uuid", UUID.fromString(id));
+        jdbc.update("DELETE FROM gain_rules WHERE restaurant_id = ?::uuid", UUID.fromString(resto));
+    }
+
+    @Test
+    void ocrReceipt_stub_200() {
+        // OCR_SPACE_API_KEY absente en env de test → ocr() renvoie le stub → 200 (couvre l'endpoint)
+        assertThat(restTemplate.exchange(url("/api/loyalty/ocr-receipt"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("imageUrl", "https://example.com/ticket-l4.png"), adminBearer()), String.class)
+            .getStatusCode().is2xxSuccessful()).isTrue();
+    }
 }

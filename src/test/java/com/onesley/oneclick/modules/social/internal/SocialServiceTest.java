@@ -336,4 +336,84 @@ class SocialServiceTest {
             assertThat(service.findGroupMembers(g.getId())).isEmpty();
         }
     }
+
+    // ─── RBAC friend-groups : lecture (requireGroupReadAccess) + admin junction (isGroupAdminOrOwner) ───
+
+    @Test
+    void findGroupMembers_asOwner_ok() {
+        FriendGroup g = group(me); // current == owner
+        when(groupRepo.findById(any())).thenReturn(Optional.of(g));
+        when(groupMemberRepo.findAllByFriendGroupId(any())).thenReturn(List.of());
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::currentUserId).thenReturn(me);
+            sec.when(SecurityHelper::isAdmin).thenReturn(false);
+            assertThat(service.findGroupMembers(g.getId())).isEmpty();
+        }
+    }
+
+    @Test
+    void findGroupMembers_asMember_ok() {
+        FriendGroup g = group(UUID.randomUUID()); // owner ≠ current
+        when(groupRepo.findById(any())).thenReturn(Optional.of(g));
+        when(groupMemberRepo.existsByFriendGroupIdAndFriendId(any(), eq(me))).thenReturn(true);
+        when(groupMemberRepo.findAllByFriendGroupId(any())).thenReturn(List.of());
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::currentUserId).thenReturn(me);
+            sec.when(SecurityHelper::isAdmin).thenReturn(false);
+            assertThat(service.findGroupMembers(g.getId())).isEmpty();
+        }
+    }
+
+    @Test
+    void findGroupMembers_outsider_throwsForbidden() {
+        FriendGroup g = group(UUID.randomUUID());
+        when(groupRepo.findById(any())).thenReturn(Optional.of(g));
+        when(groupMemberRepo.existsByFriendGroupIdAndFriendId(any(), any())).thenReturn(false);
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::currentUserId).thenReturn(me);
+            sec.when(SecurityHelper::isAdmin).thenReturn(false);
+            assertThatThrownBy(() -> service.findGroupMembers(g.getId())).isInstanceOf(ForbiddenException.class);
+        }
+    }
+
+    @Test
+    void findGroupMembers_notAuthenticated_throwsForbidden() {
+        FriendGroup g = group(UUID.randomUUID());
+        when(groupRepo.findById(any())).thenReturn(Optional.of(g));
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::currentUserId).thenReturn(null);
+            assertThatThrownBy(() -> service.findGroupMembers(g.getId())).isInstanceOf(ForbiddenException.class);
+        }
+    }
+
+    @Test
+    void removeGroupMember_asJunctionAdmin_removesOther() {
+        FriendGroup g = group(UUID.randomUUID()); // owner ≠ current
+        UUID target = UUID.randomUUID();
+        FriendGroupMember adminMember = new FriendGroupMember(
+            UUID.randomUUID(), g, new User(me, null, "m@x.ma", "h", "M", "M"), "admin");
+        ReflectionTestUtils.setField(adminMember, "friendId", me); // friendId = mirror insertable=false
+        when(groupRepo.findById(any())).thenReturn(Optional.of(g));
+        when(groupMemberRepo.findAllByFriendGroupId(any())).thenReturn(List.of(adminMember));
+        when(groupMemberRepo.deleteByFriendGroupIdAndFriendId(any(), eq(target))).thenReturn(1);
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::currentUserId).thenReturn(me); // pas owner, pas admin global → via junction
+            sec.when(SecurityHelper::isAdmin).thenReturn(false);
+            service.removeGroupMember(g.getId(), target);
+        }
+        verify(groupMemberRepo).deleteByFriendGroupIdAndFriendId(any(), eq(target));
+    }
+
+    @Test
+    void removeGroupMember_outsider_throwsForbidden() {
+        FriendGroup g = group(UUID.randomUUID());
+        UUID target = UUID.randomUUID();
+        when(groupRepo.findById(any())).thenReturn(Optional.of(g));
+        when(groupMemberRepo.findAllByFriendGroupId(any())).thenReturn(List.of()); // current absent de la junction
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::currentUserId).thenReturn(me); // ni owner, ni self (target ≠ me), ni admin junction
+            sec.when(SecurityHelper::isAdmin).thenReturn(false);
+            assertThatThrownBy(() -> service.removeGroupMember(g.getId(), target)).isInstanceOf(ForbiddenException.class);
+        }
+    }
 }

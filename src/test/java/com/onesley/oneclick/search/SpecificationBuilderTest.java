@@ -209,4 +209,50 @@ class SpecificationBuilderTest {
             List.of(new SearchCriterion("field", SearchOperator.GT, "pas-une-date")), Set.of("field"));
         assertThatThrownBy(() -> spec.toPredicate(root, query, cb)).isInstanceOf(BadRequestException.class);
     }
+
+    // ─── coercion : branches restantes (null / LocalDateTime / invalides / fallback / non-Comparable) ───
+
+    @Test
+    void coerce_nullValue_returnsNull() {
+        run(SearchOperator.EQ, null, String.class);
+        verify(cb).equal(eq(path), eq((Object) null));
+    }
+
+    @Test
+    void coerce_localDateTime_valid() {
+        run(SearchOperator.EQ, "2026-01-01T10:00:00", java.time.LocalDateTime.class);
+        verify(cb).equal(eq(path), eq(java.time.LocalDateTime.parse("2026-01-01T10:00:00")));
+    }
+
+    @Test
+    void coerce_invalidLocalDate_throwsBadRequest() {
+        when(path.getJavaType()).thenReturn((Class) LocalDate.class);
+        Specification<Object> spec = SpecificationBuilder.build(
+            List.of(new SearchCriterion("field", SearchOperator.EQ, "pas-une-date")), Set.of("field"));
+        assertThatThrownBy(() -> spec.toPredicate(root, query, cb)).isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void coerce_invalidLocalDateTime_throwsBadRequest() {
+        when(path.getJavaType()).thenReturn((Class) java.time.LocalDateTime.class);
+        Specification<Object> spec = SpecificationBuilder.build(
+            List.of(new SearchCriterion("field", SearchOperator.EQ, "pas-une-date")), Set.of("field"));
+        assertThatThrownBy(() -> spec.toPredicate(root, query, cb)).isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void coerce_noMatchingRule_returnsValueAsIs() {
+        // target Integer mais valeur String (pas un Number) → aucune règle ne matche → renvoie la valeur telle quelle
+        run(SearchOperator.EQ, "abc", Integer.class);
+        verify(cb).equal(eq(path), eq("abc"));
+    }
+
+    @Test
+    void coerceComparable_nonComparable_throwsBadRequest() {
+        // valeur déjà du bon type (Object) mais non Comparable → rejet sur opérateur d'ordre
+        when(path.getJavaType()).thenReturn((Class) Object.class);
+        Specification<Object> spec = SpecificationBuilder.build(
+            List.of(new SearchCriterion("field", SearchOperator.GT, new Object())), Set.of("field"));
+        assertThatThrownBy(() -> spec.toPredicate(root, query, cb)).isInstanceOf(BadRequestException.class);
+    }
 }
