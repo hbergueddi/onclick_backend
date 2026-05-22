@@ -26,6 +26,9 @@ class SocialFlowIntegrationTest extends AbstractIntegrationTest {
     void friendships_create_accept_decline() throws Exception {
         String admin = adminBearer();
         List<String> u = twoUsers();
+        // pré-nettoyage : la contrainte unique (user1_id,user2_id) bloquerait un re-run
+        jdbc.update("DELETE FROM friendships WHERE (user1_id = ?::uuid AND user2_id = ?::uuid) OR (user1_id = ?::uuid AND user2_id = ?::uuid)",
+            u.get(0), u.get(1), u.get(1), u.get(0));
         ResponseEntity<String> post = restTemplate.exchange(url("/api/social/friendships"), HttpMethod.POST,
             jsonJwtEntity(Map.of("user1Id", u.get(0), "user2Id", u.get(1)), admin), String.class);
         assertThat(post.getStatusCode().is2xxSuccessful()).isTrue();

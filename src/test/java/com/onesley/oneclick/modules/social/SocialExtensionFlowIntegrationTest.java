@@ -26,8 +26,11 @@ class SocialExtensionFlowIntegrationTest extends AbstractIntegrationTest {
             .getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(restTemplate.exchange(url("/api/social/elite-applications/by-user/" + userId()), HttpMethod.GET, jwtEntity(admin), String.class)
             .getStatusCode()).isEqualTo(HttpStatus.OK);
+        // pré-nettoyage : un user ne peut avoir qu'une candidature active → re-run sinon bloqué
+        String uid = userId();
+        jdbc.update("DELETE FROM elite_applications WHERE user_id = ?::uuid", uid);
         ResponseEntity<String> post = restTemplate.exchange(url("/api/social/elite-applications"), HttpMethod.POST,
-            jsonJwtEntity(Map.of("userId", userId(), "motivation", "Candidature L4"), admin), String.class);
+            jsonJwtEntity(Map.of("userId", uid, "motivation", "Candidature L4"), admin), String.class);
         assertThat(post.getStatusCode().is2xxSuccessful()).isTrue();
         String id = om.readTree(post.getBody()).get("id").asText();
         assertThat(restTemplate.exchange(url("/api/social/elite-applications/" + id + "/review"), HttpMethod.PATCH,
