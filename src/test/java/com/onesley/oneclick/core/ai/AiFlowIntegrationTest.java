@@ -48,6 +48,20 @@ class AiFlowIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void careChatStream_stubMode_2xx() {
+        var r = restTemplate.exchange(url("/api/ai/care-chat/stream"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("message", "Bonjour"), adminBearer()), String.class);
+        assertThat(r.getStatusCode().is2xxSuccessful()).isTrue();
+    }
+
+    @Test
+    void assistantStream_stubMode_2xx() {
+        var r = restTemplate.exchange(url("/api/ai/assistant/stream"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("prompt", "Résume"), adminBearer()), String.class);
+        assertThat(r.getStatusCode().is2xxSuccessful()).isTrue();
+    }
+
+    @Test
     void careChat_invalidBody_400() {
         var r = restTemplate.exchange(url("/api/ai/care-chat"), HttpMethod.POST,
             jsonJwtEntity(Map.of("context", Map.of()), adminBearer()), String.class);
