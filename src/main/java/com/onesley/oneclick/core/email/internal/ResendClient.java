@@ -33,8 +33,16 @@ public class ResendClient {
     @Value("${app.email.from.default:OneClick <noreply@app-oneclick.net>}")
     private String defaultFrom;
 
-    private final RestClient restClient = RestClient.builder().build();
+    private final RestClient restClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    /**
+     * RestClient construit depuis le {@code Builder} Spring auto-configuré (injectable
+     * en test), aligné sur le pattern de {@code GooglePlacesEnrichmentService}.
+     */
+    public ResendClient(RestClient.Builder restClientBuilder) {
+        this.restClient = restClientBuilder.build();
+    }
 
     /**
      * Envoi d'un email branded via Resend.

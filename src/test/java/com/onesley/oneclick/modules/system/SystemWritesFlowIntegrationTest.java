@@ -36,6 +36,22 @@ class SystemWritesFlowIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void healthCheck_record_201() {
+        ResponseEntity<String> r = restTemplate.exchange(url("/api/system/health-checks"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("component", "database", "status", "up", "latencyMs", 12), adminBearer()), String.class);
+        assertThat(r.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+    }
+
+    @Test
+    void quotaChangeLog_record_201() {
+        String restaurantId = jdbc.queryForObject("SELECT id::text FROM restaurants WHERE deleted_at IS NULL LIMIT 1", String.class);
+        ResponseEntity<String> r = restTemplate.exchange(url("/api/system/quota-change-logs"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("restaurantId", restaurantId, "quotaType", "max_staff",
+                "oldValue", 10, "newValue", 15, "reason", "upgrade L4"), adminBearer()), String.class);
+        assertThat(r.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+    }
+
+    @Test
     void customRoles_create_delete() throws Exception {
         String admin = adminBearer();
         assertThat(restTemplate.exchange(url("/api/system/custom-roles"), HttpMethod.GET, jwtEntity(admin), String.class)
