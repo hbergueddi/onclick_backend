@@ -54,6 +54,12 @@ public class NotificationController {
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size
     ) {
+        // Anti-fuite : un non-admin (CLIENT/RESTAURATEUR/STAFF) ayant VIEW:NOTIFICATIONS
+        // ne voit QUE ses propres notifications via cette liste ; les admins
+        // (SUPERADMIN/GROUP_ADMIN) gardent le filtre recipientUserId libre.
+        if (!SecurityHelper.isAdmin()) {
+            recipientUserId = SecurityHelper.currentUserId();
+        }
         return PageResponse.from(service.findAll(recipientUserId, unreadOnly, page, size));
     }
 
@@ -66,14 +72,14 @@ public class NotificationController {
 
     @PatchMapping("/{id}/read")
     @Operation(summary = "Marque la notification comme lue (read_at = now() si pas déjà lue)")
-    @PreAuthorize("isAuthenticated()")  // self : owner-or-admin enforcé par le service (markRead → requireOwnerOrAdmin)
+    @PreAuthorize("hasAuthority('UPDATE:NOTIFICATIONS')")  // self : tous rôles ont UPDATE:NOTIFICATIONS (V34) ; ownership via service
     public NotificationDto markRead(@PathVariable UUID id) {
         return service.markRead(id);
     }
 
     @GetMapping("/by-user/{userId}")
     @Operation(summary = "Cloche notifications — toutes (ou non lues si unreadOnly=true) triées DESC.")
-    @PreAuthorize("isAuthenticated()")  // self : owner-or-admin enforcé par le service (findByUser → requireOwnerOrAdmin)
+    @PreAuthorize("hasAuthority('VIEW:NOTIFICATIONS')")  // self : tous rôles ont VIEW:NOTIFICATIONS (V34) ; ownership via service
     public List<NotificationDto> findByUser(
         @PathVariable UUID userId,
         @RequestParam(required = false) Boolean unreadOnly
@@ -83,14 +89,14 @@ public class NotificationController {
 
     @GetMapping("/unread-count/by-user/{userId}")
     @Operation(summary = "Badge cloche — nombre de notifications non lues pour un user.")
-    @PreAuthorize("isAuthenticated()")  // self : owner-or-admin enforcé par le service (unreadCountByUser → requireOwnerOrAdmin)
+    @PreAuthorize("hasAuthority('VIEW:NOTIFICATIONS')")  // self : tous rôles ont VIEW:NOTIFICATIONS (V34) ; ownership via service
     public UnreadCountDto unreadCountByUser(@PathVariable UUID userId) {
         return service.unreadCountByUser(userId);
     }
 
     @PatchMapping("/mark-all-read/by-user/{userId}")
     @Operation(summary = "Marque toutes les notifications non lues d'un user comme lues — renvoie le compteur.")
-    @PreAuthorize("isAuthenticated()")  // self : owner-or-admin enforcé par le service (markAllReadByUser → requireOwnerOrAdmin)
+    @PreAuthorize("hasAuthority('UPDATE:NOTIFICATIONS')")  // self : tous rôles ont UPDATE:NOTIFICATIONS (V34) ; ownership via service
     public MarkAllReadResultDto markAllReadByUser(@PathVariable UUID userId) {
         return service.markAllReadByUser(userId);
     }
@@ -114,7 +120,7 @@ public class NotificationController {
     // ─── Device tokens ───────────────────────────────────────────────────────
 
     @GetMapping("/tokens/by-user/{userId}")
-    @PreAuthorize("isAuthenticated()")  // self : owner-or-admin enforcé ci-dessous
+    @PreAuthorize("hasAuthority('VIEW:NOTIFICATIONS')")  // self : tous rôles ont VIEW:NOTIFICATIONS (V34) ; owner-check ci-dessous
     public List<DeviceTokenDto> findTokensByUser(@PathVariable UUID userId) {
         SecurityHelper.requireOwnerOrAdmin(userId);
         return service.findTokensByUser(userId);
@@ -122,7 +128,9 @@ public class NotificationController {
 
     @PostMapping("/tokens")
     @Operation(summary = "Enregistre (ou retourne le token existant) — upsert idempotent par token.")
-    @PreAuthorize("isAuthenticated()")  // self : un user enregistre SON propre token push
+    // UPDATE (pas CREATE) : upsert idempotent du token de l'user courant. Tous rôles
+    // ont UPDATE:NOTIFICATIONS (V34) ; CREATE reste admin (create/createCampaign).
+    @PreAuthorize("hasAuthority('UPDATE:NOTIFICATIONS')")
     public ResponseEntity<DeviceTokenDto> registerToken(@Valid @RequestBody DeviceTokenCreateDto dto) {
         SecurityHelper.requireOwnerOrAdmin(dto.userId());
         DeviceTokenDto t = service.registerToken(dto);
