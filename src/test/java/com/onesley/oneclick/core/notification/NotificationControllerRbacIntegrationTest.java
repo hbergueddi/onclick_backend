@@ -1,8 +1,10 @@
 package com.onesley.oneclick.core.notification;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.onesley.oneclick.AbstractIntegrationTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 
 import java.util.UUID;
 
@@ -159,5 +161,37 @@ class NotificationControllerRbacIntegrationTest extends AbstractIntegrationTest 
     @Test
     void byUser_noJwt_returns401() {
         assertThat(get("/api/notifications/by-user/" + SEED_SUPERADMIN_ID, null)).isEqualTo(401);
+    }
+
+    // ─── findAll : scope SELF au niveau DONNÉES (pas seulement le statut) ───────
+
+    @Test
+    void findAll_client_ignoresRecipientUserIdParam_doesNotLeakOthers() throws Exception {
+        // L'admin crée une notif POUR l'admin (cible de fuite potentielle).
+        String adminId = SEED_SUPERADMIN_ID.toString();
+        String createBody = "{\"recipientUserId\":\"" + adminId
+            + "\",\"type\":\"system\",\"title\":\"rbac-scope-probe\",\"body\":\"probe\"}";
+        ResponseEntity<String> created = restTemplate.exchange(
+            url("/api/notifications"), HttpMethod.POST, jsonJwtEntity(createBody, adminBearer()), String.class);
+        assertThat(created.getStatusCode().value()).isEqualTo(201);
+        String createdId = new ObjectMapper().readTree(created.getBody()).get("id").asText();
+        try {
+            // CLIENT demande EXPLICITEMENT les notifs de l'admin : le controller force
+            // recipientUserId=self pour un non-admin → la notif de l'admin ne fuit pas.
+            RoleUser client = asRole("CLIENT");
+            ResponseEntity<String> clientResp = restTemplate.exchange(
+                url("/api/notifications?recipientUserId=" + adminId + "&page=0&size=50"),
+                HttpMethod.GET, jwtEntity(client.bearer()), String.class);
+            assertThat(clientResp.getStatusCode().value()).isEqualTo(200);
+            assertThat(clientResp.getBody()).doesNotContain(createdId);
+
+            // Contrôle : l'admin, lui, voit bien la notif (le filtre lui est laissé libre).
+            ResponseEntity<String> adminResp = restTemplate.exchange(
+                url("/api/notifications?recipientUserId=" + adminId + "&page=0&size=50"),
+                HttpMethod.GET, jwtEntity(adminBearer()), String.class);
+            assertThat(adminResp.getBody()).contains(createdId);
+        } finally {
+            jdbc.update("DELETE FROM notifications WHERE id = ?", UUID.fromString(createdId));
+        }
     }
 }
