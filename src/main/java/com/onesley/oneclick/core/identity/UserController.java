@@ -18,6 +18,7 @@ import java.util.Set;
 import java.util.UUID;
 import com.onesley.oneclick.core.identity.api.PasswordChangeDto;
 import com.onesley.oneclick.core.identity.api.UserCreateDto;
+import com.onesley.oneclick.core.identity.api.UserRegisterDto;
 import com.onesley.oneclick.core.identity.api.UserDto;
 import com.onesley.oneclick.core.identity.api.UserUpdateDto;
 import com.onesley.oneclick.core.identity.api.MeContextDto;
@@ -165,9 +166,18 @@ public class UserController {
     }
 
     @PostMapping
-    @Operation(summary = "Crée un user (signup ou création admin)")
+    @Operation(summary = "Crée un user avec rôle arbitraire (création admin — authentifié). "
+        + "Pour le signup public, utiliser POST /api/users/register.")
     public ResponseEntity<UserDto> create(@Valid @RequestBody UserCreateDto dto) {
         UserDto created = service.create(dto);
+        return ResponseEntity.created(URI.create("/api/users/" + created.id())).body(created);
+    }
+
+    @PostMapping("/register")
+    @Operation(summary = "Inscription PUBLIQUE (permitAll) — crée un compte CLIENT. "
+        + "Le rôle est forcé serveur-side (anti escalade de privilèges) ; pas de roleId dans le body.")
+    public ResponseEntity<UserDto> register(@Valid @RequestBody UserRegisterDto dto) {
+        UserDto created = service.register(dto);
         return ResponseEntity.created(URI.create("/api/users/" + created.id())).body(created);
     }
 

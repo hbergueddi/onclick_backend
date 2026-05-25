@@ -66,14 +66,14 @@ public class NotificationController {
 
     @PatchMapping("/{id}/read")
     @Operation(summary = "Marque la notification comme lue (read_at = now() si pas déjà lue)")
-    @PreAuthorize("hasAuthority('UPDATE:NOTIFICATIONS')")
+    @PreAuthorize("isAuthenticated()")  // self : owner-or-admin enforcé par le service (markRead → requireOwnerOrAdmin)
     public NotificationDto markRead(@PathVariable UUID id) {
         return service.markRead(id);
     }
 
     @GetMapping("/by-user/{userId}")
     @Operation(summary = "Cloche notifications — toutes (ou non lues si unreadOnly=true) triées DESC.")
-    @PreAuthorize("hasAuthority('VIEW:NOTIFICATIONS')")
+    @PreAuthorize("isAuthenticated()")  // self : owner-or-admin enforcé par le service (findByUser → requireOwnerOrAdmin)
     public List<NotificationDto> findByUser(
         @PathVariable UUID userId,
         @RequestParam(required = false) Boolean unreadOnly
@@ -83,14 +83,14 @@ public class NotificationController {
 
     @GetMapping("/unread-count/by-user/{userId}")
     @Operation(summary = "Badge cloche — nombre de notifications non lues pour un user.")
-    @PreAuthorize("hasAuthority('VIEW:NOTIFICATIONS')")
+    @PreAuthorize("isAuthenticated()")  // self : owner-or-admin enforcé par le service (unreadCountByUser → requireOwnerOrAdmin)
     public UnreadCountDto unreadCountByUser(@PathVariable UUID userId) {
         return service.unreadCountByUser(userId);
     }
 
     @PatchMapping("/mark-all-read/by-user/{userId}")
     @Operation(summary = "Marque toutes les notifications non lues d'un user comme lues — renvoie le compteur.")
-    @PreAuthorize("hasAuthority('UPDATE:NOTIFICATIONS')")
+    @PreAuthorize("isAuthenticated()")  // self : owner-or-admin enforcé par le service (markAllReadByUser → requireOwnerOrAdmin)
     public MarkAllReadResultDto markAllReadByUser(@PathVariable UUID userId) {
         return service.markAllReadByUser(userId);
     }
@@ -114,7 +114,7 @@ public class NotificationController {
     // ─── Device tokens ───────────────────────────────────────────────────────
 
     @GetMapping("/tokens/by-user/{userId}")
-    @PreAuthorize("hasAuthority('VIEW:NOTIFICATIONS')")
+    @PreAuthorize("isAuthenticated()")  // self : owner-or-admin enforcé ci-dessous
     public List<DeviceTokenDto> findTokensByUser(@PathVariable UUID userId) {
         SecurityHelper.requireOwnerOrAdmin(userId);
         return service.findTokensByUser(userId);
@@ -122,8 +122,9 @@ public class NotificationController {
 
     @PostMapping("/tokens")
     @Operation(summary = "Enregistre (ou retourne le token existant) — upsert idempotent par token.")
-    @PreAuthorize("hasAuthority('CREATE:NOTIFICATIONS')")
+    @PreAuthorize("isAuthenticated()")  // self : un user enregistre SON propre token push
     public ResponseEntity<DeviceTokenDto> registerToken(@Valid @RequestBody DeviceTokenCreateDto dto) {
+        SecurityHelper.requireOwnerOrAdmin(dto.userId());
         DeviceTokenDto t = service.registerToken(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(t);
     }

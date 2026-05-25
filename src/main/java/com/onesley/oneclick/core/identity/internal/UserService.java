@@ -24,6 +24,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import com.onesley.oneclick.core.identity.api.UserCreateDto;
+import com.onesley.oneclick.core.identity.api.UserRegisterDto;
 import com.onesley.oneclick.core.identity.api.UserDto;
 import com.onesley.oneclick.core.identity.api.UserUpdateDto;
 import com.onesley.oneclick.core.identity.api.Role;
@@ -116,6 +117,20 @@ public class UserService {
         ));
 
         return saved.toDto();
+    }
+
+    /**
+     * Inscription PUBLIQUE (POST /api/users/register, permitAll).
+     * Force le rôle CLIENT côté serveur — un visiteur anonyme ne peut pas
+     * s'auto-attribuer un rôle privilégié. Délègue ensuite à {@link #create}.
+     */
+    @Transactional
+    public UserDto register(UserRegisterDto dto) {
+        Role client = roleRepository.findByCode("CLIENT")
+            .orElseThrow(() -> new NotFoundException("Role", "CLIENT"));
+        return create(new UserCreateDto(
+            dto.tenantId(), client.getId(), dto.email(), dto.phone(),
+            dto.password(), dto.firstName(), dto.lastName(), dto.language()));
     }
 
     @Transactional
