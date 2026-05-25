@@ -18,7 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <ul>
  *   <li>{@code accounts/{id}}, {@code accounts?clientId}, {@code by-restaurant} :
  *       client-self OU staff/admin du restaurant ;</li>
- *   <li>{@code ratings/by-user} : self OU staff-role/admin (jamais un autre client) ;</li>
+ *   <li>{@code ratings/scores by-user} : self OU admin (requireOwnerOrAdmin) ;</li>
  *   <li>{@code wallet-pass?userId} : self, sauf admin.</li>
  * </ul>
  * Anti-régression : le propriétaire et l'admin conservent l'accès.

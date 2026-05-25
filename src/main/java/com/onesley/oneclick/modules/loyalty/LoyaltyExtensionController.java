@@ -4,7 +4,6 @@ import com.onesley.oneclick.modules.loyalty.api.LoyaltyExtensionDtos.*;
 import com.onesley.oneclick.modules.loyalty.internal.LoyaltyExtensionService;
 import com.onesley.oneclick.security.SecurityHelper;
 import com.onesley.oneclick.security.RestaurantAccessGuard;
-import com.onesley.oneclick.exception.ForbiddenException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -35,25 +34,12 @@ public class LoyaltyExtensionController {
     private final LoyaltyExtensionService service;
     private final RestaurantAccessGuard restaurantAccessGuard;
 
-    /**
-     * P2 owner-check pour la PII de réputation client (ratings/scores) : lisible par
-     * le client lui-même, par le staff/gérant (feature « fiabilité client » ProDesk)
-     * et les admins — mais PAS par un autre CLIENT (anti-snoop inter-clients).
-     */
-    private void requireSelfOrStaffRoleOrAdmin(UUID userId) {
-        if (userId != null && userId.equals(SecurityHelper.currentUserId())) return;
-        if (SecurityHelper.isAdmin()
-            || SecurityHelper.hasRole("RESTAURATEUR")
-            || SecurityHelper.hasRole("STAFF")) return;
-        throw new ForbiddenException("Accès interdit : données d'un autre utilisateur");
-    }
-
     // ─── Client ratings ─────────────────────────────────────────────────
     @GetMapping("/ratings/by-user/{userId}")
     @Operation(summary = "Liste des ratings client (visible_rating + history)")
     @PreAuthorize("hasAuthority('VIEW:LOYALTY')")
     public List<ClientRatingDto> findUserRatings(@PathVariable UUID userId) {
-        requireSelfOrStaffRoleOrAdmin(userId);
+        SecurityHelper.requireOwnerOrAdmin(userId);
         return service.findUserRatings(userId);
     }
 
@@ -61,7 +47,7 @@ public class LoyaltyExtensionController {
     @Operation(summary = "Score agrégé (avg rating × 20 → /100)")
     @PreAuthorize("hasAuthority('VIEW:LOYALTY')")
     public ClientScoreDto computeUserScore(@PathVariable UUID userId) {
-        requireSelfOrStaffRoleOrAdmin(userId);
+        SecurityHelper.requireOwnerOrAdmin(userId);
         return service.computeUserScore(userId);
     }
 
@@ -103,11 +89,10 @@ public class LoyaltyExtensionController {
     public record RestitutionCreateDto(@NotNull UUID restaurantId, @NotNull BigDecimal amount, Integer points, String reason) {}
 
     @PostMapping("/restitutions")
-    @PreAuthorize("hasAuthority('CREATE:LOYALTY')")
+    // Restitution financière = gérant/admin → UPDATE:LOYALTY (pas CREATE:LOYALTY,
+    // détenu aussi par STAFF pour le Snap2Earn).
+    @PreAuthorize("hasAuthority('UPDATE:LOYALTY')")
     public RestaurantRestitutionDto createRestitution(@Valid @RequestBody RestitutionCreateDto dto) {
-        // Restitution financière = gérant/admin. Refermé pour le STAFF qui détient
-        // CREATE:LOYALTY au titre du Snap2Earn (V35).
-        SecurityHelper.requireManagerOrAdmin();
         return service.createRestitution(dto.restaurantId(), dto.amount(), dto.points() == null ? 0 : dto.points(), dto.reason());
     }
 

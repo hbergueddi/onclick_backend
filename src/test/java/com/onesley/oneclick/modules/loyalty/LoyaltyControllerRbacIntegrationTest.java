@@ -16,11 +16,11 @@ import static org.assertj.core.api.Assertions.assertThat;
  * JwtDecoder → UserRoleAuthoritiesConverter → @PreAuthorize → SecurityHelper →
  * service → repo).
  *
- * <p>Verrouille le contrat posé par V35 + le garde-fou {@code requireManagerOrAdmin} :
- * le STAFF (« Contrôleur ») obtient {@code CREATE:LOYALTY} pour SCANNER (Snap2Earn /
- * earn / ocr-receipt / ratings honoré-no_show), MAIS la nature grossière de cette
- * authority couvre aussi la config restaurant (gain rules, restitutions) — refermée
- * au niveau contrôleur pour gérant/admin uniquement.
+ * <p>Verrouille le contrat posé par V35 : le STAFF (« Contrôleur ») obtient
+ * {@code CREATE:LOYALTY} pour SCANNER (Snap2Earn / earn / ocr-receipt / ratings
+ * honoré-no_show). La config restaurant (gain rules, demandes, restitutions) reste
+ * réservée au gérant/admin car gardée par {@code UPDATE:LOYALTY} (que STAFF n'a pas)
+ * — séparation portée par l'authority, pas par un check de rôle.
  *
  * <p>Note data : {@code STAFF} n'a AUCUN user seedé dans {@code oneclick_enterprise}
  * (tous les comptes resto sont {@code RESTAURATEUR}) → on crée un fixture STAFF
@@ -31,8 +31,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <ul>
  *   <li>STAFF Snap2Earn (CREATE:LOYALTY V35) : gate passe → 200 ;</li>
  *   <li>STAFF transition réservation (confirm/cancel/honoré/no_show = UPDATE:RESERVATIONS) : 404 (gate passe, pas 403) ;</li>
- *   <li>STAFF createGainRule / createRestitution / createGainRuleRequest : 403 (garde-fou gérant) ;</li>
- *   <li>RESTAURATEUR createGainRule : passe le garde-fou (400 doublon, PAS 403) — anti-régression ;</li>
+ *   <li>STAFF createGainRule / createRestitution / createGainRuleRequest : 403 (UPDATE:LOYALTY non détenu) ;</li>
+ *   <li>RESTAURATEUR createGainRule : a UPDATE:LOYALTY → atteint le service (400 doublon, PAS 403) — anti-régression ;</li>
  *   <li>CLIENT Snap2Earn : 403 (jamais accordé) — inchangé par V35.</li>
  * </ul>
  */
@@ -109,8 +109,8 @@ class LoyaltyControllerRbacIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void createGainRule_staff_returns403_managerOnly() {
-        // @PreAuthorize('CREATE:LOYALTY') passe (V35), puis requireManagerOrAdmin referme → 403.
-        // restaurantId aléatoire : le garde-fou s'exécute AVANT toute persistance.
+        // STAFF n'a pas UPDATE:LOYALTY → @PreAuthorize refuse au gate → 403,
+        // avant toute validation/persistance (restaurantId aléatoire sans effet).
         int status = post("/api/loyalty/gain-rules",
             Map.of("restaurantId", UUID.randomUUID().toString(), "conversionRate", 0.1), staffBearer);
         assertThat(status).isEqualTo(403);
@@ -134,8 +134,8 @@ class LoyaltyControllerRbacIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void createGainRule_restaurateur_passesManagerFence_not403() {
-        // RESTAURATEUR passe requireManagerOrAdmin → atteint le service ; resto avec règle
-        // active existante → 400 (doublon UNIQUE), donc PAS 403 et zéro création.
+        // RESTAURATEUR détient UPDATE:LOYALTY → @PreAuthorize passe → atteint le service ;
+        // resto avec règle active existante → 400 (doublon UNIQUE), donc PAS 403 et zéro création.
         String restoWithRule = jdbc.queryForObject(
             "SELECT restaurant_id::text FROM gain_rules WHERE deleted_at IS NULL LIMIT 1", String.class);
         int status = post("/api/loyalty/gain-rules",
