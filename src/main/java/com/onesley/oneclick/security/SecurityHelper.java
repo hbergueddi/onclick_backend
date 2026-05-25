@@ -55,6 +55,33 @@ public final class SecurityHelper {
         return hasRole("SUPERADMIN") || hasRole("GROUP_ADMIN");
     }
 
+    /** Vrai si le user courant détient l'autorité {@code ACTION:MENU} donnée (ex: "CREATE:LOYALTY"). */
+    public static boolean hasAuthority(String authority) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) return false;
+        return auth.getAuthorities().stream()
+            .anyMatch(a -> a.getAuthority().equals(authority));
+    }
+
+    /**
+     * Lance 403 sauf si : le user courant est l'owner, OU détient l'autorité donnée, OU est admin.
+     * <p>Pour les lectures « owner par défaut, mais aussi accessibles à une population staff
+     * identifiée par une autorité » — ex: la réputation d'un client (scores/ratings) lisible par
+     * les staff qui notent les clients ({@code CREATE:LOYALTY}), sans exposer aux autres clients.</p>
+     */
+    public static void requireSelfOrAuthorityOrAdmin(UUID resourceOwnerId, String authority) {
+        UUID current = currentUserId();
+        if (current == null) {
+            throw new ForbiddenException("Authentification requise");
+        }
+        if (current.equals(resourceOwnerId)) return;
+        if (hasAuthority(authority)) return;
+        if (isAdmin()) return;
+        throw new ForbiddenException(
+            "Accès interdit : vous n'êtes pas propriétaire de cette ressource"
+        );
+    }
+
     /**
      * Lance 403 si le user courant n'est ni l'owner désigné ni un admin.
      * <p>Pattern recommandé pour les endpoints OWNER (GET/PATCH/DELETE d'une ressource

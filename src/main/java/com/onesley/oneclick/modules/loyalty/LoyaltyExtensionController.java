@@ -39,7 +39,9 @@ public class LoyaltyExtensionController {
     @Operation(summary = "Liste des ratings client (visible_rating + history)")
     @PreAuthorize("hasAuthority('VIEW:LOYALTY')")
     public List<ClientRatingDto> findUserRatings(@PathVariable UUID userId) {
-        SecurityHelper.requireOwnerOrAdmin(userId);
+        // Réputation client : self OU staff qui note les clients (CREATE:LOYALTY) OU admin.
+        // ProDesk affiche la fiabilité d'un client (y.c. nouveau) avant de confirmer une résa.
+        SecurityHelper.requireSelfOrAuthorityOrAdmin(userId, "CREATE:LOYALTY");
         return service.findUserRatings(userId);
     }
 
@@ -47,7 +49,8 @@ public class LoyaltyExtensionController {
     @Operation(summary = "Score agrégé (avg rating × 20 → /100)")
     @PreAuthorize("hasAuthority('VIEW:LOYALTY')")
     public ClientScoreDto computeUserScore(@PathVariable UUID userId) {
-        SecurityHelper.requireOwnerOrAdmin(userId);
+        // Réputation client : self OU staff qui note les clients (CREATE:LOYALTY) OU admin.
+        SecurityHelper.requireSelfOrAuthorityOrAdmin(userId, "CREATE:LOYALTY");
         return service.computeUserScore(userId);
     }
 

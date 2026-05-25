@@ -18,7 +18,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <ul>
  *   <li>{@code accounts/{id}}, {@code accounts?clientId}, {@code by-restaurant} :
  *       client-self OU staff/admin du restaurant ;</li>
- *   <li>{@code ratings/scores by-user} : self OU admin (requireOwnerOrAdmin) ;</li>
+ *   <li>{@code ratings/scores by-user} : self OU staff qui note les clients
+ *       ({@code CREATE:LOYALTY}) OU admin — la réputation client est lisible côté ProDesk,
+ *       mais un CLIENT ne lit que la sienne ;</li>
  *   <li>{@code wallet-pass?userId} : self, sauf admin.</li>
  * </ul>
  * Anti-régression : le propriétaire et l'admin conservent l'accès.
@@ -47,6 +49,14 @@ class LoyaltyOwnershipIntegrationTest extends AbstractIntegrationTest {
 
     private String clientBearer(UUID id) {
         return jwtIssuer.issueAccessToken(id, "CLIENT").token();
+    }
+
+    /** Un user RESTAURATEUR (détient CREATE:LOYALTY → peut lire la réputation d'un client). */
+    private String restaurateurBearer() {
+        UUID id = UUID.fromString(jdbc.queryForObject(
+            "SELECT u.id::text FROM users u JOIN roles r ON r.id = u.role_id "
+            + "WHERE r.code = 'RESTAURATEUR' AND u.deleted_at IS NULL LIMIT 1", String.class));
+        return jwtIssuer.issueAccessToken(id, "RESTAURATEUR").token();
     }
 
     private int get(String path, String jwt) {
@@ -83,6 +93,19 @@ class LoyaltyOwnershipIntegrationTest extends AbstractIntegrationTest {
         Acct a = ownerAccount();
         String snooper = clientBearer(otherClient(a.clientId()));
         assertThat(get("/api/loyalty/ratings/by-user/" + a.clientId(), snooper)).isEqualTo(403);
+    }
+
+    @Test
+    void ratingsByUser_restaurateur_returns200() {
+        // Un staff qui note les clients (CREATE:LOYALTY) lit la réputation de tout client (vetting résa).
+        Acct a = ownerAccount();
+        assertThat(get("/api/loyalty/ratings/by-user/" + a.clientId(), restaurateurBearer())).isEqualTo(200);
+    }
+
+    @Test
+    void scoresByUser_restaurateur_returns200() {
+        Acct a = ownerAccount();
+        assertThat(get("/api/loyalty/scores/by-user/" + a.clientId(), restaurateurBearer())).isEqualTo(200);
     }
 
     @Test
