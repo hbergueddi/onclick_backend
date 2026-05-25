@@ -3,6 +3,8 @@ package com.onesley.oneclick.modules.loyalty;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyExtensionDtos.*;
 import com.onesley.oneclick.modules.loyalty.internal.LoyaltyExtensionService;
 import com.onesley.oneclick.security.SecurityHelper;
+import com.onesley.oneclick.security.RestaurantAccessGuard;
+import com.onesley.oneclick.exception.ForbiddenException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -31,12 +33,27 @@ import lombok.RequiredArgsConstructor;
 public class LoyaltyExtensionController {
 
     private final LoyaltyExtensionService service;
+    private final RestaurantAccessGuard restaurantAccessGuard;
+
+    /**
+     * P2 owner-check pour la PII de réputation client (ratings/scores) : lisible par
+     * le client lui-même, par le staff/gérant (feature « fiabilité client » ProDesk)
+     * et les admins — mais PAS par un autre CLIENT (anti-snoop inter-clients).
+     */
+    private void requireSelfOrStaffRoleOrAdmin(UUID userId) {
+        if (userId != null && userId.equals(SecurityHelper.currentUserId())) return;
+        if (SecurityHelper.isAdmin()
+            || SecurityHelper.hasRole("RESTAURATEUR")
+            || SecurityHelper.hasRole("STAFF")) return;
+        throw new ForbiddenException("Accès interdit : données d'un autre utilisateur");
+    }
 
     // ─── Client ratings ─────────────────────────────────────────────────
     @GetMapping("/ratings/by-user/{userId}")
     @Operation(summary = "Liste des ratings client (visible_rating + history)")
     @PreAuthorize("hasAuthority('VIEW:LOYALTY')")
     public List<ClientRatingDto> findUserRatings(@PathVariable UUID userId) {
+        requireSelfOrStaffRoleOrAdmin(userId);
         return service.findUserRatings(userId);
     }
 
@@ -44,6 +61,7 @@ public class LoyaltyExtensionController {
     @Operation(summary = "Score agrégé (avg rating × 20 → /100)")
     @PreAuthorize("hasAuthority('VIEW:LOYALTY')")
     public ClientScoreDto computeUserScore(@PathVariable UUID userId) {
+        requireSelfOrStaffRoleOrAdmin(userId);
         return service.computeUserScore(userId);
     }
 
@@ -61,6 +79,7 @@ public class LoyaltyExtensionController {
     @Operation(summary = "Usage AI (rate limit 20/day window 24h)")
     @PreAuthorize("hasAuthority('VIEW:LOYALTY')")
     public AIUsageDto findUsage(@PathVariable UUID userId) {
+        SecurityHelper.requireOwnerOrAdmin(userId);
         return service.findUsage(userId);
     }
 
@@ -68,6 +87,7 @@ public class LoyaltyExtensionController {
     @Operation(summary = "Increment AI usage (appelé par le frontend après chaque prompt)")
     @PreAuthorize("hasAuthority('UPDATE:LOYALTY')")
     public AIUsageDto incrementUsage(@PathVariable UUID userId) {
+        SecurityHelper.requireOwnerOrAdmin(userId);
         return service.incrementUsage(userId);
     }
 
@@ -76,6 +96,7 @@ public class LoyaltyExtensionController {
     @Operation(summary = "Restitutions de points pour un restaurant")
     @PreAuthorize("hasAuthority('VIEW:LOYALTY')")
     public List<RestaurantRestitutionDto> findRestaurantRestitutions(@PathVariable UUID restaurantId) {
+        restaurantAccessGuard.requireAdminOrActiveStaffOf(restaurantId);
         return service.findRestaurantRestitutions(restaurantId);
     }
 
@@ -95,6 +116,7 @@ public class LoyaltyExtensionController {
     @Operation(summary = "Tier actuel d'un restaurant (Standard/Bronze/Silver/Gold)")
     @PreAuthorize("hasAuthority('VIEW:LOYALTY')")
     public RestaurantTierStatusDto getRestaurantTier(@PathVariable UUID restaurantId) {
+        restaurantAccessGuard.requireAdminOrActiveStaffOf(restaurantId);
         return service.getRestaurantTier(restaurantId);
     }
 
@@ -123,6 +145,10 @@ public class LoyaltyExtensionController {
         @RequestParam(required = false) UUID userId,
         @RequestParam(defaultValue = "200") int limit
     ) {
+        // Vue admin : non-admin doit scoper à un restaurant dont il est staff actif.
+        if (!SecurityHelper.isAdmin()) {
+            restaurantAccessGuard.requireAdminOrActiveStaffOf(restaurantId);
+        }
         return service.findPointDistributions(restaurantId, userId, limit);
     }
 }

@@ -2,6 +2,8 @@ package com.onesley.oneclick.modules.loyalty;
 
 import com.onesley.oneclick.modules.loyalty.api.WalletPassDtos.*;
 import com.onesley.oneclick.modules.loyalty.internal.WalletPassService;
+import com.onesley.oneclick.security.SecurityHelper;
+import com.onesley.oneclick.exception.ForbiddenException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -44,7 +46,7 @@ public class WalletPassController {
     ) {
         // userId peut venir du JWT en prod (extraction via SecurityContext).
         // En dev/MVP : on accepte un param explicite pour faciliter le test.
-        UUID effectiveUid = userId != null ? userId : resolveCurrentUserId();
+        UUID effectiveUid = resolveEffectiveUid(userId);
 
         return switch (platform.toLowerCase()) {
             case "apple" -> {
@@ -68,8 +70,21 @@ public class WalletPassController {
     @Operation(summary = "Métadonnées wallet (tier + points + nom)")
     @PreAuthorize("hasAuthority('VIEW:LOYALTY')")
     public WalletPassMetadataDto metadata(@RequestParam(required = false) UUID userId) {
-        UUID effectiveUid = userId != null ? userId : resolveCurrentUserId();
+        UUID effectiveUid = resolveEffectiveUid(userId);
         return service.getMetadata(effectiveUid);
+    }
+
+    /**
+     * P2 owner-check : le wallet pass est personnel. Un non-admin ne peut générer
+     * QUE son propre pass ; seul un admin peut cibler un autre {@code userId}.
+     * Avant : le param {@code userId} écrasait l'identité courante sans contrôle
+     * (VIEW:LOYALTY détenu par CLIENT → lecture du pass d'autrui).
+     */
+    private UUID resolveEffectiveUid(UUID requested) {
+        UUID self = resolveCurrentUserId();
+        if (requested == null || requested.equals(self)) return self;
+        if (SecurityHelper.isAdmin()) return requested;
+        throw new ForbiddenException("Wallet pass : accès limité à votre propre compte");
     }
 
     /**

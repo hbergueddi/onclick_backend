@@ -18,6 +18,8 @@ import com.onesley.oneclick.modules.loyalty.internal.GainRuleRequestService;
 import com.onesley.oneclick.modules.loyalty.internal.LoyaltyService;
 import com.onesley.oneclick.modules.loyalty.internal.OcrReceiptService;
 import com.onesley.oneclick.security.SecurityHelper;
+import com.onesley.oneclick.security.RestaurantAccessGuard;
+import com.onesley.oneclick.exception.ForbiddenException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -46,6 +48,19 @@ public class LoyaltyController {
     private final LoyaltyService service;
     private final OcrReceiptService ocrService;
     private final GainRuleRequestService gainRuleRequestService;
+    private final RestaurantAccessGuard restaurantAccessGuard;
+
+    /**
+     * P2 owner-check : un compte fidélité appartient à (client, restaurant).
+     * Accès = le client lui-même, OU un staff actif / admin du restaurant du compte.
+     * Sans cela, VIEW:LOYALTY (détenu par CLIENT) laissait lire le solde d'autrui.
+     */
+    private void requireAccountAccess(UUID clientId, UUID restaurantId) {
+        if (clientId != null && clientId.equals(SecurityHelper.currentUserId())) return;
+        if (restaurantAccessGuard.isAdminOrActiveStaffOf(restaurantId)) return;
+        throw new ForbiddenException(
+            "Accès interdit : compte fidélité d'un autre client / restaurant");
+    }
 
     public record SpendDto(
         @NotNull UUID clientId,
@@ -58,7 +73,9 @@ public class LoyaltyController {
     @Operation(summary = "Détail d'un compte fidélité")
     @PreAuthorize("hasAuthority('VIEW:LOYALTY')")
     public LoyaltyAccountDto findAccount(@PathVariable UUID id) {
-        return service.findAccount(id);
+        LoyaltyAccountDto account = service.findAccount(id);
+        requireAccountAccess(account.clientId(), account.restaurantId());
+        return account;
     }
 
     @GetMapping("/accounts")
@@ -68,6 +85,7 @@ public class LoyaltyController {
         @RequestParam UUID clientId,
         @RequestParam UUID restaurantId
     ) {
+        requireAccountAccess(clientId, restaurantId);
         return service.findOrCreate(clientId, restaurantId);
     }
 
@@ -88,6 +106,7 @@ public class LoyaltyController {
     )
     @PreAuthorize("hasAuthority('VIEW:LOYALTY')")
     public List<LoyaltyAccountDto> findAccountsByRestaurant(@PathVariable UUID restaurantId) {
+        restaurantAccessGuard.requireAdminOrActiveStaffOf(restaurantId);
         return service.findAccountsByRestaurant(restaurantId);
     }
 
@@ -202,6 +221,7 @@ public class LoyaltyController {
         @PathVariable UUID restaurantId,
         @RequestParam(required = false, defaultValue = "200") @Min(1) @Max(2000) Integer limit
     ) {
+        restaurantAccessGuard.requireAdminOrActiveStaffOf(restaurantId);
         return service.findTransactionsByRestaurant(restaurantId, limit);
     }
 
