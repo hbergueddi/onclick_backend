@@ -91,6 +91,28 @@ public class RestaurantSubResourceService {
             .orElseThrow(() -> new NotFoundException("RestaurantStaff", staffId));
     }
 
+    /** P2 owner-check helpers : restaurantId d'une sous-ressource (gate patch/delete par id). */
+    @Transactional(readOnly = true)
+    public UUID getServiceRestaurantId(UUID id) {
+        return mealServiceRepository.findById(id)
+            .map(s -> s.getRestaurant().getId())
+            .orElseThrow(() -> new NotFoundException("MealService", id));
+    }
+
+    @Transactional(readOnly = true)
+    public UUID getZoneRestaurantId(UUID id) {
+        return zoneRepository.findById(id)
+            .map(z -> z.getRestaurant().getId())
+            .orElseThrow(() -> new NotFoundException("RestaurantZone", id));
+    }
+
+    @Transactional(readOnly = true)
+    public UUID getTableRestaurantId(UUID id) {
+        return tableRepository.findById(id)
+            .map(t -> t.getZone().getRestaurant().getId())
+            .orElseThrow(() -> new NotFoundException("RestaurantTable", id));
+    }
+
     @Transactional
     public RestaurantStaffDto patchStaff(UUID id, RestaurantStaffPatchDto dto) {
         // NB : pas de filtre isDeleted() ici — la réactivation cible un staff désactivé.

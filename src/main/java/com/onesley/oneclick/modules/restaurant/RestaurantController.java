@@ -220,6 +220,7 @@ public class RestaurantController {
         @PathVariable UUID restaurantId,
         @Valid @RequestBody MealServiceCreateDto dto
     ) {
+        restaurantAccessGuard.requireAdminOrActiveStaffOf(restaurantId);
         MealServiceDto created = subResourceService.addService(restaurantId, dto);
         return ResponseEntity.created(URI.create("/api/restaurants/services/" + created.id())).body(created);
     }
@@ -231,6 +232,7 @@ public class RestaurantController {
         @PathVariable UUID id,
         @Valid @RequestBody MealServicePatchDto dto
     ) {
+        restaurantAccessGuard.requireAdminOrActiveStaffOf(subResourceService.getServiceRestaurantId(id));
         return subResourceService.patchService(id, dto);
     }
 
@@ -238,6 +240,7 @@ public class RestaurantController {
     @Operation(summary = "Supprime un créneau service")
     @PreAuthorize("hasAuthority('DELETE:SERVICES')")
     public ResponseEntity<Void> deleteService(@PathVariable UUID id) {
+        restaurantAccessGuard.requireAdminOrActiveStaffOf(subResourceService.getServiceRestaurantId(id));
         subResourceService.deleteService(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
@@ -260,6 +263,7 @@ public class RestaurantController {
         @PathVariable UUID restaurantId,
         @Valid @RequestBody RestaurantZoneCreateDto dto
     ) {
+        restaurantAccessGuard.requireAdminOrActiveStaffOf(restaurantId);
         RestaurantZoneDto created = subResourceService.addZone(restaurantId, dto);
         return ResponseEntity.created(URI.create("/api/restaurants/zones/" + created.id())).body(created);
     }
@@ -268,6 +272,7 @@ public class RestaurantController {
     @Operation(summary = "Supprime une zone (les tables liées sont supprimées en cascade DB)")
     @PreAuthorize("hasAuthority('DELETE:ZONES')")
     public ResponseEntity<Void> deleteZone(@PathVariable UUID id) {
+        restaurantAccessGuard.requireAdminOrActiveStaffOf(subResourceService.getZoneRestaurantId(id));
         subResourceService.deleteZone(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
@@ -290,6 +295,7 @@ public class RestaurantController {
         @PathVariable UUID restaurantId,
         @Valid @RequestBody RestaurantTableCreateDto dto
     ) {
+        restaurantAccessGuard.requireAdminOrActiveStaffOf(restaurantId);
         RestaurantTableDto created = subResourceService.addTable(restaurantId, dto);
         return ResponseEntity.created(URI.create("/api/restaurants/tables/" + created.id())).body(created);
     }
@@ -298,6 +304,7 @@ public class RestaurantController {
     @Operation(summary = "Supprime une table")
     @PreAuthorize("hasAuthority('DELETE:TABLES')")
     public ResponseEntity<Void> deleteTable(@PathVariable UUID id) {
+        restaurantAccessGuard.requireAdminOrActiveStaffOf(subResourceService.getTableRestaurantId(id));
         subResourceService.deleteTable(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
