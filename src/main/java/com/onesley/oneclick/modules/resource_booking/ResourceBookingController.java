@@ -2,6 +2,7 @@ package com.onesley.oneclick.modules.resource_booking;
 
 import com.onesley.oneclick.shared.PageResponse;
 import com.onesley.oneclick.modules.resource_booking.internal.ResourceBookingService;
+import com.onesley.oneclick.security.SecurityHelper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -88,6 +89,12 @@ public class ResourceBookingController {
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size
     ) {
+        // Anti-fuite : un non-admin ne liste QUE ses propres bookings (cohérent avec
+        // bookings/{id} déjà gardé owner+admin côté service). NB : si la gestion PCC
+        // staff par-ressource est requise, l'élargir via requireAdminOrActiveStaffOf.
+        if (!SecurityHelper.isAdmin()) {
+            organizerId = SecurityHelper.currentUserId();
+        }
         return PageResponse.from(service.findAllBookings(resourceId, organizerId, status, page, size));
     }
 

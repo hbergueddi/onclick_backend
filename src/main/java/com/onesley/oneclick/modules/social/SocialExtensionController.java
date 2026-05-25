@@ -2,6 +2,8 @@ package com.onesley.oneclick.modules.social;
 
 import com.onesley.oneclick.modules.social.api.SocialExtensionDtos.*;
 import com.onesley.oneclick.modules.social.internal.SocialExtensionService;
+import com.onesley.oneclick.security.SecurityHelper;
+import com.onesley.oneclick.exception.ForbiddenException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -30,6 +32,10 @@ public class SocialExtensionController {
     @Operation(summary = "Liste des demandes Elite (admin Forge)")
     @PreAuthorize("hasAuthority('VIEW:COMMUNITY')")
     public List<EliteApplicationDto> findAll(@RequestParam(required = false) String status) {
+        // Vue admin (Forge) : un non-admin passe par /by-user/{self} pour ses demandes.
+        if (!SecurityHelper.isAdmin()) {
+            throw new ForbiddenException("Liste des demandes Elite réservée à l'administration");
+        }
         return status != null ? service.findApplicationsByStatus(status) : service.findAllApplications();
     }
 
@@ -37,6 +43,7 @@ public class SocialExtensionController {
     @Operation(summary = "Demandes Elite d'un user (Pocket profile)")
     @PreAuthorize("hasAuthority('VIEW:COMMUNITY')")
     public List<EliteApplicationDto> findByUser(@PathVariable UUID userId) {
+        SecurityHelper.requireOwnerOrAdmin(userId); // ses propres demandes Elite (ou admin)
         return service.findUserApplications(userId);
     }
 

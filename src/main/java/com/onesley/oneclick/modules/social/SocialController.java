@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import com.onesley.oneclick.modules.social.internal.SocialService;
 import com.onesley.oneclick.security.SecurityHelper;
+import com.onesley.oneclick.exception.ForbiddenException;
 
 import java.util.List;
 import java.util.UUID;
@@ -66,6 +67,10 @@ public class SocialController {
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size
     ) {
+        // Liste platform-wide → admin only ; un non-admin passe par /referrals/by-referrer/{self}.
+        if (!SecurityHelper.isAdmin()) {
+            throw new ForbiddenException("Liste globale des parrainages réservée à l'administration");
+        }
         return service.findAllReferrals(page, size);
     }
 

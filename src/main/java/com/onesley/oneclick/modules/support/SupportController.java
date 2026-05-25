@@ -2,6 +2,7 @@ package com.onesley.oneclick.modules.support;
 
 import com.onesley.oneclick.shared.PageResponse;
 import com.onesley.oneclick.modules.support.internal.SupportService;
+import com.onesley.oneclick.security.SecurityHelper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -40,6 +41,11 @@ public class SupportController {
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size
     ) {
+        // Anti-fuite : un non-admin ne liste QUE ses propres tickets (les détails
+        // par-id sont déjà gardés par requireOwnerOrAdmin(openedById) côté service).
+        if (!SecurityHelper.isAdmin()) {
+            openedById = SecurityHelper.currentUserId();
+        }
         return PageResponse.from(service.findAll(openedById, assignedToId, status, page, size));
     }
 

@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.event;
 
 import com.onesley.oneclick.shared.PageResponse;
+import com.onesley.oneclick.security.SecurityHelper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -94,6 +95,7 @@ public class EventController {
     @Operation(summary = "Sprint D — RSVPs d'un user (Pocket Mes événements)")
     @PreAuthorize("hasAuthority('VIEW:EVENTS')")
     public List<ParticipationDto> findParticipationsByUser(@PathVariable UUID userId) {
+        SecurityHelper.requireOwnerOrAdmin(userId); // ses propres RSVPs (ou admin)
         return service.findParticipationsByUser(userId);
     }
 
