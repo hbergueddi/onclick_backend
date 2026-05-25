@@ -40,7 +40,7 @@ public class Friendship extends TimestampedEntity {
 
     /** Mapping vers le DTO public exposé hors du module. */
     public FriendshipDto toDto() {
-        return new FriendshipDto(id, user1Id, user2Id, status, acceptedAt, getCreatedAt());
+        return new FriendshipDto(id, user1Id, user2Id, status, acceptedAt, getCreatedAt(), null, null, null, null);
     }
 
     @Override

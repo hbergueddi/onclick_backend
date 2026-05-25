@@ -19,7 +19,14 @@ public final class SocialDtos {
 
     private SocialDtos() {}
 
-    public record FriendshipDto(UUID id, UUID user1Id, UUID user2Id, String status, Instant acceptedAt, Instant createdAt) {}
+    /**
+     * Amitié. Les champs {@code friend*} sont l'enrichissement serveur-side du profil
+     * de l'AMI (l'autre user) relatif à l'appelant — peuplés par
+     * {@code SocialService.findFriendsOf} (résolution via le domaine identity).
+     * {@code null} dans les autres contextes (request/accept/decline).
+     */
+    public record FriendshipDto(UUID id, UUID user1Id, UUID user2Id, String status, Instant acceptedAt, Instant createdAt,
+                                UUID friendId, String friendFirstName, String friendLastName, String friendAvatarUrl) {}
 
     public record FriendshipCreateDto(@NotNull UUID user1Id, @NotNull UUID user2Id) {}
 

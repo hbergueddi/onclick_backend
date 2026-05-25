@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.social.internal;
 
 import com.onesley.oneclick.core.identity.api.User;
+import com.onesley.oneclick.core.identity.api.UserRepository;
 import com.onesley.oneclick.exception.ConflictException;
 import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
@@ -11,7 +12,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.onesley.oneclick.modules.social.api.SocialDtos.*;
@@ -39,6 +43,7 @@ public class SocialService {
     private final UserFavoriteRepository favoriteRepo;
     private final FriendGroupRepository groupRepo;
     private final FriendGroupMemberRepository groupMemberRepo;
+    private final UserRepository userRepository; // domaine identity (API publique) — enrichissement profils amis
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -50,12 +55,32 @@ public class SocialService {
      * vu la convention canonique (user1 < user2).
      */
     public List<FriendshipDto> findFriendsOf(UUID userId) {
-        return Stream.concat(
+        List<FriendshipDto> base = Stream.concat(
             friendshipRepo.findAllByUser1Id(userId).stream(),
             friendshipRepo.findAllByUser2Id(userId).stream()
         ).filter(f -> "accepted".equals(f.getStatus()))
          .map(Friendship::toDto)
          .toList();
+
+        // Enrichissement serveur-side : profil de l'AMI (l'autre user) via l'API
+        // publique du domaine identity (évite que le front appelle /api/users/by-ids
+        // qui est admin-only). Batch anti-N+1.
+        Set<UUID> friendIds = base.stream()
+            .map(d -> userId.equals(d.user1Id()) ? d.user2Id() : d.user1Id())
+            .collect(Collectors.toSet());
+        Map<UUID, User> users = friendIds.isEmpty() ? Map.of()
+            : userRepository.findAllByIds(friendIds).stream()
+                .collect(Collectors.toMap(User::getId, u -> u));
+
+        return base.stream().map(d -> {
+            UUID friendId = userId.equals(d.user1Id()) ? d.user2Id() : d.user1Id();
+            User u = users.get(friendId);
+            return new FriendshipDto(d.id(), d.user1Id(), d.user2Id(), d.status(), d.acceptedAt(), d.createdAt(),
+                friendId,
+                u != null ? u.getFirstName() : null,
+                u != null ? u.getLastName() : null,
+                u != null ? u.getAvatarUrl() : null);
+        }).toList();
     }
 
     /**
