@@ -266,9 +266,24 @@ public class SocialService {
     public List<FriendGroupMemberDto> findGroupMembers(UUID groupId) {
         FriendGroup g = requireActiveGroup(groupId);
         requireGroupReadAccess(g);
-        return groupMemberRepo.findAllByFriendGroupId(groupId).stream()
+        List<FriendGroupMemberDto> base = groupMemberRepo.findAllByFriendGroupId(groupId).stream()
             .map(FriendGroupMember::toDto)
             .toList();
+
+        // Enrichissement serveur-side : profil de chaque membre via l'API publique du
+        // domaine identity (évite que le front appelle /api/users/by-ids admin-only). Batch anti-N+1.
+        Set<UUID> friendIds = base.stream().map(FriendGroupMemberDto::friendId).collect(Collectors.toSet());
+        Map<UUID, User> users = friendIds.isEmpty() ? Map.of()
+            : userRepository.findAllByIds(friendIds).stream()
+                .collect(Collectors.toMap(User::getId, u -> u));
+
+        return base.stream().map(d -> {
+            User u = users.get(d.friendId());
+            return new FriendGroupMemberDto(d.id(), d.friendGroupId(), d.friendId(), d.role(), d.joinedAt(),
+                u != null ? u.getFirstName() : null,
+                u != null ? u.getLastName() : null,
+                u != null ? u.getAvatarUrl() : null);
+        }).toList();
     }
 
     /**

@@ -69,13 +69,21 @@ public final class SocialDtos {
         @Size(min = 1, max = 512) String avatarUrl
     ) {}
 
-    /** Junction users × friend_groups — appartenance + rôle. */
+    /**
+     * Junction users × friend_groups — appartenance + rôle.
+     * Les champs {@code friend*} sont l'enrichissement serveur-side du profil du membre
+     * (résolution via le domaine identity dans {@code SocialService.findGroupMembers}).
+     * {@code null} hors contexte de lecture des membres.
+     */
     public record FriendGroupMemberDto(
         UUID id,
         UUID friendGroupId,
         UUID friendId,
         String role,
-        Instant joinedAt
+        Instant joinedAt,
+        String friendFirstName,
+        String friendLastName,
+        String friendAvatarUrl
     ) {}
 
     public record FriendGroupMemberAddDto(

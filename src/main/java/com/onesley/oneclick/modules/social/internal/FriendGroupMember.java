@@ -60,9 +60,9 @@ public class FriendGroupMember {
         this.role = role == null ? "member" : role;
     }
 
-    /** Mapping vers le DTO public exposé hors du module. */
+    /** Mapping vers le DTO public exposé hors du module (sans enrichissement profil). */
     public FriendGroupMemberDto toDto() {
-        return new FriendGroupMemberDto(id, friendGroupId, friendId, role, joinedAt);
+        return new FriendGroupMemberDto(id, friendGroupId, friendId, role, joinedAt, null, null, null);
     }
 
     @Override
