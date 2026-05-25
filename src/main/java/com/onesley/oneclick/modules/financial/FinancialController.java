@@ -30,6 +30,8 @@ import com.onesley.oneclick.modules.financial.api.FinancialDtos.ContractTemplate
 import com.onesley.oneclick.modules.financial.api.FinancialDtos.ContractTemplatePatchDto;
 import com.onesley.oneclick.modules.financial.internal.FinancialCronJobs;
 import com.onesley.oneclick.modules.financial.internal.FinancialService;
+import com.onesley.oneclick.security.SecurityHelper;
+import com.onesley.oneclick.security.RestaurantAccessGuard;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -40,6 +42,18 @@ public class FinancialController {
 
     private final FinancialService service;
     private final FinancialCronJobs cronJobs;
+    private final RestaurantAccessGuard restaurantAccessGuard;
+
+    /**
+     * P2 owner-check : les listes financières (contrats/factures/wallet) ne doivent
+     * pas exposer TOUS les restaurants. Un non-admin doit cibler un restaurant dont
+     * il est staff actif (les détails par-id sont déjà verrouillés côté service).
+     */
+    private void scopeFinancialList(UUID restaurantId) {
+        if (!SecurityHelper.isAdmin()) {
+            restaurantAccessGuard.requireAdminOrActiveStaffOf(restaurantId);
+        }
+    }
 
     /**
      * Trigger manuel de la génération mensuelle des factures — Sprint I.3.
@@ -75,6 +89,7 @@ public class FinancialController {
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size
     ) {
+        scopeFinancialList(restaurantId);
         return PageResponse.from(service.findAllContracts(restaurantId, status, page, size));
     }
 
@@ -106,6 +121,7 @@ public class FinancialController {
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size
     ) {
+        scopeFinancialList(restaurantId);
         return PageResponse.from(service.findAllInvoices(restaurantId, status, page, size));
     }
 
@@ -154,6 +170,7 @@ public class FinancialController {
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size
     ) {
+        scopeFinancialList(restaurantId);
         return PageResponse.from(service.findAllWalletTx(restaurantId, type, page, size));
     }
 
@@ -210,7 +227,10 @@ public class FinancialController {
 
     @PatchMapping("/contract-templates/{id}")
     @Operation(summary = "Mise à jour partielle d'un template (admin only)")
-    @PreAuthorize("hasAuthority('UPDATE:FINANCIAL')")
+    // Templates = config plateforme GLOBALE (pas de restaurant owner) → admin only,
+    // comme create/delete. CREATE:FINANCIAL n'est PAS détenu par RESTAURATEUR (qui a
+    // UPDATE:FINANCIAL) → on l'utilise ici pour fermer la mutation des templates au resto.
+    @PreAuthorize("hasAuthority('CREATE:FINANCIAL')")
     public ContractTemplateDto patchContractTemplate(
         @PathVariable UUID id, @Valid @RequestBody ContractTemplatePatchDto dto
     ) {

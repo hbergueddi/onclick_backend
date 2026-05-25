@@ -2,6 +2,9 @@ package com.onesley.oneclick.modules.oneclickhi;
 
 import com.onesley.oneclick.modules.oneclickhi.api.OneClickHIDtos.*;
 import com.onesley.oneclick.modules.oneclickhi.internal.OneClickHIService;
+import com.onesley.oneclick.security.SecurityHelper;
+import com.onesley.oneclick.security.RestaurantAccessGuard;
+import com.onesley.oneclick.exception.ForbiddenException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -21,6 +24,7 @@ import lombok.RequiredArgsConstructor;
 public class OneClickHIController {
 
     private final OneClickHIService service;
+    private final RestaurantAccessGuard restaurantAccessGuard;
 
     // Bug 32 (Batch C RBAC v2) — RBAC v2 senior strict sur tous les endpoints OneClickHI (RESOURCE=FINANCIAL).
     @GetMapping("/invoices")
@@ -30,6 +34,10 @@ public class OneClickHIController {
         @RequestParam(required = false) UUID restaurantId,
         @RequestParam(required = false) UUID tenantId
     ) {
+        // Non-admin : doit cibler un restaurant dont il est staff actif (anti cross-restaurant).
+        if (!SecurityHelper.isAdmin()) {
+            restaurantAccessGuard.requireAdminOrActiveStaffOf(restaurantId);
+        }
         return service.findAll(restaurantId, tenantId);
     }
 
@@ -59,12 +67,20 @@ public class OneClickHIController {
     @GetMapping("/cockpit")
     @Operation(summary = "Cockpit OneClickHI (KPIs platform-wide)")
     @PreAuthorize("hasAuthority('VIEW:FINANCIAL')")
-    public OneClickHICockpitDto cockpit() { return service.cockpit(); }
+    public OneClickHICockpitDto cockpit() {
+        // Agrégat plateforme (tous restos) → admin uniquement (un restaurateur a
+        // VIEW:FINANCIAL mais ne doit pas voir les KPIs cross-tenant).
+        if (!SecurityHelper.isAdmin()) {
+            throw new ForbiddenException("Cockpit OneClickHI réservé à l'administration");
+        }
+        return service.cockpit();
+    }
 
     @GetMapping("/restaurant-hi/{restaurantId}")
     @Operation(summary = "Stats HI pour un restaurant")
     @PreAuthorize("hasAuthority('VIEW:FINANCIAL')")
     public RestaurantHIDto restaurantHI(@PathVariable UUID restaurantId) {
+        restaurantAccessGuard.requireAdminOrActiveStaffOf(restaurantId);
         return service.restaurantHI(restaurantId);
     }
 
@@ -75,6 +91,7 @@ public class OneClickHIController {
         @PathVariable UUID restaurantId,
         @RequestParam(defaultValue = "12") int months
     ) {
+        restaurantAccessGuard.requireAdminOrActiveStaffOf(restaurantId);
         return service.restaurantHICharts(restaurantId, months);
     }
 }
