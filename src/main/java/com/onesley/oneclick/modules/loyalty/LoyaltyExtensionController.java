@@ -2,6 +2,7 @@ package com.onesley.oneclick.modules.loyalty;
 
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyExtensionDtos.*;
 import com.onesley.oneclick.modules.loyalty.internal.LoyaltyExtensionService;
+import com.onesley.oneclick.security.SecurityHelper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -83,6 +84,9 @@ public class LoyaltyExtensionController {
     @PostMapping("/restitutions")
     @PreAuthorize("hasAuthority('CREATE:LOYALTY')")
     public RestaurantRestitutionDto createRestitution(@Valid @RequestBody RestitutionCreateDto dto) {
+        // Restitution financière = gérant/admin. Refermé pour le STAFF qui détient
+        // CREATE:LOYALTY au titre du Snap2Earn (V35).
+        SecurityHelper.requireManagerOrAdmin();
         return service.createRestitution(dto.restaurantId(), dto.amount(), dto.points() == null ? 0 : dto.points(), dto.reason());
     }
 

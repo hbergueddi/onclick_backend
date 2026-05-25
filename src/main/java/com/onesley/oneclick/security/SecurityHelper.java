@@ -84,4 +84,22 @@ public final class SecurityHelper {
             );
         }
     }
+
+    /**
+     * Lance 403 si le user courant n'est ni RESTAURATEUR ni admin
+     * (GROUP_ADMIN / SUPERADMIN).
+     *
+     * <p>Garde-fou pour les endpoints de <b>configuration restaurant</b> (gain
+     * rules, demandes de gain rule, restitutions financières) que le STAFF ne
+     * doit pas piloter, alors qu'il détient l'authority grossière
+     * {@code CREATE:LOYALTY} (accordée en V35 pour le Snap2Earn). RBAC autorise
+     * grossièrement (CREATE:LOYALTY), cette vérification referme finement :
+     * seuls le gérant (RESTAURATEUR) et l'administration passent.</p>
+     */
+    public static void requireManagerOrAdmin() {
+        if (hasRole("RESTAURATEUR") || isAdmin()) return;
+        throw new ForbiddenException(
+            "Accès interdit : opération réservée au gérant ou à l'administration"
+        );
+    }
 }

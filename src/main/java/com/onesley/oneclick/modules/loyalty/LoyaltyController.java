@@ -152,6 +152,10 @@ public class LoyaltyController {
     @Operation(summary = "Crée une règle de gain pour un restaurant (1 par resto via UNIQUE).")
     @PreAuthorize("hasAuthority('CREATE:LOYALTY')")
     public GainRuleDto createGainRule(@Valid @RequestBody GainRuleCreateDto dto) {
+        // Config restaurant = gérant/admin uniquement. CREATE:LOYALTY (V35) est
+        // accordé à STAFF pour le Snap2Earn, mais le staff ne configure pas les
+        // règles de gain → on referme finement (cf SecurityHelper.requireManagerOrAdmin).
+        SecurityHelper.requireManagerOrAdmin();
         return service.createGainRule(dto);
     }
 
@@ -250,6 +254,9 @@ public class LoyaltyController {
     public GainRuleRequestDto createGainRuleRequest(
         @Valid @RequestBody GainRuleRequestDto.CreateDto dto
     ) {
+        // Demande de gain rule = gérant/admin (le restaurateur soumet, l'admin approuve).
+        // Refermé pour le STAFF qui détient CREATE:LOYALTY au titre du Snap2Earn (V35).
+        SecurityHelper.requireManagerOrAdmin();
         return gainRuleRequestService.create(dto);
     }
 
