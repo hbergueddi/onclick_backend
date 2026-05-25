@@ -80,6 +80,17 @@ public class RestaurantSubResourceService {
         return staffRepository.save(staff).toDto();
     }
 
+    /**
+     * P2 owner-check helper : restaurantId du staff (pour gate le patch/delete par
+     * staff-id côté contrôleur, sans charger l'entité deux fois côté appelant).
+     */
+    @Transactional(readOnly = true)
+    public UUID getStaffRestaurantId(UUID staffId) {
+        return staffRepository.findById(staffId)
+            .map(s -> s.getRestaurant().getId())
+            .orElseThrow(() -> new NotFoundException("RestaurantStaff", staffId));
+    }
+
     @Transactional
     public RestaurantStaffDto patchStaff(UUID id, RestaurantStaffPatchDto dto) {
         // NB : pas de filtre isDeleted() ici — la réactivation cible un staff désactivé.

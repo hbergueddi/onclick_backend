@@ -3,6 +3,7 @@ package com.onesley.oneclick.modules.restaurant;
 import com.onesley.oneclick.search.SearchRequest;
 import com.onesley.oneclick.search.Searchable;
 import com.onesley.oneclick.security.SecurityHelper;
+import com.onesley.oneclick.security.RestaurantAccessGuard;
 import com.onesley.oneclick.shared.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -53,6 +54,7 @@ public class RestaurantController {
     private final RestaurantRepository restaurantRepository;
     private final RestaurantSubResourceService subResourceService;
     private final UserRepository userRepository;
+    private final RestaurantAccessGuard restaurantAccessGuard;
 
     @GetMapping
     @Operation(summary = "Liste paginée des restaurants — filtres city + tenantId optionnels (PUBLIC catalogue)")
@@ -127,6 +129,7 @@ public class RestaurantController {
     @Operation(summary = "Liste du staff d'un restaurant")
     @PreAuthorize("hasAuthority('VIEW:STAFF')")
     public List<RestaurantStaffDto> listStaff(@PathVariable UUID restaurantId) {
+        restaurantAccessGuard.requireAdminOrActiveStaffOf(restaurantId);
         return subResourceService.listStaff(restaurantId);
     }
 
@@ -137,6 +140,9 @@ public class RestaurantController {
         @PathVariable UUID restaurantId,
         @Valid @RequestBody RestaurantStaffCreateDto dto
     ) {
+        // P2 anti-takeover : seul un staff actif / admin du restaurant ajoute du staff
+        // (sinon un RESTAURATEUR s'auto-ajoutait owner de n'importe quel resto).
+        restaurantAccessGuard.requireAdminOrActiveStaffOf(restaurantId);
         RestaurantStaffDto created = subResourceService.addStaff(restaurantId, dto);
         return ResponseEntity.created(URI.create("/api/restaurants/staff/" + created.id())).body(created);
     }
@@ -148,6 +154,7 @@ public class RestaurantController {
         @PathVariable UUID id,
         @Valid @RequestBody RestaurantStaffPatchDto dto
     ) {
+        restaurantAccessGuard.requireAdminOrActiveStaffOf(subResourceService.getStaffRestaurantId(id));
         return subResourceService.patchStaff(id, dto);
     }
 
@@ -155,6 +162,7 @@ public class RestaurantController {
     @Operation(summary = "Retire un staff (soft delete)")
     @PreAuthorize("hasAuthority('DELETE:STAFF')")
     public ResponseEntity<Void> deleteStaff(@PathVariable UUID id) {
+        restaurantAccessGuard.requireAdminOrActiveStaffOf(subResourceService.getStaffRestaurantId(id));
         subResourceService.deleteStaff(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
@@ -174,6 +182,9 @@ public class RestaurantController {
     )
     @PreAuthorize("hasAuthority('UPDATE:STAFF')")
     public RestaurantStaffDto transferStaff(@Valid @RequestBody StaffTransferDto.TransferDto dto) {
+        // Transfert = staff/admin des DEUX restos (source ET cible) — pas un restaurateur tiers.
+        restaurantAccessGuard.requireAdminOrActiveStaffOf(dto.sourceRestaurantId());
+        restaurantAccessGuard.requireAdminOrActiveStaffOf(dto.targetRestaurantId());
         return subResourceService.transferStaff(
             dto.staffId(), dto.sourceRestaurantId(), dto.targetRestaurantId()
         );
@@ -187,6 +198,7 @@ public class RestaurantController {
     )
     @PreAuthorize("hasAuthority('CREATE:STAFF')")
     public StaffTransferDto.InviteResultDto inviteStaff(@Valid @RequestBody StaffTransferDto.InviteDto dto) {
+        restaurantAccessGuard.requireAdminOrActiveStaffOf(dto.restaurantId());
         return subResourceService.inviteStaff(dto, userRepository);
     }
 
