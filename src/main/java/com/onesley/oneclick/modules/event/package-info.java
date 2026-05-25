@@ -5,7 +5,7 @@
     type = org.springframework.modulith.ApplicationModule.Type.CLOSED,
     id = "modules.event",
     displayName = "modules/event",
-    allowedDependencies = {"core.identity", "core.tenant", "audit", "exception", "shared"}
+    allowedDependencies = {"core.identity", "core.tenant", "audit", "exception", "shared", "security"}
 )
 package com.onesley.oneclick.modules.event;
 
