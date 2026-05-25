@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.support.internal;
 
 import com.onesley.oneclick.core.identity.api.User;
+import com.onesley.oneclick.core.identity.api.UserRepository;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.security.SecurityHelper;
 import jakarta.persistence.EntityManager;
@@ -13,7 +14,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static com.onesley.oneclick.modules.support.api.SupportDtos.*;
 import com.onesley.oneclick.modules.support.api.SupportDtos;
@@ -34,6 +39,7 @@ public class SupportService {
     private final SupportTicketRepository ticketRepo;
     private final TicketMessageRepository messageRepo;
     private final TicketAttachmentRepository attachmentRepo;
+    private final UserRepository userRepository; // domaine identity (API publique) — enrichissement profil auteur
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -45,8 +51,26 @@ public class SupportService {
         if (openedById != null)   spec = spec.and((root, q, cb) -> cb.equal(root.get("openedById"), openedById));
         if (assignedToId != null) spec = spec.and((root, q, cb) -> cb.equal(root.get("assignedToId"), assignedToId));
         if (status != null)       spec = spec.and((root, q, cb) -> cb.equal(root.get("status"), status));
-        return ticketRepo.findAll(spec, PageRequest.of(page, size, Sort.by("createdAt").descending()))
+        Page<TicketDto> result = ticketRepo.findAll(spec, PageRequest.of(page, size, Sort.by("createdAt").descending()))
             .map(SupportTicket::toDto);
+
+        // Enrichissement serveur-side : profil de l'auteur (openedBy) via l'API publique
+        // du domaine identity (évite /api/users/by-ids = VIEW:USERS). Batch anti-N+1.
+        Set<UUID> openerIds = result.getContent().stream()
+            .map(TicketDto::openedById).filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<UUID, User> users = openerIds.isEmpty() ? Map.of()
+            : userRepository.findAllByIds(openerIds).stream().collect(Collectors.toMap(User::getId, u -> u));
+
+        return result.map(d -> {
+            User u = d.openedById() == null ? null : users.get(d.openedById());
+            return new TicketDto(d.id(), d.openedById(), d.category(), d.priority(), d.status(), d.subject(),
+                d.resolvedAt(), d.closedAt(), d.assignedToId(), d.restaurantId(), d.photos(), d.internal(),
+                d.escalatedToAdmin(), d.lastReply(), d.aiHandled(), d.aiSummary(), d.message(),
+                d.createdAt(), d.updatedAt(),
+                u != null ? u.getFirstName() : null,
+                u != null ? u.getLastName() : null,
+                u != null ? u.getPhone() : null);
+        });
     }
 
     public TicketDto findById(UUID id) {

@@ -1,8 +1,10 @@
 package com.onesley.oneclick.modules.loyalty.internal;
 
+import com.onesley.oneclick.core.identity.api.UserRepository;
 import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.security.SecurityHelper;
+import com.onesley.oneclick.modules.loyalty.api.ClientNameDto;
 import com.onesley.oneclick.modules.loyalty.api.ExpiredPointsSummaryDto;
 import com.onesley.oneclick.modules.loyalty.api.GainRuleCreateDto;
 import com.onesley.oneclick.modules.loyalty.api.GainRuleDto;
@@ -28,7 +30,9 @@ import java.time.Instant;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -52,6 +56,7 @@ public class LoyaltyService {
     private final GainRuleRepository gainRuleRepository;
     private final TierRepository tierRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final UserRepository userRepository; // domaine identity (API publique) — résolution noms clients
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -88,6 +93,31 @@ public class LoyaltyService {
     public List<LoyaltyAccountDto> findAccountsByRestaurant(UUID restaurantId) {
         return accountRepository.findAllByRestaurantId(restaurantId).stream()
             .map(LoyaltyAccount::toDto)
+            .toList();
+    }
+
+    /**
+     * Résout les noms des clients pour les dashboards staff (PulsePro — Top clients).
+     *
+     * <p>Alternative <b>scoped</b> à {@code POST /api/users/by-ids} (VIEW:USERS, refusé au
+     * RESTAURATEUR/STAFF). Ne renvoie que les clients ayant un compte fidélité à l'un des
+     * {@code restaurantIds} (intersection avec les {@code clientIds} demandés) — empêche
+     * l'énumération d'utilisateurs arbitraires. Le contrôle d'accès par restaurant
+     * (staff/admin) est fait au niveau du controller via {@code RestaurantAccessGuard}.</p>
+     */
+    public List<ClientNameDto> resolveClientNames(List<UUID> restaurantIds, List<UUID> clientIds) {
+        if (restaurantIds == null || restaurantIds.isEmpty() || clientIds == null || clientIds.isEmpty()) {
+            return List.of();
+        }
+        Set<UUID> requested = Set.copyOf(clientIds);
+        Set<UUID> allowed = restaurantIds.stream()
+            .flatMap(rid -> accountRepository.findAllByRestaurantId(rid).stream())
+            .map(LoyaltyAccount::getClientId)
+            .filter(requested::contains)
+            .collect(Collectors.toSet());
+        if (allowed.isEmpty()) return List.of();
+        return userRepository.findAllByIds(allowed).stream()
+            .map(u -> new ClientNameDto(u.getId(), u.getFirstName(), u.getLastName(), u.getPhone()))
             .toList();
     }
 

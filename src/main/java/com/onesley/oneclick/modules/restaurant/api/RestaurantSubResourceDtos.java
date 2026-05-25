@@ -26,12 +26,21 @@ public final class RestaurantSubResourceDtos {
 
     // ─── Staff (junction user × restaurant) ──────────────────────────────────
 
+    /**
+     * Membre du staff d'un restaurant. Les champs {@code user*} sont l'enrichissement
+     * serveur-side du profil (résolus dans {@code RestaurantSubResourceService.listStaff}
+     * via le domaine identity) — évite que le front appelle {@code /api/users/by-ids}
+     * (VIEW:USERS, refusé au RESTAURATEUR/STAFF). {@code null} hors contexte de liste.
+     */
     public record RestaurantStaffDto(
         UUID id,
         UUID restaurantId,
         UUID userId,
         String roleCode,
-        Instant createdAt
+        Instant createdAt,
+        String userFirstName,
+        String userLastName,
+        String userPhone
     ) {}
 
     public record RestaurantStaffCreateDto(

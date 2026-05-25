@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.restaurant.internal;
 
 import com.onesley.oneclick.core.identity.api.User;
+import com.onesley.oneclick.core.identity.api.UserRepository;
 import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.MealServiceCreateDto;
@@ -19,7 +20,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -44,6 +48,7 @@ public class RestaurantSubResourceService {
     private final RestaurantZoneRepository zoneRepository;
     private final RestaurantTableRepository tableRepository;
     private final RestaurantRepository restaurantRepository;
+    private final UserRepository userRepository; // domaine identity (API publique) — enrichissement profils staff
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -59,10 +64,25 @@ public class RestaurantSubResourceService {
     // ═══════════════════════════════════════════════════════════════════════
 
     public List<RestaurantStaffDto> listStaff(UUID restaurantId) {
-        return staffRepository.findAllByRestaurantId(restaurantId).stream()
+        List<RestaurantStaffDto> base = staffRepository.findAllByRestaurantId(restaurantId).stream()
             .filter(s -> !s.isDeleted())
             .map(RestaurantStaff::toDto)
             .toList();
+
+        // Enrichissement serveur-side : profil de chaque membre via l'API publique du
+        // domaine identity (évite que le front appelle /api/users/by-ids = VIEW:USERS,
+        // refusé au RESTAURATEUR/STAFF). Batch anti-N+1.
+        Set<UUID> userIds = base.stream().map(RestaurantStaffDto::userId).collect(Collectors.toSet());
+        Map<UUID, User> users = userIds.isEmpty() ? Map.of()
+            : userRepository.findAllByIds(userIds).stream().collect(Collectors.toMap(User::getId, u -> u));
+
+        return base.stream().map(d -> {
+            User u = users.get(d.userId());
+            return new RestaurantStaffDto(d.id(), d.restaurantId(), d.userId(), d.roleCode(), d.createdAt(),
+                u != null ? u.getFirstName() : null,
+                u != null ? u.getLastName() : null,
+                u != null ? u.getPhone() : null);
+        }).toList();
     }
 
     public List<RestaurantStaffDto> findStaffByUser(UUID userId) {

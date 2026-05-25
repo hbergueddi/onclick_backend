@@ -1,5 +1,6 @@
 package com.onesley.oneclick.modules.loyalty;
 
+import com.onesley.oneclick.modules.loyalty.api.ClientNameDto;
 import com.onesley.oneclick.modules.loyalty.api.ExpiredPointsSummaryDto;
 import com.onesley.oneclick.modules.loyalty.api.GainRuleCreateDto;
 import com.onesley.oneclick.modules.loyalty.api.GainRuleDto;
@@ -25,6 +26,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -108,6 +110,27 @@ public class LoyaltyController {
     public List<LoyaltyAccountDto> findAccountsByRestaurant(@PathVariable UUID restaurantId) {
         restaurantAccessGuard.requireAdminOrActiveStaffOf(restaurantId);
         return service.findAccountsByRestaurant(restaurantId);
+    }
+
+    /** Requête de résolution des noms clients pour les dashboards staff (PulsePro). */
+    public record ClientNamesQuery(
+        @NotEmpty List<UUID> restaurantIds,
+        @NotEmpty List<UUID> clientIds
+    ) {}
+
+    @PostMapping("/clients/names")
+    @Operation(
+        summary = "Résout les noms des clients d'un restaurant (PulsePro Top clients) — scoped.",
+        description = "Alternative à /api/users/by-ids (VIEW:USERS, refusé au RESTAURATEUR/STAFF). " +
+                      "L'appelant doit être staff actif / admin de CHAQUE restaurant demandé ; ne renvoie " +
+                      "que les clients ayant un compte fidélité à l'un de ces restaurants."
+    )
+    @PreAuthorize("hasAuthority('VIEW:LOYALTY')")
+    public List<ClientNameDto> resolveClientNames(@Valid @RequestBody ClientNamesQuery query) {
+        for (UUID restaurantId : query.restaurantIds()) {
+            restaurantAccessGuard.requireAdminOrActiveStaffOf(restaurantId);
+        }
+        return service.resolveClientNames(query.restaurantIds(), query.clientIds());
     }
 
     @GetMapping("/accounts/{accountId}/transactions")

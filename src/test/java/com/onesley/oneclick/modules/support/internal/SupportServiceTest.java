@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.support.internal;
 
 import com.onesley.oneclick.core.identity.api.User;
+import com.onesley.oneclick.core.identity.api.UserRepository;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.modules.support.api.SupportDtos.AttachmentCreateDto;
 import com.onesley.oneclick.modules.support.api.SupportDtos.MessageCreateDto;
@@ -41,6 +42,7 @@ class SupportServiceTest {
     @Mock TicketMessageRepository messageRepo;
     @Mock TicketAttachmentRepository attachmentRepo;
     @Mock EntityManager em;
+    @Mock UserRepository userRepository;
     @InjectMocks SupportService service;
 
     @BeforeEach

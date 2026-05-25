@@ -57,7 +57,8 @@ public class SupportTicket extends TimestampedEntity {
             restaurantId,
             photos != null ? java.util.Arrays.asList(photos) : java.util.List.of(),
             internal, escalatedToAdmin, lastReply, aiHandled, aiSummary, message,
-            getCreatedAt(), getUpdatedAt());
+            getCreatedAt(), getUpdatedAt(),
+            null, null, null);
     }
 
     @Override

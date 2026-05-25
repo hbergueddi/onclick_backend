@@ -70,9 +70,9 @@ public class RestaurantStaff extends TimestampedEntity {
     /** Réactive un staff précédemment désactivé (soft-delete → actif). */
     public void reactivate() { this.deletedAt = null; }
 
-    /** Mapping vers le DTO public exposé hors du module. */
+    /** Mapping vers le DTO public exposé hors du module (sans enrichissement profil). */
     public RestaurantStaffDto toDto() {
-        return new RestaurantStaffDto(id, restaurantId, userId, roleCode, getCreatedAt());
+        return new RestaurantStaffDto(id, restaurantId, userId, roleCode, getCreatedAt(), null, null, null);
     }
 
     @Override

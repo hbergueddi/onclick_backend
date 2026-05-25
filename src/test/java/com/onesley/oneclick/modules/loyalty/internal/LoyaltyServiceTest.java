@@ -1,7 +1,10 @@
 package com.onesley.oneclick.modules.loyalty.internal;
 
+import com.onesley.oneclick.core.identity.api.User;
+import com.onesley.oneclick.core.identity.api.UserRepository;
 import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.NotFoundException;
+import com.onesley.oneclick.modules.loyalty.api.ClientNameDto;
 import com.onesley.oneclick.modules.loyalty.api.GainRuleCreateDto;
 import com.onesley.oneclick.modules.loyalty.api.GainRulePatchDto;
 import com.onesley.oneclick.modules.loyalty.api.GiftPointsDto;
@@ -52,6 +55,7 @@ class LoyaltyServiceTest {
     @Mock TierRepository tierRepository;
     @Mock ApplicationEventPublisher eventPublisher;
     @Mock EntityManager entityManager;
+    @Mock UserRepository userRepository;
     @InjectMocks LoyaltyService service;
 
     @BeforeEach
@@ -79,6 +83,30 @@ class LoyaltyServiceTest {
         LoyaltyAccount a = account(UUID.randomUUID(), UUID.randomUUID(), 50);
         when(accountRepository.findById(a.getId())).thenReturn(Optional.of(a));
         assertThat(service.findAccount(a.getId())).isNotNull();
+    }
+
+    // ─── resolveClientNames (PulsePro — scoped, alternative à /by-ids VIEW:USERS) ──
+
+    @Test
+    void resolveClientNames_scopesToClientsWithAccountAtRestaurant() {
+        UUID r1 = UUID.randomUUID();
+        UUID c1 = UUID.randomUUID(); // a un compte fidélité → résolu
+        UUID c2 = UUID.randomUUID(); // PAS de compte → exclu (anti-énumération)
+        when(accountRepository.findAllByRestaurantId(r1)).thenReturn(List.of(account(c1, r1, 100)));
+        when(userRepository.findAllByIds(any()))
+            .thenReturn(List.of(new User(c1, null, "c1@x.ma", "h", "Sara", "B")));
+
+        List<ClientNameDto> res = service.resolveClientNames(List.of(r1), List.of(c1, c2));
+
+        assertThat(res).hasSize(1);
+        assertThat(res.get(0).id()).isEqualTo(c1);
+        assertThat(res.get(0).firstName()).isEqualTo("Sara");
+    }
+
+    @Test
+    void resolveClientNames_emptyInputs_returnsEmpty() {
+        assertThat(service.resolveClientNames(List.of(), List.of(UUID.randomUUID()))).isEmpty();
+        assertThat(service.resolveClientNames(List.of(UUID.randomUUID()), List.of())).isEmpty();
     }
 
     @Test

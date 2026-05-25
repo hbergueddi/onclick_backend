@@ -33,7 +33,11 @@ public final class SupportDtos {
                             String aiSummary,
                             // V24 — Sprint K
                             String message,
-                            Instant createdAt, Instant updatedAt) {}
+                            Instant createdAt, Instant updatedAt,
+                            // Enrichissement serveur-side du profil de l'auteur (openedBy) — peuplé par
+                            // SupportService.findAll via le domaine identity. Évite /api/users/by-ids
+                            // (VIEW:USERS). null sur findById/create/update (mapping non enrichi).
+                            String openedByFirstName, String openedByLastName, String openedByPhone) {}
 
     public record TicketCreateDto(
         @NotNull UUID openedById,
