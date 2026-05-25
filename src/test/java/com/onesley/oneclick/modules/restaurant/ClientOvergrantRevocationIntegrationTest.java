@@ -13,9 +13,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Intégration P3 (migration V36) — retrait des sur-droits CLIENT.
  *
- * <p>Après V36, le rôle CLIENT n'a plus {@code VIEW} sur STAFF / TABLES / ZONES /
- * SERVICES (ni {@code DELETE:SUPPORT}). Ces lectures de config restaurant sont
- * refusées au gate {@code @PreAuthorize} (403). L'admin garde l'accès.
+ * <p>Après V36, le rôle CLIENT n'a plus {@code VIEW} sur STAFF / TABLES / ZONES
+ * (ni {@code DELETE:SUPPORT}). Ces lectures de config restaurant sont refusées au
+ * gate {@code @PreAuthorize} (403). L'admin garde l'accès.
+ *
+ * <p><b>V37</b> — {@code VIEW:SERVICES} a été <b>re-accordé</b> au CLIENT : la
+ * réservation Pocket a besoin de lire les créneaux repas (services) du restaurant.
+ * Les écritures services restent staff/admin. Donc CLIENT lit {@code /services} (200)
+ * mais toujours pas {@code /staff} / {@code /tables} / {@code /zones} (403).
  *
  * <p>Fixture CLIENT JETABLE (id neuf) : indispensable car le {@code userDetails}
  * est mis en cache (Redis, TTL 1 h) — un CLIENT déjà chargé garderait ses anciennes
@@ -53,8 +58,9 @@ class ClientOvergrantRevocationIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void client_cannotViewServices_returns403() {
-        assertThat(get("/api/restaurants/" + restaurantId() + "/services", clientBearer)).isEqualTo(403);
+    void client_canViewServices_returns200_afterV37Regrant() {
+        // V37 a re-accordé VIEW:SERVICES au CLIENT (réservation Pocket lit les créneaux repas).
+        assertThat(get("/api/restaurants/" + restaurantId() + "/services", clientBearer)).isEqualTo(200);
     }
 
     @Test
