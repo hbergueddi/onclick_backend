@@ -26,6 +26,9 @@ import com.onesley.oneclick.modules.reservation.internal.Reservation;
 import com.onesley.oneclick.modules.reservation.internal.ReservationGuestService;
 import com.onesley.oneclick.modules.reservation.internal.ReservationRepository;
 import com.onesley.oneclick.modules.reservation.internal.ReservationService;
+import com.onesley.oneclick.security.SecurityHelper;
+import com.onesley.oneclick.security.RestaurantAccessGuard;
+import com.onesley.oneclick.exception.ForbiddenException;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -56,8 +59,22 @@ public class ReservationController {
     private final ReservationRepository reservationRepository;
     private final BookingRuleService bookingRuleService;
     private final ReservationGuestService guestService;
+    private final RestaurantAccessGuard restaurantAccessGuard;
 
     public record StatusChangeDto(String status, UUID changedById, String reason) {}
+
+    /**
+     * P2 owner-check : accès EN ÉCRITURE à une réservation = client-owner, staff actif
+     * du restaurant, ou admin — PAS un simple invité (un guest peut voir via findById
+     * mais ne mute pas le statut ni les invités). Le {@link ReservationDto} porte
+     * clientId + restaurantId (anti-N+1) ; on s'appuie dessus.
+     */
+    private void requireReservationWriteAccess(ReservationDto r) {
+        if (r.clientId() != null && r.clientId().equals(SecurityHelper.currentUserId())) return;
+        if (restaurantAccessGuard.isAdminOrActiveStaffOf(r.restaurantId())) return;
+        throw new ForbiddenException(
+            "Accès interdit : modification réservée au client, au staff du restaurant ou à un admin");
+    }
 
     @GetMapping
     @Operation(summary = "Liste paginée — filtres clientId / restaurantId / status optionnels")
@@ -69,6 +86,12 @@ public class ReservationController {
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size
     ) {
+        // Anti-fuite dual-ownership : un non-admin ne liste que SES réservations,
+        // sauf s'il est staff actif du restaurant demandé (vue ProDesk de SON resto).
+        if (!SecurityHelper.isAdmin()
+            && (restaurantId == null || !restaurantAccessGuard.isAdminOrActiveStaffOf(restaurantId))) {
+            clientId = SecurityHelper.currentUserId();
+        }
         return PageResponse.from(service.findAll(clientId, restaurantId, status, page, size));
     }
 
@@ -103,6 +126,9 @@ public class ReservationController {
     @Operation(summary = "Change le statut (workflow audit dans reservation_status_histories)")
     @PreAuthorize("hasAuthority('UPDATE:RESERVATIONS')")
     public ReservationDto changeStatus(@PathVariable UUID id, @RequestBody StatusChangeDto body) {
+        // findById enforce l'accès en lecture (404 si absent, 403 si aucun accès) ;
+        // on resserre ensuite en écriture (exclut le simple invité).
+        requireReservationWriteAccess(service.findById(id));
         return service.changeStatus(id, body.status(), body.changedById(), body.reason());
     }
 
@@ -151,6 +177,7 @@ public class ReservationController {
         @PathVariable UUID restaurantId,
         @Valid @RequestBody BookingRuleCreateDto dto
     ) {
+        restaurantAccessGuard.requireAdminOrActiveStaffOf(restaurantId); // config résa = staff/admin du resto
         BookingRuleDto created = bookingRuleService.create(restaurantId, dto);
         return ResponseEntity.created(URI.create("/api/reservations/booking-rules/" + created.id())).body(created);
     }
@@ -183,6 +210,7 @@ public class ReservationController {
     @Operation(summary = "Liste tous les invités d'une réservation")
     @PreAuthorize("hasAuthority('VIEW:RESERVATIONS')")
     public List<ReservationGuestDto> findGuestsByReservation(@PathVariable UUID reservationId) {
+        service.findById(reservationId); // enforce l'accès en lecture (client/staff/admin/guest) — 403/404 sinon
         return guestService.findByReservation(reservationId);
     }
 
@@ -190,6 +218,7 @@ public class ReservationController {
     @Operation(summary = "Liste toutes les invitations reçues par un user (Pocket)")
     @PreAuthorize("hasAuthority('VIEW:RESERVATIONS')")
     public List<ReservationGuestDto> findGuestsByUser(@PathVariable UUID userId) {
+        SecurityHelper.requireOwnerOrAdmin(userId); // ses propres invitations (ou admin)
         return guestService.findByGuestUser(userId);
     }
 
@@ -203,6 +232,7 @@ public class ReservationController {
         @PathVariable UUID reservationId,
         @Valid @RequestBody ReservationGuestDto.CreateDto dto
     ) {
+        requireReservationWriteAccess(service.findById(reservationId)); // seul owner/staff/admin invite
         ReservationGuestDto created = guestService.invite(reservationId, dto);
         return ResponseEntity.created(URI.create("/api/reservations/guests/" + created.id())).body(created);
     }
@@ -221,6 +251,7 @@ public class ReservationController {
     @Operation(summary = "Marque toutes les réponses des invités comme vues par l'organisateur")
     @PreAuthorize("hasAuthority('UPDATE:RESERVATIONS')")
     public ResponseEntity<Void> markGuestsSeen(@PathVariable UUID reservationId) {
+        requireReservationWriteAccess(service.findById(reservationId)); // organisateur/staff/admin
         guestService.markSeen(reservationId);
         return ResponseEntity.noContent().build();
     }
