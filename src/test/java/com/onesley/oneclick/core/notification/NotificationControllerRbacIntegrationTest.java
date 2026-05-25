@@ -138,8 +138,10 @@ class NotificationControllerRbacIntegrationTest extends AbstractIntegrationTest 
     @Test
     void createNotification_client_returns403() {
         RoleUser c = asRole("CLIENT");
-        // recipientUserId valide → la validation passe, c'est l'autorisation (CREATE) qui refuse.
-        String body = "{\"recipientUserId\":\"" + c.id() + "\"}";
+        // Payload COMPLET (type/title/body sont @NotBlank) → @Valid passe AVANT @PreAuthorize,
+        // donc c'est bien l'autorisation CREATE:NOTIFICATIONS qui refuse (403), pas la validation (400).
+        String body = "{\"recipientUserId\":\"" + c.id()
+            + "\",\"type\":\"system\",\"title\":\"rbac\",\"body\":\"deny\"}";
         assertThat(postJson("/api/notifications", body, c.bearer())).isEqualTo(403);
     }
 
