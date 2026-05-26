@@ -3,6 +3,7 @@ package com.onesley.oneclick.core.notification.internal;
 import com.onesley.oneclick.core.notification.api.NotificationDtos.NotificationCreateDto;
 import com.onesley.oneclick.core.notification.api.NotificationDtos.PushReservationDto;
 import com.onesley.oneclick.shared.events.FriendshipRequestedEvent;
+import com.onesley.oneclick.shared.events.FriendshipRespondedEvent;
 import com.onesley.oneclick.shared.events.ReservationCreatedEvent;
 import com.onesley.oneclick.shared.events.ReservationGuestAddedEvent;
 import com.onesley.oneclick.shared.events.ReservationStatusChangedEvent;
@@ -51,6 +52,16 @@ public class NotificationEventHandler {
     public void onFriendshipRequested(FriendshipRequestedEvent event) {
         createInApp(event.addresseeId(), "community", "Demande d'ami 👋",
             "Vous avez reçu une nouvelle demande d'ami.", COMMUNITY_LINK);
+    }
+
+    /** Réponse à une demande d'amitié → notif au demandeur (server-side, pas de CREATE:NOTIFICATIONS côté client). */
+    @ApplicationModuleListener
+    public void onFriendshipResponded(FriendshipRespondedEvent event) {
+        String title = event.accepted() ? "Demande acceptée ✅" : "Demande refusée";
+        String body = event.accepted()
+            ? "Votre demande d'ami a été acceptée !"
+            : "Votre demande d'ami a été refusée.";
+        createInApp(event.recipientUserId(), "community", title, body, COMMUNITY_LINK);
     }
 
     /**

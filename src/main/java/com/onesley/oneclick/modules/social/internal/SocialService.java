@@ -7,6 +7,7 @@ import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.security.SecurityHelper;
 import com.onesley.oneclick.shared.events.FriendshipRequestedEvent;
+import com.onesley.oneclick.shared.events.FriendshipRespondedEvent;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.context.ApplicationEventPublisher;
@@ -140,7 +141,16 @@ public class SocialService {
         // (ou admin). Faute de getReceiverUserId, on accepte user1 OU user2.
         requireFriendshipPartyOrAdmin(f);
         f.markAccepted();
-        return friendshipRepo.save(f).toDto();
+        FriendshipDto dto = friendshipRepo.save(f).toDto();
+        publishResponded(f, true);
+        return dto;
+    }
+
+    /** Notifie l'AUTRE partie (le demandeur) server-side — le répondant CLIENT n'a pas CREATE:NOTIFICATIONS. */
+    private void publishResponded(Friendship f, boolean accepted) {
+        UUID current = SecurityHelper.currentUserId();
+        UUID recipient = (current != null && current.equals(f.getUser1Id())) ? f.getUser2Id() : f.getUser1Id();
+        eventPublisher.publishEvent(new FriendshipRespondedEvent(f.getId(), recipient, accepted));
     }
 
     @Transactional
@@ -149,7 +159,9 @@ public class SocialService {
             .orElseThrow(() -> new NotFoundException("Friendship", friendshipId));
         requireFriendshipPartyOrAdmin(f);
         f.setStatus("declined");
-        return friendshipRepo.save(f).toDto();
+        FriendshipDto dto = friendshipRepo.save(f).toDto();
+        publishResponded(f, false);
+        return dto;
     }
 
     /**
