@@ -100,4 +100,21 @@ class ReservationOwnershipIntegrationTest extends AbstractIntegrationTest {
         assertThat(getResp("/api/reservations/guests/by-user/" + a.clientId(), clientBearer(a.clientId()))
             .getStatusCode().value()).isEqualTo(200);
     }
+
+    // ─── guests/by-inviter (« Invitations envoyées » Pocket) : requireOwnerOrAdmin ──
+
+    @Test
+    void guestsByInviter_otherUser_returns403() {
+        Resa a = clientReservation();
+        String snooper = clientBearer(otherClient(a.clientId()));
+        assertThat(getResp("/api/reservations/guests/by-inviter/" + a.clientId(), snooper)
+            .getStatusCode().value()).isEqualTo(403);
+    }
+
+    @Test
+    void guestsByInviter_self_returns200() {
+        Resa a = clientReservation();
+        assertThat(getResp("/api/reservations/guests/by-inviter/" + a.clientId(), clientBearer(a.clientId()))
+            .getStatusCode().value()).isEqualTo(200);
+    }
 }

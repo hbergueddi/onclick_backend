@@ -55,6 +55,42 @@ class SocialFlowIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void deleteFriendship_hardRemovesRow_andRbac() throws Exception {
+        String admin = adminBearer();
+        String a = createUser(admin), b = createUser(admin), c = createUser(admin); // users jetables
+        // crée l'amitié (a,b)
+        ResponseEntity<String> post = restTemplate.exchange(url("/api/social/friendships"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("user1Id", a, "user2Id", b), admin), String.class);
+        assertThat(post.getStatusCode().is2xxSuccessful())
+            .as("friendship create attendu 2xx — reçu %s, body=%s", post.getStatusCode(), post.getBody()).isTrue();
+        String id = om.readTree(post.getBody()).get("id").asText();
+
+        // 403 : un tiers CLIENT (a DELETE:COMMUNITY mais n'est PAS partie) → bloqué par l'ABAC service
+        String outsider = jwtIssuer.issueAccessToken(UUID.fromString(c), "CLIENT").token();
+        assertThat(restTemplate.exchange(url("/api/social/friendships/" + id), HttpMethod.DELETE, jwtEntity(outsider), String.class)
+            .getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        // 204 : une partie (user a, CLIENT) supprime définitivement (valide aussi le grant V38 DELETE:COMMUNITY)
+        String partyA = jwtIssuer.issueAccessToken(UUID.fromString(a), "CLIENT").token();
+        assertThat(restTemplate.exchange(url("/api/social/friendships/" + id), HttpMethod.DELETE, jwtEntity(partyA), String.class)
+            .getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+
+        // hard delete : la row n'existe plus (≠ decline qui garde la row en status=declined)
+        Integer remaining = jdbc.queryForObject(
+            "SELECT count(*) FROM friendships WHERE id = ?::uuid", Integer.class, UUID.fromString(id));
+        assertThat(remaining).isZero();
+
+        // 404 : id inexistant
+        assertThat(restTemplate.exchange(url("/api/social/friendships/" + UUID.randomUUID()), HttpMethod.DELETE, jwtEntity(admin), String.class)
+            .getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+
+        // self-clean users jetables
+        restTemplate.exchange(url("/api/users/" + a), HttpMethod.DELETE, jwtEntity(admin), String.class);
+        restTemplate.exchange(url("/api/users/" + b), HttpMethod.DELETE, jwtEntity(admin), String.class);
+        restTemplate.exchange(url("/api/users/" + c), HttpMethod.DELETE, jwtEntity(admin), String.class);
+    }
+
+    @Test
     void referrals_listAndCreate() {
         String admin = adminBearer();
         assertThat(restTemplate.exchange(url("/api/social/referrals?page=0&size=5"), HttpMethod.GET, jwtEntity(admin), String.class)
