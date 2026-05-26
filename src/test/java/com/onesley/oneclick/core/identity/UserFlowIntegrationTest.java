@@ -29,6 +29,9 @@ class UserFlowIntegrationTest extends AbstractIntegrationTest {
             jsonJwtEntity(Map.of("roleId", roleId(), "email", email, "password", "password1", "firstName", "L4", "lastName", "User"), admin), String.class);
         assertThat(post.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         String id = om.readTree(post.getBody()).get("id").asText();
+        // V14+ : tout user créé reçoit un referral_code (8 chars hex de l'UUID), jamais NULL.
+        assertThat(om.readTree(post.getBody()).get("referralCode").asText())
+            .as("referralCode généré à la création").hasSize(8);
 
         assertThat(restTemplate.exchange(url("/api/users/" + id), HttpMethod.GET, jwtEntity(admin), String.class)
             .getStatusCode()).isEqualTo(HttpStatus.OK);

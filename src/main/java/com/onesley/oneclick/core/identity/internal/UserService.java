@@ -92,8 +92,9 @@ public class UserService {
         Role role = roleRepository.findById(dto.roleId())
             .orElseThrow(() -> new NotFoundException("Role", dto.roleId()));
 
+        UUID userId = UUID.randomUUID();
         User user = new User(
-            UUID.randomUUID(),
+            userId,
             role,
             dto.email().toLowerCase(),
             passwordEncoder.encode(dto.password()),
@@ -105,6 +106,10 @@ public class UserService {
         if (dto.tenantId() != null) {
             user.setTenant(entityManager.getReference(Tenant.class, dto.tenantId()));
         }
+        // Code de parrainage public stable (8 chars hex uppercase dérivés de l'UUID) — MÊME
+        // formule que V14 (backfill) + generate_referral_code(). Sans ça, tout user créé APRÈS
+        // V14 aurait referral_code = NULL → page parrainage cassée (code factice côté front).
+        user.setReferralCode(userId.toString().replace("-", "").substring(0, 8).toUpperCase());
         User saved = repository.save(user);
 
         // Publish event Spring Modulith → Kafka topic 'user.registered'
