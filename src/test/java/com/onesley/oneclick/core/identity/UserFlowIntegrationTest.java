@@ -74,6 +74,35 @@ class UserFlowIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void changeMyPassword_asClient_self_verifiesCurrent() throws Exception {
+        String admin = adminBearer();
+        String email = "l4-pw-" + UUID.randomUUID().toString().substring(0, 8) + "@x.ma";
+        ResponseEntity<String> post = restTemplate.exchange(url("/api/users"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("roleId", roleId(), "email", email, "password", "password1", "firstName", "Pw", "lastName", "Self"), admin), String.class);
+        assertThat(post.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        String id = om.readTree(post.getBody()).get("id").asText();
+        String bearer = jwtIssuer.issueAccessToken(UUID.fromString(id), "CLIENT").token();
+
+        // sans JWT → 401
+        assertThat(restTemplate.exchange(url("/api/users/me/password"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("currentPassword", "password1", "newPassword", "newpass1234"), null), String.class)
+            .getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        // mauvais mot de passe courant → 4xx (refusé)
+        assertThat(restTemplate.exchange(url("/api/users/me/password"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("currentPassword", "WRONGpwd", "newPassword", "newpass1234"), bearer), String.class)
+            .getStatusCode().is2xxSuccessful()).isFalse();
+
+        // CLIENT change SON mot de passe (currentPassword correct, sans UPDATE:USERS) → 204
+        assertThat(restTemplate.exchange(url("/api/users/me/password"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("currentPassword", "password1", "newPassword", "newpass1234"), bearer), String.class)
+            .getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+
+        // self-clean
+        restTemplate.exchange(url("/api/users/" + id), HttpMethod.DELETE, jwtEntity(admin), String.class);
+    }
+
+    @Test
     void user_readsAndMe() {
         String admin = adminBearer();
         for (String path : List.of("/api/users?page=0&size=5", "/api/users/me", "/api/users/me/context",

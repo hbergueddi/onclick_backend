@@ -61,7 +61,7 @@ public class UserController {
         summary = "User courant (depuis JWT.sub) — évite au frontend de parser le JWT",
         description = "Retourne le UserDto du user actuellement authentifié. 401 si pas de JWT."
     )
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('VIEW:PROFILE')")
     public UserDto findMe() {
         return service.findMe();
     }
@@ -73,7 +73,7 @@ public class UserController {
                       "pas la permission (UX cosmétique — le backend reste la source de vérité " +
                       "via @PreAuthorize). Cache TanStack frontend conseillé : staleTime 5 min."
     )
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('VIEW:PROFILE')")
     public java.util.List<String> findMyPermissions(
         org.springframework.security.core.Authentication authentication
     ) {
@@ -95,23 +95,37 @@ public class UserController {
                       "et expose les menus (sidebar) accessibles selon le rôle. Construit côté domaine " +
                       "identity, indépendamment de l'adaptateur Spring Security."
     )
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('VIEW:PROFILE')")
     public MeContextDto meContext() {
         return service.findMeContext();
     }
 
     @PatchMapping("/me")
     @Operation(
-        summary = "Mise à jour de SON PROPRE profil (self-service) — authentifié, sans droit admin",
+        summary = "Mise à jour de SON PROPRE profil (self-service) — UPDATE:PROFILE, sans droit admin",
         description = "Self-service Pocket : un user édite ses champs sûrs (firstName/lastName/phone/" +
-                      "avatarUrl/language via UserUpdateDto — PAS de role/tenant/status). Évite d'exiger " +
-                      "UPDATE:USERS (admin) pour une simple MAJ de profil. Mirror de GET /api/users/me."
+                      "avatarUrl/language via UserUpdateDto — PAS de role/tenant/status). Gardé par " +
+                      "UPDATE:PROFILE (≠ UPDATE:USERS admin). Self par construction (JWT.sub)."
     )
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('UPDATE:PROFILE')")
     public UserDto patchMe(@Valid @RequestBody UserUpdateDto dto) {
         UUID me = SecurityHelper.currentUserId();
         if (me == null) throw new ForbiddenException("Authentification requise");
         return service.patch(me, dto);
+    }
+
+    @PostMapping("/me/password")
+    @Operation(
+        summary = "Change SON PROPRE mot de passe (self-service) — vérifie le mot de passe courant",
+        description = "Self-service : gardé par UPDATE:PROFILE (≠ UPDATE:USERS admin). Self par " +
+                      "construction (JWT.sub). Vérifie currentPassword (BCrypt) avant de ré-encoder."
+    )
+    @PreAuthorize("hasAuthority('UPDATE:PROFILE')")
+    public ResponseEntity<Void> changeMyPassword(@Valid @RequestBody PasswordChangeDto dto) {
+        UUID me = SecurityHelper.currentUserId();
+        if (me == null) throw new ForbiddenException("Authentification requise");
+        service.changePassword(me, dto.currentPassword(), dto.newPassword());
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
     @GetMapping("/{id}")
