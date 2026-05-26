@@ -84,6 +84,18 @@ public class SocialService {
     }
 
     /**
+     * Découverte sociale : résout le profil public MINIMAL d'un user par téléphone
+     * (recherche pour invitation / ajout d'ami). 404 si aucun user actif. Ne renvoie
+     * PAS le UserDto complet (admin VIEW:USERS) — cf {@link SocialDtos.PublicProfileDto}.
+     */
+    public PublicProfileDto findUserByPhone(String phone) {
+        User u = userRepository.findByPhone(phone)
+            .filter(x -> !x.isDeleted())
+            .orElseThrow(() -> new NotFoundException("User", phone));
+        return new PublicProfileDto(u.getId(), u.getFirstName(), u.getLastName(), u.getAvatarUrl(), u.getPhone());
+    }
+
+    /**
      * Crée une demande d'amitié. La contrainte DB {@code friendships_check} exige
      * {@code user1_id < user2_id} pour empêcher les doublons bidirectionnels.
      *

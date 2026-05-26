@@ -30,6 +30,14 @@ public final class SocialDtos {
 
     public record FriendshipCreateDto(@NotNull UUID user1Id, @NotNull UUID user2Id) {}
 
+    /**
+     * Profil public minimal d'un user — découverte sociale (recherche par téléphone pour
+     * inviter / ajouter en ami). Exposé sous {@code VIEW:COMMUNITY} (que le CLIENT détient),
+     * et NON le {@code UserDto} complet derrière {@code VIEW:USERS} (admin) : on ne divulgue
+     * que l'identité d'affichage nécessaire à l'invitation.
+     */
+    public record PublicProfileDto(UUID id, String firstName, String lastName, String avatarUrl, String phone) {}
+
     public record ReferralDto(UUID id, UUID referrerId, UUID referredUserId, String referralCode, String status, Instant activatedAt, Instant createdAt) {}
 
     public record ReferralCreateDto(@NotNull UUID referrerId, @NotBlank @Size(min = 1, max = 64) String referralCode) {}

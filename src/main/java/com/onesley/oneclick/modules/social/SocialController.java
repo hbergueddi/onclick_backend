@@ -48,6 +48,17 @@ public class SocialController {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.request(dto));
     }
 
+    @GetMapping("/users/by-phone")
+    @Operation(
+        summary = "Découverte sociale — profil public minimal par téléphone (invitation/ajout d'ami).",
+        description = "Alternative scoped à /api/users/by-phone (VIEW:USERS, admin). Gardé VIEW:COMMUNITY " +
+                      "(que le CLIENT détient) ; ne renvoie qu'un profil d'affichage minimal, 404 si introuvable."
+    )
+    @PreAuthorize("hasAuthority('VIEW:COMMUNITY')")
+    public PublicProfileDto findUserByPhone(@RequestParam String phone) {
+        return service.findUserByPhone(phone);
+    }
+
     @PatchMapping("/friendships/{id}/accept")
     @Operation(summary = "Accepte une demande d'amitié")
     @PreAuthorize("hasAuthority('UPDATE:COMMUNITY')")
