@@ -73,8 +73,12 @@ public class LoyaltyService {
     }
 
     public List<LoyaltyAccountDto> findByClient(UUID clientId) {
-        return accountRepository.findAllByClientId(clientId).stream()
-            .map(LoyaltyAccount::toDto)
+        // Projection JOIN restaurants (anti-N+1) → DTO enrichi nom/cuisine pour le Pocket
+        // (Mes Points / historique). Le module CLOSED ne peut pas importer l'entité Restaurant.
+        return accountRepository.findAllByClientIdWithRestaurant(clientId).stream()
+            .map(v -> new LoyaltyAccountDto(
+                v.getId(), v.getClientId(), v.getRestaurantId(), v.getTierId(),
+                v.getBalance(), v.getCreatedAt(), v.getRestaurantName(), v.getRestaurantCuisine()))
             .toList();
     }
 

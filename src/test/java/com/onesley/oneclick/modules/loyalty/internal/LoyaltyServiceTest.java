@@ -129,9 +129,14 @@ class LoyaltyServiceTest {
     @Test
     void findByClient_andByRestaurant_map() {
         UUID client = UUID.randomUUID(), resto = UUID.randomUUID();
-        when(accountRepository.findAllByClientId(client)).thenReturn(List.of(account(client, resto, 5)));
+        // findByClient utilise désormais la projection enrichie (JOIN restaurants) → nom resto.
+        LoyaltyAccountWithRestaurantView v = org.mockito.Mockito.mock(LoyaltyAccountWithRestaurantView.class);
+        when(v.getRestaurantName()).thenReturn("Chez Test");
+        when(accountRepository.findAllByClientIdWithRestaurant(client)).thenReturn(List.of(v));
         when(accountRepository.findAllByRestaurantId(resto)).thenReturn(List.of(account(client, resto, 5)));
-        assertThat(service.findByClient(client)).hasSize(1);
+        var accounts = service.findByClient(client);
+        assertThat(accounts).hasSize(1);
+        assertThat(accounts.get(0).restaurantName()).isEqualTo("Chez Test");
         assertThat(service.findAccountsByRestaurant(resto)).hasSize(1);
     }
 

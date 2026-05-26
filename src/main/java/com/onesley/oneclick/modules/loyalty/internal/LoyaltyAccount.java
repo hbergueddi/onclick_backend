@@ -61,9 +61,11 @@ public class LoyaltyAccount extends TimestampedEntity {
     public void addPoints(int points) { this.balance = Math.max(0, this.balance + points); }
     public void deductPoints(int points) { this.balance = Math.max(0, this.balance - points); }
 
-    /** Mapping vers le DTO public exposé hors du module. */
+    /** Mapping vers le DTO public exposé hors du module. {@code restaurantName}/
+     *  {@code restaurantCuisine} restent null (remplis seulement via la projection
+     *  JOIN de {@code findByClient} — cf {@link LoyaltyAccountWithRestaurantView}). */
     public LoyaltyAccountDto toDto() {
-        return new LoyaltyAccountDto(id, clientId, restaurantId, tierId, balance, getCreatedAt());
+        return new LoyaltyAccountDto(id, clientId, restaurantId, tierId, balance, getCreatedAt(), null, null);
     }
 
     @Override
