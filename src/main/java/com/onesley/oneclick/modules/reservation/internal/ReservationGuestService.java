@@ -6,6 +6,7 @@ import com.onesley.oneclick.exception.ConflictException;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.modules.reservation.api.ReservationGuestDto;
 import com.onesley.oneclick.shared.events.ReservationGuestAddedEvent;
+import com.onesley.oneclick.shared.events.ReservationGuestRespondedEvent;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.context.ApplicationEventPublisher;
@@ -128,7 +129,18 @@ public class ReservationGuestService {
             .orElseThrow(() -> new NotFoundException("ReservationGuest", guestId));
         guest.setStatus(dto.status());
         guest.setSeenByHost(false); // notifier organisateur de la nouvelle réponse
-        return repository.save(guest).toDto();
+        ReservationGuestDto result = repository.save(guest).toDto();
+        // Notif server-side à l'organisateur quand l'invité RÉPOND (accepte/décline) —
+        // l'invité CLIENT n'a pas CREATE:NOTIFICATIONS. (Le badge seenByHost reste le signal UI.)
+        if ("accepted".equals(dto.status()) || "refused".equals(dto.status())) {
+            UUID organizerId = reservationRepository.findById(guest.getReservationId())
+                .map(Reservation::getClientId).orElse(null);
+            if (organizerId != null) {
+                eventPublisher.publishEvent(new ReservationGuestRespondedEvent(
+                    guest.getReservationId(), organizerId, "accepted".equals(dto.status())));
+            }
+        }
+        return result;
     }
 
     /** Marque les réponses comme vues par l'organisateur (badge UI). */

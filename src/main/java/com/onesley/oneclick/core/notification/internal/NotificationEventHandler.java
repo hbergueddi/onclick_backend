@@ -6,6 +6,7 @@ import com.onesley.oneclick.shared.events.FriendshipRequestedEvent;
 import com.onesley.oneclick.shared.events.FriendshipRespondedEvent;
 import com.onesley.oneclick.shared.events.ReservationCreatedEvent;
 import com.onesley.oneclick.shared.events.ReservationGuestAddedEvent;
+import com.onesley.oneclick.shared.events.ReservationGuestRespondedEvent;
 import com.onesley.oneclick.shared.events.ReservationStatusChangedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -73,6 +74,17 @@ public class NotificationEventHandler {
         notify(event.guestUserId(), event.reservationId(), "invited",
             "Invitation à dîner 🍽️",
             "Vous êtes invité·e à une réservation. Consultez vos invitations.");
+    }
+
+    /** Un invité répond (accepte/décline) → notif à l'organisateur (server-side). */
+    @ApplicationModuleListener
+    public void onReservationGuestResponded(ReservationGuestRespondedEvent event) {
+        String title = event.accepted() ? "Invitation acceptée ✅" : "Invitation déclinée";
+        String body = event.accepted()
+            ? "Un invité a accepté votre invitation."
+            : "Un invité s'est désisté de votre réservation.";
+        notify(event.organizerId(), event.reservationId(),
+            event.accepted() ? "guest_accepted" : "guest_declined", title, body);
     }
 
     @ApplicationModuleListener
