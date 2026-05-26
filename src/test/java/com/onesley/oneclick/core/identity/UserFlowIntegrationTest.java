@@ -49,6 +49,31 @@ class UserFlowIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void patchMe_asClient_updatesOwnProfile_withoutAdminAuthority() throws Exception {
+        String admin = adminBearer();
+        String email = "l4-me-" + UUID.randomUUID().toString().substring(0, 8) + "@x.ma";
+        ResponseEntity<String> post = restTemplate.exchange(url("/api/users"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("roleId", roleId(), "email", email, "password", "password1", "firstName", "Self", "lastName", "Svc"), admin), String.class);
+        assertThat(post.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        String id = om.readTree(post.getBody()).get("id").asText();
+
+        // sans JWT → 401
+        assertThat(restTemplate.exchange(url("/api/users/me"), HttpMethod.PATCH,
+            jsonJwtEntity(Map.of("firstName", "X"), null), String.class).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        // un CLIENT (qui n'a PAS UPDATE:USERS) édite SON propre profil via /me → 200
+        // (firstName seul : phone a une contrainte d'unicité → éviter les collisions seed)
+        String bearerClient = jwtIssuer.issueAccessToken(UUID.fromString(id), "CLIENT").token();
+        ResponseEntity<String> patch = restTemplate.exchange(url("/api/users/me"), HttpMethod.PATCH,
+            jsonJwtEntity(Map.of("firstName", "SelfEdited"), bearerClient), String.class);
+        assertThat(patch.getStatusCode()).as("CLIENT self-edit via /me — body=%s", patch.getBody()).isEqualTo(HttpStatus.OK);
+        assertThat(om.readTree(patch.getBody()).get("firstName").asText()).isEqualTo("SelfEdited");
+
+        // self-clean
+        restTemplate.exchange(url("/api/users/" + id), HttpMethod.DELETE, jwtEntity(admin), String.class);
+    }
+
+    @Test
     void user_readsAndMe() {
         String admin = adminBearer();
         for (String path : List.of("/api/users?page=0&size=5", "/api/users/me", "/api/users/me/context",

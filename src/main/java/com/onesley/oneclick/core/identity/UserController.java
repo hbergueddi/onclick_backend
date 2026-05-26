@@ -24,6 +24,7 @@ import com.onesley.oneclick.core.identity.api.UserUpdateDto;
 import com.onesley.oneclick.core.identity.api.MeContextDto;
 import com.onesley.oneclick.core.identity.api.User;
 import com.onesley.oneclick.core.identity.api.UserRepository;
+import com.onesley.oneclick.exception.ForbiddenException;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -97,6 +98,20 @@ public class UserController {
     @PreAuthorize("isAuthenticated()")
     public MeContextDto meContext() {
         return service.findMeContext();
+    }
+
+    @PatchMapping("/me")
+    @Operation(
+        summary = "Mise à jour de SON PROPRE profil (self-service) — authentifié, sans droit admin",
+        description = "Self-service Pocket : un user édite ses champs sûrs (firstName/lastName/phone/" +
+                      "avatarUrl/language via UserUpdateDto — PAS de role/tenant/status). Évite d'exiger " +
+                      "UPDATE:USERS (admin) pour une simple MAJ de profil. Mirror de GET /api/users/me."
+    )
+    @PreAuthorize("isAuthenticated()")
+    public UserDto patchMe(@Valid @RequestBody UserUpdateDto dto) {
+        UUID me = SecurityHelper.currentUserId();
+        if (me == null) throw new ForbiddenException("Authentification requise");
+        return service.patch(me, dto);
     }
 
     @GetMapping("/{id}")
