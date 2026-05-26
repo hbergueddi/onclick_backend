@@ -140,6 +140,24 @@ class SocialServiceTest {
     }
 
     @Test
+    void findSentBy_returnsOnlySentNonAccepted() {
+        Friendship sentPending = friendship("pending", me, UUID.randomUUID());
+        sentPending.setRequestedBy(me);                        // moi auteur, pending → ENVOYÉE
+        Friendship sentDeclined = friendship("declined", me, UUID.randomUUID());
+        sentDeclined.setRequestedBy(me);                       // moi auteur, declined → ENVOYÉE (refusée)
+        Friendship sentAccepted = friendship("accepted", me, UUID.randomUUID());
+        sentAccepted.setRequestedBy(me);                       // acceptée → exclue (c'est un ami)
+        Friendship received = friendship("pending", me, UUID.randomUUID());
+        received.setRequestedBy(received.getUser2Id());        // l'autre auteur → reçue, exclue
+        when(friendshipRepo.findAllByUser1Id(me)).thenReturn(List.of(sentPending, sentDeclined, sentAccepted, received));
+        when(friendshipRepo.findAllByUser2Id(me)).thenReturn(List.of());
+        when(userRepository.findAllByIds(any())).thenReturn(List.of());
+        var result = service.findSentBy(me);
+        assertThat(result).extracting(d -> d.id())
+            .containsExactlyInAnyOrder(sentPending.getId(), sentDeclined.getId());
+    }
+
+    @Test
     void request_notAPartyNorAdmin_throwsForbidden() {
         try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
             sec.when(SecurityHelper::currentUserId).thenReturn(UUID.randomUUID()); // tiers

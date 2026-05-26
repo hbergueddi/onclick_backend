@@ -124,6 +124,40 @@ public class SocialService {
     }
 
     /**
+     * Demandes d'amitié ENVOYÉES par un user (Pocket → « Invitations envoyées · Amitié ») :
+     * friendships dont l'user est l'auteur ({@code requested_by}) et encore non acceptées
+     * (status pending ou declined). Enrichit avec le profil du DESTINATAIRE (l'autre partie)
+     * — même pattern anti-N+1 que {@link #findFriendsOf}. Le {@code friendId} du DTO porte
+     * le destinataire (à afficher). Symétrique de {@link #findPendingReceivedBy}.
+     */
+    public List<FriendshipDto> findSentBy(UUID userId) {
+        List<FriendshipDto> base = Stream.concat(
+            friendshipRepo.findAllByUser1Id(userId).stream(),
+            friendshipRepo.findAllByUser2Id(userId).stream()
+        ).filter(f -> userId.equals(f.getRequestedBy())) // envoyée = je suis l'auteur
+         .filter(f -> "pending".equals(f.getStatus()) || "declined".equals(f.getStatus()))
+         .map(Friendship::toDto)
+         .toList();
+
+        Set<UUID> addresseeIds = base.stream()
+            .map(d -> userId.equals(d.user1Id()) ? d.user2Id() : d.user1Id())
+            .collect(Collectors.toSet());
+        Map<UUID, User> users = addresseeIds.isEmpty() ? Map.of()
+            : userRepository.findAllByIds(addresseeIds).stream()
+                .collect(Collectors.toMap(User::getId, u -> u));
+
+        return base.stream().map(d -> {
+            UUID addresseeId = userId.equals(d.user1Id()) ? d.user2Id() : d.user1Id();
+            User u = users.get(addresseeId);
+            return new FriendshipDto(d.id(), d.user1Id(), d.user2Id(), d.status(), d.acceptedAt(), d.createdAt(),
+                addresseeId,
+                u != null ? u.getFirstName() : null,
+                u != null ? u.getLastName() : null,
+                u != null ? u.getAvatarUrl() : null);
+        }).toList();
+    }
+
+    /**
      * Découverte sociale : résout le profil public MINIMAL d'un user par téléphone
      * (recherche pour invitation / ajout d'ami). 404 si aucun user actif. Ne renvoie
      * PAS le UserDto complet (admin VIEW:USERS) — cf {@link SocialDtos.PublicProfileDto}.

@@ -120,6 +120,16 @@ class SocialFlowIntegrationTest extends AbstractIntegrationTest {
         assertThat(restTemplate.exchange(url("/api/social/friendships/pending/by-user/" + b), HttpMethod.GET, jwtEntity(bearerA), String.class)
             .getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
 
+        // a (auteur) voit sa demande dans « ENVOYÉES »
+        ResponseEntity<String> sentByA = restTemplate.exchange(
+            url("/api/social/friendships/sent/by-user/" + a), HttpMethod.GET, jwtEntity(bearerA), String.class);
+        assertThat(sentByA.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(sentByA.getBody()).contains(id);
+
+        // b (destinataire) n'a RIEN envoyé → liste « envoyées » ne contient pas la demande
+        assertThat(restTemplate.exchange(url("/api/social/friendships/sent/by-user/" + b), HttpMethod.GET, jwtEntity(bearerB), String.class)
+            .getBody()).doesNotContain(id);
+
         // self-clean
         jdbc.update("DELETE FROM friendships WHERE id = ?::uuid", java.util.UUID.fromString(id));
         restTemplate.exchange(url("/api/users/" + a), HttpMethod.DELETE, jwtEntity(admin), String.class);
