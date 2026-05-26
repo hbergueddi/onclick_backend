@@ -99,9 +99,24 @@ class SocialServiceTest {
     void request_savesFriendship_bothOrderings() {
         UUID lo = UUID.fromString("00000000-0000-0000-0000-000000000001");
         UUID hi = UUID.fromString("ffffffff-ffff-ffff-ffff-ffffffffffff");
-        assertThat(service.request(new FriendshipCreateDto(hi, lo))).isNotNull(); // swap
-        assertThat(service.request(new FriendshipCreateDto(lo, hi))).isNotNull(); // déjà ordonné
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::currentUserId).thenReturn(lo); // partie de l'amitié
+            sec.when(SecurityHelper::isAdmin).thenReturn(false);
+            assertThat(service.request(new FriendshipCreateDto(hi, lo))).isNotNull(); // swap
+            assertThat(service.request(new FriendshipCreateDto(lo, hi))).isNotNull(); // déjà ordonné
+        }
         verify(friendshipRepo, org.mockito.Mockito.times(2)).save(any());
+    }
+
+    @Test
+    void request_notAPartyNorAdmin_throwsForbidden() {
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::currentUserId).thenReturn(UUID.randomUUID()); // tiers
+            sec.when(SecurityHelper::isAdmin).thenReturn(false);
+            assertThatThrownBy(() -> service.request(
+                new FriendshipCreateDto(UUID.randomUUID(), UUID.randomUUID())))
+                .isInstanceOf(ForbiddenException.class);
+        }
     }
 
     @Test
@@ -167,7 +182,10 @@ class SocialServiceTest {
 
     @Test
     void createReferral_saves() {
-        assertThat(service.create(new ReferralCreateDto(me, "OC-XYZ"))).isNotNull();
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            // requireOwnerOrAdmin(referrerId) → no-op sous mockStatic (le parrain crée son code)
+            assertThat(service.create(new ReferralCreateDto(me, "OC-XYZ"))).isNotNull();
+        }
     }
 
     @Test

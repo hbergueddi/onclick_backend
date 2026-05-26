@@ -94,6 +94,15 @@ public class SocialService {
      */
     @Transactional
     public FriendshipDto request(FriendshipCreateDto dto) {
+        // Le demandeur doit être l'une des 2 parties (ou admin) — empêche de forger une
+        // amitié entre deux tiers. Le gate CREATE:COMMUNITY (détenu par le CLIENT depuis V38)
+        // ne porte pas sur l'identité des parties → contrôle ABAC ici.
+        UUID current = SecurityHelper.currentUserId();
+        if (current == null) throw new ForbiddenException("Authentification requise");
+        if (!SecurityHelper.isAdmin()
+            && !current.equals(dto.user1Id()) && !current.equals(dto.user2Id())) {
+            throw new ForbiddenException("Accès interdit : vous devez être l'une des parties de l'amitié");
+        }
         UUID a = dto.user1Id();
         UUID b = dto.user2Id();
         if (a.toString().compareTo(b.toString()) > 0) { UUID tmp = a; a = b; b = tmp; }
@@ -151,6 +160,8 @@ public class SocialService {
 
     @Transactional
     public ReferralDto create(ReferralCreateDto dto) {
+        // Seul le parrain lui-même (ou admin) crée son code de parrainage.
+        SecurityHelper.requireOwnerOrAdmin(dto.referrerId());
         User referrer = entityManager.getReference(User.class, dto.referrerId());
         Referral r = new Referral(UUID.randomUUID(), referrer, dto.referralCode());
         return referralRepo.save(r).toDto();
