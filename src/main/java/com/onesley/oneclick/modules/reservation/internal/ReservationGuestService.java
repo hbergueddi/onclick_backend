@@ -5,8 +5,10 @@ import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.ConflictException;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.modules.reservation.api.ReservationGuestDto;
+import com.onesley.oneclick.shared.events.ReservationGuestAddedEvent;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +37,7 @@ public class ReservationGuestService {
 
     private final ReservationGuestRepository repository;
     private final ReservationRepository reservationRepository;
+    private final ApplicationEventPublisher eventPublisher; // notif server-side (ReservationGuestAddedEvent)
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -98,7 +101,14 @@ public class ReservationGuestService {
             inviter,
             status
         );
-        return repository.save(guest).toDto();
+        ReservationGuestDto result = repository.save(guest).toDto();
+        // Notif server-side à l'invité IDENTIFIÉ (le CLIENT organisateur n'a pas CREATE:NOTIFICATIONS).
+        // Guests anonymes (téléphone/nom seul) non notifiés (pas de compte destinataire).
+        if (dto.guestUserId() != null) {
+            eventPublisher.publishEvent(
+                new ReservationGuestAddedEvent(reservationId, dto.guestUserId(), dto.invitedBy()));
+        }
+        return result;
     }
 
     /**

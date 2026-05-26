@@ -2,7 +2,9 @@ package com.onesley.oneclick.core.notification.internal;
 
 import com.onesley.oneclick.core.notification.api.NotificationDtos.NotificationCreateDto;
 import com.onesley.oneclick.core.notification.api.NotificationDtos.PushReservationDto;
+import com.onesley.oneclick.shared.events.FriendshipRequestedEvent;
 import com.onesley.oneclick.shared.events.ReservationCreatedEvent;
+import com.onesley.oneclick.shared.events.ReservationGuestAddedEvent;
 import com.onesley.oneclick.shared.events.ReservationStatusChangedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,6 +41,28 @@ public class NotificationEventHandler {
     private final FcmPushService pushService;
 
     private static final String DEEP_LINK = "/pocket/oneclick?tab=suivi";
+    private static final String COMMUNITY_LINK = "/pocket/circle";
+
+    /**
+     * Demande d'amitié → notif in-app au destinataire. Server-side car le CLIENT
+     * demandeur n'a pas {@code CREATE:NOTIFICATIONS} (le POST front 403'ait).
+     */
+    @ApplicationModuleListener
+    public void onFriendshipRequested(FriendshipRequestedEvent event) {
+        createInApp(event.addresseeId(), "community", "Demande d'ami 👋",
+            "Vous avez reçu une nouvelle demande d'ami.", COMMUNITY_LINK);
+    }
+
+    /**
+     * Invité IDENTIFIÉ ajouté à une réservation → notif « Invitation à dîner » +
+     * push best-effort (canal réservation). Guests anonymes non concernés (pas d'event).
+     */
+    @ApplicationModuleListener
+    public void onReservationGuestAdded(ReservationGuestAddedEvent event) {
+        notify(event.guestUserId(), event.reservationId(), "invited",
+            "Invitation à dîner 🍽️",
+            "Vous êtes invité·e à une réservation. Consultez vos invitations.");
+    }
 
     @ApplicationModuleListener
     public void onReservationCreated(ReservationCreatedEvent event) {
@@ -53,6 +77,20 @@ public class NotificationEventHandler {
         String[] tb = titleAndBody(event.newStatus());
         if (tb == null) return; // statuts sans notification client (ex: pending)
         notify(event.clientId(), event.reservationId(), event.newStatus(), tb[0], tb[1]);
+    }
+
+    /** Notif in-app seule (sans push) — pour les events non-réservation (ex: communauté). */
+    private void createInApp(UUID recipientUserId, String type, String title, String body, String link) {
+        if (recipientUserId == null) {
+            log.warn("[notif-event] recipient null (type={}) — skip", type);
+            return;
+        }
+        try {
+            notificationService.create(new NotificationCreateDto(recipientUserId, type, "inapp", title, body, link));
+        } catch (Exception ex) {
+            log.warn("[notif-event] création notif in-app échouée (recipient={}, type={}): {}",
+                recipientUserId, type, ex.getMessage());
+        }
     }
 
     private void notify(UUID recipientUserId, UUID reservationId, String status, String title, String body) {

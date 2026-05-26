@@ -6,8 +6,10 @@ import com.onesley.oneclick.exception.ConflictException;
 import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.security.SecurityHelper;
+import com.onesley.oneclick.shared.events.FriendshipRequestedEvent;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,6 +46,7 @@ public class SocialService {
     private final FriendGroupRepository groupRepo;
     private final FriendGroupMemberRepository groupMemberRepo;
     private final UserRepository userRepository; // domaine identity (API publique) — enrichissement profils amis
+    private final ApplicationEventPublisher eventPublisher; // notif server-side (FriendshipRequestedEvent)
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -121,7 +124,12 @@ public class SocialService {
         User u1 = entityManager.getReference(User.class, a);
         User u2 = entityManager.getReference(User.class, b);
         Friendship f = new Friendship(UUID.randomUUID(), u1, u2);
-        return friendshipRepo.save(f).toDto();
+        Friendship saved = friendshipRepo.save(f);
+        // Notif server-side au destinataire (l'autre partie) — le CLIENT n'a pas CREATE:NOTIFICATIONS.
+        UUID requester = current.equals(dto.user2Id()) ? dto.user2Id() : dto.user1Id();
+        UUID addressee = requester.equals(dto.user1Id()) ? dto.user2Id() : dto.user1Id();
+        eventPublisher.publishEvent(new FriendshipRequestedEvent(saved.getId(), requester, addressee));
+        return saved.toDto();
     }
 
     @Transactional

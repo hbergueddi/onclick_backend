@@ -36,6 +36,7 @@ class ReservationGuestServiceTest {
     @Mock ReservationGuestRepository repository;
     @Mock ReservationRepository reservationRepository;
     @Mock EntityManager em;
+    @Mock org.springframework.context.ApplicationEventPublisher eventPublisher; // ReservationGuestAddedEvent
     @InjectMocks ReservationGuestService service;
 
     @BeforeEach

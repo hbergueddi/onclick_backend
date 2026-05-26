@@ -52,6 +52,7 @@ class SocialServiceTest {
     @Mock FriendGroupMemberRepository groupMemberRepo;
     @Mock EntityManager entityManager;
     @Mock com.onesley.oneclick.core.identity.api.UserRepository userRepository; // enrichissement profils amis (findFriendsOf)
+    @Mock org.springframework.context.ApplicationEventPublisher eventPublisher; // FriendshipRequestedEvent
     @InjectMocks SocialService service;
 
     private final UUID me = UUID.randomUUID();
