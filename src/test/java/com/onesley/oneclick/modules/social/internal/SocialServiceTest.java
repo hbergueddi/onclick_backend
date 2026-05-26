@@ -172,6 +172,34 @@ class SocialServiceTest {
         }
     }
 
+    @Test
+    void deleteFriendship_notFound_throwsNotFound() {
+        when(friendshipRepo.findById(any())).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.deleteFriendship(UUID.randomUUID())).isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void deleteFriendship_asParty_deletes() {
+        Friendship f = friendship("accepted", me, UUID.randomUUID());
+        when(friendshipRepo.findById(any())).thenReturn(Optional.of(f));
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::currentUserId).thenReturn(me);
+            service.deleteFriendship(f.getId());
+        }
+        verify(friendshipRepo).delete(f);
+    }
+
+    @Test
+    void deleteFriendship_notPartyNorAdmin_throwsForbidden() {
+        Friendship f = friendship("accepted", UUID.randomUUID(), UUID.randomUUID());
+        when(friendshipRepo.findById(any())).thenReturn(Optional.of(f));
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::currentUserId).thenReturn(me); // tiers
+            sec.when(SecurityHelper::isAdmin).thenReturn(false);
+            assertThatThrownBy(() -> service.deleteFriendship(f.getId())).isInstanceOf(ForbiddenException.class);
+        }
+    }
+
     // ─── referrals ─────────────────────────────────────────────────────────────
 
     @Test

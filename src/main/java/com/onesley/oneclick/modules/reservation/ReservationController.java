@@ -222,6 +222,14 @@ public class ReservationController {
         return guestService.findByGuestUser(userId);
     }
 
+    @GetMapping("/guests/by-inviter/{inviterId}")
+    @Operation(summary = "Liste toutes les invitations ENVOYÉES par un organisateur (Pocket → « Invitations envoyées »)")
+    @PreAuthorize("hasAuthority('VIEW:RESERVATIONS')")
+    public List<ReservationGuestDto> findGuestsByInviter(@PathVariable UUID inviterId) {
+        SecurityHelper.requireOwnerOrAdmin(inviterId); // ses propres invitations envoyées (ou admin)
+        return guestService.findByInviter(inviterId);
+    }
+
     @PostMapping("/{reservationId}/guests")
     @Operation(
         summary = "Invite un guest à une réservation",

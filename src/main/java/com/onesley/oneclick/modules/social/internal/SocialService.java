@@ -165,6 +165,20 @@ public class SocialService {
     }
 
     /**
+     * Retrait DÉFINITIF d'une amitié (Pocket → « Retirer cet ami »). Contrairement à
+     * {@link #decline} (qui pose le statut {@code declined} pour une demande en cours),
+     * supprime physiquement la row — les deux ex-amis pourront se redemander en ami.
+     * Réservé à une partie de l'amitié (user1/user2) ou admin (ABAC). 404 si absent.
+     */
+    @Transactional
+    public void deleteFriendship(UUID friendshipId) {
+        Friendship f = friendshipRepo.findById(friendshipId)
+            .orElseThrow(() -> new NotFoundException("Friendship", friendshipId));
+        requireFriendshipPartyOrAdmin(f);
+        friendshipRepo.delete(f);
+    }
+
+    /**
      * Vérifie que le user courant fait partie de l'amitié (user1 ou user2) OU est admin.
      * Faute de champ requester/receiver distinct, on accepte les 2 parties.
      */

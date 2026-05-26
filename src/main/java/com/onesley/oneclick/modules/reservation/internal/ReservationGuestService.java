@@ -55,6 +55,12 @@ public class ReservationGuestService {
             .stream().map(ReservationGuest::toDto).toList();
     }
 
+    /** Toutes les invitations ENVOYÉES par un organisateur (Pocket → "Invitations envoyées"). */
+    public List<ReservationGuestDto> findByInviter(UUID inviterId) {
+        return repository.findAllByInvitedById(inviterId)
+            .stream().map(ReservationGuest::toDto).toList();
+    }
+
     /**
      * Invite un guest à une réservation. Au moins un identifiant requis
      * ({@code guestUserId} OU {@code guestPhone} OU {@code guestName}).

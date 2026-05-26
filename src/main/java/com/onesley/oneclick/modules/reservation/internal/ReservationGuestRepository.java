@@ -17,4 +17,6 @@ import java.util.UUID;
 public interface ReservationGuestRepository extends JpaRepository<ReservationGuest, UUID>, JpaSpecificationExecutor<ReservationGuest> {
     java.util.List<ReservationGuest> findAllByReservationId(java.util.UUID reservationId);
     java.util.List<ReservationGuest> findAllByGuestUserId(java.util.UUID guestUserId);
+    /** Invitations ENVOYÉES par un organisateur (colonne {@code invited_by}, champ {@code invitedById}). */
+    java.util.List<ReservationGuest> findAllByInvitedById(java.util.UUID invitedById);
 }

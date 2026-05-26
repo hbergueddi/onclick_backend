@@ -59,6 +59,12 @@ class ReservationGuestServiceTest {
     }
 
     @Test
+    void findByInviter_maps() {
+        when(repository.findAllByInvitedById(any())).thenReturn(List.of(guest("invited"), guest("accepted")));
+        assertThat(service.findByInviter(UUID.randomUUID())).hasSize(2);
+    }
+
+    @Test
     void invite_noIdentifier_throwsBadRequest() {
         assertThatThrownBy(() -> service.invite(UUID.randomUUID(),
             new ReservationGuestDto.CreateDto(null, null, null, null, null)))

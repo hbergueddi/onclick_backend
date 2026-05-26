@@ -69,6 +69,14 @@ public class SocialController {
     @PreAuthorize("hasAuthority('UPDATE:COMMUNITY')")
     public FriendshipDto decline(@PathVariable UUID id) { return service.decline(id); }
 
+    @DeleteMapping("/friendships/{id}")
+    @Operation(summary = "Retire définitivement une amitié (Pocket « Retirer cet ami ») — partie ou admin")
+    @PreAuthorize("hasAuthority('DELETE:COMMUNITY')")
+    public ResponseEntity<Void> deleteFriendship(@PathVariable UUID id) {
+        service.deleteFriendship(id);
+        return ResponseEntity.noContent().build();
+    }
+
     // ─── Referrals ───────────────────────────────────────────────────────────
 
     @GetMapping("/referrals")
