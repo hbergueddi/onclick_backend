@@ -91,6 +91,42 @@ class SocialFlowIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void pendingReceived_byUser_returnsReceivedRequests_andRbac() throws Exception {
+        String admin = adminBearer();
+        String a = createUser(admin), b = createUser(admin); // a = demandeur, b = destinataire
+        String bearerA = jwtIssuer.issueAccessToken(UUID.fromString(a), "CLIENT").token();
+        String bearerB = jwtIssuer.issueAccessToken(UUID.fromString(b), "CLIENT").token();
+
+        // a DEMANDE b (avec le bearer de a → requested_by = a, status pending)
+        ResponseEntity<String> post = restTemplate.exchange(url("/api/social/friendships"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("user1Id", a, "user2Id", b), bearerA), String.class);
+        assertThat(post.getStatusCode().is2xxSuccessful())
+            .as("friendship create attendu 2xx — reçu %s, body=%s", post.getStatusCode(), post.getBody()).isTrue();
+        String id = om.readTree(post.getBody()).get("id").asText();
+
+        // b (destinataire) voit la demande comme REÇUE
+        ResponseEntity<String> received = restTemplate.exchange(
+            url("/api/social/friendships/pending/by-user/" + b), HttpMethod.GET, jwtEntity(bearerB), String.class);
+        assertThat(received.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(received.getBody()).contains(id);
+
+        // a (auteur) ne voit PAS sa propre demande comme « reçue »
+        ResponseEntity<String> sent = restTemplate.exchange(
+            url("/api/social/friendships/pending/by-user/" + a), HttpMethod.GET, jwtEntity(bearerA), String.class);
+        assertThat(sent.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(sent.getBody()).doesNotContain(id);
+
+        // RBAC : a ne peut pas lire les demandes reçues de b (requireOwnerOrAdmin) → 403
+        assertThat(restTemplate.exchange(url("/api/social/friendships/pending/by-user/" + b), HttpMethod.GET, jwtEntity(bearerA), String.class)
+            .getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        // self-clean
+        jdbc.update("DELETE FROM friendships WHERE id = ?::uuid", java.util.UUID.fromString(id));
+        restTemplate.exchange(url("/api/users/" + a), HttpMethod.DELETE, jwtEntity(admin), String.class);
+        restTemplate.exchange(url("/api/users/" + b), HttpMethod.DELETE, jwtEntity(admin), String.class);
+    }
+
+    @Test
     void referrals_listAndCreate() {
         String admin = adminBearer();
         assertThat(restTemplate.exchange(url("/api/social/referrals?page=0&size=5"), HttpMethod.GET, jwtEntity(admin), String.class)

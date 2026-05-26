@@ -51,8 +51,12 @@ public class NotificationEventHandler {
      */
     @ApplicationModuleListener
     public void onFriendshipRequested(FriendshipRequestedEvent event) {
-        createInApp(event.addresseeId(), "community", "Demande d'ami 👋",
-            "Vous avez reçu une nouvelle demande d'ami.", COMMUNITY_LINK);
+        // type=friend_request + link=friendshipId : la cloche (GlassHeader) reconnaît
+        // ce type, ouvre la pop-up d'acceptation et appelle acceptFriendship(link).
+        // Le type 'friend_request' est whitelisté dans le CHECK notifications.type (V39).
+        String link = event.friendshipId() != null ? event.friendshipId().toString() : COMMUNITY_LINK;
+        createInApp(event.addresseeId(), "friend_request", "Demande d'ami 👋",
+            "Vous avez reçu une nouvelle demande d'ami.", link);
     }
 
     /** Réponse à une demande d'amitié → notif au demandeur (server-side, pas de CREATE:NOTIFICATIONS côté client). */

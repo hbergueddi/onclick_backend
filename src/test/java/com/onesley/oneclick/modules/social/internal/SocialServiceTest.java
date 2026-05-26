@@ -110,6 +110,36 @@ class SocialServiceTest {
     }
 
     @Test
+    void request_setsRequestedBy_toCurrentUser() {
+        UUID lo = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        UUID hi = UUID.fromString("ffffffff-ffff-ffff-ffff-ffffffffffff");
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::currentUserId).thenReturn(lo);
+            sec.when(SecurityHelper::isAdmin).thenReturn(false);
+            service.request(new FriendshipCreateDto(lo, hi));
+        }
+        org.mockito.ArgumentCaptor<Friendship> cap = org.mockito.ArgumentCaptor.forClass(Friendship.class);
+        verify(friendshipRepo).save(cap.capture());
+        assertThat(cap.getValue().getRequestedBy()).isEqualTo(lo); // direction V39 = l'auteur
+    }
+
+    @Test
+    void findPendingReceivedBy_returnsOnlyReceivedPending() {
+        UUID requester = UUID.randomUUID();
+        Friendship received = friendship("pending", me, requester);
+        received.setRequestedBy(requester);                 // l'autre a demandé → REÇUE
+        Friendship sentByMe = friendship("pending", me, UUID.randomUUID());
+        sentByMe.setRequestedBy(me);                        // moi auteur → envoyée, exclue
+        Friendship accepted = friendship("accepted", me, UUID.randomUUID()); // pas pending, exclue
+        when(friendshipRepo.findAllByUser1Id(me)).thenReturn(List.of(received, sentByMe, accepted));
+        when(friendshipRepo.findAllByUser2Id(me)).thenReturn(List.of());
+        when(userRepository.findAllByIds(any())).thenReturn(List.of());
+        var result = service.findPendingReceivedBy(me);
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).id()).isEqualTo(received.getId());
+    }
+
+    @Test
     void request_notAPartyNorAdmin_throwsForbidden() {
         try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
             sec.when(SecurityHelper::currentUserId).thenReturn(UUID.randomUUID()); // tiers

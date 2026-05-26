@@ -41,6 +41,14 @@ public class SocialController {
         return service.findFriendsOf(userId);
     }
 
+    @GetMapping("/friendships/pending/by-user/{userId}")
+    @Operation(summary = "Demandes d'amitié REÇUES (pending) par un user — Pocket « Demandes reçues »")
+    @PreAuthorize("hasAuthority('VIEW:COMMUNITY')")
+    public List<FriendshipDto> findPendingReceived(@PathVariable UUID userId) {
+        SecurityHelper.requireOwnerOrAdmin(userId);
+        return service.findPendingReceivedBy(userId);
+    }
+
     @PostMapping("/friendships")
     @Operation(summary = "Demande d'amitié (pending)")
     @PreAuthorize("hasAuthority('CREATE:COMMUNITY')")

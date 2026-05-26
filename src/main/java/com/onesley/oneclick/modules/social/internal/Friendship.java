@@ -26,6 +26,8 @@ public class Friendship extends TimestampedEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "user2_id", nullable = false) private User user2;
      @Column(name = "status", nullable = false, length = 64) @Setter private String status = "pending";
     @Column(name = "accepted_at") private Instant acceptedAt;
+    /** Auteur de la demande (V39) — distingue « reçue » vs « envoyée ». NULL pour l'historique. */
+    @Column(name = "requested_by") @Setter private UUID requestedBy;
     public Friendship(UUID id, User user1, User user2) {
         // Convention canonique : user1_id < user2_id pour respecter le CHECK `friendships_check`.
         // IMPORTANT : Postgres compare les UUID en BYTE-WISE (= hex lexicographique), PAS comme

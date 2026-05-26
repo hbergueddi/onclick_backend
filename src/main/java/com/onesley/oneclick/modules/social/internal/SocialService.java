@@ -88,6 +88,42 @@ public class SocialService {
     }
 
     /**
+     * Demandes d'amitié REÇUES par un user (Pocket → « Demandes reçues ») : status
+     * {@code pending} où l'user est partie mais N'EST PAS l'auteur ({@code requested_by}).
+     * Enrichit avec le profil du DEMANDEUR (l'autre partie) — même pattern anti-N+1 que
+     * {@link #findFriendsOf}. Le {@code friendId} du DTO porte le demandeur (à afficher).
+     *
+     * <p>Rows historiques sans {@code requested_by} (NULL) : direction inconnue → on les
+     * considère « reçues » (par défaut sûr ; en pratique aucune demande pending pré-V39).
+     */
+    public List<FriendshipDto> findPendingReceivedBy(UUID userId) {
+        List<FriendshipDto> base = Stream.concat(
+            friendshipRepo.findAllByUser1Id(userId).stream(),
+            friendshipRepo.findAllByUser2Id(userId).stream()
+        ).filter(f -> "pending".equals(f.getStatus()))
+         .filter(f -> !userId.equals(f.getRequestedBy())) // reçue = je ne suis pas l'auteur
+         .map(Friendship::toDto)
+         .toList();
+
+        Set<UUID> requesterIds = base.stream()
+            .map(d -> userId.equals(d.user1Id()) ? d.user2Id() : d.user1Id())
+            .collect(Collectors.toSet());
+        Map<UUID, User> users = requesterIds.isEmpty() ? Map.of()
+            : userRepository.findAllByIds(requesterIds).stream()
+                .collect(Collectors.toMap(User::getId, u -> u));
+
+        return base.stream().map(d -> {
+            UUID requesterId = userId.equals(d.user1Id()) ? d.user2Id() : d.user1Id();
+            User u = users.get(requesterId);
+            return new FriendshipDto(d.id(), d.user1Id(), d.user2Id(), d.status(), d.acceptedAt(), d.createdAt(),
+                requesterId,
+                u != null ? u.getFirstName() : null,
+                u != null ? u.getLastName() : null,
+                u != null ? u.getAvatarUrl() : null);
+        }).toList();
+    }
+
+    /**
      * Découverte sociale : résout le profil public MINIMAL d'un user par téléphone
      * (recherche pour invitation / ajout d'ami). 404 si aucun user actif. Ne renvoie
      * PAS le UserDto complet (admin VIEW:USERS) — cf {@link SocialDtos.PublicProfileDto}.
@@ -125,6 +161,7 @@ public class SocialService {
         User u1 = entityManager.getReference(User.class, a);
         User u2 = entityManager.getReference(User.class, b);
         Friendship f = new Friendship(UUID.randomUUID(), u1, u2);
+        f.setRequestedBy(current); // V39 : direction (auteur) — distingue « reçue » vs « envoyée »
         Friendship saved = friendshipRepo.save(f);
         // Notif server-side au destinataire (l'autre partie) — le CLIENT n'a pas CREATE:NOTIFICATIONS.
         UUID requester = current.equals(dto.user2Id()) ? dto.user2Id() : dto.user1Id();
