@@ -98,4 +98,53 @@ class EventFlowIntegrationTest extends AbstractIntegrationTest {
                 "eventAt", Instant.now().plus(1, ChronoUnit.DAYS).toString()), bearerForRole("CLIENT")), String.class)
             .getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
+
+    /**
+     * V42 — RSVP est self-service (CREATE/DELETE:EVENT_RSVP), pas UPDATE:EVENTS (admin).
+     * Un CLIENT peut s'inscrire/annuler LUI-MÊME, mais pas pour un AUTRE user
+     * (ABAC requireOwnerOrAdmin → 403, corrige l'IDOR sur userId).
+     */
+    @Test
+    void rsvp_asClient_selfOk_otherUser403() throws Exception {
+        String admin = adminBearer();
+        // Event actif créé par l'admin
+        ResponseEntity<String> post = restTemplate.exchange(url("/api/events"), HttpMethod.POST,
+            jsonJwtEntity(Map.of(
+                "tenantId", tenantId(), "title", "V42 RSVP RBAC",
+                "eventAt", Instant.now().plus(7, ChronoUnit.DAYS).toString(),
+                "capacity", 50, "isActive", true), admin), String.class);
+        assertThat(post.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        String eventId = om.readTree(post.getBody()).get("id").asText();
+
+        String clientBearer = bearerForRole("CLIENT");
+        // même requête que bearerForRole("CLIENT") → même user (sub du JWT)
+        String clientId = jdbc.queryForObject(
+            "SELECT u.id::text FROM users u JOIN roles r ON r.id = u.role_id "
+            + "WHERE r.code = 'CLIENT' AND u.deleted_at IS NULL LIMIT 1", String.class);
+        String otherUserId = jdbc.queryForObject(
+            "SELECT u.id::text FROM users u JOIN roles r ON r.id = u.role_id "
+            + "WHERE r.code = 'CLIENT' AND u.deleted_at IS NULL AND u.id::text <> ? LIMIT 1",
+            String.class, clientId);
+
+        // CLIENT s'inscrit LUI-MÊME → 201 (CREATE:EVENT_RSVP + owner)
+        assertThat(restTemplate.exchange(url("/api/events/participations"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("eventId", eventId, "userId", clientId, "status", "going"), clientBearer), String.class)
+            .getStatusCode()).isEqualTo(HttpStatus.CREATED);
+
+        // CLIENT tente d'inscrire un AUTRE user → 403 (owner check)
+        assertThat(restTemplate.exchange(url("/api/events/participations"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("eventId", eventId, "userId", otherUserId, "status", "going"), clientBearer), String.class)
+            .getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        // CLIENT annule SA propre inscription → 204
+        assertThat(restTemplate.exchange(url("/api/events/participations/by-event/" + eventId + "/user/" + clientId),
+            HttpMethod.DELETE, jwtEntity(clientBearer), String.class).getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+
+        // CLIENT tente d'annuler l'inscription d'un AUTRE user → 403 (owner check, avant le service)
+        assertThat(restTemplate.exchange(url("/api/events/participations/by-event/" + eventId + "/user/" + otherUserId),
+            HttpMethod.DELETE, jwtEntity(clientBearer), String.class).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        // cleanup
+        restTemplate.exchange(url("/api/events/" + eventId), HttpMethod.DELETE, jwtEntity(admin), String.class);
+    }
 }

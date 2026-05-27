@@ -75,18 +75,23 @@ public class EventController {
         return service.findParticipations(eventId);
     }
 
+    // Self-service RSVP : CREATE:EVENT_RSVP (PAS UPDATE:EVENTS, qui est admin et
+    // protège aussi PATCH /events/{id}). ABAC : requireOwnerOrAdmin → un user
+    // ne peut inscrire que LUI-MÊME (ou admin), corrige l'IDOR sur dto.userId().
     @PostMapping("/participations")
     @Operation(summary = "RSVP sur un événement (going|maybe|declined|attended)")
-    @PreAuthorize("hasAuthority('UPDATE:EVENTS')")
+    @PreAuthorize("hasAuthority('CREATE:EVENT_RSVP')")
     public ResponseEntity<ParticipationDto> rsvp(@Valid @RequestBody ParticipationCreateDto dto) {
+        SecurityHelper.requireOwnerOrAdmin(dto.userId()); // sa propre inscription (ou admin)
         ParticipationDto p = service.rsvp(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(p);
     }
 
     @DeleteMapping("/participations/by-event/{eventId}/user/{userId}")
     @Operation(summary = "Sprint D — Cancel RSVP (decrement places_taken si going)")
-    @PreAuthorize("hasAuthority('UPDATE:EVENTS')")
+    @PreAuthorize("hasAuthority('DELETE:EVENT_RSVP')")
     public ResponseEntity<Void> cancelRsvp(@PathVariable UUID eventId, @PathVariable UUID userId) {
+        SecurityHelper.requireOwnerOrAdmin(userId); // annule SA propre inscription (ou admin)
         service.cancelRsvp(eventId, userId);
         return ResponseEntity.noContent().build();
     }
