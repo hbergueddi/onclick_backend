@@ -2,6 +2,9 @@ package com.onesley.oneclick.core.notification;
 
 import com.onesley.oneclick.core.notification.api.PromoNotificationDtos.*;
 import com.onesley.oneclick.core.notification.internal.PromoNotificationService;
+import com.onesley.oneclick.security.RestaurantAccessGuard;
+import com.onesley.oneclick.security.SecurityHelper;
+import com.onesley.oneclick.exception.ForbiddenException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -24,14 +27,18 @@ import lombok.RequiredArgsConstructor;
 public class PromoNotificationController {
 
     private final PromoNotificationService service;
+    private final RestaurantAccessGuard restaurantAccessGuard;
 
     @GetMapping
-    @Operation(summary = "Liste des demandes push promo (admin)")
+    @Operation(summary = "Liste des demandes push promo (admin = toutes ; restaurateur = son resto)")
     @PreAuthorize("hasAuthority('VIEW:NOTIFICATIONS')")
     public List<PromoRequestDto> findAll(
         @RequestParam(required = false) String status,
         @RequestParam(required = false) UUID restaurantId
     ) {
+        // ABAC : un non-admin ne liste que les demandes de SON restaurant
+        // (admin → restaurantId optionnel, voit tout).
+        restaurantAccessGuard.requireAdminOrActiveStaffOf(restaurantId);
         return service.findAll(status, restaurantId);
     }
 
@@ -40,9 +47,13 @@ public class PromoNotificationController {
     public PromoRequestDto findById(@PathVariable UUID id) { return service.findById(id); }
 
     @PostMapping
-    @Operation(summary = "Restaurateur soumet une demande push promo")
-    @PreAuthorize("hasAuthority('CREATE:NOTIFICATIONS')")
+    @Operation(summary = "Restaurateur soumet une demande push promo pour son offre")
+    // A(a) : le restaurateur (CREATE:OFFERS) demande une notif pour SON offre.
+    // CREATE:NOTIFICATIONS était SUPERADMIN-only (V34) → 403 restaurateur. ABAC
+    // requireAdminOrActiveStaffOf(restaurantId) ; la modération (review) reste admin.
+    @PreAuthorize("hasAuthority('CREATE:OFFERS')")
     public ResponseEntity<PromoRequestDto> create(@Valid @RequestBody PromoRequestCreateDto dto) {
+        restaurantAccessGuard.requireAdminOrActiveStaffOf(dto.restaurantId());
         return ResponseEntity.status(HttpStatus.CREATED).body(service.create(dto));
     }
 
@@ -50,6 +61,7 @@ public class PromoNotificationController {
     @Operation(summary = "Admin approve/refuse une demande push promo")
     @PreAuthorize("hasAuthority('UPDATE:NOTIFICATIONS')")
     public PromoRequestDto review(@PathVariable UUID id, @Valid @RequestBody PromoRequestReviewDto dto) {
+        requireAdminModeration();
         return service.review(id, dto);
     }
 
@@ -61,6 +73,7 @@ public class PromoNotificationController {
         @RequestParam(defaultValue = "0") int sentCount,
         @RequestParam(required = false) String error
     ) {
+        requireAdminModeration();
         return service.markSent(id, sentCount, error);
     }
 
@@ -68,4 +81,16 @@ public class PromoNotificationController {
     @Operation(summary = "Stats globales promo (offers, impressions, redemptions, push)")
     @PreAuthorize("hasAuthority('VIEW:NOTIFICATIONS')")
     public PromoStatsDto stats() { return service.stats(); }
+
+    /**
+     * Modération promo (review / markSent) = admin (SUPERADMIN/GROUP_ADMIN) uniquement.
+     * {@code UPDATE:NOTIFICATIONS} est détenu par TOUS les rôles (V34, accès cloche
+     * self-service) : sans ce garde, un restaurateur approuverait sa propre demande
+     * (push aux clients sans validation admin). ABAC admin-only.
+     */
+    private void requireAdminModeration() {
+        if (!SecurityHelper.isAdmin()) {
+            throw new ForbiddenException("Modération des demandes push réservée à l'administrateur");
+        }
+    }
 }
