@@ -403,4 +403,21 @@ class LoyaltyServiceTest {
         when(transactionRepository.findAllByRestaurantIdEnriched(eq(resto), any(Pageable.class))).thenReturn(List.of());
         assertThat(service.findTransactionsByRestaurant(resto, 50)).isEmpty();
     }
+
+    @Test
+    void searchClients_mapsUsersToClientNameDto() {
+        User u = org.mockito.Mockito.mock(User.class);
+        UUID id = UUID.randomUUID();
+        when(u.getId()).thenReturn(id);
+        when(u.getFirstName()).thenReturn("Karim");
+        when(u.getLastName()).thenReturn("B");
+        when(u.getPhone()).thenReturn("+212600000001");
+        when(userRepository.searchClients(anyString(), any(Pageable.class))).thenReturn(List.of(u));
+
+        List<ClientNameDto> dtos = service.searchClients("kar", 8);
+        assertThat(dtos).hasSize(1);
+        assertThat(dtos.get(0).id()).isEqualTo(id);
+        assertThat(dtos.get(0).firstName()).isEqualTo("Karim");
+        assertThat(dtos.get(0).phone()).isEqualTo("+212600000001");
+    }
 }

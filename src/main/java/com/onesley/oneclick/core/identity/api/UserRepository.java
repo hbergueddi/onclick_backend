@@ -62,6 +62,25 @@ public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificat
     );
 
     /**
+     * Recherche floue de clients (rôle CLIENT) par téléphone / prénom / nom — usage
+     * staff Snap2Earn (identification du porteur du ticket). Insensible à la casse,
+     * limité via {@link Pageable}. Soft-deletes exclus. Scoping autorité/ABAC porté
+     * par le contrôleur ({@code CREATE:LOYALTY} + RestaurantAccessGuard).
+     */
+    @Query("""
+        SELECT u FROM User u
+        WHERE u.role.code = 'CLIENT'
+          AND u.deletedAt IS NULL
+          AND (
+            LOWER(COALESCE(u.phone, '')) LIKE LOWER(CONCAT('%', :q, '%'))
+            OR LOWER(u.firstName) LIKE LOWER(CONCAT('%', :q, '%'))
+            OR LOWER(u.lastName) LIKE LOWER(CONCAT('%', :q, '%'))
+          )
+        ORDER BY u.firstName, u.lastName
+        """)
+    java.util.List<User> searchClients(@Param("q") String q, Pageable pageable);
+
+    /**
      * Bug 34 (UserDetails) — Eager load user + role + permissions + menu + action
      * en 1 query pour {@code OneClickUserDetailsService} (évite N+1 + alimente le
      * cache Redis "userDetails", 1h TTL).

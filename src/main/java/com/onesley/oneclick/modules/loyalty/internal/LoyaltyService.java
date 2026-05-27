@@ -125,6 +125,18 @@ public class LoyaltyService {
             .toList();
     }
 
+    /**
+     * Recherche floue de clients (Snap2Earn) par téléphone / prénom / nom — réutilise
+     * {@link ClientNameDto}. Le scoping (CREATE:LOYALTY + RestaurantAccessGuard) est
+     * porté par le contrôleur. {@code limit} borné [1..20] pour éviter les gros scans.
+     */
+    public List<ClientNameDto> searchClients(String q, int limit) {
+        int capped = Math.min(Math.max(limit, 1), 20);
+        return userRepository.searchClients(q, org.springframework.data.domain.PageRequest.of(0, capped)).stream()
+            .map(u -> new ClientNameDto(u.getId(), u.getFirstName(), u.getLastName(), u.getPhone()))
+            .toList();
+    }
+
     public List<LoyaltyTransactionDto> findTransactionsByAccount(UUID accountId) {
         LoyaltyAccount a = accountRepository.findById(accountId)
             .orElseThrow(() -> new NotFoundException("LoyaltyAccount", accountId));

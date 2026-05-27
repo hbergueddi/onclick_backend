@@ -133,6 +133,24 @@ public class LoyaltyController {
         return service.resolveClientNames(query.restaurantIds(), query.clientIds());
     }
 
+    @GetMapping("/clients/search")
+    @Operation(
+        summary = "Recherche client Snap2Earn — par téléphone / nom (scopé staff actif du restaurant).",
+        description = "Identification du porteur du ticket. CREATE:LOYALTY (détenu par le staff qui scanne) " +
+                      "+ ABAC RestaurantAccessGuard. Alternative à /api/users (VIEW:USERS, admin-only). " +
+                      "q &lt; 2 caractères → liste vide (évite les gros scans)."
+    )
+    @PreAuthorize("hasAuthority('CREATE:LOYALTY')")
+    public List<ClientNameDto> searchClients(
+        @RequestParam String q,
+        @RequestParam UUID restaurantId,
+        @RequestParam(defaultValue = "8") int limit
+    ) {
+        restaurantAccessGuard.requireAdminOrActiveStaffOf(restaurantId);
+        if (q == null || q.trim().length() < 2) return List.of();
+        return service.searchClients(q.trim(), limit);
+    }
+
     @GetMapping("/accounts/{accountId}/transactions")
     @Operation(summary = "Historique des mouvements d'un compte")
     @PreAuthorize("hasAuthority('VIEW:LOYALTY')")
