@@ -151,6 +151,22 @@ public class LoyaltyController {
         return service.searchClients(q.trim(), limit);
     }
 
+    @GetMapping("/clients/by-code")
+    @Operation(
+        summary = "Résout un client par son Code OneClick (referral_code — QR / Carte Wallet) — scopé staff.",
+        description = "Identification du porteur du ticket via le code scanné. CREATE:LOYALTY (détenu " +
+                      "par le staff qui scanne) + ABAC RestaurantAccessGuard. Remplace le RPC legacy " +
+                      "find_client_by_code. 404 si le code ne correspond à aucun client actif."
+    )
+    @PreAuthorize("hasAuthority('CREATE:LOYALTY')")
+    public ClientNameDto resolveClientByCode(
+        @RequestParam String code,
+        @RequestParam UUID restaurantId
+    ) {
+        restaurantAccessGuard.requireAdminOrActiveStaffOf(restaurantId);
+        return service.resolveClientByCode(code.trim());
+    }
+
     @GetMapping("/accounts/{accountId}/transactions")
     @Operation(summary = "Historique des mouvements d'un compte")
     @PreAuthorize("hasAuthority('VIEW:LOYALTY')")

@@ -1,5 +1,6 @@
 package com.onesley.oneclick.modules.loyalty.internal;
 
+import com.onesley.oneclick.core.identity.api.Role;
 import com.onesley.oneclick.core.identity.api.User;
 import com.onesley.oneclick.core.identity.api.UserRepository;
 import com.onesley.oneclick.exception.BadRequestException;
@@ -36,6 +37,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -187,7 +189,7 @@ class LoyaltyServiceTest {
         UUID resto = UUID.randomUUID();
         when(transactionRepository.existsSnap2EarnByRestaurantAndTicketRef(eq(resto), anyString())).thenReturn(true);
         assertThatThrownBy(() -> service.snap2earn(new Snap2EarnDto(
-            UUID.randomUUID(), resto, new BigDecimal("100"), "TICKET-1", null)))
+            UUID.randomUUID(), resto, new BigDecimal("100"), "TICKET-1", null, null)))
             .isInstanceOf(BadRequestException.class);
     }
 
@@ -199,7 +201,7 @@ class LoyaltyServiceTest {
         when(gainRuleRepository.findByRestaurantIdAndDeletedAtIsNull(resto)).thenReturn(Optional.of(rule));
         when(accountRepository.findAllByClientId(client)).thenReturn(List.of(account(client, resto, 7)));
 
-        Snap2EarnResultDto r = service.snap2earn(new Snap2EarnDto(client, resto, new BigDecimal("50"), null, null));
+        Snap2EarnResultDto r = service.snap2earn(new Snap2EarnDto(client, resto, new BigDecimal("50"), null, null, null));
 
         assertThat(r.pointsEarned()).isZero();
         assertThat(r.accountBalance()).isEqualTo(7);
@@ -217,7 +219,7 @@ class LoyaltyServiceTest {
         when(transactionRepository.save(any())).thenAnswer(i -> i.getArgument(0));
         when(accountRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
-        Snap2EarnResultDto r = service.snap2earn(new Snap2EarnDto(client, resto, new BigDecimal("1000"), null, null));
+        Snap2EarnResultDto r = service.snap2earn(new Snap2EarnDto(client, resto, new BigDecimal("1000"), null, null, null));
 
         assertThat(r.pointsEarned()).isEqualTo(5); // floor(1000*0.10)=100 -> cap 5
         assertThat(r.gainRuleApplied()).isEqualTo("restaurant");
@@ -231,10 +233,60 @@ class LoyaltyServiceTest {
         when(transactionRepository.save(any())).thenAnswer(i -> i.getArgument(0));
         when(accountRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
-        Snap2EarnResultDto r = service.snap2earn(new Snap2EarnDto(client, resto, new BigDecimal("100"), null, null));
+        Snap2EarnResultDto r = service.snap2earn(new Snap2EarnDto(client, resto, new BigDecimal("100"), null, null, null));
 
         assertThat(r.pointsEarned()).isEqualTo(10); // floor(100*0.10)
         assertThat(r.gainRuleApplied()).isEqualTo("default");
+    }
+
+    @Test
+    void snap2earn_withRedeemPoints_debitsAfterEarn() {
+        UUID client = UUID.randomUUID(), resto = UUID.randomUUID();
+        when(gainRuleRepository.findByRestaurantIdAndDeletedAtIsNull(resto)).thenReturn(Optional.empty());
+        LoyaltyAccount acc = account(client, resto, 100);
+        when(accountRepository.findAllByClientId(client)).thenReturn(List.of(acc));
+        when(transactionRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(accountRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        // amount 100, fallback 0.10 → earn 10 ; redeem 30 ⇒ balance 100 + 10 - 30 = 80
+        Snap2EarnResultDto r = service.snap2earn(new Snap2EarnDto(client, resto, new BigDecimal("100"), null, null, 30));
+
+        assertThat(r.pointsEarned()).isEqualTo(10);
+        assertThat(r.pointsRedeemed()).isEqualTo(30);
+        assertThat(r.accountBalance()).isEqualTo(80);
+        verify(eventPublisher).publishEvent(any(LoyaltyRedeemedEvent.class));
+    }
+
+    @Test
+    void snap2earn_redeemExceedsBalance_throwsBadRequest() {
+        UUID client = UUID.randomUUID(), resto = UUID.randomUUID();
+        when(gainRuleRepository.findByRestaurantIdAndDeletedAtIsNull(resto)).thenReturn(Optional.empty());
+        LoyaltyAccount acc = account(client, resto, 5);
+        when(accountRepository.findAllByClientId(client)).thenReturn(List.of(acc));
+        when(transactionRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(accountRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        // amount 100 → earn 10 → solde 15 ; redeem 50 > 15 ⇒ BadRequest (refus conversion)
+        assertThatThrownBy(() -> service.snap2earn(
+            new Snap2EarnDto(client, resto, new BigDecimal("100"), null, null, 50)))
+            .isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void snap2earn_zeroRedeem_noDebit() {
+        UUID client = UUID.randomUUID(), resto = UUID.randomUUID();
+        when(gainRuleRepository.findByRestaurantIdAndDeletedAtIsNull(resto)).thenReturn(Optional.empty());
+        LoyaltyAccount acc = account(client, resto, 0);
+        when(accountRepository.findAllByClientId(client)).thenReturn(List.of(acc));
+        when(transactionRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(accountRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        // redeem=0 ⇒ pas de conversion, pointsRedeemed null, solde = 10 (earn only)
+        Snap2EarnResultDto r = service.snap2earn(new Snap2EarnDto(client, resto, new BigDecimal("100"), null, null, 0));
+
+        assertThat(r.pointsEarned()).isEqualTo(10);
+        assertThat(r.pointsRedeemed()).isNull();
+        assertThat(r.accountBalance()).isEqualTo(10);
     }
 
     // ─── giftPoints ─────────────────────────────────────────────────────────────
@@ -419,5 +471,47 @@ class LoyaltyServiceTest {
         assertThat(dtos.get(0).id()).isEqualTo(id);
         assertThat(dtos.get(0).firstName()).isEqualTo("Karim");
         assertThat(dtos.get(0).phone()).isEqualTo("+212600000001");
+    }
+
+    // ─── resolveClientByCode (Code OneClick — referral_code, QR / Carte Wallet) ──
+
+    @Test
+    void resolveClientByCode_clientFound_returnsDto() {
+        User u = mock(User.class);
+        Role role = mock(Role.class);
+        UUID id = UUID.randomUUID();
+        when(u.getDeletedAt()).thenReturn(null);
+        when(u.getRole()).thenReturn(role);
+        when(role.getCode()).thenReturn("CLIENT");
+        when(u.getId()).thenReturn(id);
+        when(u.getFirstName()).thenReturn("Imane");
+        when(u.getLastName()).thenReturn("Z");
+        when(u.getPhone()).thenReturn("+212611111111");
+        when(userRepository.findByReferralCode("ABC123XY")).thenReturn(Optional.of(u));
+
+        ClientNameDto dto = service.resolveClientByCode("ABC123XY");
+        assertThat(dto.id()).isEqualTo(id);
+        assertThat(dto.firstName()).isEqualTo("Imane");
+        assertThat(dto.phone()).isEqualTo("+212611111111");
+    }
+
+    @Test
+    void resolveClientByCode_notClientRole_throwsNotFound() {
+        User u = mock(User.class);
+        Role role = mock(Role.class);
+        when(u.getDeletedAt()).thenReturn(null);
+        when(u.getRole()).thenReturn(role);
+        when(role.getCode()).thenReturn("RESTAURATEUR"); // code d'un owner → ne doit pas résoudre
+        when(userRepository.findByReferralCode("OWNRCODE")).thenReturn(Optional.of(u));
+
+        assertThatThrownBy(() -> service.resolveClientByCode("OWNRCODE"))
+            .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void resolveClientByCode_unknown_throwsNotFound() {
+        when(userRepository.findByReferralCode("NOPECODE")).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.resolveClientByCode("NOPECODE"))
+            .isInstanceOf(NotFoundException.class);
     }
 }

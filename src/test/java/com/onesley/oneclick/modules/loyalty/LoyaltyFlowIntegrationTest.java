@@ -78,6 +78,48 @@ class LoyaltyFlowIntegrationTest extends AbstractIntegrationTest {
         assertThat(r.getStatusCode().is2xxSuccessful()).isTrue();
     }
 
+    /** Solde courant d'un compte (client × restaurant) via find-or-create. */
+    private int balanceOf(String bearer, String clientId, String restaurantId) throws Exception {
+        ResponseEntity<String> r = restTemplate.exchange(
+            url("/api/loyalty/accounts?clientId=" + clientId + "&restaurantId=" + restaurantId),
+            HttpMethod.GET, jwtEntity(bearer), String.class);
+        return om.readTree(r.getBody()).get("balance").asInt();
+    }
+
+    @Test
+    void snap2earn_withRedeemPoints_debitsBalance() throws Exception {
+        String admin = adminBearer();
+        String[] rt = restoTenant();
+        String restaurantId = rt[0], clientId = userId();
+
+        // 1. Finance le compte (solde suffisant pour la conversion)
+        restTemplate.exchange(url("/api/loyalty/earn"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("clientId", clientId, "restaurantId", restaurantId,
+                "points", 100, "amount", 200, "reason", "L4 redeem-fund"), admin), String.class);
+        int before = balanceOf(admin, clientId, restaurantId);
+
+        // 2. snap2earn avec conversion (redeemPoints=20), montant faible
+        ResponseEntity<String> res = restTemplate.exchange(url("/api/loyalty/snap2earn"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("clientId", clientId, "restaurantId", restaurantId,
+                "amount", 10, "redeemPoints", 20), admin), String.class);
+        assertThat(res.getStatusCode().is2xxSuccessful()).isTrue();
+        JsonNode body = om.readTree(res.getBody());
+        int earned = body.get("pointsEarned").asInt();
+        assertThat(body.get("pointsRedeemed").asInt()).isEqualTo(20);
+
+        // 3. Solde après = avant + gagné - 20 (crédit puis conversion, même tx)
+        assertThat(balanceOf(admin, clientId, restaurantId)).isEqualTo(before + earned - 20);
+    }
+
+    @Test
+    void snap2earn_redeemExceedsBalance_returns400() {
+        String[] rt = restoTenant();
+        assertThat(restTemplate.exchange(url("/api/loyalty/snap2earn"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("clientId", userId(), "restaurantId", rt[0],
+                "amount", 10, "redeemPoints", 99_999_999), adminBearer()), String.class)
+            .getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
     @Test
     void gainRules_read_andRequests() throws Exception {
         String admin = adminBearer();

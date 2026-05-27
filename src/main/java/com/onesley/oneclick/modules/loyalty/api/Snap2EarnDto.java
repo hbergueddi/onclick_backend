@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.loyalty.api;
 
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotNull;
 
@@ -20,12 +21,16 @@ import java.util.UUID;
  * @param amount         Montant TTC du ticket (MAD), {@code >= 0}
  * @param ticketRef      Référence ticket caisse (optionnel) — anti-doublon par (restaurantId, ticketRef)
  * @param photoUrl       URL Storage de la photo OCR (optionnel) — stockée dans {@code reason} pour audit
+ * @param redeemPoints   Points convertis en réduction lors de la même visite (optionnel, {@code >= 0}).
+ *                       Débité du solde APRÈS le crédit du ticket (les points gagnés sont immédiatement
+ *                       utilisables). 400 si le solde est insuffisant. {@code null}/0 = pas de conversion.
  */
 public record Snap2EarnDto(
     @NotNull UUID clientId,
     @NotNull UUID restaurantId,
     @NotNull @DecimalMin("0.00") BigDecimal amount,
     @Size(min = 1, max = 64) String ticketRef,
-    @Size(min = 1, max = 512) String photoUrl
+    @Size(min = 1, max = 512) String photoUrl,
+    @Min(0) Integer redeemPoints
 ) {
 }

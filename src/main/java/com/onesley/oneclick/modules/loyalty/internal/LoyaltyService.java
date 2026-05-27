@@ -137,6 +137,27 @@ public class LoyaltyService {
             .toList();
     }
 
+    /**
+     * Résout un client par son <b>Code OneClick</b> ({@code referral_code}, 8 chars
+     * uppercase encodés dans le QR / la Carte Wallet du client). Snap2Earn : le staff
+     * scanne, on identifie le porteur du ticket. Remplace le RPC legacy Supabase
+     * {@code find_client_by_code}.
+     *
+     * <p>Filtre soft-deletes ({@code deletedAt IS NULL}) <b>et</b> rôle {@code CLIENT} :
+     * un code de restaurateur / admin ne doit pas résoudre vers un compte fidélité.
+     * {@code 404} si le code ne correspond à aucun client actif — le front bascule sur
+     * « Code invalide ». Le scoping (CREATE:LOYALTY + RestaurantAccessGuard) est porté
+     * par le contrôleur.
+     */
+    public ClientNameDto resolveClientByCode(String code) {
+        return userRepository.findByReferralCode(code)
+            .filter(u -> u.getDeletedAt() == null
+                && u.getRole() != null
+                && "CLIENT".equals(u.getRole().getCode()))
+            .map(u -> new ClientNameDto(u.getId(), u.getFirstName(), u.getLastName(), u.getPhone()))
+            .orElseThrow(() -> new NotFoundException("Client", code));
+    }
+
     public List<LoyaltyTransactionDto> findTransactionsByAccount(UUID accountId) {
         LoyaltyAccount a = accountRepository.findById(accountId)
             .orElseThrow(() -> new NotFoundException("LoyaltyAccount", accountId));
@@ -181,6 +202,8 @@ public class LoyaltyService {
      *       et plancher (minAmount)</li>
      *   <li>Délégation à {@link #earnPoints(LoyaltyEarnDto)} qui fait INSERT transaction +
      *       UPDATE balance dans la même tx Spring + publie l'event {@link LoyaltyEarnedEvent}</li>
+     *   <li>Conversion optionnelle ({@code redeemPoints}) : débit {@code type='spend'} du solde
+     *       APRÈS le crédit (solde insuffisant → 400), publie {@link LoyaltyRedeemedEvent}</li>
      * </ol>
      *
      * <p>Le {@code ticketRef} est encodé dans {@code reason} sous forme
@@ -219,27 +242,49 @@ public class LoyaltyService {
             }
         }
 
-        if (points <= 0) {
-            // Pas de points crédités — on retourne le solde existant sans transaction
-            LoyaltyAccount account = findOrCreateInternal(dto.clientId(), dto.restaurantId());
-            return new Snap2EarnResultDto(0, account.getBalance(), null, gainRuleApplied);
+        // 4. Crédit (earn) si points > 0 — INSERT tx + UPDATE balance + publish event.
+        //    reason encodé : "snap2earn|<ticket_ref>|<photo_url?>" (anti-doublon + audit).
+        UUID earnTxId = null;
+        if (points > 0) {
+            String reason = "snap2earn|"
+                + (dto.ticketRef() != null ? dto.ticketRef() : "")
+                + "|"
+                + (dto.photoUrl() != null ? dto.photoUrl() : "");
+            LoyaltyTransactionDto tx = earnPoints(new LoyaltyEarnDto(
+                dto.clientId(), dto.restaurantId(), points, dto.amount(), reason
+            ));
+            earnTxId = tx.id();
         }
 
-        // 4. Reason encodé : "snap2earn|<ticket_ref>|<photo_url?>"
-        String reason = "snap2earn|"
-            + (dto.ticketRef() != null ? dto.ticketRef() : "")
-            + "|"
-            + (dto.photoUrl() != null ? dto.photoUrl() : "");
+        // 5. Conversion optionnelle (redeemPoints) — débit du solde dans la MÊME tx Spring.
+        //    Appliquée APRÈS le crédit : les points gagnés sur ce ticket sont immédiatement
+        //    utilisables. type='spend' (CHECK loyalty_transactions), refus si solde insuffisant.
+        int redeem = dto.redeemPoints() != null ? dto.redeemPoints() : 0;
+        if (redeem > 0) {
+            LoyaltyAccount account = findOrCreateInternal(dto.clientId(), dto.restaurantId());
+            if (account.getBalance() < redeem) {
+                throw new BadRequestException(String.format(
+                    "Solde insuffisant pour la conversion : %d points demandés, %d disponibles",
+                    redeem, account.getBalance()));
+            }
+            LoyaltyTransaction debit = new LoyaltyTransaction(
+                UUID.randomUUID(), account.getId(), "spend", -redeem,
+                "snap2earn-redeem|" + (dto.ticketRef() != null ? dto.ticketRef() : "")
+            );
+            transactionRepository.save(debit);
+            account.deductPoints(redeem);
+            accountRepository.save(account);
+            eventPublisher.publishEvent(new LoyaltyRedeemedEvent(
+                debit.getId(), account.getId(),
+                dto.clientId(), dto.restaurantId(), account.getTenantId(),
+                redeem, null, Instant.now()
+            ));
+        }
 
-        // 5. Délégation à earnPoints — INSERT tx + UPDATE balance + publish event
-        LoyaltyEarnDto earnDto = new LoyaltyEarnDto(
-            dto.clientId(), dto.restaurantId(), points, dto.amount(), reason
-        );
-        LoyaltyTransactionDto tx = earnPoints(earnDto);
-
-        // 6. Solde courant après crédit (relecture car earnPoints retourne uniquement la tx)
+        // 6. Solde courant après crédit + conversion (relecture) + résultat
         LoyaltyAccount account = findOrCreateInternal(dto.clientId(), dto.restaurantId());
-        return new Snap2EarnResultDto(points, account.getBalance(), tx.id(), gainRuleApplied);
+        return new Snap2EarnResultDto(
+            points, account.getBalance(), earnTxId, gainRuleApplied, redeem > 0 ? redeem : null);
     }
 
     /**
