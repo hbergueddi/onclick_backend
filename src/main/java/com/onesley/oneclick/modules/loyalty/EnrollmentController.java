@@ -1,5 +1,6 @@
 package com.onesley.oneclick.modules.loyalty;
 
+import com.onesley.oneclick.modules.loyalty.api.EnrollLookupResultDto;
 import com.onesley.oneclick.modules.loyalty.api.EnrollMemberDto;
 import com.onesley.oneclick.modules.loyalty.api.EnrollMemberResultDto;
 import com.onesley.oneclick.modules.loyalty.api.EnrollmentRecordDto;
@@ -50,6 +51,21 @@ public class EnrollmentController {
     @PreAuthorize("hasAuthority('CREATE:LOYALTY')")
     public ResponseEntity<EnrollMemberResultDto> enrollMember(@Valid @RequestBody EnrollMemberDto dto) {
         return ResponseEntity.ok(enrollmentService.enrollMember(dto));
+    }
+
+    @GetMapping("/enroll-member/lookup")
+    @Operation(
+        summary = "Recherche un client existant par email OU téléphone (flow Inscrire membre)",
+        description = "Lookup scopé enrollment — staff resto (CREATE:LOYALTY) au lieu de "
+                    + "GET /api/users/by-email|by-phone (VIEW:USERS, admin only). Renvoie {id, "
+                    + "firstName, lastName} (PII minimale) ou 404 si aucun compte. RBAC : CREATE:LOYALTY."
+    )
+    @PreAuthorize("hasAuthority('CREATE:LOYALTY')")
+    public EnrollLookupResultDto lookupClient(
+        @RequestParam(required = false) String email,
+        @RequestParam(required = false) String phone
+    ) {
+        return enrollmentService.lookupClient(email, phone);
     }
 
     @GetMapping("/enrollments/by-restaurant/{restaurantId}")

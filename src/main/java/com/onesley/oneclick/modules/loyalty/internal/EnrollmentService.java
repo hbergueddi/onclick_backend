@@ -7,6 +7,7 @@ import com.onesley.oneclick.core.tenant.api.Tenant;
 import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
+import com.onesley.oneclick.modules.loyalty.api.EnrollLookupResultDto;
 import com.onesley.oneclick.modules.loyalty.api.EnrollMemberDto;
 import com.onesley.oneclick.modules.loyalty.api.EnrollMemberResultDto;
 import com.onesley.oneclick.modules.loyalty.api.EnrollmentRecordDto;
@@ -221,6 +222,19 @@ public class EnrollmentService {
             .setParameter("restaurantId", restaurantId)
             .getSingleResult();
         return count.longValue() > 0;
+    }
+
+    /**
+     * Recherche un client existant par email OU téléphone pour le flow « Inscrire
+     * membre » (staff resto). Réutilise {@link #lookupExistingUser} et ne renvoie
+     * que l'identité minimale ({@link EnrollLookupResultDto}). 404 si introuvable
+     * (le front bascule alors sur l'étape « Créer le compte »). RBAC CREATE:LOYALTY
+     * appliqué au controller — staff/admin uniquement, jamais le CLIENT.
+     */
+    public EnrollLookupResultDto lookupClient(String email, String phone) {
+        User u = lookupExistingUser(email, phone)
+            .orElseThrow(() -> new NotFoundException("User", email != null && !email.isBlank() ? email : phone));
+        return new EnrollLookupResultDto(u.getId(), u.getFirstName(), u.getLastName());
     }
 
     private Optional<User> lookupExistingUser(String email, String phone) {

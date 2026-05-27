@@ -103,6 +103,26 @@ class EnrollmentServiceTest {
         }
     }
 
+    // ─── lookupClient (flow recherche « Inscrire membre » staff, CREATE:LOYALTY) ───
+
+    @Test
+    void lookupClient_byEmail_found_returnsMinimalIdentity() {
+        UUID uid = UUID.randomUUID();
+        User u = new User(uid, null, "jean@x.com", "hash", "Jean", "Dupont");
+        when(userRepository.findByEmailIgnoreCase("jean@x.com")).thenReturn(Optional.of(u));
+        var dto = service.lookupClient("jean@x.com", null);
+        assertThat(dto.id()).isEqualTo(uid);
+        assertThat(dto.firstName()).isEqualTo("Jean");
+        assertThat(dto.lastName()).isEqualTo("Dupont");
+    }
+
+    @Test
+    void lookupClient_notFound_throwsNotFound() {
+        when(userRepository.findByEmailIgnoreCase(anyString())).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.lookupClient("nobody@x.com", null))
+            .isInstanceOf(NotFoundException.class);
+    }
+
     @Test
     void enroll_gainRuleNotFound_throwsNotFound() {
         when(gainRuleRepository.findByRestaurantIdAndDeletedAtIsNull(resto)).thenReturn(Optional.empty());
