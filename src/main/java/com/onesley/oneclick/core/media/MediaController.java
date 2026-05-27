@@ -5,6 +5,8 @@ import com.onesley.oneclick.core.media.internal.MediaService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.net.URI;
+import java.util.List;
 import java.util.UUID;
 
 import static com.onesley.oneclick.core.media.api.MediaDtos.*;
@@ -21,6 +24,7 @@ import com.onesley.oneclick.core.media.api.MediaDtos.FileCreateDto;
 import com.onesley.oneclick.core.media.api.MediaDtos.FileDto;
 import com.onesley.oneclick.core.media.api.MediaDtos.MediaCreateDto;
 import com.onesley.oneclick.core.media.api.MediaDtos.MediaDto;
+import com.onesley.oneclick.core.media.api.MediaModerationDto;
 import com.onesley.oneclick.core.media.internal.MediaStorageService;
 import lombok.RequiredArgsConstructor;
 
@@ -119,5 +123,28 @@ public class MediaController {
     public ResponseEntity<Void> deleteFile(@PathVariable UUID id) {
         service.softDeleteFile(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    // ─── Modération (V46 — admin GALAXY, ressource dédiée MEDIA_MODERATION) ────
+
+    @GetMapping("/moderation")
+    @Operation(summary = "File de modération des médias (par type d'entité, défaut restaurant)")
+    @PreAuthorize("hasAuthority('VIEW:MEDIA_MODERATION')")
+    public List<MediaModerationDto> listForModeration(
+        @RequestParam(defaultValue = "restaurant") String entityType
+    ) {
+        return service.findForModeration(entityType);
+    }
+
+    /** Payload PATCH modération — statut EN (pending|approved|rejected). */
+    public record ModerationStatusUpdate(
+        @NotNull @Pattern(regexp = "pending|approved|rejected") String status
+    ) {}
+
+    @PatchMapping("/{id}/moderation")
+    @Operation(summary = "Approuve / rejette / remet en attente un média")
+    @PreAuthorize("hasAuthority('UPDATE:MEDIA_MODERATION')")
+    public MediaModerationDto moderate(@PathVariable UUID id, @Valid @RequestBody ModerationStatusUpdate body) {
+        return service.setModerationStatus(id, body.status());
     }
 }

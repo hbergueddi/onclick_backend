@@ -61,6 +61,10 @@ public class Media extends SoftDeletableAuditedEntity {
     @Column(name = "metadata", columnDefinition = "jsonb")
     private Map<String, Object> metadata = new HashMap<>();
 
+    /** Statut de modération (V46) : pending | approved | rejected. Défaut approved. */
+    @Column(name = "moderation_status", nullable = false)
+    @Setter private String moderationStatus = "approved";
+
     public Media(UUID id, String entityType, UUID entityId, String url, String mediaType) {
         this.id = id;
         this.entityType = entityType;
@@ -73,6 +77,12 @@ public class Media extends SoftDeletableAuditedEntity {
     public MediaDto toDto() {
         return new MediaDto(id, entityType, entityId, url, mediaType, mimeType, sizeBytes, sortOrder,
             metadata, getCreatedAt());
+    }
+
+    /** Mapping vers le DTO de modération (V46). */
+    public com.onesley.oneclick.core.media.api.MediaModerationDto toModerationDto() {
+        return new com.onesley.oneclick.core.media.api.MediaModerationDto(
+            id, entityType, entityId, mediaType, url, moderationStatus, getCreatedAt());
     }
 
     @Override

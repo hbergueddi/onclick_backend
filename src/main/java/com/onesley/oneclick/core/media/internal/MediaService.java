@@ -9,10 +9,12 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 import static com.onesley.oneclick.core.media.api.MediaDtos.*;
 import com.onesley.oneclick.core.media.api.MediaDtos;
+import com.onesley.oneclick.core.media.api.MediaModerationDto;
 import com.onesley.oneclick.core.media.api.MediaDtos.FileCreateDto;
 import com.onesley.oneclick.core.media.api.MediaDtos.FileDto;
 import com.onesley.oneclick.core.media.api.MediaDtos.MediaCreateDto;
@@ -55,6 +57,23 @@ public class MediaService {
         SecurityHelper.requireOwnerOrAdmin(m.getCreatedBy());
         m.markDeleted();
         mediaRepo.save(m);
+    }
+
+    // ─── Modération (V46) — admin only (RBAC MEDIA_MODERATION côté contrôleur) ──
+
+    /** Médias d'un type d'entité pour la file de modération (récents d'abord). */
+    public List<MediaModerationDto> findForModeration(String entityType) {
+        return mediaRepo.findByEntityTypeAndDeletedAtIsNullOrderByCreatedAtDesc(entityType)
+            .stream().map(Media::toModerationDto).toList();
+    }
+
+    /** Approuve / rejette / remet en attente un média. Statut validé côté DTO. */
+    @Transactional
+    public MediaModerationDto setModerationStatus(UUID id, String status) {
+        Media m = mediaRepo.findByIdAndDeletedAtIsNull(id)
+            .orElseThrow(() -> new NotFoundException("Media", id));
+        m.setModerationStatus(status);
+        return mediaRepo.save(m).toModerationDto();
     }
 
     // ─── File attachments (PDF / docs) ───────────────────────────────────────
