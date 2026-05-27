@@ -95,4 +95,33 @@ class MediaServiceTest {
         }
         verify(fileRepo).save(f);
     }
+
+    // ─── Modération (V46) ──────────────────────────────────────────────────────
+
+    @Test
+    void findForModeration_mapsToDto() {
+        Media m = new Media(UUID.randomUUID(), "restaurant", UUID.randomUUID(), "https://x/a.jpg", "image");
+        when(mediaRepo.findByEntityTypeAndDeletedAtIsNullOrderByCreatedAtDesc("restaurant"))
+            .thenReturn(java.util.List.of(m));
+        var dtos = service.findForModeration("restaurant");
+        assertThat(dtos).hasSize(1);
+        assertThat(dtos.get(0).mediaType()).isEqualTo("image");
+        assertThat(dtos.get(0).moderationStatus()).isEqualTo("approved");
+    }
+
+    @Test
+    void setModerationStatus_notFound_throwsNotFound() {
+        when(mediaRepo.findByIdAndDeletedAtIsNull(any())).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.setModerationStatus(UUID.randomUUID(), "rejected"))
+            .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void setModerationStatus_success_updatesStatus() {
+        Media m = new Media(UUID.randomUUID(), "restaurant", UUID.randomUUID(), "https://x/a.jpg", "image");
+        when(mediaRepo.findByIdAndDeletedAtIsNull(m.getId())).thenReturn(Optional.of(m));
+        when(mediaRepo.save(any())).thenAnswer(i -> i.getArgument(0));
+        var dto = service.setModerationStatus(m.getId(), "rejected");
+        assertThat(dto.moderationStatus()).isEqualTo("rejected");
+    }
 }
