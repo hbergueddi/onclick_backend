@@ -107,19 +107,30 @@ class RestaurantSubResourceServiceTest {
     @Test
     void patchStaff_notFound_roleChange_reactivate_deactivate() {
         when(staffRepository.findById(any())).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> service.patchStaff(UUID.randomUUID(), new RestaurantStaffPatchDto("owner", null)))
+        assertThatThrownBy(() -> service.patchStaff(UUID.randomUUID(), new RestaurantStaffPatchDto("owner", null, null, null, null)))
             .isInstanceOf(NotFoundException.class);
 
         RestaurantStaff active = staff(UUID.randomUUID(), UUID.randomUUID(), "manager");
         when(staffRepository.findById(active.getId())).thenReturn(Optional.of(active));
-        service.patchStaff(active.getId(), new RestaurantStaffPatchDto("owner", false));
+        service.patchStaff(active.getId(), new RestaurantStaffPatchDto("owner", false, null, null, null));
         assertThat(active.isDeleted()).isTrue();
 
         RestaurantStaff deleted = staff(UUID.randomUUID(), UUID.randomUUID(), "manager");
         deleted.markDeleted();
         when(staffRepository.findById(deleted.getId())).thenReturn(Optional.of(deleted));
-        service.patchStaff(deleted.getId(), new RestaurantStaffPatchDto("  ", true));
+        service.patchStaff(deleted.getId(), new RestaurantStaffPatchDto("  ", true, null, null, null));
         assertThat(deleted.isDeleted()).isFalse();
+    }
+
+    @Test
+    void patchStaff_profileFields_updatesLinkedUser() {
+        // Sprint M — l'owner (UPDATE:STAFF) édite nom/tél du membre → user lié mis à jour.
+        RestaurantStaff s = staff(UUID.randomUUID(), UUID.randomUUID(), "manager");
+        when(staffRepository.findById(s.getId())).thenReturn(Optional.of(s));
+        service.patchStaff(s.getId(), new RestaurantStaffPatchDto(null, null, "Nouveau", "Nom", null));
+        assertThat(s.getUser().getFirstName()).isEqualTo("Nouveau");
+        assertThat(s.getUser().getLastName()).isEqualTo("Nom");
+        verify(userRepo).save(s.getUser());
     }
 
     @Test

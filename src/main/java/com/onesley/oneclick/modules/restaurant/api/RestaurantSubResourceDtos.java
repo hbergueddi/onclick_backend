@@ -59,7 +59,12 @@ public final class RestaurantSubResourceDtos {
      */
     public record RestaurantStaffPatchDto(
         @Size(min = 1, max = 64) String roleCode,
-        Boolean active
+        Boolean active,
+        // Sprint M — édition du profil du membre par l'owner (UPDATE:STAFF) : si
+        // présents, on met à jour le user lié (évite PATCH /api/users/{id} = UPDATE:USERS).
+        @Size(min = 1, max = 128) String firstName,
+        @Size(min = 1, max = 128) String lastName,
+        @Size(min = 1, max = 64) String phone
     ) {}
 
     // ─── MealService (créneau brunch/déjeuner/dîner) ─────────────────────────

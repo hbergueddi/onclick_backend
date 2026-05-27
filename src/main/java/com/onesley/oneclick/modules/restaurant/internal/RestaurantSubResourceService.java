@@ -145,6 +145,24 @@ public class RestaurantSubResourceService {
             if (dto.active() && staff.isDeleted())        staff.reactivate();
             else if (!dto.active() && !staff.isDeleted()) staff.markDeleted();
         }
+        // Sprint M — l'owner (UPDATE:STAFF) édite aussi le profil du membre (nom/tél)
+        // du user lié. Évite PATCH /api/users/{id} (UPDATE:USERS, admin only → 403
+        // RESTAURATEUR). Le module restaurant écrit déjà des users (invite/transfer).
+        if (dto.firstName() != null || dto.lastName() != null || dto.phone() != null) {
+            User u = staff.getUser(); // @ManyToOne(optional=false) — toujours présent
+            if (dto.firstName() != null) u.setFirstName(dto.firstName());
+            if (dto.lastName() != null) u.setLastName(dto.lastName());
+            if (dto.phone() != null && !dto.phone().equals(u.getPhone())) {
+                // Contrainte UNIQUE sur users.phone → garde explicite (409 propre).
+                userRepository.findByPhone(dto.phone())
+                    .filter(other -> !other.getId().equals(u.getId()))
+                    .ifPresent(other -> {
+                        throw new com.onesley.oneclick.exception.ConflictException("Téléphone déjà utilisé");
+                    });
+                u.setPhone(dto.phone());
+            }
+            userRepository.save(u);
+        }
         return staffRepository.save(staff).toDto();
     }
 
