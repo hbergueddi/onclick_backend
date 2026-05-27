@@ -34,6 +34,10 @@ public class Contract extends SoftDeletableAuditedEntity {
     @Column(name = "commission_rate", nullable = false, precision = 5, scale = 2)
     @Setter private BigDecimal commissionRate;
 
+    /** Taux (%) reversé au wallet admin OneClick — par contrat (V49). Défaut plateforme 2.00. */
+    @Column(name = "wallet_admin_rate", nullable = false, precision = 5, scale = 2)
+    @Setter private BigDecimal walletAdminRate = new BigDecimal("2.00");
+
     @Column(name = "starts_at", nullable = false)
     private LocalDate startsAt;
 
@@ -53,7 +57,7 @@ public class Contract extends SoftDeletableAuditedEntity {
 
     /** Mapping vers le DTO public exposé hors du module. */
     public ContractDto toDto() {
-        return new ContractDto(id, restaurantId, contractNumber, commissionRate, startsAt, endsAt, status, getCreatedAt());
+        return new ContractDto(id, restaurantId, contractNumber, commissionRate, walletAdminRate, startsAt, endsAt, status, getCreatedAt());
     }
 
     @Override

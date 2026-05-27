@@ -27,18 +27,21 @@ public final class FinancialDtos {
     // ─── Contract ────────────────────────────────────────────────────────────
 
     public record ContractDto(UUID id, UUID restaurantId, String contractNumber, BigDecimal commissionRate,
-                              LocalDate startsAt, LocalDate endsAt, String status, Instant createdAt) {}
+                              BigDecimal walletAdminRate, LocalDate startsAt, LocalDate endsAt, String status, Instant createdAt) {}
 
     public record ContractCreateDto(
         @NotNull UUID restaurantId,
         @NotBlank @Size(min = 1, max = 64) String contractNumber,
         @NotNull @DecimalMin("0.00") @DecimalMax("100.00") BigDecimal commissionRate,
+        // Optionnel — défaut 2.00 côté entité si absent (V49).
+        @DecimalMin("0.00") @DecimalMax("100.00") BigDecimal walletAdminRate,
         @NotNull LocalDate startsAt,
         LocalDate endsAt
     ) {}
 
     public record ContractUpdateDto(
         @DecimalMin("0.00") @DecimalMax("100.00") BigDecimal commissionRate,
+        @DecimalMin("0.00") @DecimalMax("100.00") BigDecimal walletAdminRate,
         LocalDate endsAt,
         @Pattern(regexp = "^(draft|active|paused|terminated)$") @Size(min = 1, max = 64) String status
     ) {}

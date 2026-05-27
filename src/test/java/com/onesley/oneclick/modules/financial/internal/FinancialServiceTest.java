@@ -77,10 +77,14 @@ class FinancialServiceTest {
     @Test
     void createContract_withEndsAt_andWithout() {
         when(contractRepo.save(any(Contract.class))).thenAnswer(i -> i.getArgument(0));
-        assertThat(service.createContract(new ContractCreateDto(
-            UUID.randomUUID(), "C-1", new BigDecimal("3.00"), LocalDate.now(), LocalDate.now().plusYears(1)))).isNotNull();
-        assertThat(service.createContract(new ContractCreateDto(
-            UUID.randomUUID(), "C-2", new BigDecimal("5.00"), LocalDate.now(), null))).isNotNull();
+        // walletAdminRate explicite (1.50) → persisté
+        var withRate = service.createContract(new ContractCreateDto(
+            UUID.randomUUID(), "C-1", new BigDecimal("3.00"), new BigDecimal("1.50"), LocalDate.now(), LocalDate.now().plusYears(1)));
+        assertThat(withRate.walletAdminRate()).isEqualByComparingTo("1.50");
+        // walletAdminRate null → défaut entité 2.00 (V49)
+        var defaulted = service.createContract(new ContractCreateDto(
+            UUID.randomUUID(), "C-2", new BigDecimal("5.00"), null, LocalDate.now(), null));
+        assertThat(defaulted.walletAdminRate()).isEqualByComparingTo("2.00");
     }
 
     @Test
@@ -104,9 +108,10 @@ class FinancialServiceTest {
         when(contractRepo.findById(any())).thenReturn(Optional.of(c));
         when(contractRepo.save(any(Contract.class))).thenAnswer(i -> i.getArgument(0));
         try (MockedStatic<SecurityHelper> ignored = mockStatic(SecurityHelper.class)) {
-            service.updateContract(c.getId(), new ContractUpdateDto(new BigDecimal("7.50"), LocalDate.now().plusYears(2), "active"));
+            service.updateContract(c.getId(), new ContractUpdateDto(new BigDecimal("7.50"), new BigDecimal("2.50"), LocalDate.now().plusYears(2), "active"));
         }
         assertThat(c.getCommissionRate()).isEqualByComparingTo("7.50");
+        assertThat(c.getWalletAdminRate()).isEqualByComparingTo("2.50");
         assertThat(c.getStatus()).isEqualTo("active");
     }
 
@@ -114,7 +119,7 @@ class FinancialServiceTest {
     void updateContract_notFound_throwsNotFound() {
         when(contractRepo.findById(any())).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.updateContract(UUID.randomUUID(),
-            new ContractUpdateDto(null, null, null))).isInstanceOf(NotFoundException.class);
+            new ContractUpdateDto(null, null, null, null))).isInstanceOf(NotFoundException.class);
     }
 
     // ─── Invoices ──────────────────────────────────────────────────────────────

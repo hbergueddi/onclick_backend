@@ -69,6 +69,7 @@ public class FinancialService {
         Contract c = new Contract(UUID.randomUUID(), dto.restaurantId(), dto.contractNumber(),
             dto.commissionRate(), dto.startsAt());
         if (dto.endsAt() != null) c.setEndsAt(dto.endsAt());
+        if (dto.walletAdminRate() != null) c.setWalletAdminRate(dto.walletAdminRate());
         return contractRepo.save(c).toDto();
     }
 
@@ -78,9 +79,10 @@ public class FinancialService {
             .filter(x -> x.getDeletedAt() == null)
             .orElseThrow(() -> new NotFoundException("Contract", id));
         SecurityHelper.requireOwnerOrAdmin(c.getCreatedBy());
-        if (dto.commissionRate() != null) c.setCommissionRate(dto.commissionRate());
-        if (dto.endsAt() != null)         c.setEndsAt(dto.endsAt());
-        if (dto.status() != null)         c.setStatus(dto.status());
+        if (dto.commissionRate() != null)  c.setCommissionRate(dto.commissionRate());
+        if (dto.walletAdminRate() != null) c.setWalletAdminRate(dto.walletAdminRate());
+        if (dto.endsAt() != null)          c.setEndsAt(dto.endsAt());
+        if (dto.status() != null)          c.setStatus(dto.status());
         return contractRepo.save(c).toDto();
     }
 

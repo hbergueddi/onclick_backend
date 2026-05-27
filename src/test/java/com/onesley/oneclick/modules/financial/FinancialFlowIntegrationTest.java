@@ -27,13 +27,16 @@ class FinancialFlowIntegrationTest extends AbstractIntegrationTest {
             .getStatusCode()).isEqualTo(HttpStatus.OK);
         ResponseEntity<String> post = restTemplate.exchange(url("/api/financial/contracts"), HttpMethod.POST,
             jsonJwtEntity(Map.of("restaurantId", restaurantId(), "contractNumber", "L4-C-" + rand(),
-                "commissionRate", 3.0, "startsAt", LocalDate.now().toString(), "endsAt", LocalDate.now().plusYears(1).toString()), admin), String.class);
+                "commissionRate", 3.0, "walletAdminRate", 1.5, "startsAt", LocalDate.now().toString(), "endsAt", LocalDate.now().plusYears(1).toString()), admin), String.class);
         assertThat(post.getStatusCode().is2xxSuccessful()).isTrue();
+        // walletAdminRate (V49) persisté + exposé dans le DTO
+        assertThat(om.readTree(post.getBody()).get("walletAdminRate").asDouble()).isEqualTo(1.5);
         String id = om.readTree(post.getBody()).get("id").asText();
-        assertThat(restTemplate.exchange(url("/api/financial/contracts/" + id), HttpMethod.GET, jwtEntity(admin), String.class)
-            .getStatusCode()).isEqualTo(HttpStatus.OK);
+        ResponseEntity<String> get = restTemplate.exchange(url("/api/financial/contracts/" + id), HttpMethod.GET, jwtEntity(admin), String.class);
+        assertThat(get.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(om.readTree(get.getBody()).get("walletAdminRate").asDouble()).isEqualTo(1.5);
         assertThat(restTemplate.exchange(url("/api/financial/contracts/" + id), HttpMethod.PATCH,
-            jsonJwtEntity(Map.of("commissionRate", 4.5), admin), String.class).getStatusCode()).isEqualTo(HttpStatus.OK);
+            jsonJwtEntity(Map.of("commissionRate", 4.5, "walletAdminRate", 2.75), admin), String.class).getStatusCode()).isEqualTo(HttpStatus.OK);
         jdbc.update("DELETE FROM contracts WHERE id = ?::uuid", UUID.fromString(id)); // self-clean (pas d'endpoint DELETE)
     }
 
