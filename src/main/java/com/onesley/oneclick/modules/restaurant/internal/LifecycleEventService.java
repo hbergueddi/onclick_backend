@@ -1,7 +1,9 @@
 package com.onesley.oneclick.modules.restaurant.internal;
 
+import com.onesley.oneclick.core.identity.api.UserRepository;
 import com.onesley.oneclick.modules.restaurant.api.LifecycleEventCreateDto;
 import com.onesley.oneclick.modules.restaurant.api.LifecycleEventDto;
+import com.onesley.oneclick.security.SecurityHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +27,7 @@ public class LifecycleEventService {
 
     private final LifecycleEventRepository repository;
     private final RestaurantRepository restaurantRepository;
+    private final UserRepository userRepository;
 
     @Transactional(readOnly = true)
     public List<LifecycleEventDto> list() {
@@ -54,5 +57,41 @@ public class LifecycleEventService {
             ? null
             : restaurantRepository.findById(dto.restaurantId()).map(Restaurant::getName).orElse(null);
         return saved.toDto(name);
+    }
+
+    /**
+     * Journalise un événement de cycle de vie déclenché par une mutation interne
+     * du catalogue (inscription / suspension / réactivation / rejet / modification).
+     *
+     * <p>L'acteur est résolu depuis le contexte de sécurité courant (admin/owner
+     * authentifié). Participe à la transaction de l'appelant (propagation REQUIRED) :
+     * si la mutation restaurant est rollback, l'entrée de journal l'est aussi —
+     * pas de log orphelin, pas de mutation sans trace. Append-only.
+     *
+     * <p>Producteur de {@code lifecycle_events} (V45) : avant ce câblage, le
+     * journal restait vide (la page admin CycleDeVie affichait toujours « aucun
+     * événement »).
+     *
+     * @param eventType clé d'événement FR alignée sur {@code eventConfig} du front
+     *                  (inscription / suspension / réactivation / rejet / modification)
+     * @param restaurantId restaurant concerné (jamais null pour les producteurs catalogue)
+     * @param details libellé lisible (non validé : appel interne, colonne TEXT)
+     */
+    @Transactional
+    public void record(String eventType, UUID restaurantId, String details) {
+        LifecycleEvent e = new LifecycleEvent(UUID.randomUUID(), eventType.trim());
+        e.setRestaurantId(restaurantId);
+        e.setDetails(details);
+        e.setActor(resolveActor());
+        repository.save(e);
+    }
+
+    /** Nom lisible de l'acteur courant (« Prénom Nom »), sinon « Système » (pas de contexte JWT). */
+    private String resolveActor() {
+        UUID uid = SecurityHelper.currentUserId();
+        if (uid == null) return "Système";
+        return userRepository.findById(uid)
+            .map(u -> (u.getFirstName() + " " + u.getLastName()).trim())
+            .orElse("Système");
     }
 }

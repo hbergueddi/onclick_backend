@@ -1,11 +1,14 @@
 package com.onesley.oneclick.modules.restaurant.internal;
 
+import com.onesley.oneclick.core.identity.api.UserRepository;
 import com.onesley.oneclick.modules.restaurant.api.LifecycleEventCreateDto;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.List;
 import java.util.Optional;
@@ -27,6 +30,7 @@ class LifecycleEventServiceTest {
 
     @Mock LifecycleEventRepository repo;
     @Mock RestaurantRepository restaurantRepo;
+    @Mock UserRepository userRepository;
     @InjectMocks LifecycleEventService service;
 
     @Test
@@ -70,5 +74,23 @@ class LifecycleEventServiceTest {
         assertThat(dto.event()).isEqualTo("global_event");
         assertThat(dto.restaurantName()).isNull();
         verify(restaurantRepo, never()).findById(any());
+    }
+
+    @Test
+    void record_persistsEvent_withSystemActorWhenNoSecurityContext() {
+        SecurityContextHolder.clearContext(); // pas de JWT → acteur « Système »
+        when(repo.save(any())).thenAnswer(i -> i.getArgument(0));
+        UUID rid = UUID.randomUUID();
+
+        service.record("suspension", rid, "Changement de statut : active → paused");
+
+        ArgumentCaptor<LifecycleEvent> captor = ArgumentCaptor.forClass(LifecycleEvent.class);
+        verify(repo).save(captor.capture());
+        LifecycleEvent saved = captor.getValue();
+        assertThat(saved.getEventType()).isEqualTo("suspension");
+        assertThat(saved.getRestaurantId()).isEqualTo(rid);
+        assertThat(saved.getDetails()).contains("active → paused");
+        assertThat(saved.getActor()).isEqualTo("Système");
+        verify(userRepository, never()).findById(any()); // uid null → pas de lookup
     }
 }

@@ -25,8 +25,11 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -39,6 +42,7 @@ class RestaurantCatalogServiceTest {
 
     @Mock RestaurantRepository repository;
     @Mock EntityManager em;
+    @Mock LifecycleEventService lifecycleEventService;
     @InjectMocks RestaurantCatalogService service;
 
     @BeforeEach
@@ -113,5 +117,60 @@ class RestaurantCatalogServiceTest {
         when(repository.findById(r.getId())).thenReturn(Optional.of(r));
         service.patch(r.getId(), new RestaurantPatchDto(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null));
         assertThat(r.getName()).isEqualTo("Resto");
+    }
+
+    // ─── Producteurs lifecycle_events (V45) ──────────────────────────────────
+
+    private RestaurantPatchDto patchStatus(String status) {
+        return new RestaurantPatchDto(null, null, null, null, null, null, null, status, null, null, null, null, null, null, null);
+    }
+
+    @Test
+    void create_journalisesInscription() {
+        service.create(new RestaurantCreateDto(UUID.randomUUID(), "Resto", null, null, null,
+            "Casablanca", null, null, null, null, null));
+        verify(lifecycleEventService).record(eq("inscription"), any(UUID.class), anyString());
+    }
+
+    @Test
+    void patch_statusActiveToPaused_journalisesSuspension() {
+        Restaurant r = restaurant(); // statut défaut "active"
+        when(repository.findById(r.getId())).thenReturn(Optional.of(r));
+        service.patch(r.getId(), patchStatus("paused"));
+        verify(lifecycleEventService).record(eq("suspension"), eq(r.getId()), anyString());
+    }
+
+    @Test
+    void patch_statusPausedToActive_journalisesReactivation() {
+        Restaurant r = restaurant();
+        r.setStatus("paused");
+        when(repository.findById(r.getId())).thenReturn(Optional.of(r));
+        service.patch(r.getId(), patchStatus("active"));
+        verify(lifecycleEventService).record(eq("réactivation"), eq(r.getId()), anyString());
+    }
+
+    @Test
+    void patch_nonStatusFieldOnly_journalisesModification() {
+        Restaurant r = restaurant();
+        when(repository.findById(r.getId())).thenReturn(Optional.of(r));
+        service.patch(r.getId(), new RestaurantPatchDto("Renommé", null, null, null, null, null, null, null, null, null, null, null, null, null, null));
+        verify(lifecycleEventService).record(eq("modification"), eq(r.getId()), anyString());
+    }
+
+    @Test
+    void patch_noFields_noLifecycleEvent() {
+        Restaurant r = restaurant();
+        when(repository.findById(r.getId())).thenReturn(Optional.of(r));
+        service.patch(r.getId(), new RestaurantPatchDto(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null));
+        verify(lifecycleEventService, never()).record(any(), any(), any());
+    }
+
+    @Test
+    void patch_statusUnchanged_noStatusEvent() {
+        Restaurant r = restaurant(); // statut "active"
+        when(repository.findById(r.getId())).thenReturn(Optional.of(r));
+        // statut identique "active" sans autre champ → no-op, aucun événement
+        service.patch(r.getId(), patchStatus("active"));
+        verify(lifecycleEventService, never()).record(any(), any(), any());
     }
 }

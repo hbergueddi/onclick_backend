@@ -35,6 +35,7 @@ import lombok.RequiredArgsConstructor;
 public class RestaurantCatalogService {
 
     private final RestaurantRepository repository;
+    private final LifecycleEventService lifecycleEventService;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -71,7 +72,11 @@ public class RestaurantCatalogService {
         r.setCuisine(dto.cuisine());
         r.setMaxStaff(dto.maxStaff());
         r.setGroupId(dto.groupId());
-        return repository.save(r).toDto();
+        Restaurant saved = repository.save(r);
+        // Producteur lifecycle_events (V45) : inscription d'un nouveau restaurant.
+        lifecycleEventService.record("inscription", saved.getId(),
+            "Inscription du restaurant « " + saved.getName() + " » (" + saved.getCity() + ")");
+        return saved.toDto();
     }
 
     @Transactional
@@ -100,6 +105,8 @@ public class RestaurantCatalogService {
             .filter(x -> x.getDeletedAt() == null)
             .orElseThrow(() -> new NotFoundException("Restaurant", id));
 
+        String oldStatus = r.getStatus();
+
         if (dto.name() != null)        r.setName(dto.name());
         if (dto.description() != null) r.setDescription(dto.description());
         if (dto.phone() != null)       r.setPhone(dto.phone());
@@ -116,6 +123,47 @@ public class RestaurantCatalogService {
         if (dto.maxStaff() != null)    r.setMaxStaff(dto.maxStaff());
         if (dto.groupId() != null)     r.setGroupId(dto.groupId());
 
-        return repository.save(r).toDto();
+        RestaurantDto result = repository.save(r).toDto();
+
+        // Producteur lifecycle_events (V45). Une transition de statut prime sur une
+        // simple modification de fiche (événement le plus signifiant). Un PATCH no-op
+        // (aucun champ, ou statut inchangé sans autre champ) ne journalise rien.
+        boolean statusChanged = dto.status() != null && !dto.status().equals(oldStatus);
+        if (statusChanged) {
+            lifecycleEventService.record(statusEvent(dto.status()), id,
+                "Changement de statut : " + oldStatus + " → " + dto.status());
+        } else if (hasEditableFieldChange(dto)) {
+            lifecycleEventService.record("modification", id, "Mise à jour de la fiche restaurant");
+        }
+
+        return result;
+    }
+
+    /**
+     * Mappe le nouveau statut canonique EN ({@code active|paused|archived}) vers la
+     * clé d'événement FR attendue par la page admin CycleDeVie ({@code eventConfig}).
+     *
+     * <p>Le modèle de statut restaurant n'a que 3 états : un passage à {@code active}
+     * est toujours une <em>réactivation</em> (l'activation initiale est journalisée
+     * comme « inscription » à la création, pas via un PATCH). Tout statut hors
+     * vocabulaire retombe sur « modification » (sûreté).
+     */
+    static String statusEvent(String newStatus) {
+        if (newStatus == null) return "modification";
+        return switch (newStatus) {
+            case "paused"   -> "suspension";
+            case "active"   -> "réactivation";
+            case "archived" -> "rejet";
+            default          -> "modification";
+        };
+    }
+
+    /** Vrai si le PATCH modifie au moins un champ non-statut (→ événement « modification »). */
+    static boolean hasEditableFieldChange(RestaurantPatchDto dto) {
+        return dto.name() != null || dto.description() != null || dto.phone() != null
+            || dto.address() != null || dto.city() != null || dto.latitude() != null
+            || dto.longitude() != null || dto.budget() != null || dto.tags() != null
+            || dto.loungePts() != null || dto.image() != null || dto.cuisine() != null
+            || dto.maxStaff() != null || dto.groupId() != null;
     }
 }

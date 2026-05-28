@@ -165,6 +165,32 @@ class RestaurantFlowIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void restaurant_mutations_produceLifecycleEvents() throws Exception {
+        // V45 — câblage des producteurs lifecycle_events : create → inscription,
+        // PATCH statut → suspension/réactivation, PATCH fiche → modification.
+        String admin = adminBearer();
+        String id = createRestaurant(admin, "L4 Lifecycle " + UUID.randomUUID());
+
+        // active → paused (suspension)
+        assertThat(restTemplate.exchange(url("/api/restaurants/" + id), HttpMethod.PATCH,
+            jsonJwtEntity(Map.of("status", "paused"), admin), String.class).getStatusCode()).isEqualTo(HttpStatus.OK);
+        // paused → active (réactivation)
+        assertThat(restTemplate.exchange(url("/api/restaurants/" + id), HttpMethod.PATCH,
+            jsonJwtEntity(Map.of("status", "active"), admin), String.class).getStatusCode()).isEqualTo(HttpStatus.OK);
+        // champ non-statut (modification)
+        assertThat(restTemplate.exchange(url("/api/restaurants/" + id), HttpMethod.PATCH,
+            jsonJwtEntity(Map.of("name", "L4 Lifecycle Renamed"), admin), String.class).getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        List<String> events = jdbc.queryForList(
+            "SELECT event_type FROM lifecycle_events WHERE restaurant_id = ?", String.class, UUID.fromString(id));
+        assertThat(events).contains("inscription", "suspension", "réactivation", "modification");
+
+        // self-clean : le soft-delete resto ne supprime pas les rows (FK ON DELETE SET NULL)
+        jdbc.update("DELETE FROM lifecycle_events WHERE restaurant_id = ?", UUID.fromString(id));
+        restTemplate.exchange(url("/api/restaurants/" + id), HttpMethod.DELETE, jwtEntity(admin), String.class);
+    }
+
+    @Test
     void restaurant_unknownId_404() {
         assertThat(restTemplate.exchange(url("/api/restaurants/" + UUID.randomUUID()),
             HttpMethod.GET, jwtEntity(adminBearer()), String.class).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
