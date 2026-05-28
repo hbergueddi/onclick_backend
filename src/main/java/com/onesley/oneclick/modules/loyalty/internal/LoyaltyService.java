@@ -464,6 +464,20 @@ public class LoyaltyService {
         return transactionRepository.findAllByRestaurantIdEnriched(restaurantId, PageRequest.of(0, limit));
     }
 
+    /**
+     * Agrégat plateforme des tickets scannés (Snap2Earn) — carte « Tickets &
+     * Lounge » du PulseBoard admin. Cross-restaurant, donc réservé admin
+     * (VIEW:ANALYTICS côté contrôleur).
+     */
+    public com.onesley.oneclick.modules.loyalty.api.ScannedTicketStatsDto scannedTicketStats() {
+        LoyaltyTransactionRepository.ScannedTicketStats s = transactionRepository.aggregateScannedTickets();
+        return new com.onesley.oneclick.modules.loyalty.api.ScannedTicketStatsDto(
+            s.getTicketCount(),
+            s.getPointsEmitted(),
+            s.getTotalAmount() == null ? java.math.BigDecimal.ZERO : s.getTotalAmount()
+        );
+    }
+
     /** Résumé des points expirés d'un client (cross-comptes). */
     public ExpiredPointsSummaryDto findExpiredPointsByClient(UUID clientId) {
         SecurityHelper.requireOwnerOrAdmin(clientId);

@@ -64,6 +64,31 @@ class LoyaltyServiceTest {
     @BeforeEach
     void injectEm() { ReflectionTestUtils.setField(service, "entityManager", entityManager); }
 
+    @Test
+    void scannedTicketStats_mapsProjectionToDto() {
+        var p = mock(LoyaltyTransactionRepository.ScannedTicketStats.class);
+        when(p.getTicketCount()).thenReturn(7L);
+        when(p.getPointsEmitted()).thenReturn(420L);
+        when(p.getTotalAmount()).thenReturn(new BigDecimal("1234.50"));
+        when(transactionRepository.aggregateScannedTickets()).thenReturn(p);
+
+        var dto = service.scannedTicketStats();
+        assertThat(dto.ticketCount()).isEqualTo(7L);
+        assertThat(dto.pointsEmitted()).isEqualTo(420L);
+        assertThat(dto.totalAmount()).isEqualByComparingTo("1234.50");
+    }
+
+    @Test
+    void scannedTicketStats_nullAmount_defaultsToZero() {
+        var p = mock(LoyaltyTransactionRepository.ScannedTicketStats.class);
+        when(p.getTicketCount()).thenReturn(0L);
+        when(p.getPointsEmitted()).thenReturn(0L);
+        when(p.getTotalAmount()).thenReturn(null);
+        when(transactionRepository.aggregateScannedTickets()).thenReturn(p);
+
+        assertThat(service.scannedTicketStats().totalAmount()).isEqualByComparingTo("0");
+    }
+
     private LoyaltyAccount account(UUID clientId, UUID restaurantId, int balance) {
         LoyaltyAccount a = new LoyaltyAccount(UUID.randomUUID(), clientId, restaurantId);
         a.addPoints(balance);

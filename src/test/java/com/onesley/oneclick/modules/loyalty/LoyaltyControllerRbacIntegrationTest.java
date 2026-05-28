@@ -83,6 +83,25 @@ class LoyaltyControllerRbacIntegrationTest extends AbstractIntegrationTest {
             String.class).split(",");
     }
 
+    // ─── Agrégat plateforme tickets scannés : VIEW:ANALYTICS (SUPERADMIN-only) ──
+
+    @Test
+    void scannedTicketStats_adminOk_restaurateur403_anon401() {
+        // Admin (VIEW:ANALYTICS) → 200 + shape du DTO.
+        var ok = restTemplate.exchange(url("/api/loyalty/scanned-tickets/stats"),
+            HttpMethod.GET, jwtEntity(adminBearer()), String.class);
+        assertThat(ok.getStatusCode().value()).isEqualTo(200);
+        assertThat(ok.getBody()).contains("ticketCount").contains("pointsEmitted").contains("totalAmount");
+        // RESTAURATEUR n'a pas VIEW:ANALYTICS (réservé SUPERADMIN) → 403.
+        assertThat(restTemplate.exchange(url("/api/loyalty/scanned-tickets/stats"),
+            HttpMethod.GET, jwtEntity(bearerOf("RESTAURATEUR")), String.class)
+            .getStatusCode().value()).isEqualTo(403);
+        // Anonyme → 401.
+        assertThat(restTemplate.exchange(url("/api/loyalty/scanned-tickets/stats"),
+            HttpMethod.GET, org.springframework.http.HttpEntity.EMPTY, String.class)
+            .getStatusCode().value()).isEqualTo(401);
+    }
+
     // ─── STAFF peut SCANNER : gate CREATE:LOYALTY passe (V35) ─────────────────
 
     @Test

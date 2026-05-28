@@ -116,4 +116,29 @@ public interface LoyaltyTransactionRepository extends JpaRepository<LoyaltyTrans
         @Param("restaurantId") UUID restaurantId,
         Pageable pageable
     );
+
+    /**
+     * Agrégat plateforme des tickets scannés (Snap2Earn) — carte « Tickets &
+     * Lounge » du PulseBoard admin. Un « ticket scanné » = transaction
+     * {@code type='earn'} dont le {@code reason} encode un scan
+     * ({@code snap2earn|<ticket_ref>|...}), ce qui exclut les earns manuels et
+     * les cadeaux. Pas de workflow de validation côté Spring : le ticket est
+     * crédité immédiatement (le statut pending/rejeté du legacy Supabase a été
+     * abandonné) → tout ticket scanné est implicitement « validé ».
+     */
+    @Query("""
+        SELECT COUNT(t) AS ticketCount,
+               COALESCE(SUM(t.points), 0) AS pointsEmitted,
+               COALESCE(SUM(t.amount), 0) AS totalAmount
+        FROM LoyaltyTransaction t
+        WHERE t.type = 'earn' AND t.reason LIKE 'snap2earn|%'
+        """)
+    ScannedTicketStats aggregateScannedTickets();
+
+    /** Projection fermée de {@link #aggregateScannedTickets()}. */
+    interface ScannedTicketStats {
+        long getTicketCount();
+        long getPointsEmitted();
+        java.math.BigDecimal getTotalAmount();
+    }
 }

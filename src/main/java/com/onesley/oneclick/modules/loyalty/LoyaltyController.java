@@ -10,6 +10,7 @@ import com.onesley.oneclick.modules.loyalty.api.GiftPointsDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyAccountDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyEarnDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyTransactionDto;
+import com.onesley.oneclick.modules.loyalty.api.ScannedTicketStatsDto;
 import com.onesley.oneclick.modules.loyalty.api.OcrReceiptRequestDto;
 import com.onesley.oneclick.modules.loyalty.api.OcrReceiptResultDto;
 import com.onesley.oneclick.modules.loyalty.api.Snap2EarnDto;
@@ -280,6 +281,17 @@ public class LoyaltyController {
     ) {
         restaurantAccessGuard.requireAdminOrActiveStaffOf(restaurantId);
         return service.findTransactionsByRestaurant(restaurantId, limit);
+    }
+
+    @GetMapping("/scanned-tickets/stats")
+    @Operation(
+        summary = "Agrégat plateforme des tickets scannés (Snap2Earn) — PulseBoard admin.",
+        description = "Cross-restaurant (count + points émis + CA scanné). Réservé admin " +
+                      "(VIEW:ANALYTICS) comme les autres agrégats plateforme du dashboard."
+    )
+    @PreAuthorize("hasAuthority('VIEW:ANALYTICS')")
+    public ScannedTicketStatsDto scannedTicketStats() {
+        return service.scannedTicketStats();
     }
 
     @GetMapping("/tiers")
