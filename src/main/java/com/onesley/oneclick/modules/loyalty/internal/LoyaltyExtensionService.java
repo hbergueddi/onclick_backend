@@ -45,13 +45,52 @@ public class LoyaltyExtensionService {
         return ratingRepo.findByUser(userId).stream().map(ClientRatingDto::from).toList();
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public ClientScoreDto computeUserScore(UUID userId) {
         Double avg = ratingRepo.averageVisibleRating(userId);
         Long count = ratingRepo.countByUser(userId);
         BigDecimal averageRating = avg == null ? new BigDecimal("5.0") : new BigDecimal(avg).setScale(2, RoundingMode.HALF_UP);
         BigDecimal score = averageRating.multiply(new BigDecimal("20")); // 0-100 scale
-        return new ClientScoreDto(userId, averageRating, count == null ? 0L : count, score);
+
+        // D4 — enrichissement : label de fiabilité (seuils config) + compteurs
+        // réservations sur la fenêtre glissante. Lecture cross-domaine en SQL
+        // natif (Modulith CLOSED : pas d'import du module reservation).
+        ClientScoreConfig cfg = loadOrCreateScoreConfig();
+        long total = 0L, honorees = 0L, noShows = 0L;
+        try {
+            Object[] row = (Object[]) em.createNativeQuery("""
+                SELECT COUNT(*),
+                       COUNT(*) FILTER (WHERE status = 'honored'),
+                       COUNT(*) FILTER (WHERE status = 'no_show')
+                FROM reservations
+                WHERE client_id = :cid AND deleted_at IS NULL
+                  AND reservation_at >= now() - make_interval(months => :months)
+                """)
+                .setParameter("cid", userId)
+                .setParameter("months", cfg.getFenetreMois())
+                .getSingleResult();
+            if (row != null) {
+                total = ((Number) row[0]).longValue();
+                honorees = ((Number) row[1]).longValue();
+                noShows = ((Number) row[2]).longValue();
+            }
+        } catch (RuntimeException ignored) {
+            // Compteurs best-effort : ne jamais casser le score si la lecture échoue.
+        }
+
+        String label = scoreLabel(score, total, cfg);
+        return new ClientScoreDto(userId, averageRating, count == null ? 0L : count, score,
+            label, averageRating, total, honorees, noShows);
+    }
+
+    /** Label de fiabilité depuis le score (/100) et les seuils config. */
+    private static String scoreLabel(BigDecimal scorePct, long total, ClientScoreConfig cfg) {
+        if (total < cfg.getMinReservations()) return "Nouveau";
+        double s = scorePct.doubleValue();
+        if (s >= cfg.getSeuilExcellent().doubleValue()) return "Excellent";
+        if (s >= cfg.getSeuilFiable().doubleValue()) return "Fiable";
+        if (s >= cfg.getSeuilMoyen().doubleValue()) return "Moyen";
+        return "Peu fiable";
     }
 
     // ─── Configuration du moteur de notation (singleton V52) ─────────

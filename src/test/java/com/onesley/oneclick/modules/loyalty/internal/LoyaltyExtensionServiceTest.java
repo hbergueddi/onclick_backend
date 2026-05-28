@@ -62,6 +62,9 @@ class LoyaltyExtensionServiceTest {
         lenient().when(ratingRepo.save(any())).thenAnswer(i -> i.getArgument(0));
         lenient().when(aiUsageRepo.save(any())).thenAnswer(i -> i.getArgument(0));
         lenient().when(restitutionRepo.save(any())).thenAnswer(i -> i.getArgument(0));
+        // Config de notation par défaut (les tests qui valident la config l'overrident).
+        lenient().when(scoreConfigRepo.findFirstByOrderByCreatedAtAsc())
+            .thenReturn(Optional.of(new ClientScoreConfig()));
     }
 
     private ClientRating rating(String visible) {
@@ -96,6 +99,29 @@ class LoyaltyExtensionServiceTest {
         var s = service.computeUserScore(user);
         assertThat(s.averageRating()).isEqualByComparingTo("4.00");
         assertThat(s.score()).isEqualByComparingTo("80.00");
+    }
+
+    @Test
+    void computeUserScore_enrichesLabelAndReservationCounts() {
+        when(ratingRepo.averageVisibleRating(user)).thenReturn(5.0);
+        when(ratingRepo.countByUser(user)).thenReturn(8L);
+        // Compteurs réservations (total, honorées, no-shows) via SQL natif mocké.
+        when(query.getSingleResult()).thenReturn(new Object[]{10L, 8L, 1L});
+        var s = service.computeUserScore(user);
+        assertThat(s.totalReservations()).isEqualTo(10L);
+        assertThat(s.honorees()).isEqualTo(8L);
+        assertThat(s.noShows()).isEqualTo(1L);
+        assertThat(s.stars()).isEqualByComparingTo("5.00");
+        assertThat(s.label()).isEqualTo("Excellent"); // score 100 ≥ seuil_excellent 95, total ≥ min
+    }
+
+    @Test
+    void computeUserScore_newClient_belowMinReservations_labelsNouveau() {
+        when(ratingRepo.averageVisibleRating(user)).thenReturn(5.0);
+        when(ratingRepo.countByUser(user)).thenReturn(1L);
+        when(query.getSingleResult()).thenReturn(new Object[]{1L, 1L, 0L}); // total 1 < min 3
+        var s = service.computeUserScore(user);
+        assertThat(s.label()).isEqualTo("Nouveau");
     }
 
     @Test

@@ -43,7 +43,14 @@ public final class LoyaltyExtensionDtos {
         UUID userId,
         BigDecimal averageRating,
         Long ratingsCount,
-        BigDecimal score
+        BigDecimal score,
+        // D4 — enrichissement fiche réservation admin (label/étoiles + compteurs
+        // réservations sur la fenêtre glissante de client_score_config).
+        String label,
+        BigDecimal stars,
+        Long totalReservations,
+        Long honorees,
+        Long noShows
     ) {}
 
     /**
