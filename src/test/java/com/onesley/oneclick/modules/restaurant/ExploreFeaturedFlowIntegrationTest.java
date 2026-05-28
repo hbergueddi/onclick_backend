@@ -34,6 +34,46 @@ class ExploreFeaturedFlowIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void featured_adminListAll_includesDisabledAndEditorialFields() throws Exception {
+        // V57 — upsert avec label/notes + enabled=false, puis :
+        //   • GET /all (admin)  → inclut l'entrée désactivée + label/notes
+        //   • GET     (public)  → l'exclut (enabled=true only)
+        String admin = adminBearer();
+        String rid = restaurantId();
+
+        ResponseEntity<String> post = restTemplate.exchange(url("/api/restaurants/featured"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("restaurantId", rid, "rank", 3, "enabled", false,
+                "label", "Top Chef", "notes", "note admin interne"), admin), String.class);
+        assertThat(post.getStatusCode().is2xxSuccessful()).isTrue();
+        String id = om.readTree(post.getBody()).get("id").asText();
+        // L'upsert renvoie les champs éditoriaux persistés.
+        assertThat(om.readTree(post.getBody()).get("label").asText()).isEqualTo("Top Chef");
+        assertThat(om.readTree(post.getBody()).get("notes").asText()).isEqualTo("note admin interne");
+
+        // Liste admin (tous) → inclut l'entrée désactivée + ses champs.
+        ResponseEntity<String> all = restTemplate.exchange(url("/api/restaurants/featured/all"),
+            HttpMethod.GET, jwtEntity(admin), String.class);
+        assertThat(all.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(all.getBody()).contains(id).contains("Top Chef").contains("note admin interne");
+
+        // Flux public (activés uniquement) → exclut l'entrée désactivée.
+        ResponseEntity<String> pub = restTemplate.exchange(url("/api/restaurants/featured"),
+            HttpMethod.GET, jwtEntity(admin), String.class);
+        assertThat(pub.getBody()).doesNotContain(id);
+
+        // self-clean
+        restTemplate.exchange(url("/api/restaurants/featured/" + id), HttpMethod.DELETE, jwtEntity(admin), String.class);
+    }
+
+    @Test
+    void adminListAll_requiresAuth_401() {
+        // GET /all est protégé (VIEW:RESTAURANTS) contrairement au flux public GET racine.
+        assertThat(restTemplate.exchange(url("/api/restaurants/featured/all"),
+            HttpMethod.GET, org.springframework.http.HttpEntity.EMPTY, String.class)
+            .getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
     void delete_unknown_404() {
         assertThat(restTemplate.exchange(url("/api/restaurants/featured/" + UUID.randomUUID()),
             HttpMethod.DELETE, jwtEntity(adminBearer()), String.class).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);

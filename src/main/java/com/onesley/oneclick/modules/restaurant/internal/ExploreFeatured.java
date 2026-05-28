@@ -35,4 +35,18 @@ public class ExploreFeatured extends TimestampedEntity {
 
     @Column(name = "ends_at")
     @Setter private Instant endsAt;
+
+    // ─── V57 — champs éditoriaux legacy (page admin Pilotage Explore) ─────────
+
+    /** Étiquettes affichées côté client (CSV : « Nouveau, Coup de cœur »). */
+    @Column(name = "label")
+    @Setter private String label;
+
+    /** Notes internes admin (non exposées au client). */
+    @Column(name = "notes")
+    @Setter private String notes;
+
+    /** Auteur de la mise en avant (audit léger, pas de FK). */
+    @Column(name = "created_by")
+    @Setter private UUID createdBy;
 }

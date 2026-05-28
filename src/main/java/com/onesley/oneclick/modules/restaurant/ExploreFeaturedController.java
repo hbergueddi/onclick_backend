@@ -23,9 +23,18 @@ public class ExploreFeaturedController {
     private final ExploreFeaturedService service;
 
     @GetMapping
-    @Operation(summary = "Liste publique des restos featured (Explore)")
+    @Operation(summary = "Liste publique des restos featured activés (flux client Explore)")
     public List<ExploreFeaturedDto> findAllEnabled() {
         return service.findAllEnabled();
+    }
+
+    // Admin (Pilotage Explore) : tous les featured, désactivés inclus — distinct du
+    // flux public ci-dessus qui ne renvoie que les activés. RESOURCE=RESTAURANTS.
+    @GetMapping("/all")
+    @Operation(summary = "Liste admin de tous les featured, désactivés inclus (Pilotage Explore)")
+    @PreAuthorize("hasAuthority('VIEW:RESTAURANTS')")
+    public List<ExploreFeaturedDto> findAllAdmin() {
+        return service.findAll();
     }
 
     // Bug 32 (Batch D RBAC v2) — RESOURCE=RESTAURANTS (featured = curation resto).

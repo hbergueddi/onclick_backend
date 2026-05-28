@@ -134,9 +134,9 @@ class DtoBeanValidationTest {
     @Test
     void exploreFeaturedCreate_negativeRank_flagged_andValidOk() {
         assertThat(violated(new ExploreFeaturedDtos.ExploreFeaturedCreateDto(
-            ID, -1, true, null, null))).contains("rank");
+            ID, -1, true, null, null, null, null, null))).contains("rank");
         assertThat(violated(new ExploreFeaturedDtos.ExploreFeaturedCreateDto(
-            ID, 3, true, null, null))).isEmpty();
+            ID, 3, true, null, null, null, null, null))).isEmpty();
     }
 
     // ─── InvoiceUpdateDto montants / InvoiceLineCreateDto.sortOrder ────────────

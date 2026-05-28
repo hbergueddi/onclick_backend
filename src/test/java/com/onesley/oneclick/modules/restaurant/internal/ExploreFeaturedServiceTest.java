@@ -45,16 +45,45 @@ class ExploreFeaturedServiceTest {
     }
 
     @Test
+    void findAll_returnsAllOrdered_inclDisabled() {
+        when(repo.findAllByOrderByRankAsc()).thenReturn(List.of(new ExploreFeatured(), new ExploreFeatured()));
+        assertThat(service.findAll()).hasSize(2);
+    }
+
+    @Test
     void upsert_createsWhenAbsent_defaultRankZero() {
         when(repo.findByRestaurant(any())).thenReturn(Optional.empty());
-        assertThat(service.upsert(new ExploreFeaturedCreateDto(UUID.randomUUID(), null, null, null, null))).isNotNull();
+        assertThat(service.upsert(new ExploreFeaturedCreateDto(UUID.randomUUID(), null, null, null, null, null, null, null))).isNotNull();
     }
 
     @Test
     void upsert_updatesExisting_withAllFields() {
         when(repo.findByRestaurant(any())).thenReturn(Optional.of(new ExploreFeatured()));
         assertThat(service.upsert(new ExploreFeaturedCreateDto(
-            UUID.randomUUID(), 5, false, Instant.now(), Instant.now().plusSeconds(86400)))).isNotNull();
+            UUID.randomUUID(), 5, false, Instant.now(), Instant.now().plusSeconds(86400), null, null, null))).isNotNull();
+    }
+
+    @Test
+    void upsert_persistsLabelNotesCreatedBy() {
+        when(repo.findByRestaurant(any())).thenReturn(Optional.empty());
+        UUID by = UUID.randomUUID();
+        var dto = service.upsert(new ExploreFeaturedCreateDto(
+            UUID.randomUUID(), 2, true, null, null, "Top Chef", "note interne", by));
+        assertThat(dto.label()).isEqualTo("Top Chef");
+        assertThat(dto.notes()).isEqualTo("note interne");
+        assertThat(dto.createdBy()).isEqualTo(by);
+    }
+
+    @Test
+    void upsert_preservesOriginalCreatedBy_onUpdate() {
+        ExploreFeatured existing = new ExploreFeatured();
+        UUID original = UUID.randomUUID();
+        existing.setCreatedBy(original);
+        when(repo.findByRestaurant(any())).thenReturn(Optional.of(existing));
+        // Un éditeur ultérieur (createdBy différent) ne doit PAS écraser l'auteur initial.
+        var dto = service.upsert(new ExploreFeaturedCreateDto(
+            UUID.randomUUID(), 1, true, null, null, "x", "y", UUID.randomUUID()));
+        assertThat(dto.createdBy()).isEqualTo(original);
     }
 
     @Test

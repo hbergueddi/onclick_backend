@@ -11,6 +11,9 @@ public interface ExploreFeaturedRepository extends JpaRepository<ExploreFeatured
     @Query("SELECT f FROM ExploreFeatured f WHERE f.enabled = true ORDER BY f.rank ASC")
     List<ExploreFeatured> findAllEnabledOrdered();
 
+    /** Liste admin : tous les featured (activés ET désactivés), triés par rang. */
+    List<ExploreFeatured> findAllByOrderByRankAsc();
+
     @Query("SELECT f FROM ExploreFeatured f WHERE f.restaurantId = :restaurantId")
     java.util.Optional<ExploreFeatured> findByRestaurant(UUID restaurantId);
 }
