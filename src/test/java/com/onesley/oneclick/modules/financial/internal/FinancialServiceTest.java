@@ -15,6 +15,7 @@ import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -35,6 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -54,6 +56,7 @@ class FinancialServiceTest {
     @Mock InvoiceLineRepository lineRepo;
     @Mock WalletTransactionRepository walletRepo;
     @Mock ContractTemplateRepository templateRepo;
+    @Mock ContractHistoryRepository historyRepo;
     @Mock EntityManager entityManager;
     @InjectMocks FinancialService service;
 
@@ -120,6 +123,36 @@ class FinancialServiceTest {
         when(contractRepo.findById(any())).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.updateContract(UUID.randomUUID(),
             new ContractUpdateDto(null, null, null, null, null))).isInstanceOf(NotFoundException.class);
+    }
+
+    // ─── #3 — audit contract_history (diff des champs suivis) ──────────────────
+
+    @Test
+    void updateContract_trackedFieldChange_recordsHistoryRow() {
+        Contract c = contract(); // status défaut "active"
+        when(contractRepo.findById(any())).thenReturn(Optional.of(c));
+        when(contractRepo.save(any(Contract.class))).thenAnswer(i -> i.getArgument(0));
+        ArgumentCaptor<ContractHistory> cap = ArgumentCaptor.forClass(ContractHistory.class);
+        try (MockedStatic<SecurityHelper> ignored = mockStatic(SecurityHelper.class)) {
+            service.updateContract(c.getId(), new ContractUpdateDto(null, null, null, "terminated", null));
+        }
+        verify(historyRepo, atLeastOnce()).save(cap.capture());
+        ContractHistory statusRow = cap.getAllValues().stream()
+            .filter(h -> "status".equals(h.getFieldName())).findFirst().orElseThrow();
+        assertThat(statusRow.getOldValue()).isEqualTo("active");
+        assertThat(statusRow.getNewValue()).isEqualTo("terminated");
+        assertThat(statusRow.getContractId()).isEqualTo(c.getId());
+    }
+
+    @Test
+    void updateContract_noTrackedChange_recordsNothing() {
+        Contract c = contract(); // status déjà "active"
+        when(contractRepo.findById(any())).thenReturn(Optional.of(c));
+        when(contractRepo.save(any(Contract.class))).thenAnswer(i -> i.getArgument(0));
+        try (MockedStatic<SecurityHelper> ignored = mockStatic(SecurityHelper.class)) {
+            service.updateContract(c.getId(), new ContractUpdateDto(null, null, null, "active", null));
+        }
+        verify(historyRepo, never()).save(any());
     }
 
     @Test
