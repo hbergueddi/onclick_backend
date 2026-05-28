@@ -87,6 +87,8 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID>,
           AND (CAST(:clientId     AS uuid) IS NULL OR r.client_id     = CAST(:clientId     AS uuid))
           AND (CAST(:restaurantId AS uuid) IS NULL OR r.restaurant_id = CAST(:restaurantId AS uuid))
           AND (:status IS NULL OR r.status = :status)
+          AND (CAST(:dateFrom AS timestamptz) IS NULL OR r.reservation_at >= CAST(:dateFrom AS timestamptz))
+          AND (CAST(:dateTo   AS timestamptz) IS NULL OR r.reservation_at <  CAST(:dateTo   AS timestamptz))
         ORDER BY r.reservation_at DESC
         """,
         countQuery = """
@@ -96,12 +98,16 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID>,
           AND (CAST(:clientId     AS uuid) IS NULL OR r.client_id     = CAST(:clientId     AS uuid))
           AND (CAST(:restaurantId AS uuid) IS NULL OR r.restaurant_id = CAST(:restaurantId AS uuid))
           AND (:status IS NULL OR r.status = :status)
+          AND (CAST(:dateFrom AS timestamptz) IS NULL OR r.reservation_at >= CAST(:dateFrom AS timestamptz))
+          AND (CAST(:dateTo   AS timestamptz) IS NULL OR r.reservation_at <  CAST(:dateTo   AS timestamptz))
         """,
         nativeQuery = true)
     Page<ReservationWithJoinsView> findAllWithJoins(
         @Param("clientId") UUID clientId,
         @Param("restaurantId") UUID restaurantId,
         @Param("status") String status,
+        @Param("dateFrom") Instant dateFrom,
+        @Param("dateTo") Instant dateTo,
         Pageable pageable
     );
 

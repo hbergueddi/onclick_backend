@@ -8,10 +8,12 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -77,12 +79,14 @@ public class ReservationController {
     }
 
     @GetMapping
-    @Operation(summary = "Liste paginée — filtres clientId / restaurantId / status optionnels")
+    @Operation(summary = "Liste paginée — filtres clientId / restaurantId / status / fenêtre de dates optionnels")
     @PreAuthorize("hasAuthority('VIEW:RESERVATIONS')")
     public PageResponse<ReservationDto> findAll(
         @RequestParam(required = false) UUID clientId,
         @RequestParam(required = false) UUID restaurantId,
         @RequestParam(required = false) String status,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant dateFrom,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant dateTo,
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size
     ) {
@@ -92,7 +96,9 @@ public class ReservationController {
             && (restaurantId == null || !restaurantAccessGuard.isAdminOrActiveStaffOf(restaurantId))) {
             clientId = SecurityHelper.currentUserId();
         }
-        return PageResponse.from(service.findAll(clientId, restaurantId, status, page, size));
+        // dateFrom/dateTo : bornes [dateFrom, dateTo[ sur reservation_at (ISO-8601).
+        // Vue admin consolidée /reservations — enrichissement (noms) + fenêtre de dates.
+        return PageResponse.from(service.findAll(clientId, restaurantId, status, dateFrom, dateTo, page, size));
     }
 
     @GetMapping("/{id}")

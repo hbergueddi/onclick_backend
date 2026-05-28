@@ -44,14 +44,19 @@ public class ReservationService {
     private EntityManager entityManager;
 
     public Page<ReservationDto> findAll(UUID clientId, UUID restaurantId, String status,
+                                        Instant dateFrom, Instant dateTo,
                                         int page, int size) {
         // Native query joints (anti N+1) — voir ReservationRepository.findAllWithJoins.
         // Tri figé `ORDER BY r.reservation_at DESC` dans la query native (NE PAS
         // passer de Sort dans le PageRequest : Hibernate l'injecte mal sur les
         // native queries — concatène `, r.reservation_at desc` après le WHERE,
         // sans le keyword ORDER BY → syntax error PostgreSQL).
+        //
+        // dateFrom/dateTo (optionnels, bornes [dateFrom, dateTo[ sur reservation_at)
+        // alimentent la vue admin consolidée /reservations qui filtre par fenêtre
+        // de dates tout en gardant l'enrichissement (noms client/resto/service).
         return repository.findAllWithJoins(
-                clientId, restaurantId, status,
+                clientId, restaurantId, status, dateFrom, dateTo,
                 PageRequest.of(page, size))
             .map(ReservationService::toDto);
     }

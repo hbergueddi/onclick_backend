@@ -193,9 +193,19 @@ class ReservationServiceTest {
 
     @Test
     void findAll_delegatesToRepository() {
-        when(repository.findAllWithJoins(any(), any(), any(), any())).thenReturn(Page.empty());
-        Page<ReservationDto> page = service.findAll(null, null, null, 0, 20);
+        when(repository.findAllWithJoins(any(), any(), any(), any(), any(), any())).thenReturn(Page.empty());
+        Page<ReservationDto> page = service.findAll(null, null, null, null, null, 0, 20);
         assertThat(page.getContent()).isEmpty();
+    }
+
+    @Test
+    void findAll_forwardsDateWindowToRepository() {
+        Instant from = Instant.parse("2026-05-01T00:00:00Z");
+        Instant to = Instant.parse("2026-06-01T00:00:00Z");
+        when(repository.findAllWithJoins(isNull(), isNull(), isNull(), eq(from), eq(to), any()))
+            .thenReturn(Page.empty());
+        service.findAll(null, null, null, from, to, 0, 20);
+        verify(repository).findAllWithJoins(isNull(), isNull(), isNull(), eq(from), eq(to), any());
     }
 
     @Test

@@ -77,6 +77,45 @@ class ReservationFlowIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void findAll_dateWindow_filtersAndEnriches() throws Exception {
+        String admin = adminBearer();
+        String[] rt = restoTenant();
+        String restaurantId = rt[0], tenantId = rt[1], uid = userId();
+
+        Instant at = Instant.now().plus(3, ChronoUnit.DAYS);
+        ResponseEntity<String> post = restTemplate.exchange(url("/api/reservations"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("tenantId", tenantId, "clientId", uid, "restaurantId", restaurantId,
+                "reservationAt", at.toString(), "guestCount", 2, "notes", "L4-window"), admin), String.class);
+        assertThat(post.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        String id = om.readTree(post.getBody()).get("id").asText();
+
+        // Fenêtre [now, now+7j[ → contient la résa + enrichissement (restaurantName non null).
+        String in = restTemplate.exchange(url("/api/reservations?dateFrom=" + Instant.now()
+                + "&dateTo=" + Instant.now().plus(7, ChronoUnit.DAYS) + "&size=200"),
+            HttpMethod.GET, jwtEntity(admin), String.class).getBody();
+        boolean found = false, enriched = false;
+        for (var n : om.readTree(in).get("content")) {
+            if (n.get("id").asText().equals(id)) { found = true; enriched = !n.get("restaurantName").isNull(); }
+        }
+        assertThat(found).as("résa présente dans la fenêtre [now, now+7j[").isTrue();
+        assertThat(enriched).as("restaurantName enrichi via findAllWithJoins").isTrue();
+
+        // Fenêtre future [now+30j, now+40j[ → exclut la résa.
+        String out = restTemplate.exchange(url("/api/reservations?dateFrom=" + Instant.now().plus(30, ChronoUnit.DAYS)
+                + "&dateTo=" + Instant.now().plus(40, ChronoUnit.DAYS) + "&size=200"),
+            HttpMethod.GET, jwtEntity(admin), String.class).getBody();
+        boolean foundOut = false;
+        for (var n : om.readTree(out).get("content")) {
+            if (n.get("id").asText().equals(id)) foundOut = true;
+        }
+        assertThat(foundOut).as("résa exclue de la fenêtre future").isFalse();
+
+        // cleanup
+        restTemplate.exchange(url("/api/reservations/" + id + "/status"), HttpMethod.PATCH,
+            jsonJwtEntity(Map.of("status", "cancelled", "changedById", uid, "reason", "window cleanup"), admin), String.class);
+    }
+
+    @Test
     void bookingRules_crud() throws Exception {
         String admin = adminBearer();
         String restaurantId = restoTenant()[0];
