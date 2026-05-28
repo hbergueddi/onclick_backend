@@ -6,16 +6,20 @@ import com.onesley.oneclick.shared.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import com.onesley.oneclick.modules.promotion.api.OfferCreateDto;
 import com.onesley.oneclick.modules.promotion.api.OfferDto;
+import com.onesley.oneclick.modules.promotion.api.OfferImpressionDto;
 import com.onesley.oneclick.modules.promotion.api.OfferPatchDto;
 import com.onesley.oneclick.modules.promotion.internal.Offer;
 import com.onesley.oneclick.modules.promotion.internal.OfferRepository;
@@ -88,5 +92,29 @@ public class OfferController {
         return PageResponse.from(
             Searchable.execute(offerRepository, req, SEARCHABLE_FIELDS, Offer::toDto)
         );
+    }
+
+    // ─── Impressions (tracking vues offres — offer_impressions V21) ──────────
+
+    public record ImpressionRequest(String type) {}
+
+    @GetMapping("/impressions")
+    @Operation(summary = "Impressions (vues) des N derniers jours — dashboard exécutif Promotions (admin)")
+    @PreAuthorize("hasAuthority('VIEW:ANALYTICS')")
+    public List<OfferImpressionDto> impressions(
+        @RequestParam(defaultValue = "60") @Min(1) @Max(365) int sinceDays
+    ) {
+        return service.listImpressions(sinceDays);
+    }
+
+    @PostMapping("/{id}/impressions")
+    @Operation(summary = "Enregistre une vue d'offre par l'utilisateur courant")
+    @PreAuthorize("hasAuthority('VIEW:OFFERS')")
+    public ResponseEntity<Void> recordImpression(
+        @PathVariable UUID id,
+        @RequestBody(required = false) ImpressionRequest body
+    ) {
+        service.recordImpression(id, body != null ? body.type() : null);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 }

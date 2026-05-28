@@ -19,6 +19,8 @@ public record OfferCreateDto(
     @Positive Integer pts,
     Boolean pushNotify,
     @Size(min = 1, max = 512) String image,
-    List<String> segments
+    List<String> segments,
+    // V53 — regroupement de campagne multi-restaurant (optionnel).
+    UUID campaignId
 ) {
 }

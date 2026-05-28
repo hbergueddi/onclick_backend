@@ -3,6 +3,7 @@ package com.onesley.oneclick.modules.promotion.internal;
 import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.modules.promotion.api.OfferCreateDto;
+import com.onesley.oneclick.modules.promotion.api.OfferDto;
 import com.onesley.oneclick.modules.promotion.api.OfferPatchDto;
 import com.onesley.oneclick.shared.events.OfferCreatedEvent;
 import jakarta.persistence.EntityManager;
@@ -10,6 +11,7 @@ import jakarta.persistence.Query;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -21,6 +23,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -38,6 +41,7 @@ import static org.mockito.Mockito.when;
 class OfferServiceTest {
 
     @Mock OfferRepository repository;
+    @Mock OfferImpressionRepository impressionRepository;
     @Mock ApplicationEventPublisher eventPublisher;
     @Mock EntityManager em;
     @Mock Query query;
@@ -59,7 +63,7 @@ class OfferServiceTest {
         return new Offer(UUID.randomUUID(), UUID.randomUUID(), "Promo", start, end);
     }
     private OfferCreateDto createDto(Instant s, Instant e, String type, Integer pts) {
-        return new OfferCreateDto(UUID.randomUUID(), "Promo", "desc", s, e, null, null, type, pts, true, "img", null);
+        return new OfferCreateDto(UUID.randomUUID(), "Promo", "desc", s, e, null, null, type, pts, true, "img", null, null);
     }
 
     @Test
@@ -145,5 +149,56 @@ class OfferServiceTest {
         when(repository.findById(o.getId())).thenReturn(Optional.of(o));
         service.softDelete(o.getId());
         assertThat(o.getDeletedAt()).isNotNull();
+    }
+
+    // ─── Gap 2 — campaign_id persisté à la création ───────────────────────────
+
+    @Test
+    void create_persistsCampaignId() {
+        UUID campaignId = UUID.randomUUID();
+        OfferCreateDto dto = new OfferCreateDto(UUID.randomUUID(), "Promo", "desc", start, end,
+            null, null, "promo", null, true, "img", null, campaignId);
+        OfferDto result = service.create(dto);
+        assertThat(result.campaignId()).isEqualTo(campaignId);
+    }
+
+    // ─── Gap 1 — impressions (record append-only + stats) ─────────────────────
+
+    @Test
+    void recordImpression_offerNotFound_throwsNotFound() {
+        when(repository.existsById(any())).thenReturn(false);
+        assertThatThrownBy(() -> service.recordImpression(UUID.randomUUID(), "view"))
+            .isInstanceOf(NotFoundException.class);
+        verify(impressionRepository, org.mockito.Mockito.never()).save(any());
+    }
+
+    @Test
+    void recordImpression_defaultsTypeToView_whenBlank() {
+        UUID offerId = UUID.randomUUID();
+        when(repository.existsById(offerId)).thenReturn(true);
+        service.recordImpression(offerId, "   ");
+        ArgumentCaptor<OfferImpression> captor = ArgumentCaptor.forClass(OfferImpression.class);
+        verify(impressionRepository).save(captor.capture());
+        assertThat(captor.getValue().getOfferId()).isEqualTo(offerId);
+        assertThat(captor.getValue().getImpressionType()).isEqualTo("view");
+        assertThat(captor.getValue().getCreatedAt()).isNotNull();
+    }
+
+    @Test
+    void recordImpression_usesProvidedType() {
+        UUID offerId = UUID.randomUUID();
+        when(repository.existsById(offerId)).thenReturn(true);
+        service.recordImpression(offerId, "click");
+        ArgumentCaptor<OfferImpression> captor = ArgumentCaptor.forClass(OfferImpression.class);
+        verify(impressionRepository).save(captor.capture());
+        assertThat(captor.getValue().getImpressionType()).isEqualTo("click");
+    }
+
+    @Test
+    void listImpressions_delegatesToRepository() {
+        when(impressionRepository.findByCreatedAtGreaterThanEqualOrderByCreatedAtDesc(any()))
+            .thenReturn(List.of());
+        assertThat(service.listImpressions(30)).isEmpty();
+        verify(impressionRepository).findByCreatedAtGreaterThanEqualOrderByCreatedAtDesc(any());
     }
 }

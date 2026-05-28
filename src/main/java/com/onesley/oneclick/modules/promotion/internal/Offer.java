@@ -51,6 +51,10 @@ public class Offer extends SoftDeletableAuditedEntity {
     /** Segments clients ciblés (tous, fideles, nouveaux, inactifs, ruby, …). */
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(name = "segments", columnDefinition = "text[]") @Setter private String[] segments;
+
+    /** V53 — regroupement de campagne multi-restaurant (null si offre isolée). */
+    @Column(name = "campaign_id") @Setter private UUID campaignId;
+
     public Offer(UUID id, UUID restaurantId, String title, Instant startsAt, Instant expiresAt) {
         this.id = id; this.restaurantId = restaurantId; this.title = title; this.startsAt = startsAt; this.expiresAt = expiresAt;
     }
@@ -60,7 +64,7 @@ public class Offer extends SoftDeletableAuditedEntity {
         return new OfferDto(id, restaurantId, title, description, startsAt, expiresAt,
             discountPct, discountAmount, enabled, type, pts,
             pushNotify, image, segments == null ? List.of() : List.of(segments),
-            getCreatedAt());
+            getCreatedAt(), campaignId);
     }
 
     @Override

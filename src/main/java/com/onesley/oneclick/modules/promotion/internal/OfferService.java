@@ -13,11 +13,15 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.onesley.oneclick.security.SecurityHelper;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import com.onesley.oneclick.modules.promotion.api.OfferCreateDto;
 import com.onesley.oneclick.modules.promotion.api.OfferDto;
+import com.onesley.oneclick.modules.promotion.api.OfferImpressionDto;
 import com.onesley.oneclick.modules.promotion.api.OfferPatchDto;
 import lombok.RequiredArgsConstructor;
 
@@ -30,6 +34,7 @@ public class OfferService {
     private static final Set<String> ALLOWED_TYPES = Set.of("promo", "bonus", "reco");
 
     private final OfferRepository repository;
+    private final OfferImpressionRepository impressionRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     @PersistenceContext
@@ -74,6 +79,7 @@ public class OfferService {
         if (dto.pushNotify() != null) o.setPushNotify(dto.pushNotify());
         o.setImage(dto.image());
         if (dto.segments() != null) o.setSegments(dto.segments().toArray(new String[0]));
+        o.setCampaignId(dto.campaignId());
         Offer saved = repository.save(o);
 
         // Publish event for downstream consumers (notification campaign trigger, etc.)
@@ -135,6 +141,34 @@ public class OfferService {
             .orElseThrow(() -> new NotFoundException("Offer", id));
         o.markDeleted();
         repository.save(o);
+    }
+
+    // ─── Impressions (tracking vues offres — offer_impressions V21) ──────────
+
+    /**
+     * Enregistre une vue d'offre par l'utilisateur courant (log append-only).
+     * Appelé quand un client consulte une offre (Pocket). {@code type} défaut "view".
+     * RBAC VIEW:OFFERS (controller) — le client voit l'offre, donc peut tracer sa vue.
+     */
+    @Transactional
+    public void recordImpression(UUID offerId, String type) {
+        if (!repository.existsById(offerId)) {
+            throw new NotFoundException("Offer", offerId);
+        }
+        String t = (type == null || type.isBlank()) ? "view" : type;
+        impressionRepository.save(new OfferImpression(
+            UUID.randomUUID(), offerId, SecurityHelper.currentUserId(), t, Instant.now()));
+    }
+
+    /**
+     * Impressions des {@code sinceDays} derniers jours (analytics admin — dashboard
+     * exécutif Promotions). Lignes brutes ; l'agrégation période/sparkline est front.
+     */
+    @Transactional(readOnly = true)
+    public List<OfferImpressionDto> listImpressions(int sinceDays) {
+        Instant since = Instant.now().minus(sinceDays, ChronoUnit.DAYS);
+        return impressionRepository.findByCreatedAtGreaterThanEqualOrderByCreatedAtDesc(since)
+            .stream().map(OfferImpression::toDto).toList();
     }
 
     private static void validateType(String type) {

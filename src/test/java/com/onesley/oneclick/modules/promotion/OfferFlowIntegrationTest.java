@@ -128,4 +128,79 @@ class OfferFlowIntegrationTest extends AbstractIntegrationTest {
             url("/api/offers?page=0&size=5"), HttpMethod.GET, jwtEntity(null), String.class);
         assertThat(r.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
+
+    // ─── Gap 2 — campaign_id (regroupement de campagne multi-restaurant) ──────
+
+    @Test
+    void offer_campaignId_roundTrip() throws Exception {
+        String admin = adminBearer();
+        String campaignId = java.util.UUID.randomUUID().toString();
+        Map<String, Object> create = Map.of(
+            "restaurantId", restaurantId(),
+            "title", "Campagne multi-resto",
+            "startsAt", Instant.now().toString(),
+            "expiresAt", Instant.now().plus(10, ChronoUnit.DAYS).toString(),
+            "campaignId", campaignId);
+
+        ResponseEntity<String> post = restTemplate.exchange(
+            url("/api/offers"), HttpMethod.POST, jsonJwtEntity(create, admin), String.class);
+        assertThat(post.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        JsonNode created = om.readTree(post.getBody());
+        assertThat(created.get("campaignId").asText()).isEqualTo(campaignId);
+
+        // GET confirme la persistance en DB (V53)
+        String id = created.get("id").asText();
+        ResponseEntity<String> get = restTemplate.exchange(
+            url("/api/offers/" + id), HttpMethod.GET, jwtEntity(admin), String.class);
+        assertThat(om.readTree(get.getBody()).get("campaignId").asText()).isEqualTo(campaignId);
+    }
+
+    // ─── Gap 1 — impressions (tracking vues offres, V21) ──────────────────────
+
+    @Test
+    void impressions_record_then_listContainsOffer() throws Exception {
+        String admin = adminBearer();
+        Map<String, Object> create = Map.of(
+            "restaurantId", restaurantId(),
+            "title", "Offre tracée",
+            "startsAt", Instant.now().toString(),
+            "expiresAt", Instant.now().plus(5, ChronoUnit.DAYS).toString());
+        ResponseEntity<String> post = restTemplate.exchange(
+            url("/api/offers"), HttpMethod.POST, jsonJwtEntity(create, admin), String.class);
+        String id = om.readTree(post.getBody()).get("id").asText();
+
+        // POST impression → 201 (VIEW:OFFERS — le client/visiteur qui voit l'offre)
+        ResponseEntity<String> imp = restTemplate.exchange(
+            url("/api/offers/" + id + "/impressions"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("type", "view"), admin), String.class);
+        assertThat(imp.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+
+        // GET stats impressions → 200 (VIEW:ANALYTICS — admin)
+        ResponseEntity<String> list = restTemplate.exchange(
+            url("/api/offers/impressions?sinceDays=1"), HttpMethod.GET, jwtEntity(admin), String.class);
+        assertThat(list.getStatusCode()).isEqualTo(HttpStatus.OK);
+        JsonNode arr = om.readTree(list.getBody());
+        assertThat(arr.isArray()).isTrue();
+        boolean found = false;
+        for (JsonNode n : arr) {
+            if (n.get("offerId").asText().equals(id)) { found = true; break; }
+        }
+        assertThat(found).as("l'impression enregistrée doit apparaître dans les stats").isTrue();
+    }
+
+    @Test
+    void impressions_record_unknownOffer_returns404() {
+        ResponseEntity<String> imp = restTemplate.exchange(
+            url("/api/offers/" + java.util.UUID.randomUUID() + "/impressions"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("type", "view"), adminBearer()), String.class);
+        assertThat(imp.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void impressions_list_asClient_returns403() {
+        // VIEW:ANALYTICS est admin-only → un client ne lit pas les stats d'impressions
+        ResponseEntity<String> r = restTemplate.exchange(
+            url("/api/offers/impressions"), HttpMethod.GET, jwtEntity(bearerForRole("CLIENT")), String.class);
+        assertThat(r.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
 }

@@ -23,6 +23,8 @@ public record OfferDto(
     Instant startsAt, Instant expiresAt, BigDecimal discountPct, BigDecimal discountAmount,
     boolean enabled, String type, Integer pts,
     boolean pushNotify, String image, List<String> segments,
-    Instant createdAt
+    Instant createdAt,
+    // V53 — regroupement de campagne multi-restaurant (null si offre isolée).
+    UUID campaignId
 ) {
 }

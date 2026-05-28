@@ -5,7 +5,7 @@
     type = org.springframework.modulith.ApplicationModule.Type.CLOSED,
     id = "modules.promotion",
     displayName = "modules/promotion",
-    allowedDependencies = {"audit", "exception", "search", "shared"}
+    allowedDependencies = {"audit", "exception", "search", "security", "shared"}
 )
 package com.onesley.oneclick.modules.promotion;
 
