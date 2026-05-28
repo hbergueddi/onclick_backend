@@ -18,6 +18,7 @@ import com.onesley.oneclick.modules.loyalty.api.TierDto;
 import com.onesley.oneclick.modules.loyalty.api.TierUpdateDto;
 import com.onesley.oneclick.shared.events.LoyaltyEarnedEvent;
 import com.onesley.oneclick.shared.events.LoyaltyRedeemedEvent;
+import static com.onesley.oneclick.shared.Temporals.toInstant;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.context.ApplicationEventPublisher;
@@ -476,6 +477,42 @@ public class LoyaltyService {
             s.getPointsEmitted(),
             s.getTotalAmount() == null ? java.math.BigDecimal.ZERO : s.getTotalAmount()
         );
+    }
+
+    /**
+     * Liste plateforme des tickets scannés (Snap2Earn) — page TrustWatch « File de
+     * tickets ». Cross-restaurant → réservé admin (VIEW:ANALYTICS côté contrôleur).
+     *
+     * <p>Native SQL (besoin de {@code split_part} pour extraire le {@code ticketRef}
+     * encodé dans {@code reason = "snap2earn|<ref>|..."}, + JOIN loyalty_accounts
+     * pour le {@code restaurant_id}). Tri récents d'abord, borné par {@code limit}.
+     */
+    @SuppressWarnings("unchecked")
+    @Transactional(readOnly = true)
+    public List<com.onesley.oneclick.modules.loyalty.api.ScannedTicketDto> findScannedTickets(int limit) {
+        var q = entityManager.createNativeQuery("""
+            SELECT lt.id,
+                   split_part(lt.reason, '|', 2) AS ticket_ref,
+                   la.restaurant_id,
+                   lt.amount,
+                   lt.points,
+                   lt.created_at
+              FROM loyalty_transactions lt
+              JOIN loyalty_accounts la ON la.id = lt.account_id
+             WHERE lt.type = 'earn' AND lt.reason LIKE 'snap2earn|%'
+             ORDER BY lt.created_at DESC
+             LIMIT :limit
+            """);
+        q.setParameter("limit", limit);
+        List<Object[]> rows = q.getResultList();
+        return rows.stream().map(r -> new com.onesley.oneclick.modules.loyalty.api.ScannedTicketDto(
+            r[0] != null ? (UUID) r[0] : null,
+            (String) r[1],
+            r[2] != null ? (UUID) r[2] : null,
+            r[3] != null ? (BigDecimal) r[3] : null,
+            r[4] != null ? ((Number) r[4]).intValue() : 0,
+            r[5] != null ? toInstant(r[5]) : null
+        )).toList();
     }
 
     /** Résumé des points expirés d'un client (cross-comptes). */

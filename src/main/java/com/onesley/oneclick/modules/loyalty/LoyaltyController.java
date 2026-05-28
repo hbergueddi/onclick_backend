@@ -11,6 +11,7 @@ import com.onesley.oneclick.modules.loyalty.api.LoyaltyAccountDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyEarnDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyTransactionDto;
 import com.onesley.oneclick.modules.loyalty.api.ScannedTicketStatsDto;
+import com.onesley.oneclick.modules.loyalty.api.ScannedTicketDto;
 import com.onesley.oneclick.modules.loyalty.api.OcrReceiptRequestDto;
 import com.onesley.oneclick.modules.loyalty.api.OcrReceiptResultDto;
 import com.onesley.oneclick.modules.loyalty.api.Snap2EarnDto;
@@ -292,6 +293,19 @@ public class LoyaltyController {
     @PreAuthorize("hasAuthority('VIEW:ANALYTICS')")
     public ScannedTicketStatsDto scannedTicketStats() {
         return service.scannedTicketStats();
+    }
+
+    @GetMapping("/scanned-tickets")
+    @Operation(
+        summary = "Liste plateforme des tickets scannés (Snap2Earn) — TrustWatch File de tickets.",
+        description = "Cross-restaurant (ref + montant + points + resto + date). Réservé admin " +
+                      "(VIEW:ANALYTICS). Distinct de /scanned-tickets/stats (agrégat)."
+    )
+    @PreAuthorize("hasAuthority('VIEW:ANALYTICS')")
+    public List<ScannedTicketDto> scannedTickets(
+        @RequestParam(required = false, defaultValue = "500") @Min(1) @Max(5000) Integer limit
+    ) {
+        return service.findScannedTickets(limit);
     }
 
     @GetMapping("/tiers")

@@ -102,6 +102,23 @@ class LoyaltyControllerRbacIntegrationTest extends AbstractIntegrationTest {
             .getStatusCode().value()).isEqualTo(401);
     }
 
+    @Test
+    void scannedTickets_list_adminOk_restaurateur403_anon401() {
+        // Admin (VIEW:ANALYTICS) → 200 + tableau JSON.
+        var ok = restTemplate.exchange(url("/api/loyalty/scanned-tickets"),
+            HttpMethod.GET, jwtEntity(adminBearer()), String.class);
+        assertThat(ok.getStatusCode().value()).isEqualTo(200);
+        assertThat(ok.getBody()).startsWith("[");
+        // RESTAURATEUR (pas VIEW:ANALYTICS) → 403.
+        assertThat(restTemplate.exchange(url("/api/loyalty/scanned-tickets"),
+            HttpMethod.GET, jwtEntity(bearerOf("RESTAURATEUR")), String.class)
+            .getStatusCode().value()).isEqualTo(403);
+        // Anonyme → 401.
+        assertThat(restTemplate.exchange(url("/api/loyalty/scanned-tickets"),
+            HttpMethod.GET, org.springframework.http.HttpEntity.EMPTY, String.class)
+            .getStatusCode().value()).isEqualTo(401);
+    }
+
     // ─── STAFF peut SCANNER : gate CREATE:LOYALTY passe (V35) ─────────────────
 
     @Test
