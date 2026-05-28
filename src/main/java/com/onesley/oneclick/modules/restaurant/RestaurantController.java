@@ -177,6 +177,17 @@ public class RestaurantController {
         return subResourceService.findStaffByUser(userId);
     }
 
+    @GetMapping("/staffed-ids")
+    @Operation(
+        summary = "IDs des restaurants ayant ≥ 1 staff actif — dashboard admin (alerte « Sans équipe »).",
+        description = "Agrégat cross-restaurant réservé au dashboard admin (VIEW:ANALYTICS, SUPERADMIN). "
+                    + "Remplace le scan legacy supabase.from(restaurant_staff)."
+    )
+    @PreAuthorize("hasAuthority('VIEW:ANALYTICS')")
+    public List<UUID> listStaffedRestaurantIds() {
+        return subResourceService.listStaffedRestaurantIds();
+    }
+
     @PostMapping("/staff/transfer")
     @Operation(
         summary = "Sprint G.5 — Transfert staff entre restos (port EF transfer-staff)",

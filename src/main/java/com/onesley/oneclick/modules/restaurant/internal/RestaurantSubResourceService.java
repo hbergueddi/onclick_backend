@@ -94,6 +94,11 @@ public class RestaurantSubResourceService {
             .toList();
     }
 
+    /** IDs des restaurants ayant ≥ 1 staff actif — dashboard admin (alerte "Sans équipe"). */
+    public List<UUID> listStaffedRestaurantIds() {
+        return staffRepository.findDistinctStaffedRestaurantIds();
+    }
+
     @Transactional
     public RestaurantStaffDto addStaff(UUID restaurantId, RestaurantStaffCreateDto dto) {
         Restaurant restaurant = requireRestaurant(restaurantId);

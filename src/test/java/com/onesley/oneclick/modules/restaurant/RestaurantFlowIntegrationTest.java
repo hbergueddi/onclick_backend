@@ -117,6 +117,19 @@ class RestaurantFlowIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void staffedIds_adminOk_restaurateur403() throws Exception {
+        // Admin (VIEW:ANALYTICS) → 200 + tableau d'UUID
+        ResponseEntity<String> ok = restTemplate.exchange(url("/api/restaurants/staffed-ids"),
+            HttpMethod.GET, jwtEntity(adminBearer()), String.class);
+        assertThat(ok.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(om.readTree(ok.getBody()).isArray()).isTrue();
+        // RESTAURATEUR n'a pas VIEW:ANALYTICS (SUPERADMIN-only) → 403
+        assertThat(restTemplate.exchange(url("/api/restaurants/staffed-ids"),
+            HttpMethod.GET, jwtEntity(bearerForRole("RESTAURATEUR")), String.class)
+            .getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
     void staff_transferBetweenRestaurants() throws Exception {
         String admin = adminBearer();
         String src = createRestaurant(admin, "L4 Src");

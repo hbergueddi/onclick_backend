@@ -262,6 +262,13 @@ class RestaurantSubResourceServiceTest {
         verify(mealServiceRepository).deleteById(id);
     }
 
+    @Test
+    void listStaffedRestaurantIds_delegatesToRepo() {
+        UUID r1 = UUID.randomUUID(), r2 = UUID.randomUUID();
+        when(staffRepository.findDistinctStaffedRestaurantIds()).thenReturn(List.of(r1, r2));
+        assertThat(service.listStaffedRestaurantIds()).containsExactly(r1, r2);
+    }
+
     // ─── Zones ─────────────────────────────────────────────────────────────────
 
     @Test
