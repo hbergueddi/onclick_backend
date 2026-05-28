@@ -15,6 +15,7 @@ import com.onesley.oneclick.modules.loyalty.api.LoyaltyTransactionDto;
 import com.onesley.oneclick.modules.loyalty.api.Snap2EarnDto;
 import com.onesley.oneclick.modules.loyalty.api.Snap2EarnResultDto;
 import com.onesley.oneclick.modules.loyalty.api.TierDto;
+import com.onesley.oneclick.modules.loyalty.api.TierUpdateDto;
 import com.onesley.oneclick.shared.events.LoyaltyEarnedEvent;
 import com.onesley.oneclick.shared.events.LoyaltyRedeemedEvent;
 import jakarta.persistence.EntityManager;
@@ -485,6 +486,22 @@ public class LoyaltyService {
         return tierRepository.findAllByTenantId(tenantId).stream()
             .map(Tier::toDto)
             .toList();
+    }
+
+    /**
+     * PATCH partiel d'un palier de fidélité (admin /forge/regles). Aligné sur le
+     * modèle réel : name / minPoints / bonusPercent / sortOrder. RBAC LOYALTY_TIER
+     * (controller). Seuls les champs présents sont appliqués.
+     */
+    @Transactional
+    public TierDto updateTier(UUID id, TierUpdateDto dto) {
+        Tier tier = tierRepository.findById(id)
+            .orElseThrow(() -> new NotFoundException("Tier", id));
+        if (dto.name() != null && !dto.name().isBlank()) tier.setName(dto.name());
+        if (dto.minPoints() != null) tier.setMinPoints(dto.minPoints());
+        if (dto.bonusPercent() != null) tier.setBonusPercent(dto.bonusPercent());
+        if (dto.sortOrder() != null) tier.setSortOrder(dto.sortOrder());
+        return tierRepository.save(tier).toDto();
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────

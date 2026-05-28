@@ -15,6 +15,7 @@ import com.onesley.oneclick.modules.loyalty.api.OcrReceiptResultDto;
 import com.onesley.oneclick.modules.loyalty.api.Snap2EarnDto;
 import com.onesley.oneclick.modules.loyalty.api.Snap2EarnResultDto;
 import com.onesley.oneclick.modules.loyalty.api.TierDto;
+import com.onesley.oneclick.modules.loyalty.api.TierUpdateDto;
 import com.onesley.oneclick.modules.loyalty.internal.GainRuleRequestService;
 import com.onesley.oneclick.modules.loyalty.internal.LoyaltyService;
 import com.onesley.oneclick.modules.loyalty.internal.OcrReceiptService;
@@ -293,6 +294,13 @@ public class LoyaltyController {
     @PreAuthorize("hasAuthority('VIEW:LOYALTY')")
     public List<TierDto> listTiersByTenant(@PathVariable UUID tenantId) {
         return service.listTiersByTenant(tenantId);
+    }
+
+    @PatchMapping("/tiers/{id}")
+    @Operation(summary = "Met à jour un palier de fidélité (name/minPoints/bonusPercent/sortOrder).")
+    @PreAuthorize("hasAuthority('UPDATE:LOYALTY_TIER')")
+    public TierDto updateTier(@PathVariable UUID id, @Valid @RequestBody TierUpdateDto dto) {
+        return service.updateTier(id, dto);
     }
 
     // ═══════════════════════════════════════════════════════════════════════

@@ -5,6 +5,7 @@ import com.onesley.oneclick.core.identity.api.User;
 import com.onesley.oneclick.core.identity.api.UserRepository;
 import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.NotFoundException;
+import com.onesley.oneclick.modules.loyalty.api.TierUpdateDto;
 import com.onesley.oneclick.modules.loyalty.api.ClientNameDto;
 import com.onesley.oneclick.modules.loyalty.api.GainRuleCreateDto;
 import com.onesley.oneclick.modules.loyalty.api.GainRulePatchDto;
@@ -447,6 +448,26 @@ class LoyaltyServiceTest {
         when(tierRepository.findAllByTenantId(any())).thenReturn(List.of());
         assertThat(service.listTiers()).isEmpty();
         assertThat(service.listTiersByTenant(UUID.randomUUID())).isEmpty();
+    }
+
+    @Test
+    void updateTier_appliesPresentFields() {
+        UUID id = UUID.randomUUID();
+        Tier tier = new Tier(id, UUID.randomUUID(), "Ruby", 0, new BigDecimal("0.00"));
+        when(tierRepository.findById(id)).thenReturn(Optional.of(tier));
+        when(tierRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        var dto = service.updateTier(id, new TierUpdateDto("Diamond", 1500, new BigDecimal("7.50"), 2));
+        assertThat(dto.name()).isEqualTo("Diamond");
+        assertThat(dto.minPoints()).isEqualTo(1500);
+        assertThat(dto.bonusPercent()).isEqualByComparingTo("7.50");
+        assertThat(dto.sortOrder()).isEqualTo(2);
+    }
+
+    @Test
+    void updateTier_notFound_throws() {
+        when(tierRepository.findById(any())).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.updateTier(UUID.randomUUID(), new TierUpdateDto(null, null, null, null)))
+            .isInstanceOf(NotFoundException.class);
     }
 
     @Test

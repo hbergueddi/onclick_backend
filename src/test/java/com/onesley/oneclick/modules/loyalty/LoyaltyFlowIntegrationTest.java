@@ -70,6 +70,20 @@ class LoyaltyFlowIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void tiers_patch_updatesFields() throws Exception {
+        String admin = adminBearer();
+        var tiers = om.readTree(restTemplate.exchange(url("/api/loyalty/tiers"), HttpMethod.GET, jwtEntity(admin), String.class).getBody());
+        assertThat(tiers.size()).as("au moins un palier seedé").isGreaterThan(0);
+        String tierId = tiers.get(0).get("id").asText();
+        ResponseEntity<String> patch = restTemplate.exchange(url("/api/loyalty/tiers/" + tierId), HttpMethod.PATCH,
+            jsonJwtEntity(Map.of("bonusPercent", 7.5, "minPoints", 1234), admin), String.class);
+        assertThat(patch.getStatusCode()).isEqualTo(HttpStatus.OK);
+        var node = om.readTree(patch.getBody());
+        assertThat(node.get("minPoints").asInt()).isEqualTo(1234);
+        assertThat(node.get("bonusPercent").asDouble()).isEqualTo(7.5);
+    }
+
+    @Test
     void snap2earn_credits() {
         String admin = adminBearer();
         String[] rt = restoTenant();

@@ -37,13 +37,13 @@ public class Tier extends TimestampedEntity {
     private UUID tenantId;
 
     @Column(name = "name", nullable = false, length = 128)
-     private String name;
+    @Setter private String name;
 
     @Column(name = "min_points", nullable = false)
-     private Integer minPoints = 0;
+    @Setter private Integer minPoints = 0;
 
     @Column(name = "bonus_percent", nullable = false, precision = 5, scale = 2)
-     private BigDecimal bonusPercent = BigDecimal.ZERO;
+    @Setter private BigDecimal bonusPercent = BigDecimal.ZERO;
 
     @Column(name = "sort_order", nullable = false)
     @Setter private Integer sortOrder = 0;
