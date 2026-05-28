@@ -110,14 +110,14 @@ public class EventService {
     // ─── Participations (RSVP) ───────────────────────────────────────────────
 
     public List<ParticipationDto> findParticipations(UUID eventId) {
-        return participationRepo.findAllByEventId(eventId).stream()
+        return participationRepo.findAllByEventIdFetchUser(eventId).stream()
             .map(EventParticipation::toDto)
             .toList();
     }
 
     /** Sprint D — RSVPs d'un user (Pocket "Mes événements"). */
     public List<ParticipationDto> findParticipationsByUser(UUID userId) {
-        return participationRepo.findAllByUserId(userId).stream()
+        return participationRepo.findAllByUserIdFetchUser(userId).stream()
             .map(EventParticipation::toDto)
             .toList();
     }

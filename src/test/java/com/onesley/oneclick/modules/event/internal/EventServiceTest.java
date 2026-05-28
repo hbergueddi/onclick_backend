@@ -123,9 +123,13 @@ class EventServiceTest {
 
     @Test
     void findParticipations_byEvent_andByUser_map() {
-        when(participationRepo.findAllByEventId(eventId)).thenReturn(List.of(participation("going")));
-        when(participationRepo.findAllByUserId(userId)).thenReturn(List.of(participation("maybe")));
-        assertThat(service.findParticipations(eventId)).hasSize(1);
+        when(participationRepo.findAllByEventIdFetchUser(eventId)).thenReturn(List.of(participation("going")));
+        when(participationRepo.findAllByUserIdFetchUser(userId)).thenReturn(List.of(participation("maybe")));
+        var byEvent = service.findParticipations(eventId);
+        assertThat(byEvent).hasSize(1);
+        // identité membre exposée (jointure user) — affichée dans la liste des inscrits
+        assertThat(byEvent.get(0).memberFirstName()).isEqualTo("U");
+        assertThat(byEvent.get(0).memberEmail()).isEqualTo("u@x.ma");
         assertThat(service.findParticipationsByUser(userId)).hasSize(1);
     }
 

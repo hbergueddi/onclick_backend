@@ -34,7 +34,10 @@ public class EventParticipation extends TimestampedEntity {
 
     /** Mapping vers le DTO public exposé hors du module. */
     public ParticipationDto toDto() {
-        return new ParticipationDto(id, eventId, userId, status, plusOneName, getCreatedAt());
+        return new ParticipationDto(
+            id, eventId, userId,
+            user.getFirstName(), user.getLastName(), user.getEmail(),
+            status, plusOneName, getCreatedAt());
     }
 
     @Override

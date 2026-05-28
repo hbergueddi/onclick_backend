@@ -59,9 +59,14 @@ public final class EventDtos {
         Boolean isActive
     ) {}
 
+    /**
+     * @param memberFirstName / memberLastName / memberEmail  identité du membre
+     *        (jointure {@code user}) — affichée dans la liste des inscrits admin.
+     */
     public record ParticipationDto(
-        UUID id, UUID eventId, UUID userId, String status,
-        String plusOneName, Instant createdAt
+        UUID id, UUID eventId, UUID userId,
+        String memberFirstName, String memberLastName, String memberEmail,
+        String status, String plusOneName, Instant createdAt
     ) {}
 
     public record ParticipationCreateDto(
