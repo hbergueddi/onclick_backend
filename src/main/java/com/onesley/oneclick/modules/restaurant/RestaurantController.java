@@ -171,8 +171,12 @@ public class RestaurantController {
     }
 
     @GetMapping("/staff/by-user/{userId}")
-    @Operation(summary = "Liste les restaurants où je suis staff (owner check)")
-    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Liste les restaurants où un utilisateur est staff (self ou admin)")
+    // RBAC v2 : VIEW:STAFF (révoqué au CLIENT en V36 — données opérationnelles
+    // ProDesk). ABAC : requireOwnerOrAdmin restreint à soi-même (lookup de session
+    // AuthContext) ou admin. Le CLIENT n'appelle jamais cet endpoint (hydrate front
+    // skip pour role=client) ; un appel direct CLIENT → 403 (cohérent V36).
+    @PreAuthorize("hasAuthority('VIEW:STAFF')")
     public List<RestaurantStaffDto> findStaffByUser(@PathVariable UUID userId) {
         SecurityHelper.requireOwnerOrAdmin(userId);
         return subResourceService.findStaffByUser(userId);

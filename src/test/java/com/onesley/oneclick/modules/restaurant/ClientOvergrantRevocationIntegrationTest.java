@@ -79,6 +79,14 @@ class ClientOvergrantRevocationIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void client_cannotViewStaffByUser_evenSelf_returns403() {
+        // /staff/by-user était gardé isAuthenticated() (CLIENT passait, self via ABAC).
+        // Migré RBAC v2 → hasAuthority('VIEW:STAFF') : le CLIENT (révoqué V36) est
+        // refusé au gate, même pour son propre id (l'hydrate front skip déjà l'appel).
+        assertThat(get("/api/restaurants/staff/by-user/" + clientUserId, clientBearer)).isEqualTo(403);
+    }
+
+    @Test
     void admin_canViewServices_returns200() {
         assertThat(get("/api/restaurants/" + restaurantId() + "/services", adminBearer())).isEqualTo(200);
     }
