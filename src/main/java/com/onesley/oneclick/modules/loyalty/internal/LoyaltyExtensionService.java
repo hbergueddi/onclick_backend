@@ -288,6 +288,69 @@ public class LoyaltyExtensionService {
     }
 
     /**
+     * Agrégat plateforme de l'économie de points (page admin OneClick Lounge).
+     * Cross-restaurant → réservé admin (VIEW:ANALYTICS côté contrôleur).
+     *
+     * <p>Calcule serveur-side sur {@code loyalty_transactions} : émis (points&gt;0),
+     * consommés ({@code spend}), expirés ({@code expire}), + répartition par
+     * catégorie (déduite du {@code reason}) et tendance des 6 derniers mois. Évite
+     * de rapatrier 10 000 lignes côté client et corrige le décalage de l'ancienne
+     * vue {@code /point-distributions} (qui n'exposait que les émissions).
+     */
+    @Transactional(readOnly = true)
+    public PointsEconomyDto getPointsEconomy() {
+        Object[] t = (Object[]) em.createNativeQuery("""
+            SELECT COALESCE(SUM(CASE WHEN points > 0 THEN points ELSE 0 END), 0)       AS emitted,
+                   COALESCE(SUM(CASE WHEN type = 'spend'  THEN -points ELSE 0 END), 0) AS consumed,
+                   COALESCE(SUM(CASE WHEN type = 'expire' THEN -points ELSE 0 END), 0) AS expired,
+                   COALESCE(SUM(CASE WHEN points > 0 THEN 1 ELSE 0 END), 0)            AS emitting_count
+              FROM loyalty_transactions
+            """).getSingleResult();
+        long emitted = ((Number) t[0]).longValue();
+        long consumed = ((Number) t[1]).longValue();
+        long expired = ((Number) t[2]).longValue();
+        long emittingCount = ((Number) t[3]).longValue();
+
+        @SuppressWarnings("unchecked")
+        List<Object[]> typeRows = em.createNativeQuery("""
+            SELECT CASE
+                     WHEN reason LIKE 'snap2earn|%' THEN 'snap2earn'
+                     WHEN reason = 'welcome'        THEN 'welcome'
+                     WHEN reason LIKE 'gift:%'      THEN 'gift'
+                     ELSE 'autre'
+                   END      AS type,
+                   COUNT(*)  AS cnt
+              FROM loyalty_transactions
+             WHERE points > 0
+             GROUP BY 1
+             ORDER BY cnt DESC
+            """).getResultList();
+        List<PointsEconomyDto.TypeBucket> byType = typeRows.stream()
+            .map(r -> new PointsEconomyDto.TypeBucket((String) r[0], ((Number) r[1]).longValue()))
+            .toList();
+
+        @SuppressWarnings("unchecked")
+        List<Object[]> monthRows = em.createNativeQuery("""
+            SELECT to_char(date_trunc('month', created_at), 'YYYY-MM')               AS ym,
+                   COALESCE(SUM(CASE WHEN points > 0 THEN points ELSE 0 END), 0)       AS emitted,
+                   COALESCE(SUM(CASE WHEN type = 'spend'  THEN -points ELSE 0 END), 0) AS consumed,
+                   COALESCE(SUM(CASE WHEN type = 'expire' THEN -points ELSE 0 END), 0) AS expired
+              FROM loyalty_transactions
+             WHERE created_at >= date_trunc('month', NOW()) - INTERVAL '5 months'
+             GROUP BY 1
+             ORDER BY 1
+            """).getResultList();
+        List<PointsEconomyDto.MonthlyPoint> monthly = monthRows.stream()
+            .map(r -> new PointsEconomyDto.MonthlyPoint(
+                (String) r[0], ((Number) r[1]).longValue(),
+                ((Number) r[2]).longValue(), ((Number) r[3]).longValue()))
+            .toList();
+
+        return new PointsEconomyDto(
+            emitted, consumed, expired, emitted - consumed - expired, emittingCount, byType, monthly);
+    }
+
+    /**
      * Distribution des membres par palier de fidélité (vue admin /fidelite).
      *
      * <p>Points globaux d'un client = somme des soldes de ses comptes ; on le

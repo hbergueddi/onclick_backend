@@ -75,6 +75,31 @@ class LoyaltyExtensionFlowIntegrationTest extends AbstractIntegrationTest {
             .getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
+    @Test
+    void pointsEconomy_adminOk_shape_restaurateur403_anon401() throws Exception {
+        // Admin (VIEW:ANALYTICS) → 200 + shape complet de l'agrégat.
+        var ok = restTemplate.exchange(url("/api/loyalty/points-economy"),
+            HttpMethod.GET, jwtEntity(adminBearer()), String.class);
+        assertThat(ok.getStatusCode()).isEqualTo(HttpStatus.OK);
+        var body = om.readTree(ok.getBody());
+        assertThat(body.has("emitted")).isTrue();
+        assertThat(body.has("consumed")).isTrue();
+        assertThat(body.has("expired")).isTrue();
+        assertThat(body.get("byType").isArray()).isTrue();
+        assertThat(body.get("monthly").isArray()).isTrue();
+        // Invariant : available = emitted - consumed - expired.
+        assertThat(body.get("available").asLong())
+            .isEqualTo(body.get("emitted").asLong() - body.get("consumed").asLong() - body.get("expired").asLong());
+        // VIEW:ANALYTICS réservé SUPERADMIN → RESTAURATEUR 403.
+        assertThat(restTemplate.exchange(url("/api/loyalty/points-economy"),
+            HttpMethod.GET, jwtEntity(bearerForRole("RESTAURATEUR")), String.class)
+            .getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        // Anonyme → 401.
+        assertThat(restTemplate.exchange(url("/api/loyalty/points-economy"),
+            HttpMethod.GET, jwtEntity(null), String.class)
+            .getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
     // ─── Écritures jusqu'ici non couvertes au L4 (recordRating / createRestitution) ───
 
     @Test

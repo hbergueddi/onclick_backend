@@ -162,4 +162,16 @@ public class LoyaltyExtensionController {
         }
         return service.findPointDistributions(restaurantId, userId, limit);
     }
+
+    // ─── Économie de points (agrégat plateforme) — page admin OneClick Lounge ──
+    @GetMapping("/points-economy")
+    @Operation(
+        summary = "Agrégat plateforme de l'économie de points (émis/consommé/expiré/disponible + type + tendance 6 mois)",
+        description = "Cross-restaurant : réservé admin (VIEW:ANALYTICS), comme les autres agrégats " +
+                      "plateforme du PulseBoard. Calcul serveur sur loyalty_transactions (earn/spend/expire)."
+    )
+    @PreAuthorize("hasAuthority('VIEW:ANALYTICS')")
+    public PointsEconomyDto pointsEconomy() {
+        return service.getPointsEconomy();
+    }
 }

@@ -171,4 +171,31 @@ public final class LoyaltyExtensionDtos {
         String reason,
         Instant createdAt
     ) {}
+
+    /**
+     * Agrégat plateforme de l'économie de points — page admin OneClick Lounge.
+     * Calculé sur {@code loyalty_transactions} (earn/spend/expire), cross-restaurant.
+     *
+     * <ul>
+     *   <li>{@code emitted}  — points crédités (points &gt; 0)</li>
+     *   <li>{@code consumed} — points consommés (transactions {@code spend})</li>
+     *   <li>{@code expired}  — points expirés (transactions {@code expire})</li>
+     *   <li>{@code available} — {@code emitted - consumed - expired}</li>
+     *   <li>{@code emittingCount} — nb de transactions émettrices (pour la moyenne/ticket)</li>
+     *   <li>{@code byType} — répartition des émissions par catégorie (déduite du reason)</li>
+     *   <li>{@code monthly} — tendance des 6 derniers mois</li>
+     * </ul>
+     */
+    public record PointsEconomyDto(
+        long emitted,
+        long consumed,
+        long expired,
+        long available,
+        long emittingCount,
+        java.util.List<TypeBucket> byType,
+        java.util.List<MonthlyPoint> monthly
+    ) {
+        public record TypeBucket(String type, long count) {}
+        public record MonthlyPoint(String month, long emitted, long consumed, long expired) {}
+    }
 }
