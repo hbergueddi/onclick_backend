@@ -115,6 +115,13 @@ public class FinancialController {
         return service.updateContract(id, dto);
     }
 
+    @GetMapping("/contracts/{id}/history")
+    @Operation(summary = "Timeline d'audit d'un contrat (V59) — modifications de champs suivis")
+    @PreAuthorize("hasAuthority('VIEW:FINANCIAL')")
+    public List<ContractHistoryDto> findContractHistory(@PathVariable UUID id) {
+        return service.findContractHistory(id);
+    }
+
     // ─── Invoices ────────────────────────────────────────────────────────────
 
     @GetMapping("/invoices")

@@ -75,6 +75,39 @@ class LoyaltyExtensionFlowIntegrationTest extends AbstractIntegrationTest {
             .getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
+    /**
+     * #4 — PointDistributionDto expose désormais remainingPoints (= solde courant
+     * loyalty_accounts.balance) et creditedBy (= loyalty_transactions.created_by).
+     * On sème un compte + une transaction earn connus, puis on filtre par client.
+     */
+    @Test
+    void pointDistributions_exposeRemainingPointsAndCreditedBy() throws Exception {
+        String admin = adminBearer();
+        String client = createUser(admin);            // CLIENT jetable (pas de compte préexistant)
+        String rid = restaurantId();
+        String creator = SEED_SUPERADMIN_ID.toString();
+        String accId = UUID.randomUUID().toString();
+        // tenant_id auto-rempli par trigger trg_loyalty_accounts_tenant_id (V10).
+        jdbc.update("INSERT INTO loyalty_accounts (id, client_id, restaurant_id, balance) VALUES (?::uuid, ?::uuid, ?::uuid, 250)",
+            accId, client, rid);
+        jdbc.update("INSERT INTO loyalty_transactions (account_id, type, points, reason, created_by) VALUES (?::uuid, 'earn', 40, 'snap2earn|TEST4', ?::uuid)",
+            accId, creator);
+        try {
+            var res = restTemplate.exchange(url("/api/loyalty/point-distributions?userId=" + client),
+                HttpMethod.GET, jwtEntity(admin), String.class);
+            assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
+            var arr = om.readTree(res.getBody());
+            assertThat(arr.isArray()).isTrue();
+            assertThat(arr).hasSizeGreaterThanOrEqualTo(1);
+            var row = arr.get(0);
+            assertThat(row.get("remainingPoints").asInt()).isEqualTo(250); // = balance du compte
+            assertThat(row.get("creditedBy").asText()).isEqualTo(creator);
+        } finally {
+            jdbc.update("DELETE FROM loyalty_transactions WHERE account_id = ?::uuid", accId);
+            jdbc.update("DELETE FROM loyalty_accounts WHERE id = ?::uuid", accId);
+        }
+    }
+
     @Test
     void pointsEconomy_adminOk_shape_restaurateur403_anon401() throws Exception {
         // Admin (VIEW:ANALYTICS) → 200 + shape complet de l'agrégat.

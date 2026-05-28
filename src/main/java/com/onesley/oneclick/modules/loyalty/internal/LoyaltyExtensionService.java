@@ -264,7 +264,8 @@ public class LoyaltyExtensionService {
         if (restaurantId != null) filter += " AND la.restaurant_id = :restaurantId ";
         if (userId != null)        filter += " AND la.client_id = :userId ";
         String sql = """
-            SELECT lt.id, la.client_id, la.restaurant_id, lt.points, lt.reason, lt.created_at
+            SELECT lt.id, la.client_id, la.restaurant_id, lt.points, lt.reason, lt.created_at,
+                   la.balance, lt.created_by
               FROM loyalty_transactions lt
               JOIN loyalty_accounts la ON la.id = lt.account_id
              WHERE lt.points > 0
@@ -283,7 +284,9 @@ public class LoyaltyExtensionService {
             row[2] != null ? (UUID) row[2] : null,
             row[3] != null ? ((Number) row[3]).intValue() : 0,
             (String) row[4],
-            row[5] != null ? toInstant(row[5]) : null
+            row[5] != null ? toInstant(row[5]) : null,
+            row[6] != null ? ((Number) row[6]).intValue() : null,
+            row[7] != null ? (UUID) row[7] : null
         )).toList();
     }
 

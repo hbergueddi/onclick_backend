@@ -80,7 +80,9 @@ public final class FinancialDtos {
         @DecimalMin("0.00") @DecimalMax("100.00") BigDecimal commissionRate,
         @DecimalMin("0.00") @DecimalMax("100.00") BigDecimal walletAdminRate,
         LocalDate endsAt,
-        @Pattern(regexp = "^(draft|active|paused|terminated)$") @Size(min = 1, max = 64) String status,
+        // Pipeline kanban contrats (ContractKanbanBoard) : 7 stages. Le front envoie la
+        // valeur EN canonique (translateStatusToBackend), alignée sur CONTRACT_STATUS_EN_TO_FR.
+        @Pattern(regexp = "^(draft|active|paused|terminated|pending|sent|renewal|expired)$") @Size(min = 1, max = 64) String status,
         // V54 — champs legacy optionnels (regroupés)
         @jakarta.validation.Valid ContractDetailsDto details
     ) {}
@@ -193,5 +195,16 @@ public final class FinancialDtos {
         @Size(min = 1, max = 128) String title,
         @Size(min = 1, max = 1024) String body,
         Boolean isActive
+    ) {}
+
+    /** Audit d'une modification de champ de contrat (V59) — alimente ContractHistoryPanel. */
+    public record ContractHistoryDto(
+        UUID id,
+        UUID contractId,
+        String fieldName,
+        String oldValue,
+        String newValue,
+        UUID changedBy,
+        Instant createdAt
     ) {}
 }

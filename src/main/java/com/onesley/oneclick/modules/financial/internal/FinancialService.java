@@ -44,6 +44,7 @@ public class FinancialService {
     private final ContractTemplateRepository templateRepo;
     private final ContractTemplateArticleRepository articleRepo;
     private final ContractDisabledArticleRepository disabledRepo;
+    private final ContractHistoryRepository historyRepo;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -82,12 +83,61 @@ public class FinancialService {
             .filter(x -> x.getDeletedAt() == null)
             .orElseThrow(() -> new NotFoundException("Contract", id));
         SecurityHelper.requireOwnerOrAdmin(c.getCreatedBy());
+        java.util.Map<String, String> before = trackedContractSnapshot(c); // #3 — audit
         if (dto.commissionRate() != null)  c.setCommissionRate(dto.commissionRate());
         if (dto.walletAdminRate() != null) c.setWalletAdminRate(dto.walletAdminRate());
         if (dto.endsAt() != null)          c.setEndsAt(dto.endsAt());
         if (dto.status() != null)          c.setStatus(dto.status());
         applyContractDetails(c, dto.details());
-        return contractRepo.save(c).toDto();
+        Contract saved = contractRepo.save(c);
+        recordContractHistory(saved, before);
+        return saved.toDto();
+    }
+
+    /** Snapshot des champs de contrat suivis par l'audit (V59) — fieldName → valeur. */
+    private java.util.Map<String, String> trackedContractSnapshot(Contract c) {
+        java.util.Map<String, String> m = new java.util.LinkedHashMap<>();
+        m.put("status", c.getStatus());
+        m.put("commission_rate", str(c.getCommissionRate()));
+        m.put("wallet_admin_rate", str(c.getWalletAdminRate()));
+        m.put("oneclick_commission_rate", str(c.getOneclickCommissionRate()));
+        m.put("contract_end", c.getEndsAt() == null ? null : c.getEndsAt().toString());
+        m.put("auto_renew", String.valueOf(c.isAutoRenew()));
+        m.put("payment_terms", c.getPaymentTerms());
+        return m;
+    }
+
+    private static String str(Object o) { return o == null ? null : o.toString(); }
+
+    /**
+     * Enregistre une ligne d'historique par champ suivi modifié (best-effort : un échec
+     * d'audit ne doit jamais casser la mise à jour du contrat).
+     */
+    private void recordContractHistory(Contract c, java.util.Map<String, String> before) {
+        try {
+            java.util.Map<String, String> after = trackedContractSnapshot(c);
+            UUID actor = SecurityHelper.currentUserId();
+            before.forEach((field, oldVal) -> {
+                String newVal = after.get(field);
+                if (!java.util.Objects.equals(oldVal, newVal)) {
+                    ContractHistory h = new ContractHistory();
+                    h.setContractId(c.getId());
+                    h.setFieldName(field);
+                    h.setOldValue(oldVal);
+                    h.setNewValue(newVal);
+                    h.setChangedBy(actor);
+                    historyRepo.save(h);
+                }
+            });
+        } catch (RuntimeException ignored) {
+            // audit best-effort
+        }
+    }
+
+    /** Timeline d'audit d'un contrat (V59) — ContractHistoryPanel. */
+    public List<ContractHistoryDto> findContractHistory(UUID contractId) {
+        return historyRepo.findByContractIdOrderByCreatedAtDesc(contractId).stream()
+            .map(ContractHistory::toDto).toList();
     }
 
     /** Applique les champs legacy optionnels (V54) — null = inchangé (PATCH partiel). */

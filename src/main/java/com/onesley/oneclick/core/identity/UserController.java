@@ -194,6 +194,26 @@ public class UserController {
         return service.rolesDistribution();
     }
 
+    @GetMapping("/clients/search")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    @Operation(
+        summary = "Recherche clients — OR firstName / lastName / phone, en une requête.",
+        description = "Remplace les 3 ILIKE fusionnés côté client de DistributionPanel (admin Wallet). " +
+                      "Scopé rôle CLIENT (cible des distributions de points). q < 2 caractères → liste vide " +
+                      "(évite les gros scans). @Transactional pour l'accès lazy à User.role dans toDto()."
+    )
+    @PreAuthorize("hasAuthority('VIEW:USERS')")
+    public java.util.List<UserDto> searchClients(
+        @RequestParam String q,
+        @RequestParam(defaultValue = "30") int limit
+    ) {
+        if (q == null || q.trim().length() < 2) return java.util.List.of();
+        int capped = Math.min(Math.max(limit, 1), 100);
+        return userRepository.searchClients(
+                q.trim(), org.springframework.data.domain.PageRequest.of(0, capped))
+            .stream().map(User::toDto).toList();
+    }
+
     @PostMapping
     @Operation(summary = "Crée un user avec rôle arbitraire (création admin — authentifié). "
         + "Pour le signup public, utiliser POST /api/users/register.")

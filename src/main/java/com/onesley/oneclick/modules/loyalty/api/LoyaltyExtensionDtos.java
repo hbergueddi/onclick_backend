@@ -169,7 +169,12 @@ public final class LoyaltyExtensionDtos {
         UUID restaurantId,
         Integer points,
         String reason,
-        Instant createdAt
+        Instant createdAt,
+        // #4 — solde courant du compte fidélité (loyalty_accounts.balance, pour
+        // ClientSummary « crédit dispo ») + auteur du crédit (loyalty_transactions
+        // .created_by, pour StaffSummary « crédits par membre »).
+        Integer remainingPoints,
+        UUID creditedBy
     ) {}
 
     /**

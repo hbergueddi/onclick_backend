@@ -249,9 +249,14 @@ class LoyaltyExtensionServiceTest {
 
     @Test
     void findPointDistributions_mapsRows_withFilters() {
-        Object[] row = { UUID.randomUUID(), UUID.randomUUID(), resto, 25, "snap2earn", Instant.now() };
+        // #4 — 8 colonnes : +balance (remainingPoints) +created_by (creditedBy).
+        UUID creditor = UUID.randomUUID();
+        Object[] row = { UUID.randomUUID(), UUID.randomUUID(), resto, 25, "snap2earn", Instant.now(), 180, creditor };
         when(query.getResultList()).thenReturn(Collections.singletonList(row));
-        assertThat(service.findPointDistributions(resto, user, 10)).hasSize(1);
+        var out = service.findPointDistributions(resto, user, 10);
+        assertThat(out).hasSize(1);
+        assertThat(out.get(0).remainingPoints()).isEqualTo(180);
+        assertThat(out.get(0).creditedBy()).isEqualTo(creditor);
     }
 
     @Test

@@ -40,6 +40,37 @@ class FinancialFlowIntegrationTest extends AbstractIntegrationTest {
         jdbc.update("DELETE FROM contracts WHERE id = ?::uuid", UUID.fromString(id)); // self-clean (pas d'endpoint DELETE)
     }
 
+    /**
+     * #3 — un PATCH de contrat (statut + commission) écrit des lignes dans
+     * contract_history, lues par GET /contracts/{id}/history (ContractHistoryPanel).
+     */
+    @Test
+    void contractHistory_recordsFieldChanges() throws Exception {
+        String admin = adminBearer();
+        ResponseEntity<String> post = restTemplate.exchange(url("/api/financial/contracts"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("restaurantId", restaurantId(), "contractNumber", "L4-H-" + rand(),
+                "commissionRate", 3.0, "startsAt", LocalDate.now().toString()), admin), String.class);
+        assertThat(post.getStatusCode().is2xxSuccessful()).isTrue();
+        String id = om.readTree(post.getBody()).get("id").asText();
+        try {
+            // active → terminated + commission 3.0 → 4.5 : 2 champs suivis modifiés.
+            assertThat(restTemplate.exchange(url("/api/financial/contracts/" + id), HttpMethod.PATCH,
+                jsonJwtEntity(Map.of("status", "terminated", "commissionRate", 4.5), admin), String.class)
+                .getStatusCode()).isEqualTo(HttpStatus.OK);
+            ResponseEntity<String> hist = restTemplate.exchange(url("/api/financial/contracts/" + id + "/history"),
+                HttpMethod.GET, jwtEntity(admin), String.class);
+            assertThat(hist.getStatusCode()).isEqualTo(HttpStatus.OK);
+            var arr = om.readTree(hist.getBody());
+            assertThat(arr.isArray()).isTrue();
+            boolean statusRow = false;
+            for (var n : arr)
+                if ("status".equals(n.get("fieldName").asText()) && "terminated".equals(n.get("newValue").asText())) statusRow = true;
+            assertThat(statusRow).as("ligne d'historique pour le changement de statut").isTrue();
+        } finally {
+            jdbc.update("DELETE FROM contracts WHERE id = ?::uuid", UUID.fromString(id)); // history cascade ON DELETE
+        }
+    }
+
     @Test
     void invoice_crud_andLines() throws Exception {
         String admin = adminBearer();

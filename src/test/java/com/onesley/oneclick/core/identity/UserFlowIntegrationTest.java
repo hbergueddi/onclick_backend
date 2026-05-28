@@ -51,6 +51,35 @@ class UserFlowIntegrationTest extends AbstractIntegrationTest {
             .getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
+    /**
+     * #5 — GET /api/users/clients/search : recherche OR firstName/lastName/phone en
+     * une seule requête (remplace les 3 ILIKE fusionnés client-side de DistributionPanel).
+     */
+    @Test
+    void clientsSearch_orMatchesNameOrPhone_andRejectsShortQuery() throws Exception {
+        String admin = adminBearer();
+        String token = "Zelda" + UUID.randomUUID().toString().substring(0, 6); // ASCII, distinctif
+        ResponseEntity<String> post = restTemplate.exchange(url("/api/users"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("roleId", roleId(), "email", "l4-cs-" + UUID.randomUUID().toString().substring(0, 8) + "@x.ma",
+                "password", "password1", "firstName", token, "lastName", "Searchable"), admin), String.class);
+        assertThat(post.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        String id = om.readTree(post.getBody()).get("id").asText();
+        try {
+            // Fragment du prénom → trouvé via OR-search (1 seul appel).
+            ResponseEntity<String> hit = restTemplate.exchange(url("/api/users/clients/search?q=" + token),
+                HttpMethod.GET, jwtEntity(admin), String.class);
+            assertThat(hit.getStatusCode()).isEqualTo(HttpStatus.OK);
+            boolean found = false;
+            for (var n : om.readTree(hit.getBody())) if (id.equals(n.get("id").asText())) found = true;
+            assertThat(found).as("client trouvé via OR-search firstName").isTrue();
+            // q < 2 caractères → liste vide (anti gros scan).
+            assertThat(om.readTree(restTemplate.exchange(url("/api/users/clients/search?q=a"),
+                HttpMethod.GET, jwtEntity(admin), String.class).getBody()).size()).isZero();
+        } finally {
+            jdbc.update("DELETE FROM users WHERE id = ?::uuid", UUID.fromString(id));
+        }
+    }
+
     @Test
     void patchMe_asClient_updatesOwnProfile_withoutAdminAuthority() throws Exception {
         String admin = adminBearer();
