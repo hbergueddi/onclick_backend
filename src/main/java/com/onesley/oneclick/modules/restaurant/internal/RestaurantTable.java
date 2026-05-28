@@ -41,13 +41,25 @@ public class RestaurantTable extends TimestampedEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "zone_id", nullable = false)
-    private RestaurantZone zone;
+    @Setter private RestaurantZone zone;
 
     @Column(name = "table_number", nullable = false, length = 64)
     @Setter private String tableNumber;
 
     @Column(name = "seats", nullable = false)
     @Setter private Integer seats;
+
+    /** Forme de la table (carree, rectangle, ronde…) — V50. */
+    @Column(name = "shape", nullable = false, length = 64)
+    @Setter private String shape = "carree";
+
+    /** Position libre sur le plan de salle (texte/coordonnées) — V50. */
+    @Column(name = "position", length = 128)
+    @Setter private String position;
+
+    /** Statut opérationnel (disponible, occupée, hors_service…) — V50. */
+    @Column(name = "status", nullable = false, length = 64)
+    @Setter private String status = "disponible";
 
     public RestaurantTable(UUID id, RestaurantZone zone, String tableNumber, Integer seats) {
         this.id = id;
@@ -56,9 +68,10 @@ public class RestaurantTable extends TimestampedEntity {
         this.seats = seats;
     }
 
-    /** Mapping vers le DTO public exposé hors du module. */
+    /** Mapping vers le DTO public exposé hors du module. {@code zone.getId()} reflète
+     * un éventuel changement de zone (le champ mirroir {@code zoneId} est read-only). */
     public RestaurantTableDto toDto() {
-        return new RestaurantTableDto(id, zoneId, tableNumber, seats, getCreatedAt());
+        return new RestaurantTableDto(id, zone.getId(), tableNumber, seats, shape, position, status, getCreatedAt());
     }
 
     @Override

@@ -96,11 +96,28 @@ public final class RestaurantSubResourceDtos {
         UUID id,
         UUID restaurantId,
         String name,
+        String type,
+        String description,
+        Integer capacity,
+        String status,
         Instant createdAt
     ) {}
 
     public record RestaurantZoneCreateDto(
-        @NotBlank @Size(min = 1, max = 128) String name
+        @NotBlank @Size(min = 1, max = 128) String name,
+        @Size(max = 64) String type,
+        @Size(max = 512) String description,
+        @Min(0) Integer capacity,
+        @Size(max = 64) String status
+    ) {}
+
+    /** Patch partiel d'une zone (V50) — seuls les champs non-null sont appliqués. */
+    public record RestaurantZonePatchDto(
+        @Size(min = 1, max = 128) String name,
+        @Size(max = 64) String type,
+        @Size(max = 512) String description,
+        @Min(0) Integer capacity,
+        @Size(max = 64) String status
     ) {}
 
     // ─── RestaurantTable (T01, T02, ... rattachées à une zone) ───────────────
@@ -110,12 +127,29 @@ public final class RestaurantSubResourceDtos {
         UUID zoneId,
         String tableNumber,
         Integer seats,
+        String shape,
+        String position,
+        String status,
         Instant createdAt
     ) {}
 
     public record RestaurantTableCreateDto(
         @NotNull UUID zoneId,
         @NotBlank @Size(min = 1, max = 64) String tableNumber,
-        @NotNull @Min(1) Integer seats
+        @NotNull @Min(1) Integer seats,
+        @Size(max = 64) String shape,
+        @Size(max = 128) String position,
+        @Size(max = 64) String status
+    ) {}
+
+    /** Patch partiel d'une table (V50) — seuls les champs non-null sont appliqués.
+     * {@code zoneId} permet de déplacer la table vers une autre zone du même restaurant. */
+    public record RestaurantTablePatchDto(
+        UUID zoneId,
+        @Size(min = 1, max = 64) String tableNumber,
+        @Min(1) Integer seats,
+        @Size(max = 64) String shape,
+        @Size(max = 128) String position,
+        @Size(max = 64) String status
     ) {}
 }

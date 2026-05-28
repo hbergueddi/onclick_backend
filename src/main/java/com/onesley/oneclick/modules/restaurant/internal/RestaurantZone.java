@@ -41,6 +41,21 @@ public class RestaurantZone extends TimestampedEntity {
     @Column(name = "name", nullable = false, length = 128)
     @Setter private String name;
 
+    /** Type de zone (salle, terrasse, bar, intérieur…) — V50. */
+    @Column(name = "type", nullable = false, length = 64)
+    @Setter private String type = "salle";
+
+    @Column(name = "description", length = 512)
+    @Setter private String description;
+
+    /** Capacité indicative de la zone (couverts) — V50. */
+    @Column(name = "capacity", nullable = false)
+    @Setter private Integer capacity = 0;
+
+    /** Statut zone (active, inactive…) — V50. */
+    @Column(name = "status", nullable = false, length = 64)
+    @Setter private String status = "active";
+
     public RestaurantZone(UUID id, Restaurant restaurant, String name) {
         this.id = id;
         this.restaurant = restaurant;
@@ -49,7 +64,7 @@ public class RestaurantZone extends TimestampedEntity {
 
     /** Mapping vers le DTO public exposé hors du module. */
     public RestaurantZoneDto toDto() {
-        return new RestaurantZoneDto(id, restaurantId, name, getCreatedAt());
+        return new RestaurantZoneDto(id, restaurantId, name, type, description, capacity, status, getCreatedAt());
     }
 
     @Override

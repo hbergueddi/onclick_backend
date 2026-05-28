@@ -92,6 +92,18 @@ class RestaurantFlowIntegrationTest extends AbstractIntegrationTest {
         String tableId = om.readTree(tablePost.getBody()).get("id").asText();
         assertThat(restTemplate.exchange(url("/api/restaurants/" + id + "/tables"), HttpMethod.GET, jwtEntity(admin), String.class)
             .getStatusCode()).isEqualTo(HttpStatus.OK);
+        // PATCH zone (V50 — type/capacité/statut) + round-trip
+        ResponseEntity<String> zonePatch = restTemplate.exchange(url("/api/restaurants/zones/" + zoneId), HttpMethod.PATCH,
+            jsonJwtEntity(Map.of("type", "terrasse", "capacity", 40, "status", "inactive"), admin), String.class);
+        assertThat(zonePatch.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(om.readTree(zonePatch.getBody()).get("capacity").asInt()).isEqualTo(40);
+        assertThat(om.readTree(zonePatch.getBody()).get("type").asText()).isEqualTo("terrasse");
+        // PATCH table (V50 — places/forme/statut) + round-trip
+        ResponseEntity<String> tablePatch = restTemplate.exchange(url("/api/restaurants/tables/" + tableId), HttpMethod.PATCH,
+            jsonJwtEntity(Map.of("seats", 8, "shape", "ronde", "status", "occupée"), admin), String.class);
+        assertThat(tablePatch.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(om.readTree(tablePatch.getBody()).get("seats").asInt()).isEqualTo(8);
+        assertThat(om.readTree(tablePatch.getBody()).get("shape").asText()).isEqualTo("ronde");
         assertThat(restTemplate.exchange(url("/api/restaurants/tables/" + tableId), HttpMethod.DELETE, jwtEntity(admin), String.class)
             .getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
         assertThat(restTemplate.exchange(url("/api/restaurants/zones/" + zoneId), HttpMethod.DELETE, jwtEntity(admin), String.class)

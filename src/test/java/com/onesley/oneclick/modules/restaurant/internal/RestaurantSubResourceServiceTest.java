@@ -11,7 +11,9 @@ import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.Mea
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantStaffCreateDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantStaffPatchDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantTableCreateDto;
+import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantTablePatchDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantZoneCreateDto;
+import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantZonePatchDto;
 import com.onesley.oneclick.modules.restaurant.api.StaffTransferDto.InviteDto;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
@@ -269,7 +271,7 @@ class RestaurantSubResourceServiceTest {
 
         UUID rid = UUID.randomUUID();
         when(restaurantRepository.findById(rid)).thenReturn(Optional.of(restaurant(rid)));
-        assertThat(service.addZone(rid, new RestaurantZoneCreateDto("Salle"))).isNotNull();
+        assertThat(service.addZone(rid, new RestaurantZoneCreateDto("Salle", null, null, null, null))).isNotNull();
 
         when(zoneRepository.existsById(any())).thenReturn(false);
         assertThatThrownBy(() -> service.deleteZone(UUID.randomUUID())).isInstanceOf(NotFoundException.class);
@@ -277,6 +279,24 @@ class RestaurantSubResourceServiceTest {
         when(zoneRepository.existsById(zid)).thenReturn(true);
         service.deleteZone(zid);
         verify(zoneRepository).deleteById(zid);
+    }
+
+    @Test
+    void patchZone_updatesFields_andNotFound() {
+        RestaurantZone z = zone(UUID.randomUUID());
+        when(zoneRepository.findById(z.getId())).thenReturn(Optional.of(z));
+        when(zoneRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        var dto = service.patchZone(z.getId(),
+            new RestaurantZonePatchDto("Terrasse Sud", "terrasse", "Vue mer", 40, "inactive"));
+        assertThat(z.getName()).isEqualTo("Terrasse Sud");
+        assertThat(z.getType()).isEqualTo("terrasse");
+        assertThat(z.getCapacity()).isEqualTo(40);
+        assertThat(z.getStatus()).isEqualTo("inactive");
+        assertThat(dto.capacity()).isEqualTo(40);
+
+        when(zoneRepository.findById(any())).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.patchZone(UUID.randomUUID(),
+            new RestaurantZonePatchDto("x", null, null, null, null))).isInstanceOf(NotFoundException.class);
     }
 
     // ─── Tables ──────────────────────────────────────────────────────────────
@@ -290,19 +310,19 @@ class RestaurantSubResourceServiceTest {
         UUID rid = UUID.randomUUID();
         // zone introuvable
         when(zoneRepository.findById(any())).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> service.addTable(rid, new RestaurantTableCreateDto(UUID.randomUUID(), "T2", 2)))
+        assertThatThrownBy(() -> service.addTable(rid, new RestaurantTableCreateDto(UUID.randomUUID(), "T2", 2, null, null, null)))
             .isInstanceOf(NotFoundException.class);
 
         // zone d'un autre resto → BadRequest
         RestaurantZone otherZone = zone(UUID.randomUUID());
         when(zoneRepository.findById(otherZone.getId())).thenReturn(Optional.of(otherZone));
-        assertThatThrownBy(() -> service.addTable(rid, new RestaurantTableCreateDto(otherZone.getId(), "T3", 2)))
+        assertThatThrownBy(() -> service.addTable(rid, new RestaurantTableCreateDto(otherZone.getId(), "T3", 2, null, null, null)))
             .isInstanceOf(BadRequestException.class);
 
         // zone du bon resto → success
         RestaurantZone okZone = zone(rid);
         when(zoneRepository.findById(okZone.getId())).thenReturn(Optional.of(okZone));
-        assertThat(service.addTable(rid, new RestaurantTableCreateDto(okZone.getId(), "T4", 6))).isNotNull();
+        assertThat(service.addTable(rid, new RestaurantTableCreateDto(okZone.getId(), "T4", 6, null, null, null))).isNotNull();
 
         when(tableRepository.existsById(any())).thenReturn(false);
         assertThatThrownBy(() -> service.deleteTable(UUID.randomUUID())).isInstanceOf(NotFoundException.class);
@@ -310,5 +330,31 @@ class RestaurantSubResourceServiceTest {
         when(tableRepository.existsById(tid)).thenReturn(true);
         service.deleteTable(tid);
         verify(tableRepository).deleteById(tid);
+    }
+
+    @Test
+    void patchTable_updatesFields_sameZone() {
+        RestaurantTable t = new RestaurantTable(UUID.randomUUID(), zone(UUID.randomUUID()), "T1", 4);
+        when(tableRepository.findById(t.getId())).thenReturn(Optional.of(t));
+        when(tableRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        service.patchTable(t.getId(),
+            new RestaurantTablePatchDto(null, "T9", 8, "ronde", "x:10,y:20", "occupée"));
+        assertThat(t.getTableNumber()).isEqualTo("T9");
+        assertThat(t.getSeats()).isEqualTo(8);
+        assertThat(t.getShape()).isEqualTo("ronde");
+        assertThat(t.getPosition()).isEqualTo("x:10,y:20");
+        assertThat(t.getStatus()).isEqualTo("occupée");
+    }
+
+    @Test
+    void patchTable_moveToZoneOfAnotherRestaurant_throwsBadRequest() {
+        UUID rid = UUID.randomUUID();
+        RestaurantTable t = new RestaurantTable(UUID.randomUUID(), zone(rid), "T1", 4);
+        RestaurantZone otherZone = zone(UUID.randomUUID()); // autre restaurant
+        when(tableRepository.findById(t.getId())).thenReturn(Optional.of(t));
+        when(zoneRepository.findById(otherZone.getId())).thenReturn(Optional.of(otherZone));
+        assertThatThrownBy(() -> service.patchTable(t.getId(),
+            new RestaurantTablePatchDto(otherZone.getId(), null, null, null, null, null)))
+            .isInstanceOf(BadRequestException.class);
     }
 }

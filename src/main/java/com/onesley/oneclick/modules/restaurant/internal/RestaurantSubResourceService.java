@@ -12,8 +12,10 @@ import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.Res
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantStaffPatchDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantTableCreateDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantTableDto;
+import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantTablePatchDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantZoneCreateDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantZoneDto;
+import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantZonePatchDto;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Service;
@@ -335,6 +337,23 @@ public class RestaurantSubResourceService {
     public RestaurantZoneDto addZone(UUID restaurantId, RestaurantZoneCreateDto dto) {
         Restaurant restaurant = requireRestaurant(restaurantId);
         RestaurantZone zone = new RestaurantZone(UUID.randomUUID(), restaurant, dto.name());
+        if (dto.type() != null && !dto.type().isBlank())     zone.setType(dto.type());
+        if (dto.description() != null)                        zone.setDescription(dto.description());
+        if (dto.capacity() != null)                           zone.setCapacity(dto.capacity());
+        if (dto.status() != null && !dto.status().isBlank())  zone.setStatus(dto.status());
+        return zoneRepository.save(zone).toDto();
+    }
+
+    /** Patch partiel d'une zone (V50) — seuls les champs non-null sont appliqués. */
+    @Transactional
+    public RestaurantZoneDto patchZone(UUID id, RestaurantZonePatchDto dto) {
+        RestaurantZone zone = zoneRepository.findById(id)
+            .orElseThrow(() -> new NotFoundException("RestaurantZone", id));
+        if (dto.name() != null && !dto.name().isBlank())      zone.setName(dto.name());
+        if (dto.type() != null && !dto.type().isBlank())      zone.setType(dto.type());
+        if (dto.description() != null)                        zone.setDescription(dto.description());
+        if (dto.capacity() != null)                           zone.setCapacity(dto.capacity());
+        if (dto.status() != null && !dto.status().isBlank())  zone.setStatus(dto.status());
         return zoneRepository.save(zone).toDto();
     }
 
@@ -367,6 +386,31 @@ public class RestaurantSubResourceService {
             throw new BadRequestException("La zone " + dto.zoneId() + " n'appartient pas au restaurant " + restaurantId);
         }
         RestaurantTable table = new RestaurantTable(UUID.randomUUID(), zone, dto.tableNumber(), dto.seats());
+        if (dto.shape() != null && !dto.shape().isBlank())   table.setShape(dto.shape());
+        if (dto.position() != null)                          table.setPosition(dto.position());
+        if (dto.status() != null && !dto.status().isBlank()) table.setStatus(dto.status());
+        return tableRepository.save(table).toDto();
+    }
+
+    /** Patch partiel d'une table (V50). {@code zoneId} déplace la table vers une autre
+     * zone du MÊME restaurant (garde-fou anti cross-restaurant). */
+    @Transactional
+    public RestaurantTableDto patchTable(UUID id, RestaurantTablePatchDto dto) {
+        RestaurantTable table = tableRepository.findById(id)
+            .orElseThrow(() -> new NotFoundException("RestaurantTable", id));
+        if (dto.zoneId() != null && !dto.zoneId().equals(table.getZoneId())) {
+            RestaurantZone newZone = zoneRepository.findById(dto.zoneId())
+                .orElseThrow(() -> new NotFoundException("RestaurantZone", dto.zoneId()));
+            if (!newZone.getRestaurantId().equals(table.getZone().getRestaurantId())) {
+                throw new BadRequestException("La zone cible n'appartient pas au même restaurant que la table");
+            }
+            table.setZone(newZone);
+        }
+        if (dto.tableNumber() != null && !dto.tableNumber().isBlank()) table.setTableNumber(dto.tableNumber());
+        if (dto.seats() != null)                             table.setSeats(dto.seats());
+        if (dto.shape() != null && !dto.shape().isBlank())   table.setShape(dto.shape());
+        if (dto.position() != null)                          table.setPosition(dto.position());
+        if (dto.status() != null && !dto.status().isBlank()) table.setStatus(dto.status());
         return tableRepository.save(table).toDto();
     }
 

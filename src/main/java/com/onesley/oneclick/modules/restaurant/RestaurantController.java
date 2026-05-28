@@ -29,6 +29,8 @@ import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.Res
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantStaffDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantStaffPatchDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantTableCreateDto;
+import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantTablePatchDto;
+import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantZonePatchDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantTableDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantZoneCreateDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantZoneDto;
@@ -268,6 +270,14 @@ public class RestaurantController {
         return ResponseEntity.created(URI.create("/api/restaurants/zones/" + created.id())).body(created);
     }
 
+    @PatchMapping("/zones/{id}")
+    @Operation(summary = "Modifie une zone (nom, type, description, capacité, statut) — PATCH partiel")
+    @PreAuthorize("hasAuthority('UPDATE:ZONES')")
+    public RestaurantZoneDto patchZone(@PathVariable UUID id, @Valid @RequestBody RestaurantZonePatchDto dto) {
+        restaurantAccessGuard.requireAdminOrActiveStaffOf(subResourceService.getZoneRestaurantId(id));
+        return subResourceService.patchZone(id, dto);
+    }
+
     @DeleteMapping("/zones/{id}")
     @Operation(summary = "Supprime une zone (les tables liées sont supprimées en cascade DB)")
     @PreAuthorize("hasAuthority('DELETE:ZONES')")
@@ -298,6 +308,14 @@ public class RestaurantController {
         restaurantAccessGuard.requireAdminOrActiveStaffOf(restaurantId);
         RestaurantTableDto created = subResourceService.addTable(restaurantId, dto);
         return ResponseEntity.created(URI.create("/api/restaurants/tables/" + created.id())).body(created);
+    }
+
+    @PatchMapping("/tables/{id}")
+    @Operation(summary = "Modifie une table (zone, numéro, places, forme, position, statut) — PATCH partiel")
+    @PreAuthorize("hasAuthority('UPDATE:TABLES')")
+    public RestaurantTableDto patchTable(@PathVariable UUID id, @Valid @RequestBody RestaurantTablePatchDto dto) {
+        restaurantAccessGuard.requireAdminOrActiveStaffOf(subResourceService.getTableRestaurantId(id));
+        return subResourceService.patchTable(id, dto);
     }
 
     @DeleteMapping("/tables/{id}")
