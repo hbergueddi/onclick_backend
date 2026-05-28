@@ -136,6 +136,12 @@ public class FinancialService {
 
     /** Timeline d'audit d'un contrat (V59) — ContractHistoryPanel. */
     public List<ContractHistoryDto> findContractHistory(UUID contractId) {
+        // Parité ABAC avec findContractById : owner du contrat ou admin (évite l'IDOR
+        // si VIEW:FINANCIAL est détenu par un restaurateur).
+        Contract c = contractRepo.findById(contractId)
+            .filter(x -> x.getDeletedAt() == null)
+            .orElseThrow(() -> new NotFoundException("Contract", contractId));
+        SecurityHelper.requireOwnerOrAdmin(c.getCreatedBy());
         return historyRepo.findByContractIdOrderByCreatedAtDesc(contractId).stream()
             .map(ContractHistory::toDto).toList();
     }
