@@ -15,11 +15,14 @@ import java.util.UUID;
  * DTO public {@code gain_rule_requests} — Sprint G.2.3 (workflow approbation
  * admin pour les règles de gain proposées par les restaurateurs).
  *
+ * @param requestedById  UUID du restaurateur qui a soumis la demande (= {@code created_by}
+ *                       audité) ; permet de notifier le demandeur à l'approbation / au refus
  * @param createdRuleId  UUID de la {@link GainRuleDto} créée si {@code status='approved'}
  */
 public record GainRuleRequestDto(
     UUID id,
     UUID restaurantId,
+    UUID requestedById,
     String name,
     String description,
     String type,

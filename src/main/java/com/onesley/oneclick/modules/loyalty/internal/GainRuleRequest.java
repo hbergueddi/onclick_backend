@@ -98,7 +98,7 @@ public class GainRuleRequest extends SoftDeletableAuditedEntity {
 
     public GainRuleRequestDto toDto() {
         return new GainRuleRequestDto(
-            id, restaurantId, name, description, type,
+            id, restaurantId, getCreatedBy(), name, description, type,
             conversionRate, capPerVisit, capPerMonth, minAmount,
             status, rejectionReason, reviewedById, reviewedAt, createdRuleId,
             getCreatedAt()

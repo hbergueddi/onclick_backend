@@ -145,7 +145,10 @@ class LoyaltyFlowIntegrationTest extends AbstractIntegrationTest {
         ResponseEntity<String> post = restTemplate.exchange(url("/api/loyalty/gain-rule-requests"), HttpMethod.POST,
             jsonJwtEntity(Map.of("restaurantId", rt[0], "name", "Règle L4", "conversionRate", 0.1), admin), String.class);
         assertThat(post.getStatusCode().is2xxSuccessful()).isTrue();
-        String id = om.readTree(post.getBody()).get("id").asText();
+        var created = om.readTree(post.getBody());
+        String id = created.get("id").asText();
+        // requestedById exposé (V-fix) = created_by audité (le SUPERADMIN qui a POSTé via JWT)
+        assertThat(created.get("requestedById").asText()).isEqualTo(SEED_SUPERADMIN_ID.toString());
         assertThat(restTemplate.exchange(url("/api/loyalty/gain-rule-requests"), HttpMethod.GET, jwtEntity(admin), String.class)
             .getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(restTemplate.exchange(url("/api/loyalty/gain-rule-requests/by-restaurant/" + rt[0]), HttpMethod.GET, jwtEntity(admin), String.class)
