@@ -27,7 +27,42 @@ public final class FinancialDtos {
     // ─── Contract ────────────────────────────────────────────────────────────
 
     public record ContractDto(UUID id, UUID restaurantId, String contractNumber, BigDecimal commissionRate,
-                              BigDecimal walletAdminRate, LocalDate startsAt, LocalDate endsAt, String status, Instant createdAt) {}
+                              BigDecimal walletAdminRate, LocalDate startsAt, LocalDate endsAt, String status, Instant createdAt,
+                              // V54 — champs du contrat partenaire legacy
+                              String representedBy, String representedTitle, BigDecimal oneclickCommissionRate,
+                              String paymentTerms, BigDecimal plafondCommissionMensuel, boolean autoRenew,
+                              Instant signedAt, int renewalNumber, String raisonSociale, String formeJuridique,
+                              String numeroRc, String numeroIf, String numeroIce, String capitalSocial,
+                              String banque, String rib, Integer capaciteCouverts, String horairesExploitation,
+                              String joursFermeture, Integer dureeEngagementMois, Integer preavisResiliationMois,
+                              BigDecimal penaliteResiliation, String lieuSignature, Integer nombreExemplaires) {}
+
+    /** Champs legacy optionnels — partagés par create & update (V54). */
+    public record ContractDetailsDto(
+        @Size(max = 128) String representedBy,
+        @Size(max = 64) String representedTitle,
+        @DecimalMin("0.00") @DecimalMax("100.00") BigDecimal oneclickCommissionRate,
+        @Size(max = 256) String paymentTerms,
+        @DecimalMin("0.00") BigDecimal plafondCommissionMensuel,
+        Boolean autoRenew,
+        Instant signedAt,
+        @Size(max = 128) String raisonSociale,
+        @Size(max = 64) String formeJuridique,
+        @Size(max = 64) String numeroRc,
+        @Size(max = 64) String numeroIf,
+        @Size(max = 64) String numeroIce,
+        @Size(max = 64) String capitalSocial,
+        @Size(max = 128) String banque,
+        @Size(max = 64) String rib,
+        @PositiveOrZero Integer capaciteCouverts,
+        @Size(max = 256) String horairesExploitation,
+        @Size(max = 256) String joursFermeture,
+        @PositiveOrZero Integer dureeEngagementMois,
+        @PositiveOrZero Integer preavisResiliationMois,
+        @DecimalMin("0.00") BigDecimal penaliteResiliation,
+        @Size(max = 128) String lieuSignature,
+        @PositiveOrZero Integer nombreExemplaires
+    ) {}
 
     public record ContractCreateDto(
         @NotNull UUID restaurantId,
@@ -36,14 +71,18 @@ public final class FinancialDtos {
         // Optionnel — défaut 2.00 côté entité si absent (V49).
         @DecimalMin("0.00") @DecimalMax("100.00") BigDecimal walletAdminRate,
         @NotNull LocalDate startsAt,
-        LocalDate endsAt
+        LocalDate endsAt,
+        // V54 — champs legacy optionnels (regroupés)
+        @jakarta.validation.Valid ContractDetailsDto details
     ) {}
 
     public record ContractUpdateDto(
         @DecimalMin("0.00") @DecimalMax("100.00") BigDecimal commissionRate,
         @DecimalMin("0.00") @DecimalMax("100.00") BigDecimal walletAdminRate,
         LocalDate endsAt,
-        @Pattern(regexp = "^(draft|active|paused|terminated)$") @Size(min = 1, max = 64) String status
+        @Pattern(regexp = "^(draft|active|paused|terminated)$") @Size(min = 1, max = 64) String status,
+        // V54 — champs legacy optionnels (regroupés)
+        @jakarta.validation.Valid ContractDetailsDto details
     ) {}
 
     // ─── Invoice ─────────────────────────────────────────────────────────────

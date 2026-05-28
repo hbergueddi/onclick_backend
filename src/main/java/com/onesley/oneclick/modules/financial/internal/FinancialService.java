@@ -70,6 +70,7 @@ public class FinancialService {
             dto.commissionRate(), dto.startsAt());
         if (dto.endsAt() != null) c.setEndsAt(dto.endsAt());
         if (dto.walletAdminRate() != null) c.setWalletAdminRate(dto.walletAdminRate());
+        applyContractDetails(c, dto.details());
         return contractRepo.save(c).toDto();
     }
 
@@ -83,7 +84,36 @@ public class FinancialService {
         if (dto.walletAdminRate() != null) c.setWalletAdminRate(dto.walletAdminRate());
         if (dto.endsAt() != null)          c.setEndsAt(dto.endsAt());
         if (dto.status() != null)          c.setStatus(dto.status());
+        applyContractDetails(c, dto.details());
         return contractRepo.save(c).toDto();
+    }
+
+    /** Applique les champs legacy optionnels (V54) — null = inchangé (PATCH partiel). */
+    private void applyContractDetails(Contract c, FinancialDtos.ContractDetailsDto d) {
+        if (d == null) return;
+        if (d.representedBy() != null)            c.setRepresentedBy(d.representedBy());
+        if (d.representedTitle() != null)         c.setRepresentedTitle(d.representedTitle());
+        if (d.oneclickCommissionRate() != null)   c.setOneclickCommissionRate(d.oneclickCommissionRate());
+        if (d.paymentTerms() != null)             c.setPaymentTerms(d.paymentTerms());
+        if (d.plafondCommissionMensuel() != null) c.setPlafondCommissionMensuel(d.plafondCommissionMensuel());
+        if (d.autoRenew() != null)                c.setAutoRenew(d.autoRenew());
+        if (d.signedAt() != null)                 c.setSignedAt(d.signedAt());
+        if (d.raisonSociale() != null)            c.setRaisonSociale(d.raisonSociale());
+        if (d.formeJuridique() != null)           c.setFormeJuridique(d.formeJuridique());
+        if (d.numeroRc() != null)                 c.setNumeroRc(d.numeroRc());
+        if (d.numeroIf() != null)                 c.setNumeroIf(d.numeroIf());
+        if (d.numeroIce() != null)                c.setNumeroIce(d.numeroIce());
+        if (d.capitalSocial() != null)            c.setCapitalSocial(d.capitalSocial());
+        if (d.banque() != null)                   c.setBanque(d.banque());
+        if (d.rib() != null)                      c.setRib(d.rib());
+        if (d.capaciteCouverts() != null)         c.setCapaciteCouverts(d.capaciteCouverts());
+        if (d.horairesExploitation() != null)     c.setHorairesExploitation(d.horairesExploitation());
+        if (d.joursFermeture() != null)           c.setJoursFermeture(d.joursFermeture());
+        if (d.dureeEngagementMois() != null)      c.setDureeEngagementMois(d.dureeEngagementMois());
+        if (d.preavisResiliationMois() != null)   c.setPreavisResiliationMois(d.preavisResiliationMois());
+        if (d.penaliteResiliation() != null)      c.setPenaliteResiliation(d.penaliteResiliation());
+        if (d.lieuSignature() != null)            c.setLieuSignature(d.lieuSignature());
+        if (d.nombreExemplaires() != null)        c.setNombreExemplaires(d.nombreExemplaires());
     }
 
     // ─── Invoices ────────────────────────────────────────────────────────────

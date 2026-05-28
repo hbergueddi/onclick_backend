@@ -79,11 +79,11 @@ class FinancialServiceTest {
         when(contractRepo.save(any(Contract.class))).thenAnswer(i -> i.getArgument(0));
         // walletAdminRate explicite (1.50) → persisté
         var withRate = service.createContract(new ContractCreateDto(
-            UUID.randomUUID(), "C-1", new BigDecimal("3.00"), new BigDecimal("1.50"), LocalDate.now(), LocalDate.now().plusYears(1)));
+            UUID.randomUUID(), "C-1", new BigDecimal("3.00"), new BigDecimal("1.50"), LocalDate.now(), LocalDate.now().plusYears(1), null));
         assertThat(withRate.walletAdminRate()).isEqualByComparingTo("1.50");
         // walletAdminRate null → défaut entité 2.00 (V49)
         var defaulted = service.createContract(new ContractCreateDto(
-            UUID.randomUUID(), "C-2", new BigDecimal("5.00"), null, LocalDate.now(), null));
+            UUID.randomUUID(), "C-2", new BigDecimal("5.00"), null, LocalDate.now(), null, null));
         assertThat(defaulted.walletAdminRate()).isEqualByComparingTo("2.00");
     }
 
@@ -108,7 +108,7 @@ class FinancialServiceTest {
         when(contractRepo.findById(any())).thenReturn(Optional.of(c));
         when(contractRepo.save(any(Contract.class))).thenAnswer(i -> i.getArgument(0));
         try (MockedStatic<SecurityHelper> ignored = mockStatic(SecurityHelper.class)) {
-            service.updateContract(c.getId(), new ContractUpdateDto(new BigDecimal("7.50"), new BigDecimal("2.50"), LocalDate.now().plusYears(2), "active"));
+            service.updateContract(c.getId(), new ContractUpdateDto(new BigDecimal("7.50"), new BigDecimal("2.50"), LocalDate.now().plusYears(2), "active", null));
         }
         assertThat(c.getCommissionRate()).isEqualByComparingTo("7.50");
         assertThat(c.getWalletAdminRate()).isEqualByComparingTo("2.50");
@@ -119,7 +119,24 @@ class FinancialServiceTest {
     void updateContract_notFound_throwsNotFound() {
         when(contractRepo.findById(any())).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.updateContract(UUID.randomUUID(),
-            new ContractUpdateDto(null, null, null, null))).isInstanceOf(NotFoundException.class);
+            new ContractUpdateDto(null, null, null, null, null))).isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void createContract_withDetails_persistsLegacyFields() {
+        when(contractRepo.save(any(Contract.class))).thenAnswer(i -> i.getArgument(0));
+        var details = new com.onesley.oneclick.modules.financial.api.FinancialDtos.ContractDetailsDto(
+            "M. Alami", "Gérant", new BigDecimal("3.00"), "30 jours", null, true, null,
+            "SARL Test", "SARL", null, null, null, null, null, null,
+            50, null, null, 12, 3, null, "Casablanca", 2);
+        var dto = service.createContract(new ContractCreateDto(
+            UUID.randomUUID(), "C-D", new BigDecimal("10.00"), null, LocalDate.now(), null, details));
+        assertThat(dto.representedBy()).isEqualTo("M. Alami");
+        assertThat(dto.oneclickCommissionRate()).isEqualByComparingTo("3.00");
+        assertThat(dto.autoRenew()).isTrue();
+        assertThat(dto.capaciteCouverts()).isEqualTo(50);
+        assertThat(dto.raisonSociale()).isEqualTo("SARL Test");
+        assertThat(dto.lieuSignature()).isEqualTo("Casablanca");
     }
 
     // ─── Invoices ──────────────────────────────────────────────────────────────
