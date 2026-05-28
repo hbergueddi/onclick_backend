@@ -31,6 +31,8 @@ import com.onesley.oneclick.modules.financial.api.FinancialDtos.ContractTemplate
 import com.onesley.oneclick.modules.financial.api.FinancialDtos.ContractTemplateArticleCreateDto;
 import com.onesley.oneclick.modules.financial.api.FinancialDtos.ContractTemplateArticleDto;
 import com.onesley.oneclick.modules.financial.api.FinancialDtos.ContractTemplateArticlePatchDto;
+import com.onesley.oneclick.modules.financial.api.FinancialDtos.DisabledArticlesDto;
+import com.onesley.oneclick.modules.financial.api.FinancialDtos.ContractRenewResultDto;
 import com.onesley.oneclick.modules.financial.internal.FinancialCronJobs;
 import com.onesley.oneclick.modules.financial.internal.FinancialService;
 import com.onesley.oneclick.security.SecurityHelper;
@@ -281,5 +283,30 @@ public class FinancialController {
     public ResponseEntity<Void> deleteTemplateArticle(@PathVariable UUID templateId, @PathVariable UUID articleId) {
         service.deleteTemplateArticle(articleId);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    // ─── Articles désactivés par contrat (V56) ─────────────────────────────────
+
+    @GetMapping("/contracts/{contractId}/disabled-articles")
+    @Operation(summary = "Liste des IDs d'articles désactivés pour un contrat")
+    @PreAuthorize("hasAuthority('VIEW:FINANCIAL')")
+    public List<UUID> findDisabledArticles(@PathVariable UUID contractId) {
+        return service.findDisabledArticleIds(contractId);
+    }
+
+    @PutMapping("/contracts/{contractId}/disabled-articles")
+    @Operation(summary = "Remplace l'ensemble des articles désactivés d'un contrat")
+    @PreAuthorize("hasAuthority('UPDATE:FINANCIAL')")
+    public List<UUID> setDisabledArticles(@PathVariable UUID contractId, @RequestBody DisabledArticlesDto dto) {
+        return service.setDisabledArticles(contractId, dto.articleIds());
+    }
+
+    // ─── Renouvellement en masse des contrats auto (V57 — port renew-contracts) ─
+
+    @PostMapping("/contracts/renew")
+    @Operation(summary = "Renouvelle les contrats actifs en auto-renew arrivant à échéance (admin only)")
+    @PreAuthorize("hasAuthority('CREATE:FINANCIAL')")
+    public ContractRenewResultDto renewContracts() {
+        return service.renewContracts();
     }
 }

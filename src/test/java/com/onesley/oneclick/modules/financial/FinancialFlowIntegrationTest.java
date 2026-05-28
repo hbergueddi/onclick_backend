@@ -188,4 +188,56 @@ class FinancialFlowIntegrationTest extends AbstractIntegrationTest {
             HttpMethod.POST, jwtEntity(admin), String.class).getStatusCode()).isEqualTo(HttpStatus.OK);
         jdbc.update("DELETE FROM invoices WHERE period_start >= DATE '2099-12-01'"); // défensif
     }
+
+    @Test
+    void contractDisabledArticles_setAndGet() throws Exception {
+        String admin = adminBearer();
+        ResponseEntity<String> tpl = restTemplate.exchange(url("/api/financial/contract-templates"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("code", "L4-DA-" + rand(), "name", "Tpl DA", "version", 1, "language", "fr",
+                "title", "T", "body", "B", "isActive", true), admin), String.class);
+        String templateId = om.readTree(tpl.getBody()).get("id").asText();
+        ResponseEntity<String> art = restTemplate.exchange(url("/api/financial/contract-templates/" + templateId + "/articles"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("articleNumber", 1, "title", "Clause", "content", "…", "sortOrder", 0), admin), String.class);
+        String articleId = om.readTree(art.getBody()).get("id").asText();
+        ResponseEntity<String> ct = restTemplate.exchange(url("/api/financial/contracts"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("restaurantId", restaurantId(), "contractNumber", "L4-DA-" + rand(),
+                "commissionRate", 3.0, "startsAt", LocalDate.now().toString()), admin), String.class);
+        String contractId = om.readTree(ct.getBody()).get("id").asText();
+
+        // PUT [articleId] → GET le contient
+        assertThat(restTemplate.exchange(url("/api/financial/contracts/" + contractId + "/disabled-articles"), HttpMethod.PUT,
+            jsonJwtEntity(Map.of("articleIds", java.util.List.of(articleId)), admin), String.class).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(restTemplate.exchange(url("/api/financial/contracts/" + contractId + "/disabled-articles"), HttpMethod.GET, jwtEntity(admin), String.class)
+            .getBody()).contains(articleId);
+        // PUT [] → GET vide
+        assertThat(restTemplate.exchange(url("/api/financial/contracts/" + contractId + "/disabled-articles"), HttpMethod.PUT,
+            jsonJwtEntity(Map.of("articleIds", java.util.List.of()), admin), String.class).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(restTemplate.exchange(url("/api/financial/contracts/" + contractId + "/disabled-articles"), HttpMethod.GET, jwtEntity(admin), String.class)
+            .getBody()).doesNotContain(articleId);
+
+        jdbc.update("DELETE FROM contracts WHERE id = ?::uuid", UUID.fromString(contractId));
+        jdbc.update("DELETE FROM contract_templates WHERE id = ?::uuid", UUID.fromString(templateId));
+    }
+
+    @Test
+    void renewContracts_extendsAutoRenewExpiring() throws Exception {
+        String admin = adminBearer();
+        ResponseEntity<String> ct = restTemplate.exchange(url("/api/financial/contracts"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("restaurantId", restaurantId(), "contractNumber", "L4-RN-" + rand(),
+                "commissionRate", 3.0, "startsAt", LocalDate.now().minusMonths(11).toString(),
+                "endsAt", LocalDate.now().plusDays(10).toString(),
+                "details", Map.of("autoRenew", true, "dureeEngagementMois", 12)), admin), String.class);
+        String contractId = om.readTree(ct.getBody()).get("id").asText();
+        String endsBefore = om.readTree(ct.getBody()).get("endsAt").asText();
+
+        ResponseEntity<String> renew = restTemplate.exchange(url("/api/financial/contracts/renew"), HttpMethod.POST, jwtEntity(admin), String.class);
+        assertThat(renew.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(om.readTree(renew.getBody()).get("renewed").asInt()).isGreaterThanOrEqualTo(1);
+
+        ResponseEntity<String> get = restTemplate.exchange(url("/api/financial/contracts/" + contractId), HttpMethod.GET, jwtEntity(admin), String.class);
+        assertThat(om.readTree(get.getBody()).get("endsAt").asText()).isGreaterThan(endsBefore); // échéance repoussée (ISO comparable)
+        assertThat(om.readTree(get.getBody()).get("renewalNumber").asInt()).isGreaterThanOrEqualTo(1);
+
+        jdbc.update("DELETE FROM contracts WHERE id = ?::uuid", UUID.fromString(contractId));
+    }
 }

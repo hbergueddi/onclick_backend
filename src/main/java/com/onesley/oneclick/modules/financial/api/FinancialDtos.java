@@ -106,6 +106,14 @@ public final class FinancialDtos {
         @PositiveOrZero Integer sortOrder
     ) {}
 
+    // ─── Contract disabled articles (override par contrat, V56) + renew (V57) ──
+
+    /** Liste (replace) des articles désactivés pour un contrat. */
+    public record DisabledArticlesDto(java.util.List<UUID> articleIds) {}
+
+    /** Résultat du renouvellement en masse des contrats auto. */
+    public record ContractRenewResultDto(int renewed) {}
+
     // ─── Invoice ─────────────────────────────────────────────────────────────
 
     public record InvoiceDto(UUID id, UUID restaurantId, String invoiceNumber, LocalDate periodStart,

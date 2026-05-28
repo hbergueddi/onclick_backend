@@ -43,6 +43,7 @@ public class FinancialService {
     private final WalletTransactionRepository walletRepo;
     private final ContractTemplateRepository templateRepo;
     private final ContractTemplateArticleRepository articleRepo;
+    private final ContractDisabledArticleRepository disabledRepo;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -319,5 +320,44 @@ public class FinancialService {
             throw new NotFoundException("ContractTemplateArticle", articleId);
         }
         articleRepo.deleteById(articleId);
+    }
+
+    // ─── Articles désactivés par contrat (V56) + renouvellement (V57) ──────────
+
+    public List<UUID> findDisabledArticleIds(UUID contractId) {
+        return disabledRepo.findAllByContractId(contractId).stream()
+            .map(ContractDisabledArticle::getArticleId).toList();
+    }
+
+    @Transactional
+    public List<UUID> setDisabledArticles(UUID contractId, List<UUID> articleIds) {
+        contractRepo.findById(contractId)
+            .filter(x -> x.getDeletedAt() == null)
+            .orElseThrow(() -> new NotFoundException("Contract", contractId));
+        disabledRepo.deleteByContractId(contractId);
+        if (articleIds != null) {
+            articleIds.stream().distinct().forEach(aid ->
+                disabledRepo.save(new ContractDisabledArticle(UUID.randomUUID(), contractId, aid)));
+        }
+        return findDisabledArticleIds(contractId);
+    }
+
+    /**
+     * Renouvelle les contrats actifs en auto-renew dont l'échéance tombe dans les 30 jours
+     * (ou est dépassée) — port de l'edge function renew-contracts. Étend ends_at de la durée
+     * d'engagement (défaut 12 mois) et incrémente renewal_number.
+     */
+    @Transactional
+    public ContractRenewResultDto renewContracts() {
+        java.time.LocalDate threshold = java.time.LocalDate.now().plusDays(30);
+        List<Contract> renewable = contractRepo.findRenewable(threshold);
+        for (Contract c : renewable) {
+            int months = (c.getDureeEngagementMois() != null && c.getDureeEngagementMois() > 0)
+                ? c.getDureeEngagementMois() : 12;
+            c.setEndsAt(c.getEndsAt().plusMonths(months));
+            c.setRenewalNumber(c.getRenewalNumber() + 1);
+            contractRepo.save(c);
+        }
+        return new ContractRenewResultDto(renewable.size());
     }
 }
