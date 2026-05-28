@@ -90,19 +90,22 @@ class SupportServiceTest {
         SupportTicket t = ticket();
         when(ticketRepo.findById(any())).thenReturn(Optional.of(t));
         try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
-            service.update(t.getId(), new TicketUpdateDto("resolved", "high", UUID.randomUUID(), "réponse"));
+            service.update(t.getId(), new TicketUpdateDto("resolved", "high", UUID.randomUUID(), "réponse", true));
             assertThat(t.getStatus()).isEqualTo("resolved");
-            service.update(t.getId(), new TicketUpdateDto("closed", null, null, null));
+            assertThat(t.isEscalatedToAdmin()).isTrue(); // escalade écrite via PATCH
+            service.update(t.getId(), new TicketUpdateDto("closed", null, null, null, null));
             assertThat(t.getStatus()).isEqualTo("closed");
-            service.update(t.getId(), new TicketUpdateDto("in_progress", null, null, null));
+            assertThat(t.isEscalatedToAdmin()).isTrue(); // null → inchangé
+            service.update(t.getId(), new TicketUpdateDto("in_progress", null, null, null, false));
             assertThat(t.getStatus()).isEqualTo("in_progress");
+            assertThat(t.isEscalatedToAdmin()).isFalse(); // dé-escalade
         }
     }
 
     @Test
     void update_notFound_throwsNotFound() {
         when(ticketRepo.findById(any())).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> service.update(UUID.randomUUID(), new TicketUpdateDto("open", null, null, null)))
+        assertThatThrownBy(() -> service.update(UUID.randomUUID(), new TicketUpdateDto("open", null, null, null, null)))
             .isInstanceOf(NotFoundException.class);
     }
 

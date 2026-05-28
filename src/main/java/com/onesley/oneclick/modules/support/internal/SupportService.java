@@ -106,6 +106,7 @@ public class SupportService {
             t.setAssignedTo(entityManager.getReference(User.class, dto.assignedToId()));
         }
         if (dto.lastReply() != null)  t.setLastReply(dto.lastReply());
+        if (dto.escalatedToAdmin() != null) t.setEscalatedToAdmin(dto.escalatedToAdmin());
         return ticketRepo.save(t).toDto();
     }
 

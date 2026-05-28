@@ -55,7 +55,9 @@ public final class SupportDtos {
         @Pattern(regexp = "^(low|normal|high|urgent)$") @Size(min = 1, max = 64) String priority,
         UUID assignedToId,
         // V24 — Sprint K : dernière réponse staff
-        @Size(min = 1, max = 1024) String lastReply
+        @Size(min = 1, max = 1024) String lastReply,
+        // Escalade vers l'admin (lecture exposée sur TicketDto ; écrit par le bouton "Escalader" ProDesk)
+        Boolean escalatedToAdmin
     ) {}
 
     // ─── Message ─────────────────────────────────────────────────────────────

@@ -34,11 +34,12 @@ class SupportFlowIntegrationTest extends AbstractIntegrationTest {
         assertThat(restTemplate.exchange(url("/api/support/tickets/" + id), HttpMethod.GET, jwtEntity(admin), String.class)
             .getStatusCode()).isEqualTo(HttpStatus.OK);
 
-        // UPDATE
+        // UPDATE (+ escalade vers admin — TicketUpdateDto.escalatedToAdmin)
         ResponseEntity<String> upd = restTemplate.exchange(url("/api/support/tickets/" + id), HttpMethod.PATCH,
-            jsonJwtEntity(Map.of("status", "in_progress", "priority", "urgent"), admin), String.class);
+            jsonJwtEntity(Map.of("status", "in_progress", "priority", "urgent", "escalatedToAdmin", true), admin), String.class);
         assertThat(upd.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(om.readTree(upd.getBody()).get("status").asText()).isEqualTo("in_progress");
+        assertThat(om.readTree(upd.getBody()).get("escalatedToAdmin").asBoolean()).isTrue();
 
         // messages
         assertThat(restTemplate.exchange(url("/api/support/messages"), HttpMethod.POST,
