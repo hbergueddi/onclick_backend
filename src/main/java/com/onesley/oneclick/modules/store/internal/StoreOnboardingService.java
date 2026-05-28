@@ -46,6 +46,16 @@ public class StoreOnboardingService {
         r.setOwnerLastName(dto.ownerLastName());
         r.setOwnerEmail(dto.ownerEmail());
         r.setOwnerPhone(dto.ownerPhone());
+        // Champs enrollment legacy (V58) — restaurés depuis le formulaire public.
+        r.setBudget(dto.budget());
+        r.setDescription(dto.description());
+        r.setOwnerRole(dto.ownerRole());
+        r.setIce(dto.ice());
+        r.setIfNumber(dto.ifNumber());
+        r.setRc(dto.rc());
+        r.setPatente(dto.patente());
+        r.setCapacity(dto.capacity());
+        r.setServices(dto.services() == null ? null : dto.services().toArray(new String[0]));
 
         OnboardingRequestDto saved = OnboardingRequestDto.from(repo.save(r));
         log.info("[store/onboarding] new request: id={} restaurant={} email={}",

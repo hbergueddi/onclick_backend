@@ -50,10 +50,17 @@ class StoreOnboardingServiceTest {
     }
 
     @Test
-    void create_success() {
+    void create_success_persistsEnrollmentFields() {
         when(repo.save(any())).thenAnswer(i -> i.getArgument(0));
-        assertThat(service.create(new OnboardingCreateDto(UUID.randomUUID(), "Bistrot", "marocaine", "Casa",
-            "12 rue X", "+212600", "Ada", "L", "ada@x.ma", "+212611"))).isNotNull();
+        var saved = service.create(new OnboardingCreateDto(UUID.randomUUID(), "Bistrot", "marocaine", "Casa",
+            "12 rue X", "+212600", "Ada", "L", "ada@x.ma", "+212611",
+            "€€", "Bistrot de quartier", "Propriétaire", "001234567890123", "12345678", "RC-1", "PAT-1", 80,
+            List.of("Déjeuner", "Dîner")));
+        assertThat(saved).isNotNull();
+        // Les champs enrollment legacy (V58) doivent être persistés + exposés.
+        assertThat(saved.ice()).isEqualTo("001234567890123");
+        assertThat(saved.capacity()).isEqualTo(80);
+        assertThat(saved.services()).containsExactly("Déjeuner", "Dîner");
     }
 
     @Test

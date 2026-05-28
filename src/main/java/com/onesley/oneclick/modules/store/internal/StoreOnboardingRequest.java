@@ -2,6 +2,8 @@ package com.onesley.oneclick.modules.store.internal;
 
 import com.onesley.oneclick.audit.TimestampedEntity;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -40,6 +42,20 @@ public class StoreOnboardingRequest extends TimestampedEntity {
 
     @Column(name = "owner_phone", length = 64)
     @Setter private String ownerPhone;
+
+    // ─── Champs enrollment legacy (V58) — collectés par le formulaire public ──
+    @Column(length = 8) @Setter private String budget;
+    @Column(length = 2000) @Setter private String description;
+    @Column(name = "owner_role", length = 64) @Setter private String ownerRole;
+    @Column(length = 32) @Setter private String ice;
+    @Column(name = "if_number", length = 32) @Setter private String ifNumber;
+    @Column(length = 64) @Setter private String rc;
+    @Column(length = 64) @Setter private String patente;
+    @Column @Setter private Integer capacity;
+
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Column(name = "services", columnDefinition = "text[]")
+    @Setter private String[] services;
 
     @Column(nullable = false, length = 64)
     @Setter private String status = "pending";
