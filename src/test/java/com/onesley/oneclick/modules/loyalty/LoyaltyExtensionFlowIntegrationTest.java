@@ -47,6 +47,22 @@ class LoyaltyExtensionFlowIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void scoreConfig_getAndPatch() throws Exception {
+        String admin = adminBearer();
+        // GET singleton (seedé par V52) — admin-only (VIEW:ANALYTICS).
+        ResponseEntity<String> get = restTemplate.exchange(url("/api/loyalty/score-config"),
+            HttpMethod.GET, jwtEntity(admin), String.class);
+        assertThat(get.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(om.readTree(get.getBody()).has("minReservations")).isTrue();
+        // PATCH partiel (UPDATE:ANALYTICS).
+        ResponseEntity<String> patch = restTemplate.exchange(url("/api/loyalty/score-config"),
+            HttpMethod.PATCH, jsonJwtEntity(Map.of("minReservations", 4, "fenetreMois", 9), admin), String.class);
+        assertThat(patch.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(om.readTree(patch.getBody()).get("minReservations").asInt()).isEqualTo(4);
+        assertThat(om.readTree(patch.getBody()).get("fenetreMois").asInt()).isEqualTo(9);
+    }
+
+    @Test
     void aiUsage_increment_2xx() {
         assertThat(restTemplate.exchange(url("/api/loyalty/ai-usage/by-user/" + userId() + "/increment"),
             HttpMethod.POST, jwtEntity(adminBearer()), String.class).getStatusCode().is2xxSuccessful()).isTrue();

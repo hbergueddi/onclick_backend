@@ -54,6 +54,21 @@ public class LoyaltyExtensionController {
         return service.computeUserScore(userId);
     }
 
+    // ─── Configuration du moteur de notation (singleton, admin-only) ──────
+    @GetMapping("/score-config")
+    @Operation(summary = "Config singleton de notation client (seuils + règles de calcul)")
+    @PreAuthorize("hasAuthority('VIEW:ANALYTICS')")
+    public ClientScoreConfigDto getScoreConfig() {
+        return service.getScoreConfig();
+    }
+
+    @PatchMapping("/score-config")
+    @Operation(summary = "Met à jour la config de notation client (partiel)")
+    @PreAuthorize("hasAuthority('UPDATE:ANALYTICS')")
+    public ClientScoreConfigDto updateScoreConfig(@Valid @RequestBody ClientScoreConfigPatchDto dto) {
+        return service.updateScoreConfig(dto);
+    }
+
     public record RatingRecordDto(@NotNull UUID userId, UUID reservationId, @NotNull BigDecimal delta, String reason) {}
 
     @PostMapping("/ratings")

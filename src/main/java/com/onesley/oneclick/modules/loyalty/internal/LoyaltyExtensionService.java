@@ -34,6 +34,7 @@ public class LoyaltyExtensionService {
     private final AIUsageRepository aiUsageRepo;
     private final RestaurantRestitutionRepository restitutionRepo;
     private final RestaurantTierStatusRepository tierStatusRepo;
+    private final ClientScoreConfigRepository scoreConfigRepo;
 
     @PersistenceContext
     private EntityManager em;
@@ -51,6 +52,36 @@ public class LoyaltyExtensionService {
         BigDecimal averageRating = avg == null ? new BigDecimal("5.0") : new BigDecimal(avg).setScale(2, RoundingMode.HALF_UP);
         BigDecimal score = averageRating.multiply(new BigDecimal("20")); // 0-100 scale
         return new ClientScoreDto(userId, averageRating, count == null ? 0L : count, score);
+    }
+
+    // ─── Configuration du moteur de notation (singleton V52) ─────────
+    /**
+     * Config singleton de notation client. Seedée par V52 ; on recrée une ligne
+     * par défaut de façon défensive si elle a été supprimée (jamais null).
+     */
+    @Transactional
+    public ClientScoreConfigDto getScoreConfig() {
+        return loadOrCreateScoreConfig().toDto();
+    }
+
+    @Transactional
+    public ClientScoreConfigDto updateScoreConfig(ClientScoreConfigPatchDto dto) {
+        ClientScoreConfig c = loadOrCreateScoreConfig();
+        if (dto.minReservations() != null)       c.setMinReservations(dto.minReservations());
+        if (dto.seuilExcellent() != null)        c.setSeuilExcellent(dto.seuilExcellent());
+        if (dto.seuilFiable() != null)           c.setSeuilFiable(dto.seuilFiable());
+        if (dto.seuilMoyen() != null)            c.setSeuilMoyen(dto.seuilMoyen());
+        if (dto.scoreInitial() != null)          c.setScoreInitial(dto.scoreInitial());
+        if (dto.penaliteNoShow() != null)        c.setPenaliteNoShow(dto.penaliteNoShow());
+        if (dto.honoreesPourRemonter() != null)  c.setHonoreesPourRemonter(dto.honoreesPourRemonter());
+        if (dto.gainParPalier() != null)         c.setGainParPalier(dto.gainParPalier());
+        if (dto.fenetreMois() != null)           c.setFenetreMois(dto.fenetreMois());
+        return scoreConfigRepo.save(c).toDto();
+    }
+
+    private ClientScoreConfig loadOrCreateScoreConfig() {
+        return scoreConfigRepo.findFirstByOrderByCreatedAtAsc()
+            .orElseGet(() -> scoreConfigRepo.save(new ClientScoreConfig()));
     }
 
     public ClientRatingDto recordRating(UUID userId, UUID reservationId, BigDecimal delta, String reason) {

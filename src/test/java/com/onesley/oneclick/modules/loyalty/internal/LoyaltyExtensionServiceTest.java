@@ -2,6 +2,7 @@ package com.onesley.oneclick.modules.loyalty.internal;
 
 import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.ForbiddenException;
+import com.onesley.oneclick.modules.loyalty.api.LoyaltyExtensionDtos.ClientScoreConfigPatchDto;
 import com.onesley.oneclick.security.SecurityHelper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
@@ -45,6 +46,7 @@ class LoyaltyExtensionServiceTest {
     @Mock AIUsageRepository aiUsageRepo;
     @Mock RestaurantRestitutionRepository restitutionRepo;
     @Mock RestaurantTierStatusRepository tierStatusRepo;
+    @Mock ClientScoreConfigRepository scoreConfigRepo;
     @Mock EntityManager em;
     @Mock Query query;
     @InjectMocks LoyaltyExtensionService service;
@@ -224,5 +226,30 @@ class LoyaltyExtensionServiceTest {
         Object[] row = { UUID.randomUUID(), UUID.randomUUID(), resto, 25, "snap2earn", Instant.now() };
         when(query.getResultList()).thenReturn(Collections.singletonList(row));
         assertThat(service.findPointDistributions(resto, user, 10)).hasSize(1);
+    }
+
+    // ─── score config (singleton V52) ──────────────────────────────────────────
+
+    @Test
+    void getScoreConfig_createsDefaultWhenAbsent() {
+        when(scoreConfigRepo.findFirstByOrderByCreatedAtAsc()).thenReturn(Optional.empty());
+        when(scoreConfigRepo.save(any())).thenAnswer(i -> i.getArgument(0));
+        var dto = service.getScoreConfig();
+        assertThat(dto.minReservations()).isEqualTo(3);
+        assertThat(dto.scoreInitial()).isEqualByComparingTo("5.0");
+        assertThat(dto.fenetreMois()).isEqualTo(6);
+    }
+
+    @Test
+    void updateScoreConfig_appliesPresentFieldsOnly() {
+        ClientScoreConfig c = new ClientScoreConfig();
+        when(scoreConfigRepo.findFirstByOrderByCreatedAtAsc()).thenReturn(Optional.of(c));
+        when(scoreConfigRepo.save(any())).thenAnswer(i -> i.getArgument(0));
+        var patch = new ClientScoreConfigPatchDto(
+            7, null, null, null, null, null, null, null, 12);
+        var dto = service.updateScoreConfig(patch);
+        assertThat(dto.minReservations()).isEqualTo(7);   // patché
+        assertThat(dto.fenetreMois()).isEqualTo(12);       // patché
+        assertThat(dto.honoreesPourRemonter()).isEqualTo(5); // défaut préservé
     }
 }

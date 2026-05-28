@@ -5,6 +5,9 @@ import com.onesley.oneclick.modules.loyalty.internal.ClientRating;
 import com.onesley.oneclick.modules.loyalty.internal.RestaurantRestitution;
 import com.onesley.oneclick.modules.loyalty.internal.RestaurantTierStatus;
 
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
@@ -41,6 +44,37 @@ public final class LoyaltyExtensionDtos {
         BigDecimal averageRating,
         Long ratingsCount,
         BigDecimal score
+    ) {}
+
+    /**
+     * Configuration singleton du moteur de notation client (V52).
+     * Alimente /reservations · onglet Scoring (seuils + règles de calcul).
+     */
+    public record ClientScoreConfigDto(
+        UUID id,
+        Integer minReservations,
+        BigDecimal seuilExcellent,
+        BigDecimal seuilFiable,
+        BigDecimal seuilMoyen,
+        BigDecimal scoreInitial,
+        BigDecimal penaliteNoShow,
+        Integer honoreesPourRemonter,
+        BigDecimal gainParPalier,
+        Integer fenetreMois,
+        Instant updatedAt
+    ) {}
+
+    /** PATCH partiel de la configuration de notation (champs présents seulement). */
+    public record ClientScoreConfigPatchDto(
+        @Min(0) Integer minReservations,
+        @DecimalMin("0") BigDecimal seuilExcellent,
+        @DecimalMin("0") BigDecimal seuilFiable,
+        @DecimalMin("0") BigDecimal seuilMoyen,
+        @DecimalMin("0") BigDecimal scoreInitial,
+        @DecimalMin("0") BigDecimal penaliteNoShow,
+        @Min(0) Integer honoreesPourRemonter,
+        @DecimalMin("0") BigDecimal gainParPalier,
+        @Min(1) Integer fenetreMois
     ) {}
 
     public record AIUsageDto(
