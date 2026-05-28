@@ -254,6 +254,17 @@ class LoyaltyExtensionServiceTest {
         assertThat(service.findPointDistributions(resto, user, 10)).hasSize(1);
     }
 
+    @Test
+    void tierDistribution_mapsRows() {
+        Object[] row = { UUID.randomUUID(), UUID.randomUUID(), "Ruby", 0, 42L };
+        when(query.getResultList()).thenReturn(Collections.singletonList(row));
+        var out = service.tierDistribution();
+        assertThat(out).hasSize(1);
+        assertThat(out.get(0).name()).isEqualTo("Ruby");
+        assertThat(out.get(0).minPoints()).isEqualTo(0);
+        assertThat(out.get(0).memberCount()).isEqualTo(42L);
+    }
+
     // ─── score config (singleton V52) ──────────────────────────────────────────
 
     @Test

@@ -71,6 +71,20 @@ public final class LoyaltyExtensionDtos {
         Instant updatedAt
     ) {}
 
+    /**
+     * Distribution des membres par palier de fidélité (vue admin /fidelite).
+     * memberCount = nb de clients dont les points globaux (somme des soldes de
+     * leurs comptes) tombent dans le palier, bucketé sur {@code tiers.min_points}
+     * du tenant du client. Paliers à 0 membre inclus (LEFT JOIN).
+     */
+    public record TierDistributionDto(
+        UUID tierId,
+        UUID tenantId,
+        String name,
+        Integer minPoints,
+        Long memberCount
+    ) {}
+
     /** PATCH partiel de la configuration de notation (champs présents seulement). */
     public record ClientScoreConfigPatchDto(
         @Min(0) Integer minReservations,

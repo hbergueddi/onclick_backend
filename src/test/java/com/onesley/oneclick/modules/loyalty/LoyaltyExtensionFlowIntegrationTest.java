@@ -40,7 +40,8 @@ class LoyaltyExtensionFlowIntegrationTest extends AbstractIntegrationTest {
             "/api/loyalty/restitutions/by-restaurant/" + rid,
             "/api/loyalty/tier-status/by-restaurant/" + rid,
             "/api/loyalty/expired-points/admin",
-            "/api/loyalty/point-distributions"}) {
+            "/api/loyalty/point-distributions",
+            "/api/loyalty/tier-distribution"}) {
             assertThat(restTemplate.exchange(url(path), HttpMethod.GET, jwtEntity(admin), String.class)
                 .getStatusCode()).as(path).isEqualTo(HttpStatus.OK);
         }

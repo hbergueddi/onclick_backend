@@ -286,4 +286,45 @@ public class LoyaltyExtensionService {
             row[5] != null ? toInstant(row[5]) : null
         )).toList();
     }
+
+    /**
+     * Distribution des membres par palier de fidélité (vue admin /fidelite).
+     *
+     * <p>Points globaux d'un client = somme des soldes de ses comptes ; on le
+     * bucketise sur le palier le plus élevé de SON tenant dont {@code min_points}
+     * ≤ points. {@code LEFT JOIN tiers} → tous les paliers remontent (même 0 membre).
+     * Cross-domaine en SQL natif (Modulith CLOSED). Réservé admin (VIEW:ANALYTICS).
+     */
+    @Transactional(readOnly = true)
+    public List<TierDistributionDto> tierDistribution() {
+        String sql = """
+            WITH client_points AS (
+                SELECT a.client_id, u.tenant_id AS tenant_id, COALESCE(SUM(a.balance), 0) AS pts
+                  FROM loyalty_accounts a
+                  JOIN users u ON u.id = a.client_id
+                 WHERE u.deleted_at IS NULL
+                 GROUP BY a.client_id, u.tenant_id
+            ),
+            ranked AS (
+                SELECT cp.client_id,
+                       (SELECT t.id FROM tiers t
+                         WHERE t.tenant_id = cp.tenant_id AND t.min_points <= cp.pts
+                         ORDER BY t.min_points DESC LIMIT 1) AS tier_id
+                  FROM client_points cp
+            )
+            SELECT t.id, t.tenant_id, t.name, t.min_points, COUNT(r.client_id)
+              FROM tiers t
+              LEFT JOIN ranked r ON r.tier_id = t.id
+             GROUP BY t.id, t.tenant_id, t.name, t.min_points
+             ORDER BY t.tenant_id, t.min_points
+            """;
+        List<Object[]> rows = em.createNativeQuery(sql).getResultList();
+        return rows.stream().map(row -> new TierDistributionDto(
+            row[0] != null ? (UUID) row[0] : null,
+            row[1] != null ? (UUID) row[1] : null,
+            (String) row[2],
+            row[3] != null ? ((Number) row[3]).intValue() : 0,
+            row[4] != null ? ((Number) row[4]).longValue() : 0L
+        )).toList();
+    }
 }

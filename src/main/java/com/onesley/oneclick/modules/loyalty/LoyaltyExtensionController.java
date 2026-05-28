@@ -69,6 +69,14 @@ public class LoyaltyExtensionController {
         return service.updateScoreConfig(dto);
     }
 
+    // ─── Distribution des membres par palier (vue admin /fidelite) ────────
+    @GetMapping("/tier-distribution")
+    @Operation(summary = "Nombre de clients par palier de fidélité (points globaux bucketés)")
+    @PreAuthorize("hasAuthority('VIEW:ANALYTICS')")
+    public List<TierDistributionDto> tierDistribution() {
+        return service.tierDistribution();
+    }
+
     public record RatingRecordDto(@NotNull UUID userId, UUID reservationId, @NotNull BigDecimal delta, String reason) {}
 
     @PostMapping("/ratings")
