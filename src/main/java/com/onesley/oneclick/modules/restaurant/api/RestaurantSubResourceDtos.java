@@ -75,17 +75,50 @@ public final class RestaurantSubResourceDtos {
         String name,
         LocalTime startTime,
         LocalTime endTime,
-        Instant createdAt
+        Instant createdAt,
+        // V51 — quotas Click&Go
+        String type,
+        Integer clickgoQuota,
+        Integer capaciteMax,
+        String status
     ) {}
 
     public record MealServiceCreateDto(
         @NotBlank @Size(min = 1, max = 128) String name,
         @NotNull LocalTime startTime,
-        @NotNull LocalTime endTime
+        @NotNull LocalTime endTime,
+        @Size(max = 32) String type,
+        @Min(0) Integer clickgoQuota,
+        @Min(0) Integer capaciteMax,
+        @Size(max = 16) String status
     ) {}
 
     public record MealServicePatchDto(
         @Size(min = 1, max = 128) String name,
+        LocalTime startTime,
+        LocalTime endTime,
+        @Size(max = 32) String type,
+        @Min(0) Integer clickgoQuota,
+        @Min(0) Integer capaciteMax,
+        @Size(max = 16) String status
+    ) {}
+
+    /**
+     * Vue admin consolidée d'un créneau de service, enrichie du restaurant + groupe.
+     * Alimente l'écran /reservations · onglet "Quotas Click&Go" (tous restaurants).
+     * Projection native — cf {@code MealServiceRepository.findAllOverview}.
+     */
+    public record MealServiceOverviewDto(
+        UUID id,
+        UUID restaurantId,
+        String restaurantName,
+        String restaurantCity,
+        String groupName,
+        String type,
+        String name,
+        Integer clickgoQuota,
+        Integer capaciteMax,
+        String status,
         LocalTime startTime,
         LocalTime endTime
     ) {}

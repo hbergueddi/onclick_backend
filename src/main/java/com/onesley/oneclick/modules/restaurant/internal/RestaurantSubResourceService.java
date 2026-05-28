@@ -6,6 +6,7 @@ import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.MealServiceCreateDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.MealServiceDto;
+import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.MealServiceOverviewDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.MealServicePatchDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantStaffCreateDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantStaffDto;
@@ -291,6 +292,19 @@ public class RestaurantSubResourceService {
             .toList();
     }
 
+    /**
+     * Vue admin consolidée des créneaux actifs (tous restaurants), enrichie du
+     * restaurant + groupe. Alimente l'onglet "Quotas Click&Go" de /reservations.
+     */
+    public List<MealServiceOverviewDto> listAllServicesOverview() {
+        return mealServiceRepository.findAllOverview().stream()
+            .map(v -> new MealServiceOverviewDto(
+                v.getId(), v.getRestaurantId(), v.getRestaurantName(), v.getRestaurantCity(),
+                v.getGroupName(), v.getType(), v.getName(), v.getClickgoQuota(),
+                v.getCapaciteMax(), v.getStatus(), v.getStartTime(), v.getEndTime()))
+            .toList();
+    }
+
     @Transactional
     public MealServiceDto addService(UUID restaurantId, MealServiceCreateDto dto) {
         Restaurant restaurant = requireRestaurant(restaurantId);
@@ -298,6 +312,11 @@ public class RestaurantSubResourceService {
             throw new BadRequestException("endTime doit être strictement supérieur à startTime");
         }
         MealService svc = new MealService(UUID.randomUUID(), restaurant, dto.name(), dto.startTime(), dto.endTime());
+        // V51 — quotas (optionnels ; défauts entité 0/0/'actif' sinon).
+        svc.setType(dto.type() != null ? dto.type() : dto.name().toLowerCase());
+        if (dto.clickgoQuota() != null) svc.setClickgoQuota(dto.clickgoQuota());
+        if (dto.capaciteMax() != null) svc.setCapaciteMax(dto.capaciteMax());
+        if (dto.status() != null && !dto.status().isBlank()) svc.setStatus(dto.status());
         return mealServiceRepository.save(svc).toDto();
     }
 
@@ -314,6 +333,11 @@ public class RestaurantSubResourceService {
         if (dto.endTime() != null) {
             svc.setEndTime(dto.endTime());
         }
+        // V51 — quotas Click&Go (PATCH partiel : seuls les champs présents).
+        if (dto.type() != null) svc.setType(dto.type());
+        if (dto.clickgoQuota() != null) svc.setClickgoQuota(dto.clickgoQuota());
+        if (dto.capaciteMax() != null) svc.setCapaciteMax(dto.capaciteMax());
+        if (dto.status() != null && !dto.status().isBlank()) svc.setStatus(dto.status());
         if (!svc.getEndTime().isAfter(svc.getStartTime())) {
             throw new BadRequestException("endTime doit être strictement supérieur à startTime");
         }

@@ -52,6 +52,19 @@ public class MealService extends TimestampedEntity {
     @Column(name = "end_time", nullable = false)
     @Setter private LocalTime endTime;
 
+    // V51 — quotas Click&Go (écran admin /reservations · onglet Quotas).
+    @Column(name = "type", length = 32)
+    @Setter private String type;
+
+    @Column(name = "clickgo_quota", nullable = false)
+    @Setter private Integer clickgoQuota = 0;
+
+    @Column(name = "capacite_max", nullable = false)
+    @Setter private Integer capaciteMax = 0;
+
+    @Column(name = "status", nullable = false, length = 16)
+    @Setter private String status = "actif";
+
     public MealService(UUID id, Restaurant restaurant, String name, LocalTime startTime, LocalTime endTime) {
         this.id = id;
         this.restaurant = restaurant;
@@ -62,7 +75,8 @@ public class MealService extends TimestampedEntity {
 
     /** Mapping vers le DTO public exposé hors du module. */
     public MealServiceDto toDto() {
-        return new MealServiceDto(id, restaurantId, name, startTime, endTime, getCreatedAt());
+        return new MealServiceDto(id, restaurantId, name, startTime, endTime, getCreatedAt(),
+            type, clickgoQuota, capaciteMax, status);
     }
 
     @Override

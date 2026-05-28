@@ -24,6 +24,7 @@ import com.onesley.oneclick.modules.restaurant.api.RestaurantPatchDto;
 import com.onesley.oneclick.modules.restaurant.api.StaffTransferDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.MealServiceCreateDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.MealServiceDto;
+import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.MealServiceOverviewDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.MealServicePatchDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantStaffCreateDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantStaffDto;
@@ -218,6 +219,13 @@ public class RestaurantController {
     // ═══════════════════════════════════════════════════════════════════════
     //  Services repas (brunch / déjeuner / dîner)
     // ═══════════════════════════════════════════════════════════════════════
+
+    @GetMapping("/services/overview")
+    @Operation(summary = "Vue admin consolidée des quotas Click&Go (tous restaurants, créneaux actifs)")
+    @PreAuthorize("hasAuthority('VIEW:ANALYTICS')")
+    public List<MealServiceOverviewDto> servicesOverview() {
+        return subResourceService.listAllServicesOverview();
+    }
 
     @GetMapping("/{restaurantId}/services")
     @Operation(summary = "Liste des créneaux service d'un restaurant")

@@ -35,6 +35,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -230,26 +231,49 @@ class RestaurantSubResourceServiceTest {
 
         UUID rid = UUID.randomUUID();
         when(restaurantRepository.findById(rid)).thenReturn(Optional.of(restaurant(rid)));
-        assertThat(service.addService(rid, new MealServiceCreateDto("Dîner", LocalTime.of(19, 0), LocalTime.of(23, 0)))).isNotNull();
-        assertThatThrownBy(() -> service.addService(rid, new MealServiceCreateDto("Bug", LocalTime.of(20, 0), LocalTime.of(19, 0))))
+        // V51 — quota Click&Go transmis à la création.
+        var created = service.addService(rid, new MealServiceCreateDto("Dîner", LocalTime.of(19, 0), LocalTime.of(23, 0), "dîner", 50, 80, "actif"));
+        assertThat(created).isNotNull();
+        assertThat(created.clickgoQuota()).isEqualTo(50);
+        assertThat(created.capaciteMax()).isEqualTo(80);
+        assertThatThrownBy(() -> service.addService(rid, new MealServiceCreateDto("Bug", LocalTime.of(20, 0), LocalTime.of(19, 0), null, null, null, null)))
             .isInstanceOf(BadRequestException.class);
     }
 
     @Test
     void patchService_notFound_success_invalidRange() {
         when(mealServiceRepository.findById(any())).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> service.patchService(UUID.randomUUID(), new MealServicePatchDto("X", null, null)))
+        assertThatThrownBy(() -> service.patchService(UUID.randomUUID(), new MealServicePatchDto("X", null, null, null, null, null, null)))
             .isInstanceOf(NotFoundException.class);
 
         MealService m = meal();
         when(mealServiceRepository.findById(m.getId())).thenReturn(Optional.of(m));
-        service.patchService(m.getId(), new MealServicePatchDto("Brunch", LocalTime.of(10, 0), LocalTime.of(14, 0)));
+        // V51 — PATCH partiel : name + quota Click&Go.
+        service.patchService(m.getId(), new MealServicePatchDto("Brunch", LocalTime.of(10, 0), LocalTime.of(14, 0), null, 30, null, null));
         assertThat(m.getName()).isEqualTo("Brunch");
+        assertThat(m.getClickgoQuota()).isEqualTo(30);
 
         MealService m2 = meal();
         when(mealServiceRepository.findById(m2.getId())).thenReturn(Optional.of(m2));
-        assertThatThrownBy(() -> service.patchService(m2.getId(), new MealServicePatchDto("  ", LocalTime.of(16, 0), LocalTime.of(15, 0))))
+        assertThatThrownBy(() -> service.patchService(m2.getId(), new MealServicePatchDto("  ", LocalTime.of(16, 0), LocalTime.of(15, 0), null, null, null, null)))
             .isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void listAllServicesOverview_mapsProjection() {
+        MealServiceOverviewView v = mock(MealServiceOverviewView.class);
+        when(v.getId()).thenReturn(UUID.randomUUID());
+        when(v.getRestaurantName()).thenReturn("Le Test");
+        when(v.getGroupName()).thenReturn("Groupe X");
+        when(v.getClickgoQuota()).thenReturn(50);
+        when(v.getStatus()).thenReturn("actif");
+        when(mealServiceRepository.findAllOverview()).thenReturn(List.of(v));
+
+        var out = service.listAllServicesOverview();
+        assertThat(out).hasSize(1);
+        assertThat(out.get(0).restaurantName()).isEqualTo("Le Test");
+        assertThat(out.get(0).groupName()).isEqualTo("Groupe X");
+        assertThat(out.get(0).clickgoQuota()).isEqualTo(50);
     }
 
     @Test

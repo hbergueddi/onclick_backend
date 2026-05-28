@@ -67,15 +67,23 @@ class RestaurantFlowIntegrationTest extends AbstractIntegrationTest {
         assertThat(restTemplate.exchange(url("/api/restaurants/staff/" + staffId), HttpMethod.DELETE, jwtEntity(admin), String.class)
             .getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
 
-        // SERVICES
+        // SERVICES (+ V51 quotas Click&Go)
         ResponseEntity<String> svcPost = restTemplate.exchange(url("/api/restaurants/" + id + "/services"), HttpMethod.POST,
-            jsonJwtEntity(Map.of("name", "Déjeuner", "startTime", "12:00:00", "endTime", "15:00:00"), admin), String.class);
+            jsonJwtEntity(Map.of("name", "Déjeuner", "startTime", "12:00:00", "endTime", "15:00:00",
+                "clickgoQuota", 50, "capaciteMax", 80), admin), String.class);
         assertThat(svcPost.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(om.readTree(svcPost.getBody()).get("clickgoQuota").asInt()).isEqualTo(50);
         String svcId = om.readTree(svcPost.getBody()).get("id").asText();
         assertThat(restTemplate.exchange(url("/api/restaurants/" + id + "/services"), HttpMethod.GET, jwtEntity(admin), String.class)
             .getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(restTemplate.exchange(url("/api/restaurants/services/" + svcId), HttpMethod.PATCH,
-            jsonJwtEntity(Map.of("name", "Brunch"), admin), String.class).getStatusCode()).isEqualTo(HttpStatus.OK);
+        // PATCH du quota Click&Go.
+        ResponseEntity<String> svcPatch = restTemplate.exchange(url("/api/restaurants/services/" + svcId), HttpMethod.PATCH,
+            jsonJwtEntity(Map.of("clickgoQuota", 30), admin), String.class);
+        assertThat(svcPatch.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(om.readTree(svcPatch.getBody()).get("clickgoQuota").asInt()).isEqualTo(30);
+        // Vue admin consolidée (tous restaurants).
+        assertThat(restTemplate.exchange(url("/api/restaurants/services/overview"), HttpMethod.GET, jwtEntity(admin), String.class)
+            .getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(restTemplate.exchange(url("/api/restaurants/services/" + svcId), HttpMethod.DELETE, jwtEntity(admin), String.class)
             .getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
 
