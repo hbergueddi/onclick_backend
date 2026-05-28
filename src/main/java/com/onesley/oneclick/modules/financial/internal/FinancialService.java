@@ -42,6 +42,7 @@ public class FinancialService {
     private final InvoiceLineRepository lineRepo;
     private final WalletTransactionRepository walletRepo;
     private final ContractTemplateRepository templateRepo;
+    private final ContractTemplateArticleRepository articleRepo;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -281,5 +282,42 @@ public class FinancialService {
             .orElseThrow(() -> new NotFoundException("ContractTemplate", id));
         t.markDeleted();
         templateRepo.save(t);
+    }
+
+    // ─── Contract template articles (clauses, V55) ─────────────────────────────
+
+    public List<ContractTemplateArticleDto> findTemplateArticles(UUID templateId) {
+        return articleRepo.findAllByTemplateIdOrderBySortOrderAscArticleNumberAsc(templateId)
+            .stream().map(ContractTemplateArticle::toDto).toList();
+    }
+
+    @Transactional
+    public ContractTemplateArticleDto createTemplateArticle(UUID templateId, ContractTemplateArticleCreateDto dto) {
+        // garde-fou : le template parent doit exister (non supprimé)
+        templateRepo.findById(templateId)
+            .filter(x -> x.getDeletedAt() == null)
+            .orElseThrow(() -> new NotFoundException("ContractTemplate", templateId));
+        ContractTemplateArticle a = new ContractTemplateArticle(
+            UUID.randomUUID(), templateId, dto.articleNumber(), dto.title(), dto.content(), dto.sortOrder());
+        return articleRepo.save(a).toDto();
+    }
+
+    @Transactional
+    public ContractTemplateArticleDto patchTemplateArticle(UUID articleId, ContractTemplateArticlePatchDto dto) {
+        ContractTemplateArticle a = articleRepo.findById(articleId)
+            .orElseThrow(() -> new NotFoundException("ContractTemplateArticle", articleId));
+        if (dto.articleNumber() != null) a.setArticleNumber(dto.articleNumber());
+        if (dto.title() != null)         a.setTitle(dto.title());
+        if (dto.content() != null)       a.setContent(dto.content());
+        if (dto.sortOrder() != null)     a.setSortOrder(dto.sortOrder());
+        return articleRepo.save(a).toDto();
+    }
+
+    @Transactional
+    public void deleteTemplateArticle(UUID articleId) {
+        if (!articleRepo.existsById(articleId)) {
+            throw new NotFoundException("ContractTemplateArticle", articleId);
+        }
+        articleRepo.deleteById(articleId);
     }
 }

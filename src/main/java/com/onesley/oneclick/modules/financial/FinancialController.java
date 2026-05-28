@@ -28,6 +28,9 @@ import com.onesley.oneclick.modules.financial.api.FinancialDtos.WalletTxDto;
 import com.onesley.oneclick.modules.financial.api.FinancialDtos.ContractTemplateCreateDto;
 import com.onesley.oneclick.modules.financial.api.FinancialDtos.ContractTemplateDto;
 import com.onesley.oneclick.modules.financial.api.FinancialDtos.ContractTemplatePatchDto;
+import com.onesley.oneclick.modules.financial.api.FinancialDtos.ContractTemplateArticleCreateDto;
+import com.onesley.oneclick.modules.financial.api.FinancialDtos.ContractTemplateArticleDto;
+import com.onesley.oneclick.modules.financial.api.FinancialDtos.ContractTemplateArticlePatchDto;
 import com.onesley.oneclick.modules.financial.internal.FinancialCronJobs;
 import com.onesley.oneclick.modules.financial.internal.FinancialService;
 import com.onesley.oneclick.security.SecurityHelper;
@@ -242,6 +245,41 @@ public class FinancialController {
     @PreAuthorize("hasAuthority('DELETE:FINANCIAL')")
     public ResponseEntity<Void> deleteContractTemplate(@PathVariable UUID id) {
         service.softDeleteContractTemplate(id);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    // ─── Contract template articles (clauses, V55) ─────────────────────────────
+
+    @GetMapping("/contract-templates/{templateId}/articles")
+    @Operation(summary = "Liste des articles (clauses) d'un template, ordonnés sort_order")
+    @PreAuthorize("hasAuthority('VIEW:FINANCIAL')")
+    public List<ContractTemplateArticleDto> findTemplateArticles(@PathVariable UUID templateId) {
+        return service.findTemplateArticles(templateId);
+    }
+
+    @PostMapping("/contract-templates/{templateId}/articles")
+    @Operation(summary = "Crée un article de template (admin only)")
+    @PreAuthorize("hasAuthority('CREATE:FINANCIAL')")
+    public ResponseEntity<ContractTemplateArticleDto> createTemplateArticle(
+        @PathVariable UUID templateId, @Valid @RequestBody ContractTemplateArticleCreateDto dto
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.createTemplateArticle(templateId, dto));
+    }
+
+    @PatchMapping("/contract-templates/{templateId}/articles/{articleId}")
+    @Operation(summary = "Mise à jour partielle d'un article (admin only)")
+    @PreAuthorize("hasAuthority('CREATE:FINANCIAL')")
+    public ContractTemplateArticleDto patchTemplateArticle(
+        @PathVariable UUID templateId, @PathVariable UUID articleId, @Valid @RequestBody ContractTemplateArticlePatchDto dto
+    ) {
+        return service.patchTemplateArticle(articleId, dto);
+    }
+
+    @DeleteMapping("/contract-templates/{templateId}/articles/{articleId}")
+    @Operation(summary = "Supprime un article de template (admin only)")
+    @PreAuthorize("hasAuthority('DELETE:FINANCIAL')")
+    public ResponseEntity<Void> deleteTemplateArticle(@PathVariable UUID templateId, @PathVariable UUID articleId) {
+        service.deleteTemplateArticle(articleId);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 }

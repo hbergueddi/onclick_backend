@@ -85,6 +85,27 @@ public final class FinancialDtos {
         @jakarta.validation.Valid ContractDetailsDto details
     ) {}
 
+    // ─── Contract template articles (clauses, V55) ─────────────────────────────
+
+    public record ContractTemplateArticleDto(
+        UUID id, UUID templateId, Integer articleNumber, String title, String content,
+        Integer sortOrder, Instant createdAt
+    ) {}
+
+    public record ContractTemplateArticleCreateDto(
+        @NotNull Integer articleNumber,
+        @NotBlank @Size(min = 1, max = 256) String title,
+        @NotBlank String content,
+        @PositiveOrZero Integer sortOrder
+    ) {}
+
+    public record ContractTemplateArticlePatchDto(
+        Integer articleNumber,
+        @Size(min = 1, max = 256) String title,
+        String content,
+        @PositiveOrZero Integer sortOrder
+    ) {}
+
     // ─── Invoice ─────────────────────────────────────────────────────────────
 
     public record InvoiceDto(UUID id, UUID restaurantId, String invoiceNumber, LocalDate periodStart,

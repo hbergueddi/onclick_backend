@@ -111,6 +111,51 @@ class FinancialFlowIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void contractTemplateArticles_crud() throws Exception {
+        String admin = adminBearer();
+        String code = "L4-CTA-" + rand();
+        ResponseEntity<String> tpl = restTemplate.exchange(url("/api/financial/contract-templates"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("code", code, "name", "Tpl Articles", "version", 1, "language", "fr",
+                "title", "T", "body", "B", "isActive", true), admin), String.class);
+        String templateId = om.readTree(tpl.getBody()).get("id").asText();
+
+        // CREATE article → 201
+        ResponseEntity<String> post = restTemplate.exchange(
+            url("/api/financial/contract-templates/" + templateId + "/articles"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("articleNumber", 1, "title", "Objet du contrat", "content", "Le présent contrat…", "sortOrder", 0), admin),
+            String.class);
+        assertThat(post.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        String articleId = om.readTree(post.getBody()).get("id").asText();
+        assertThat(om.readTree(post.getBody()).get("templateId").asText()).isEqualTo(templateId);
+
+        // LIST → 200 + contient l'article
+        ResponseEntity<String> list = restTemplate.exchange(
+            url("/api/financial/contract-templates/" + templateId + "/articles"), HttpMethod.GET, jwtEntity(admin), String.class);
+        assertThat(list.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(list.getBody()).contains("Objet du contrat");
+
+        // PATCH → 200 + titre modifié
+        ResponseEntity<String> patch = restTemplate.exchange(
+            url("/api/financial/contract-templates/" + templateId + "/articles/" + articleId), HttpMethod.PATCH,
+            jsonJwtEntity(Map.of("title", "Objet (révisé)"), admin), String.class);
+        assertThat(patch.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(om.readTree(patch.getBody()).get("title").asText()).isEqualTo("Objet (révisé)");
+
+        // DELETE → 204
+        assertThat(restTemplate.exchange(
+            url("/api/financial/contract-templates/" + templateId + "/articles/" + articleId), HttpMethod.DELETE, jwtEntity(admin), String.class)
+            .getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+
+        // create article sur template inconnu → 404
+        assertThat(restTemplate.exchange(
+            url("/api/financial/contract-templates/" + UUID.randomUUID() + "/articles"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("articleNumber", 1, "title", "x", "content", "y"), admin), String.class)
+            .getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+
+        jdbc.update("DELETE FROM contract_templates WHERE id = ?::uuid", UUID.fromString(templateId));
+    }
+
+    @Test
     void invoiceLine_create() throws Exception {
         String admin = adminBearer();
         ResponseEntity<String> inv = restTemplate.exchange(url("/api/financial/invoices"), HttpMethod.POST,
