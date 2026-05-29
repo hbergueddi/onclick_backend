@@ -60,4 +60,23 @@ public final class AdminViewsDtos {
         BigDecimal yearlyRevenue,
         Long ticketsLast30d
     ) {}
+
+    /**
+     * Rollup d'UN restaurant pour le dashboard groupe (B1) — remplace le fan-out
+     * N+1 ({@code Promise.all(ids.map(...))} × 6 sources). Le service agrège les 6
+     * sources en 5 requêtes natives groupées par {@code restaurant_id}.
+     *
+     * <p>{@code honored} est compté côté serveur sur le statut canonique EN
+     * ('honored') — le frontend l'utilise tel quel (pas de traduction EN/FR).
+     */
+    public record GroupRestaurantRollupDto(
+        UUID restaurantId,
+        BigDecimal totalCA,        // SUM(loyalty_transactions.amount) earn snap2earn
+        Long totalPoints,          // SUM(loyalty_accounts.balance)
+        BigDecimal walletBalance,  // SUM(wallet_transactions.amount)
+        Long reservations,         // COUNT(reservations)
+        Long honored,              // COUNT(reservations WHERE status='honored')
+        Long tickets,              // COUNT(loyalty_transactions earn snap2earn)
+        Long staff                 // COUNT(restaurant_staffs)
+    ) {}
 }

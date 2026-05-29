@@ -6,6 +6,7 @@ import com.onesley.oneclick.modules.analytics.internal.AdminStatsFullService;
 import com.onesley.oneclick.modules.analytics.internal.AdminViewsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Size;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -39,6 +40,20 @@ public class AdminViewsController {
         @RequestParam(defaultValue = "200") int limit
     ) {
         return service.findAdminUsers(search, roleCode, tenantId, limit);
+    }
+
+    @GetMapping("/group-dashboard")
+    @Operation(
+        summary = "Rollup agrégé des restaurants d'un groupe (B1 — anti N+1)",
+        description = "Remplace le fan-out N+1 du frontend (6 appels × N restaurants) par 5 requêtes " +
+                      "natives groupées. VIEW:RESTAURANTS (détenu par GROUP_ADMIN, contrairement à " +
+                      "VIEW:ANALYTICS réservé SUPERADMIN) + ABAC : admin → tout, sinon staff actif de tous les restos."
+    )
+    @PreAuthorize("hasAuthority('VIEW:RESTAURANTS')")
+    public List<GroupRestaurantRollupDto> groupDashboard(
+        @RequestParam @Size(max = 500, message = "max 500 restaurants") List<UUID> restaurantIds
+    ) {
+        return service.groupDashboardRollup(restaurantIds);
     }
 
     @GetMapping("/admin-wallet/summary")

@@ -61,4 +61,13 @@ class AdminViewsSmokeIntegrationTests extends AbstractIntegrationTest {
             HttpMethod.GET, jwtEntity(adminBearer()), String.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
+
+    @Test
+    void groupDashboard_admin_returns200() {
+        // B1 — rollup groupe (BOGUS id → liste 1 entrée zéros). Admin bypass ABAC.
+        ResponseEntity<String> response = restTemplate.exchange(
+            url("/api/analytics/group-dashboard?restaurantIds=00000000-0000-0000-0000-000000000000"),
+            HttpMethod.GET, jwtEntity(adminBearer()), String.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
 }

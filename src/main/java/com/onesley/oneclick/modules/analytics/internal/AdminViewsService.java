@@ -198,4 +198,116 @@ public class AdminViewsService {
         if (o instanceof BigDecimal bd) return bd;
         return new BigDecimal(o.toString());
     }
+
+    // ─── B1 — Rollup dashboard groupe (anti N+1) ─────────────────────────────
+
+    /** Accumulateur mutable par restaurant pour fusionner les 5 requêtes natives. */
+    private static final class Acc {
+        BigDecimal ca = BigDecimal.ZERO;
+        long points;
+        BigDecimal wallet = BigDecimal.ZERO;
+        long reservations;
+        long honored;
+        long tickets;
+        long staff;
+    }
+
+    /**
+     * Rollup agrégé des restaurants d'un groupe — UNE passe par source (5 requêtes
+     * groupées par {@code restaurant_id}) au lieu du fan-out N+1 du frontend
+     * (6 appels HTTP × N restaurants). Modulith CLOSED → SQL natif cross-domaine.
+     *
+     * <p>ABAC : admin → tout ; sinon le caller doit être staff actif de TOUS les
+     * restaurants demandés (sinon 403). Liste dédupliquée + plafonnée par le contrôleur.
+     */
+    @SuppressWarnings("unchecked")
+    public List<GroupRestaurantRollupDto> groupDashboardRollup(List<UUID> restaurantIds) {
+        List<UUID> ids = restaurantIds == null ? List.of()
+            : restaurantIds.stream().filter(java.util.Objects::nonNull).distinct().toList();
+        if (ids.isEmpty()) return List.of();
+        requireAdminOrStaffOfAll(ids);
+
+        // LinkedHashMap : préserve l'ordre demandé + seed à zéro (restos sans data inclus).
+        java.util.LinkedHashMap<UUID, Acc> acc = new java.util.LinkedHashMap<>();
+        ids.forEach(id -> acc.put(id, new Acc()));
+
+        // 1. Réservations : total + honorées (statut canonique EN).
+        for (Object[] r : (List<Object[]>) em.createNativeQuery("""
+            SELECT restaurant_id, COUNT(*), COUNT(*) FILTER (WHERE status = 'honored')
+              FROM reservations
+             WHERE restaurant_id IN (:ids) AND deleted_at IS NULL
+             GROUP BY restaurant_id
+            """).setParameter("ids", ids).getResultList()) {
+            Acc a = acc.get((UUID) r[0]);
+            if (a != null) { a.reservations = ((Number) r[1]).longValue(); a.honored = ((Number) r[2]).longValue(); }
+        }
+
+        // 2. Tickets scannés (Snap2Earn) : count + CA (montant). reason 'snap2earn|<ref>|...'.
+        for (Object[] r : (List<Object[]>) em.createNativeQuery("""
+            SELECT la.restaurant_id, COUNT(*), COALESCE(SUM(lt.amount), 0)
+              FROM loyalty_transactions lt
+              JOIN loyalty_accounts la ON la.id = lt.account_id
+             WHERE la.restaurant_id IN (:ids) AND lt.type = 'earn' AND lt.reason LIKE 'snap2earn|%'
+             GROUP BY la.restaurant_id
+            """).setParameter("ids", ids).getResultList()) {
+            Acc a = acc.get((UUID) r[0]);
+            if (a != null) { a.tickets = ((Number) r[1]).longValue(); a.ca = toBd(r[2]); }
+        }
+
+        // 3. Points : somme des soldes des comptes fidélité.
+        for (Object[] r : (List<Object[]>) em.createNativeQuery("""
+            SELECT restaurant_id, COALESCE(SUM(balance), 0)
+              FROM loyalty_accounts
+             WHERE restaurant_id IN (:ids)
+             GROUP BY restaurant_id
+            """).setParameter("ids", ids).getResultList()) {
+            Acc a = acc.get((UUID) r[0]);
+            if (a != null) a.points = ((Number) r[1]).longValue();
+        }
+
+        // 4. Wallet : solde (somme des mouvements).
+        for (Object[] r : (List<Object[]>) em.createNativeQuery("""
+            SELECT restaurant_id, COALESCE(SUM(amount), 0)
+              FROM wallet_transactions
+             WHERE restaurant_id IN (:ids)
+             GROUP BY restaurant_id
+            """).setParameter("ids", ids).getResultList()) {
+            Acc a = acc.get((UUID) r[0]);
+            if (a != null) a.wallet = toBd(r[1]);
+        }
+
+        // 5. Effectif staff actif.
+        for (Object[] r : (List<Object[]>) em.createNativeQuery("""
+            SELECT restaurant_id, COUNT(*)
+              FROM restaurant_staffs
+             WHERE restaurant_id IN (:ids) AND deleted_at IS NULL
+             GROUP BY restaurant_id
+            """).setParameter("ids", ids).getResultList()) {
+            Acc a = acc.get((UUID) r[0]);
+            if (a != null) a.staff = ((Number) r[1]).longValue();
+        }
+
+        return acc.entrySet().stream()
+            .map(e -> new GroupRestaurantRollupDto(
+                e.getKey(), e.getValue().ca, e.getValue().points, e.getValue().wallet,
+                e.getValue().reservations, e.getValue().honored, e.getValue().tickets, e.getValue().staff))
+            .toList();
+    }
+
+    /** ABAC liste : admin → tout ; sinon staff actif de TOUS les restaurants demandés. */
+    private void requireAdminOrStaffOfAll(List<UUID> ids) {
+        if (SecurityHelper.isAdmin()) return;
+        UUID callerId = SecurityHelper.currentUserId();
+        if (callerId == null) throw new ForbiddenException("Non authentifié");
+        Number owned = (Number) em.createNativeQuery("""
+            SELECT COUNT(DISTINCT restaurant_id) FROM restaurant_staffs
+             WHERE user_id = :userId AND restaurant_id IN (:ids) AND deleted_at IS NULL
+            """)
+            .setParameter("userId", callerId)
+            .setParameter("ids", ids)
+            .getSingleResult();
+        if (owned.longValue() < ids.size()) {
+            throw new ForbiddenException("Accès refusé : un ou plusieurs restaurants sont hors de votre périmètre");
+        }
+    }
 }

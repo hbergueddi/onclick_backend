@@ -136,4 +136,52 @@ class AdminViewsServiceTest {
         when(query.getSingleResult()).thenReturn(row);
         assertThat(service.adminHICockpit().restaurantsCount()).isEqualTo(100L);
     }
+
+    // ─── B1 — groupDashboardRollup (anti N+1) ────────────────────────────────
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void groupDashboardRollup_admin_mergesFiveSources() {
+        UUID r = UUID.randomUUID();
+        // 5 getResultList consécutifs = les 5 requêtes (résa, tickets, points, wallet, staff).
+        when(query.getResultList()).thenReturn(
+            java.util.Collections.singletonList(new Object[]{ r, 10L, 4L }),
+            java.util.Collections.singletonList(new Object[]{ r, 7L, new BigDecimal("1500.00") }),
+            java.util.Collections.singletonList(new Object[]{ r, 250L }),
+            java.util.Collections.singletonList(new Object[]{ r, new BigDecimal("44.20") }),
+            java.util.Collections.singletonList(new Object[]{ r, 3L })
+        );
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::isAdmin).thenReturn(true);
+            var out = service.groupDashboardRollup(List.of(r));
+            assertThat(out).hasSize(1);
+            var d = out.get(0);
+            assertThat(d.restaurantId()).isEqualTo(r);
+            assertThat(d.reservations()).isEqualTo(10L);
+            assertThat(d.honored()).isEqualTo(4L);
+            assertThat(d.tickets()).isEqualTo(7L);
+            assertThat(d.totalCA()).isEqualByComparingTo("1500.00");
+            assertThat(d.totalPoints()).isEqualTo(250L);
+            assertThat(d.walletBalance()).isEqualByComparingTo("44.20");
+            assertThat(d.staff()).isEqualTo(3L);
+        }
+    }
+
+    @Test
+    void groupDashboardRollup_emptyIds_returnsEmpty_noQuery() {
+        assertThat(service.groupDashboardRollup(List.of())).isEmpty();
+    }
+
+    @Test
+    void groupDashboardRollup_nonAdmin_notStaffOfAll_forbidden() {
+        // ABAC : caller possède 1 resto sur 2 demandés → 403.
+        when(query.getSingleResult()).thenReturn(1L);
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::isAdmin).thenReturn(false);
+            sec.when(SecurityHelper::currentUserId).thenReturn(UUID.randomUUID());
+            assertThatThrownBy(() ->
+                service.groupDashboardRollup(List.of(UUID.randomUUID(), UUID.randomUUID())))
+                .isInstanceOf(ForbiddenException.class);
+        }
+    }
 }
