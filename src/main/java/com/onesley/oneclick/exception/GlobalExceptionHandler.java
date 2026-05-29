@@ -100,6 +100,21 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(body);
     }
 
+    /**
+     * Validation des paramètres de méthode contrôleur (Spring 6.1+/Boot 4 :
+     * {@code @Min}/{@code @Max}/{@code @Pattern} sur {@code @RequestParam}/{@code @PathVariable},
+     * sans {@code @Validated}). Sans ce handler, la violation tombait dans le catch-all
+     * {@code Exception} → 500 au lieu de 400 (ex: {@code limit} hors borne).
+     */
+    @ExceptionHandler(org.springframework.web.method.annotation.HandlerMethodValidationException.class)
+    public ResponseEntity<ProblemDetail> handleHandlerMethodValidation(
+        org.springframework.web.method.annotation.HandlerMethodValidationException ex, HttpServletRequest req
+    ) {
+        return ResponseEntity.badRequest().body(
+            problem(HttpStatus.BAD_REQUEST, "Validation failed", req, "validation-failed")
+        );
+    }
+
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public ResponseEntity<ProblemDetail> handleMissingParam(
         MissingServletRequestParameterException ex, HttpServletRequest req

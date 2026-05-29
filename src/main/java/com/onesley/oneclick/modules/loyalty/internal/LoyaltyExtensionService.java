@@ -393,4 +393,49 @@ public class LoyaltyExtensionService {
             row[4] != null ? ((Number) row[4]).longValue() : 0L
         )).toList();
     }
+
+    /**
+     * Agrégat crédit d'UN restaurant (fiche resto — onglets Clients/Staff).
+     *
+     * <p>Remplace le pull de 10 000 lignes que ClientSummary/StaffSummary faisaient via
+     * {@code /point-distributions} : on calcule serveur-side en 2 requêtes natives
+     * (totaux + répartition par membre). Cross-domaine en SQL natif (Modulith CLOSED).
+     */
+    @Transactional(readOnly = true)
+    public RestaurantCreditSummaryDto restaurantCreditSummary(UUID restaurantId) {
+        Object[] t = (Object[]) em.createNativeQuery("""
+            SELECT
+              COALESCE(SUM(CASE WHEN lt.points > 0 THEN lt.points ELSE 0 END), 0)      AS accorde,
+              COALESCE(SUM(CASE WHEN lt.type = 'spend' THEN -lt.points ELSE 0 END), 0) AS consomme,
+              (SELECT COALESCE(SUM(balance), 0) FROM loyalty_accounts WHERE restaurant_id = :rid) AS dispo
+              FROM loyalty_transactions lt
+              JOIN loyalty_accounts la ON la.id = lt.account_id
+             WHERE la.restaurant_id = :rid
+            """)
+            .setParameter("rid", restaurantId)
+            .getSingleResult();
+        long accorde = ((Number) t[0]).longValue();
+        long consomme = ((Number) t[1]).longValue();
+        long dispo = ((Number) t[2]).longValue();
+
+        @SuppressWarnings("unchecked")
+        List<Object[]> memberRows = em.createNativeQuery("""
+            SELECT lt.created_by, COALESCE(SUM(lt.points), 0) AS pts
+              FROM loyalty_transactions lt
+              JOIN loyalty_accounts la ON la.id = lt.account_id
+             WHERE la.restaurant_id = :rid AND lt.points > 0 AND lt.created_by IS NOT NULL
+             GROUP BY lt.created_by
+             ORDER BY pts DESC
+             LIMIT 10
+            """)
+            .setParameter("rid", restaurantId)
+            .getResultList();
+        List<RestaurantCreditSummaryDto.MemberCredit> byMember = memberRows.stream()
+            .map(r -> new RestaurantCreditSummaryDto.MemberCredit(
+                r[0] != null ? (UUID) r[0] : null,
+                r[1] != null ? ((Number) r[1]).longValue() : 0L))
+            .toList();
+
+        return new RestaurantCreditSummaryDto(restaurantId, accorde, consomme, dispo, byMember);
+    }
 }

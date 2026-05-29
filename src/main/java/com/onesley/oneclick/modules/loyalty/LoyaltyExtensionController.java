@@ -7,6 +7,8 @@ import com.onesley.oneclick.security.RestaurantAccessGuard;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -142,7 +144,8 @@ public class LoyaltyExtensionController {
     @PreAuthorize("hasAuthority('VIEW:LOYALTY')")
     public List<ExpiredPointsAdminDto> findExpiredPointsAdmin(
         @RequestParam(required = false) UUID restaurantId,
-        @RequestParam(defaultValue = "200") int limit
+        // Borne dure : évite les pulls non bornés (Spring Boot 4 valide les params sans @Validated).
+        @RequestParam(defaultValue = "200") @Min(1) @Max(5000) int limit
     ) {
         return service.findExpiredPointsAdmin(restaurantId, limit);
     }
@@ -154,7 +157,9 @@ public class LoyaltyExtensionController {
     public List<PointDistributionDto> findPointDistributions(
         @RequestParam(required = false) UUID restaurantId,
         @RequestParam(required = false) UUID userId,
-        @RequestParam(defaultValue = "200") int limit
+        // Borne haute = 10000 : plafond de l'export CSV admin (le plus gros consommateur
+        // légitime). Ferme le vecteur de pull non borné sans régresser l'export.
+        @RequestParam(defaultValue = "200") @Min(1) @Max(10000) int limit
     ) {
         // Vue admin : non-admin doit scoper à un restaurant dont il est staff actif.
         if (!SecurityHelper.isAdmin()) {
@@ -173,5 +178,18 @@ public class LoyaltyExtensionController {
     @PreAuthorize("hasAuthority('VIEW:ANALYTICS')")
     public PointsEconomyDto pointsEconomy() {
         return service.getPointsEconomy();
+    }
+
+    // ─── Agrégat crédit d'un restaurant (fiche resto — onglets Clients/Staff) ──
+    @GetMapping("/restaurant-credit-summary/{restaurantId}")
+    @Operation(
+        summary = "Agrégat crédit d'un restaurant (accordé/consommé/dispo + crédits par membre)",
+        description = "Calcul serveur-side : remplace le pull de 10 000 lignes que faisaient " +
+                      "ClientSummary/StaffSummary. VIEW:LOYALTY + ABAC (admin ou staff actif du resto)."
+    )
+    @PreAuthorize("hasAuthority('VIEW:LOYALTY')")
+    public RestaurantCreditSummaryDto restaurantCreditSummary(@PathVariable UUID restaurantId) {
+        restaurantAccessGuard.requireAdminOrActiveStaffOf(restaurantId);
+        return service.restaurantCreditSummary(restaurantId);
     }
 }

@@ -108,6 +108,57 @@ class LoyaltyExtensionFlowIntegrationTest extends AbstractIntegrationTest {
         }
     }
 
+    /**
+     * B2 — l'agrégat crédit resto remplace le pull de 10k lignes. On sème un compte +
+     * txns connus et on vérifie les deltas (resto partagé → baseline) + byMember + le
+     * plafond @Max(10000) sur /point-distributions (Spring Boot 4 valide les params).
+     */
+    @Test
+    void restaurantCreditSummary_aggregatesAndCapsLimit() throws Exception {
+        String admin = adminBearer();
+        // Anon → 401 (filtre sécurité, avant l'ABAC).
+        assertThat(restTemplate.exchange(url("/api/loyalty/restaurant-credit-summary/" + restaurantId()),
+            HttpMethod.GET, jwtEntity(null), String.class).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        String client = createUser(admin);  // CLIENT jetable, sert aussi de created_by unique
+        String rid = restaurantId();
+        String accId = UUID.randomUUID().toString();
+
+        var before = om.readTree(restTemplate.exchange(url("/api/loyalty/restaurant-credit-summary/" + rid),
+            HttpMethod.GET, jwtEntity(admin), String.class).getBody());
+        long accordeBefore = before.get("creditAccorde").asLong();
+        long dispoBefore = before.get("creditDispo").asLong();
+        long consoBefore = before.get("creditConsomme").asLong();
+
+        // tenant_id auto-rempli par trigger (V10).
+        jdbc.update("INSERT INTO loyalty_accounts (id, client_id, restaurant_id, balance) VALUES (?::uuid, ?::uuid, ?::uuid, 900000)",
+            accId, client, rid);
+        jdbc.update("INSERT INTO loyalty_transactions (account_id, type, points, created_by) VALUES (?::uuid, 'earn', 900000, ?::uuid)",
+            accId, client);
+        jdbc.update("INSERT INTO loyalty_transactions (account_id, type, points, created_by) VALUES (?::uuid, 'spend', -100000, ?::uuid)",
+            accId, client);
+        try {
+            var res = restTemplate.exchange(url("/api/loyalty/restaurant-credit-summary/" + rid),
+                HttpMethod.GET, jwtEntity(admin), String.class);
+            assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
+            var node = om.readTree(res.getBody());
+            assertThat(node.get("creditAccorde").asLong() - accordeBefore).isEqualTo(900000L);   // SUM(points>0)
+            assertThat(node.get("creditDispo").asLong() - dispoBefore).isEqualTo(900000L);        // SUM(balance)
+            assertThat(node.get("creditConsomme").asLong() - consoBefore).isEqualTo(100000L);     // SUM(spend → -points)
+            boolean found = false;
+            for (var m : node.get("byMember"))
+                if (client.equals(m.get("userId").asText()) && m.get("points").asLong() == 900000L) found = true;
+            assertThat(found).as("byMember contient le membre créateur semé").isTrue();
+
+            // Plafond : limit > @Max(10000) → 400.
+            assertThat(restTemplate.exchange(url("/api/loyalty/point-distributions?limit=999999"),
+                HttpMethod.GET, jwtEntity(admin), String.class).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        } finally {
+            jdbc.update("DELETE FROM loyalty_transactions WHERE account_id = ?::uuid", UUID.fromString(accId));
+            jdbc.update("DELETE FROM loyalty_accounts WHERE id = ?::uuid", UUID.fromString(accId));
+        }
+    }
+
     @Test
     void pointsEconomy_adminOk_shape_restaurateur403_anon401() throws Exception {
         // Admin (VIEW:ANALYTICS) → 200 + shape complet de l'agrégat.

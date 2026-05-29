@@ -75,6 +75,15 @@ class LoyaltyExtensionSmokeIntegrationTests extends AbstractIntegrationTest {
     }
 
     @Test
+    void restaurantCreditSummary_admin_returns200() {
+        // B2 — agrégat crédit resto (resto vide → 0/0/0 + byMember vide). Admin bypass ABAC.
+        ResponseEntity<String> response = restTemplate.exchange(
+            url("/api/loyalty/restaurant-credit-summary/" + BOGUS),
+            HttpMethod.GET, jwtEntity(adminBearer()), String.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
     void walletPass_metadata_admin_returns200() {
         // Auth as admin in JWT => metadata extracts from JWT sub.
         ResponseEntity<String> response = restTemplate.exchange(

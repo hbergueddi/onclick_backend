@@ -203,4 +203,26 @@ public final class LoyaltyExtensionDtos {
         public record TypeBucket(String type, long count) {}
         public record MonthlyPoint(String month, long emitted, long consumed, long expired) {}
     }
+
+    /**
+     * Agrégat crédit d'UN restaurant — fiche resto (onglets Clients/Staff du ProDesk).
+     * Calculé serveur-side sur {@code loyalty_transactions} + {@code loyalty_accounts},
+     * pour remplacer le pull de 10 000 lignes que faisaient ClientSummary/StaffSummary.
+     *
+     * <ul>
+     *   <li>{@code creditAccorde}  — total des points crédités (points &gt; 0)</li>
+     *   <li>{@code creditConsomme} — total consommé (transactions {@code spend})</li>
+     *   <li>{@code creditDispo}    — solde courant (somme des {@code loyalty_accounts.balance})</li>
+     *   <li>{@code byMember}       — top 10 des membres staff par points émis (créés)</li>
+     * </ul>
+     */
+    public record RestaurantCreditSummaryDto(
+        UUID restaurantId,
+        long creditAccorde,
+        long creditConsomme,
+        long creditDispo,
+        java.util.List<MemberCredit> byMember
+    ) {
+        public record MemberCredit(UUID userId, long points) {}
+    }
 }

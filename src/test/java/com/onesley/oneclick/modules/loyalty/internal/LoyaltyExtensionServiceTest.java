@@ -260,6 +260,23 @@ class LoyaltyExtensionServiceTest {
     }
 
     @Test
+    void restaurantCreditSummary_mapsTotalsAndByMember() {
+        // B2 — agrégat crédit resto : Q1 totaux (accordé/consommé/dispo), Q2 byMember.
+        UUID member = UUID.randomUUID();
+        when(query.getSingleResult()).thenReturn(new Object[]{ 500L, 120L, 380L });
+        // singletonList (PAS List.of) : List.of(Object[]) déplie le tableau en varargs.
+        when(query.getResultList()).thenReturn(Collections.singletonList(new Object[]{ member, 300L }));
+        var dto = service.restaurantCreditSummary(resto);
+        assertThat(dto.restaurantId()).isEqualTo(resto);
+        assertThat(dto.creditAccorde()).isEqualTo(500L);
+        assertThat(dto.creditConsomme()).isEqualTo(120L);
+        assertThat(dto.creditDispo()).isEqualTo(380L);
+        assertThat(dto.byMember()).hasSize(1);
+        assertThat(dto.byMember().get(0).userId()).isEqualTo(member);
+        assertThat(dto.byMember().get(0).points()).isEqualTo(300L);
+    }
+
+    @Test
     void tierDistribution_mapsRows() {
         Object[] row = { UUID.randomUUID(), UUID.randomUUID(), "Ruby", 0, 42L };
         when(query.getResultList()).thenReturn(Collections.singletonList(row));
