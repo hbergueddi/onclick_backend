@@ -226,7 +226,30 @@ public class AdminViewsService {
             : restaurantIds.stream().filter(java.util.Objects::nonNull).distinct().toList();
         if (ids.isEmpty()) return List.of();
         requireAdminOrStaffOfAll(ids);
+        return aggregate(ids);
+    }
 
+    /**
+     * Rollup pour les restaurants dont {@code userId} est staff actif — résolution
+     * serveur (pas d'ids client). Pas d'ABAC : les ids SONT ceux du user. Utilisé
+     * par le publisher WebSocket (thread @Scheduled, hors SecurityContext) pour
+     * pousser le dashboard groupe sur la queue privée du user (B1.2).
+     */
+    @SuppressWarnings("unchecked")
+    public List<GroupRestaurantRollupDto> groupDashboardRollupForUser(UUID userId) {
+        if (userId == null) return List.of();
+        List<UUID> ids = ((List<UUID>) em.createNativeQuery("""
+            SELECT restaurant_id FROM restaurant_staffs
+             WHERE user_id = :uid AND deleted_at IS NULL
+            """).setParameter("uid", userId).getResultList())
+            .stream().filter(java.util.Objects::nonNull).distinct().toList();
+        if (ids.isEmpty()) return List.of();
+        return aggregate(ids);
+    }
+
+    /** Agrégation pure (5 requêtes groupées) sur une liste d'ids déjà autorisée. */
+    @SuppressWarnings("unchecked")
+    private List<GroupRestaurantRollupDto> aggregate(List<UUID> ids) {
         // LinkedHashMap : préserve l'ordre demandé + seed à zéro (restos sans data inclus).
         java.util.LinkedHashMap<UUID, Acc> acc = new java.util.LinkedHashMap<>();
         ids.forEach(id -> acc.put(id, new Acc()));
