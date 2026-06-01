@@ -246,6 +246,23 @@ class FinancialServiceTest {
             UUID.randomUUID(), "credit", new BigDecimal("10.00"), null, null, null))).isNotNull();
     }
 
+    @Test
+    void walletBalancesByRestaurants_mapsGroupedSums() {
+        UUID r1 = UUID.randomUUID();
+        when(walletRepo.sumBalanceByRestaurants(List.of(r1)))
+            .thenReturn(java.util.Collections.singletonList(new Object[]{ r1, new BigDecimal("88.50") }));
+        var out = service.walletBalancesByRestaurants(List.of(r1));
+        assertThat(out).hasSize(1);
+        assertThat(out.get(0).restaurantId()).isEqualTo(r1);
+        assertThat(out.get(0).balance()).isEqualByComparingTo("88.50");
+    }
+
+    @Test
+    void walletBalancesByRestaurants_emptyIds_returnsEmpty_noQuery() {
+        assertThat(service.walletBalancesByRestaurants(List.of())).isEmpty();
+        verify(walletRepo, never()).sumBalanceByRestaurants(any());
+    }
+
     // ─── Contract templates ──────────────────────────────────────────────────────
 
     @Test

@@ -197,6 +197,9 @@ public final class FinancialDtos {
         Boolean isActive
     ) {}
 
+    /** B1.5 — solde wallet agrégé d'un restaurant (batch by-restaurants, anti N+1). */
+    public record WalletBalanceDto(UUID restaurantId, BigDecimal balance) {}
+
     /** Audit d'une modification de champ de contrat (V59) — alimente ContractHistoryPanel. */
     public record ContractHistoryDto(
         UUID id,

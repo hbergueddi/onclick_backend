@@ -4,6 +4,7 @@ import com.onesley.oneclick.shared.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -184,6 +185,21 @@ public class FinancialController {
     ) {
         scopeFinancialList(restaurantId);
         return PageResponse.from(service.findAllWalletTx(restaurantId, type, page, size));
+    }
+
+    @GetMapping("/wallet/balances")
+    @Operation(
+        summary = "Solde wallet par restaurant en UNE requête (B1.5 — anti N+1)",
+        description = "Remplace le fan-out par-resto de RestaurantDetailsDialog. VIEW:FINANCIAL " +
+                      "+ ABAC : admin → tout ; sinon staff actif de CHAQUE resto demandé. Restaurants " +
+                      "sans mouvement absents du résultat (le front traite l'absence comme 0)."
+    )
+    @PreAuthorize("hasAuthority('VIEW:FINANCIAL')")
+    public List<WalletBalanceDto> walletBalances(
+        @RequestParam @Size(max = 1000) List<UUID> restaurantIds
+    ) {
+        restaurantIds.forEach(this::scopeFinancialList);
+        return service.walletBalancesByRestaurants(restaurantIds);
     }
 
     @PostMapping("/wallet-tx")

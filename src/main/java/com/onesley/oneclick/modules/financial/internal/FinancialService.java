@@ -246,6 +246,20 @@ public class FinancialService {
             .map(WalletTransaction::toDto);
     }
 
+    /**
+     * B1.5 — solde wallet par restaurant en UNE requête groupée (remplace le fan-out
+     * N+1 de RestaurantDetailsDialog). L'ABAC est appliquée par le contrôleur. Les
+     * restaurants sans mouvement sont absents (le front traite l'absence comme 0).
+     */
+    public List<WalletBalanceDto> walletBalancesByRestaurants(List<UUID> restaurantIds) {
+        if (restaurantIds == null || restaurantIds.isEmpty()) return List.of();
+        return walletRepo.sumBalanceByRestaurants(restaurantIds).stream()
+            .map(row -> new WalletBalanceDto(
+                (UUID) row[0],
+                row[1] == null ? java.math.BigDecimal.ZERO : (java.math.BigDecimal) row[1]))
+            .toList();
+    }
+
     @Transactional
     public WalletTxDto createWalletTx(WalletTxCreateDto dto) {
         WalletTransaction t = new WalletTransaction(UUID.randomUUID(), dto.restaurantId(),

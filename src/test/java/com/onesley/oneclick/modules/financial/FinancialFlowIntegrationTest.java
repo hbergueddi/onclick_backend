@@ -20,6 +20,45 @@ class FinancialFlowIntegrationTest extends AbstractIntegrationTest {
     private String restaurantId() { return jdbc.queryForObject("SELECT id::text FROM restaurants WHERE deleted_at IS NULL LIMIT 1", String.class); }
     private String rand() { return UUID.randomUUID().toString().substring(0, 8); }
 
+    // ─── B1.5b — wallet/balances batch ───────────────────────────────────────
+
+    @Test
+    void walletBalances_admin200_restaurateurScoped() {
+        String admin = adminBearer();
+        String rid = restaurantId();
+        ResponseEntity<String> adminRes = restTemplate.exchange(
+            url("/api/financial/wallet/balances?restaurantIds=" + rid),
+            HttpMethod.GET, jwtEntity(admin), String.class);
+        assertThat(adminRes.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(adminRes.getBody()).startsWith("[");
+
+        // RESTAURATEUR (non-admin) staffé : 200 sur son resto, 403 si un resto étranger dans la liste.
+        java.util.Map<String, Object> row = jdbc.queryForMap(
+            "SELECT u.id::text AS uid, rs.restaurant_id::text AS rid "
+            + "FROM users u JOIN roles r ON r.id = u.role_id "
+            + "JOIN restaurant_staffs rs ON rs.user_id = u.id "
+            + "WHERE r.code = 'RESTAURATEUR' AND rs.deleted_at IS NULL AND u.deleted_at IS NULL "
+            + "ORDER BY u.id LIMIT 1");
+        String ownerId = (String) row.get("uid");
+        String ownedRid = (String) row.get("rid");
+        String ownerBearer = jwtIssuer.issueAccessToken(UUID.fromString(ownerId), "RESTAURATEUR").token();
+        String foreignRid = jdbc.queryForObject(
+            "SELECT id::text FROM restaurants WHERE deleted_at IS NULL "
+            + "AND id NOT IN (SELECT restaurant_id FROM restaurant_staffs WHERE user_id = ?::uuid AND deleted_at IS NULL) "
+            + "LIMIT 1", String.class, ownerId);
+
+        assertThat(restTemplate.exchange(url("/api/financial/wallet/balances?restaurantIds=" + ownedRid),
+            HttpMethod.GET, jwtEntity(ownerBearer), String.class).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(restTemplate.exchange(url("/api/financial/wallet/balances?restaurantIds=" + ownedRid + "," + foreignRid),
+            HttpMethod.GET, jwtEntity(ownerBearer), String.class).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void walletBalances_noBearer_401() {
+        assertThat(restTemplate.exchange(url("/api/financial/wallet/balances?restaurantIds=" + restaurantId()),
+            HttpMethod.GET, jwtEntity(null), String.class).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
     @Test
     void contract_crud() throws Exception {
         String admin = adminBearer();
