@@ -11,6 +11,10 @@ public interface RestaurantRestitutionRepository extends JpaRepository<Restauran
     @Query("SELECT r FROM RestaurantRestitution r WHERE r.restaurantId = :restaurantId ORDER BY r.createdAt DESC")
     List<RestaurantRestitution> findByRestaurant(UUID restaurantId);
 
+    /** Batch (B1.5) — restitutions de plusieurs restaurants en une requête (anti N+1). */
+    @Query("SELECT r FROM RestaurantRestitution r WHERE r.restaurantId IN :restaurantIds ORDER BY r.createdAt DESC")
+    List<RestaurantRestitution> findByRestaurants(List<UUID> restaurantIds);
+
     @Query("SELECT COALESCE(SUM(r.amount), 0) FROM RestaurantRestitution r WHERE r.restaurantId = :restaurantId AND r.status = 'paid'")
     java.math.BigDecimal sumPaidAmount(UUID restaurantId);
 }

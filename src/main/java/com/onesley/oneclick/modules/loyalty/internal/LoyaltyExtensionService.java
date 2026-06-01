@@ -174,6 +174,18 @@ public class LoyaltyExtensionService {
             .map(RestaurantRestitutionDto::from).toList();
     }
 
+    /**
+     * Batch (B1.5) — restitutions de plusieurs restaurants en UNE requête (remplace
+     * le fan-out N+1 de useRestitutions). L'ABAC est appliquée par le contrôleur
+     * (admin → tout ; sinon staff actif de chaque resto demandé).
+     */
+    @Transactional(readOnly = true)
+    public List<RestaurantRestitutionDto> findRestitutionsByRestaurants(List<UUID> restaurantIds) {
+        if (restaurantIds == null || restaurantIds.isEmpty()) return List.of();
+        return restitutionRepo.findByRestaurants(restaurantIds).stream()
+            .map(RestaurantRestitutionDto::from).toList();
+    }
+
     public RestaurantRestitutionDto createRestitution(UUID restaurantId, BigDecimal amount, Integer points, String reason) {
         RestaurantRestitution r = new RestaurantRestitution();
         r.setRestaurantId(restaurantId);

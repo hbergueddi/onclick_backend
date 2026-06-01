@@ -19,6 +19,44 @@ class LoyaltyExtensionFlowIntegrationTest extends AbstractIntegrationTest {
     private String userId() { return jdbc.queryForObject("SELECT id::text FROM users WHERE deleted_at IS NULL LIMIT 1", String.class); }
     private String restaurantId() { return jdbc.queryForObject("SELECT id::text FROM restaurants WHERE deleted_at IS NULL LIMIT 1", String.class); }
 
+    @Test
+    void restitutionsByRestaurants_admin200_restaurateurScoped() {
+        String admin = adminBearer();
+        String rid = restaurantId();
+        // Admin → 200 (bypass ABAC), réponse tableau.
+        ResponseEntity<String> adminRes = restTemplate.exchange(
+            url("/api/loyalty/restitutions/by-restaurants?restaurantIds=" + rid),
+            HttpMethod.GET, jwtEntity(admin), String.class);
+        assertThat(adminRes.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(adminRes.getBody()).startsWith("[");
+
+        // RESTAURATEUR (non-admin) : 200 sur son resto, 403 sur un resto étranger (ABAC par-id).
+        java.util.Map<String, Object> row = jdbc.queryForMap(
+            "SELECT u.id::text AS uid, rs.restaurant_id::text AS rid "
+            + "FROM users u JOIN roles r ON r.id = u.role_id "
+            + "JOIN restaurant_staffs rs ON rs.user_id = u.id "
+            + "WHERE r.code = 'RESTAURATEUR' AND rs.deleted_at IS NULL AND u.deleted_at IS NULL "
+            + "ORDER BY u.id LIMIT 1");
+        String ownerId = (String) row.get("uid");
+        String ownedRid = (String) row.get("rid");
+        String ownerBearer = jwtIssuer.issueAccessToken(UUID.fromString(ownerId), "RESTAURATEUR").token();
+        String foreignRid = jdbc.queryForObject(
+            "SELECT id::text FROM restaurants WHERE deleted_at IS NULL "
+            + "AND id NOT IN (SELECT restaurant_id FROM restaurant_staffs WHERE user_id = ?::uuid AND deleted_at IS NULL) "
+            + "LIMIT 1", String.class, ownerId);
+
+        assertThat(restTemplate.exchange(url("/api/loyalty/restitutions/by-restaurants?restaurantIds=" + ownedRid),
+            HttpMethod.GET, jwtEntity(ownerBearer), String.class).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(restTemplate.exchange(url("/api/loyalty/restitutions/by-restaurants?restaurantIds=" + ownedRid + "," + foreignRid),
+            HttpMethod.GET, jwtEntity(ownerBearer), String.class).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void restitutionsByRestaurants_noBearer_401() {
+        assertThat(restTemplate.exchange(url("/api/loyalty/restitutions/by-restaurants?restaurantIds=" + restaurantId()),
+            HttpMethod.GET, jwtEntity(null), String.class).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
     /** User CLIENT jetable (évite de muter le rating d'un user seed). */
     private String createUser(String admin) throws Exception {
         String roleId = jdbc.queryForObject("SELECT id::text FROM roles WHERE code='CLIENT' LIMIT 1", String.class);

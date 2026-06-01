@@ -30,6 +30,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -199,6 +200,26 @@ class LoyaltyExtensionServiceTest {
         assertThat(service.createRestitution(resto, new BigDecimal("100.00"), 50, "geste commercial")).isNotNull();
         when(restitutionRepo.findByRestaurant(resto)).thenReturn(List.of());
         assertThat(service.findRestaurantRestitutions(resto)).isEmpty();
+    }
+
+    @Test
+    void findRestitutionsByRestaurants_batchMapsRows() {
+        RestaurantRestitution r = new RestaurantRestitution();
+        r.setRestaurantId(resto);
+        r.setAmount(new BigDecimal("75.00"));
+        r.setPoints(150);
+        r.setStatus("pending");
+        when(restitutionRepo.findByRestaurants(List.of(resto))).thenReturn(List.of(r));
+        var out = service.findRestitutionsByRestaurants(List.of(resto));
+        assertThat(out).hasSize(1);
+        assertThat(out.get(0).restaurantId()).isEqualTo(resto);
+        assertThat(out.get(0).points()).isEqualTo(150);
+    }
+
+    @Test
+    void findRestitutionsByRestaurants_emptyIds_returnsEmpty_noQuery() {
+        assertThat(service.findRestitutionsByRestaurants(List.of())).isEmpty();
+        verify(restitutionRepo, never()).findByRestaurants(any());
     }
 
     @Test

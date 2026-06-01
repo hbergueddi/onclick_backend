@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -112,6 +113,20 @@ public class LoyaltyExtensionController {
     public List<RestaurantRestitutionDto> findRestaurantRestitutions(@PathVariable UUID restaurantId) {
         restaurantAccessGuard.requireAdminOrActiveStaffOf(restaurantId);
         return service.findRestaurantRestitutions(restaurantId);
+    }
+
+    @GetMapping("/restitutions/by-restaurants")
+    @Operation(
+        summary = "Restitutions de plusieurs restaurants en UNE requête (B1.5 — anti N+1)",
+        description = "Remplace le fan-out N+1 de useRestitutions (1 appel par resto du pool). " +
+                      "VIEW:LOYALTY + ABAC : admin → tout ; sinon staff actif de CHAQUE resto demandé."
+    )
+    @PreAuthorize("hasAuthority('VIEW:LOYALTY')")
+    public List<RestaurantRestitutionDto> findRestitutionsByRestaurants(
+        @RequestParam @Size(max = 1000) List<UUID> restaurantIds
+    ) {
+        restaurantIds.forEach(restaurantAccessGuard::requireAdminOrActiveStaffOf);
+        return service.findRestitutionsByRestaurants(restaurantIds);
     }
 
     public record RestitutionCreateDto(@NotNull UUID restaurantId, @NotNull BigDecimal amount, Integer points, String reason) {}
