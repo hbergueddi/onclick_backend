@@ -1,5 +1,6 @@
 package com.onesley.oneclick.modules.loyalty.internal;
 
+import com.onesley.oneclick.core.identity.api.UserDirectoryApi;
 import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
@@ -35,6 +36,8 @@ public class LoyaltyExtensionService {
     private final RestaurantRestitutionRepository restitutionRepo;
     private final RestaurantTierStatusRepository tierStatusRepo;
     private final ClientScoreConfigRepository scoreConfigRepo;
+    /** P2 — noms clients via contrat identity (plus de JOIN users pour l'enrichissement). */
+    private final UserDirectoryApi userDirectory;
 
     @PersistenceContext
     private EntityManager em;
@@ -240,14 +243,14 @@ public class LoyaltyExtensionService {
     @Transactional(readOnly = true)
     public List<ExpiredPointsAdminDto> findExpiredPointsAdmin(UUID restaurantId, int limit) {
         requireAdminOrStaffOf(restaurantId);
-        // LoyaltyTransaction n'a pas user_id/restaurant_id directs — JOIN via loyalty_accounts
+        // LoyaltyTransaction n'a pas user_id/restaurant_id directs — JOIN via loyalty_accounts.
+        // P2 (hybride core-only) : on garde le JOIN restaurants (pair business → read-view native
+        // délibérée) ; le nom client vient de UserDirectoryApi (core.identity), plus de JOIN users.
         String sql = """
-            SELECT la.client_id, COALESCE(u.first_name || ' ' || u.last_name, 'Unknown'),
-                   ABS(lt.points) AS pts, lt.created_at,
+            SELECT la.client_id, ABS(lt.points) AS pts, lt.created_at,
                    la.restaurant_id, r.name
               FROM loyalty_transactions lt
               JOIN loyalty_accounts la ON la.id = lt.account_id
-              LEFT JOIN users u ON u.id = la.client_id
               LEFT JOIN restaurants r ON r.id = la.restaurant_id
              WHERE lt.type = 'expire'
              """ + (restaurantId != null ? " AND la.restaurant_id = :restaurantId " : "") + """
@@ -258,14 +261,28 @@ public class LoyaltyExtensionService {
         if (restaurantId != null) q.setParameter("restaurantId", restaurantId);
         q.setParameter("limit", limit);
         List<Object[]> rows = q.getResultList();
-        return rows.stream().map(row -> new ExpiredPointsAdminDto(
-            row[0] != null ? (UUID) row[0] : null,
-            (String) row[1],
-            row[2] != null ? ((Number) row[2]).intValue() : 0,
-            row[3] != null ? toInstant(row[3]) : null,
-            row[4] != null ? (UUID) row[4] : null,
-            (String) row[5]
-        )).toList();
+
+        // Enrichissement noms via contrat identity (anti-N+1, un seul batch).
+        List<UUID> clientIds = rows.stream()
+            .map(row -> (UUID) row[0]).filter(java.util.Objects::nonNull).distinct().toList();
+        java.util.Map<UUID, UserDirectoryApi.UserName> names = userDirectory.namesByIds(clientIds).stream()
+            .collect(java.util.stream.Collectors.toMap(UserDirectoryApi.UserName::id, n -> n, (a, b) -> a));
+
+        return rows.stream().map(row -> {
+            UUID clientId = row[0] != null ? (UUID) row[0] : null;
+            UserDirectoryApi.UserName n = clientId != null ? names.get(clientId) : null;
+            // Parité avec l'ancien COALESCE(first || ' ' || last, 'Unknown') : null si un nom manque.
+            String fullName = (n != null && n.firstName() != null && n.lastName() != null)
+                ? (n.firstName() + " " + n.lastName()) : "Unknown";
+            return new ExpiredPointsAdminDto(
+                clientId,
+                fullName,
+                row[1] != null ? ((Number) row[1]).intValue() : 0,
+                row[2] != null ? toInstant(row[2]) : null,
+                row[3] != null ? (UUID) row[3] : null,
+                (String) row[4]
+            );
+        }).toList();
     }
 
     @SuppressWarnings("unchecked")

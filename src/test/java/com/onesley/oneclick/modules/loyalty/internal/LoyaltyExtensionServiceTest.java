@@ -1,5 +1,6 @@
 package com.onesley.oneclick.modules.loyalty.internal;
 
+import com.onesley.oneclick.core.identity.api.UserDirectoryApi;
 import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyExtensionDtos.ClientScoreConfigPatchDto;
@@ -48,6 +49,7 @@ class LoyaltyExtensionServiceTest {
     @Mock RestaurantRestitutionRepository restitutionRepo;
     @Mock RestaurantTierStatusRepository tierStatusRepo;
     @Mock ClientScoreConfigRepository scoreConfigRepo;
+    @Mock UserDirectoryApi userDirectory;
     @Mock EntityManager em;
     @Mock Query query;
     @InjectMocks LoyaltyExtensionService service;
@@ -259,12 +261,35 @@ class LoyaltyExtensionServiceTest {
     }
 
     @Test
-    void findExpiredPointsAdmin_admin_mapsRows() {
-        Object[] row = { UUID.randomUUID(), "Ada L", 30, Instant.now(), resto, "Resto" };
+    void findExpiredPointsAdmin_admin_mapsRows_enrichesNameViaDirectory() {
+        // P2.b — la requête ne renvoie plus le nom (5 cols : clientId, pts, createdAt,
+        // restaurantId, r.name) ; le nom client vient de UserDirectoryApi (plus de JOIN users).
+        UUID clientId = UUID.randomUUID();
+        Object[] row = { clientId, 30, Instant.now(), resto, "Resto" };
         when(query.getResultList()).thenReturn(Collections.singletonList(row));
+        when(userDirectory.namesByIds(any())).thenReturn(List.of(
+            new UserDirectoryApi.UserName(clientId, "Ada", "L", null, null)));
         try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
             sec.when(SecurityHelper::isAdmin).thenReturn(true);
-            assertThat(service.findExpiredPointsAdmin(resto, 10)).hasSize(1);
+            var out = service.findExpiredPointsAdmin(resto, 10);
+            assertThat(out).hasSize(1);
+            assertThat(out.get(0).userName()).isEqualTo("Ada L");
+            assertThat(out.get(0).pointsExpired()).isEqualTo(30);
+            assertThat(out.get(0).restaurantName()).isEqualTo("Resto");
+        }
+    }
+
+    @Test
+    void findExpiredPointsAdmin_unknownClient_fallsBackToUnknown() {
+        // Parité avec l'ancien COALESCE(... , 'Unknown') : nom absent du directory → "Unknown".
+        Object[] row = { UUID.randomUUID(), 10, Instant.now(), resto, "Resto" };
+        when(query.getResultList()).thenReturn(Collections.singletonList(row));
+        when(userDirectory.namesByIds(any())).thenReturn(List.of());
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::isAdmin).thenReturn(true);
+            var out = service.findExpiredPointsAdmin(resto, 10);
+            assertThat(out).hasSize(1);
+            assertThat(out.get(0).userName()).isEqualTo("Unknown");
         }
     }
 
