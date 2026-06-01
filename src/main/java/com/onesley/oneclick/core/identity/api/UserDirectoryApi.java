@@ -12,13 +12,13 @@ import java.util.UUID;
  * de la table {@code users} (couplage de schéma caché, cassant à la moindre évolution
  * de colonne) par un contrat versionnable et refactor-safe.
  *
- * <p>Projection minimale {@link UserName} (id + nom + téléphone) — pas d'exposition de
+ * <p>Projection minimale {@link UserName} (id + nom + contact) — pas d'exposition de
  * l'entité {@code User} ni de son rôle/permissions hors du module identity.
  */
 public interface UserDirectoryApi {
 
-    /** Projection légère d'un utilisateur pour affichage hors module. */
-    record UserName(UUID id, String firstName, String lastName, String phone) {}
+    /** Projection légère d'un utilisateur pour affichage/contact hors module. */
+    record UserName(UUID id, String firstName, String lastName, String phone, String email) {}
 
     /** Nom d'un utilisateur actif (soft-delete exclus). Vide si introuvable/supprimé. */
     Optional<UserName> nameById(UUID userId);

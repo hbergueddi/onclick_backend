@@ -2,6 +2,7 @@ package com.onesley.oneclick.modules.loyalty.internal;
 
 import com.onesley.oneclick.core.identity.api.Role;
 import com.onesley.oneclick.core.identity.api.User;
+import com.onesley.oneclick.core.identity.api.UserDirectoryApi;
 import com.onesley.oneclick.core.identity.api.UserRepository;
 import com.onesley.oneclick.core.tenant.api.Tenant;
 import com.onesley.oneclick.exception.BadRequestException;
@@ -50,6 +51,7 @@ class EnrollmentServiceTest {
     @Mock GainRuleRepository gainRuleRepository;
     @Mock LoyaltyService loyaltyService;
     @Mock PasswordEncoder passwordEncoder;
+    @Mock UserDirectoryApi userDirectory;
     @Mock EntityManager em;
     @Mock Query query;
     @InjectMocks EnrollmentService service;
@@ -249,12 +251,22 @@ class EnrollmentServiceTest {
     }
 
     @Test
-    void listRecentEnrollments_success_mapsRows() {
-        Object[] row = { UUID.randomUUID(), UUID.randomUUID(), "Ada", "L", "a@x.ma", 100, java.time.Instant.now() };
+    void listRecentEnrollments_success_mapsRows_enrichesNameViaDirectory() {
+        UUID txId = UUID.randomUUID();
+        UUID clientId = UUID.randomUUID();
+        // P2.a — la requête loyalty ne renvoie plus que (txId, clientId, points, createdAt) ;
+        // le nom/email vient du contrat UserDirectoryApi (plus de JOIN users).
+        Object[] row = { txId, clientId, 100, java.time.Instant.now() };
         when(query.getResultList()).thenReturn(java.util.Collections.singletonList(row));
+        when(userDirectory.namesByIds(any())).thenReturn(List.of(
+            new UserDirectoryApi.UserName(clientId, "Ada", "L", null, "a@x.ma")));
         try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
             adminContext(sec);
-            assertThat(service.listRecentEnrollments(resto, 10)).hasSize(1);
+            var res = service.listRecentEnrollments(resto, 10);
+            assertThat(res).hasSize(1);
+            assertThat(res.get(0).clientFirstName()).isEqualTo("Ada");
+            assertThat(res.get(0).clientEmail()).isEqualTo("a@x.ma");
+            assertThat(res.get(0).pointsGranted()).isEqualTo(100);
         }
     }
 }

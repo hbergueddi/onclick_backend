@@ -71,8 +71,8 @@ public class EnrollmentController {
     @GetMapping("/enrollments/by-restaurant/{restaurantId}")
     @Operation(
         summary = "N dernières inscriptions welcome d'un restaurant (panneau UI sous le wizard)",
-        description = "Filtre loyalty_transactions reason='welcome' joint avec users. "
-                    + "RBAC : SUPERADMIN ou staff actif du restaurant."
+        description = "Filtre loyalty_transactions reason='welcome' ; nom/email enrichis via "
+                    + "UserDirectoryApi (core.identity). RBAC : SUPERADMIN ou staff actif du restaurant."
     )
     @PreAuthorize("hasAuthority('VIEW:LOYALTY')")
     public List<EnrollmentRecordDto> listRecentEnrollments(

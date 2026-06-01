@@ -2,6 +2,7 @@ package com.onesley.oneclick.modules.loyalty.internal;
 
 import com.onesley.oneclick.core.identity.api.Role;
 import com.onesley.oneclick.core.identity.api.User;
+import com.onesley.oneclick.core.identity.api.UserDirectoryApi;
 import com.onesley.oneclick.core.identity.api.UserRepository;
 import com.onesley.oneclick.core.tenant.api.Tenant;
 import com.onesley.oneclick.exception.BadRequestException;
@@ -68,6 +69,8 @@ public class EnrollmentService {
     private final GainRuleRepository gainRuleRepository;
     private final LoyaltyService loyaltyService;
     private final PasswordEncoder passwordEncoder;
+    /** P2 — résolution noms/email via contrat identity (plus de JOIN users cross-module). */
+    private final UserDirectoryApi userDirectory;
 
     @PersistenceContext
     private EntityManager em;
@@ -157,8 +160,11 @@ public class EnrollmentService {
     /**
      * Liste les N dernières inscriptions welcome d'un restaurant (UI : panneau
      * sous le wizard). Source : {@code loyalty_transactions WHERE reason='welcome'}
-     * joint avec {@code loyalty_accounts} + {@code users}. SQL natif car
-     * cross-module (loyalty + identity) et besoin d'un projection custom.
+     * joint avec {@code loyalty_accounts} (tables propres au module loyalty).
+     *
+     * <p>P2 (hybride core-only) — l'enrichissement nom/email vient désormais du contrat
+     * {@code UserDirectoryApi} (core.identity), plus du {@code JOIN users} cross-module.
+     * On garde l'ordre de la requête (created_at DESC) ; le lookup batch est anti-N+1.
      */
     @Transactional(readOnly = true)
     @SuppressWarnings("unchecked")
@@ -170,11 +176,9 @@ public class EnrollmentService {
         }
 
         List<Object[]> rows = em.createNativeQuery("""
-            SELECT t.id, u.id, u.first_name, u.last_name, u.email,
-                   t.points, t.created_at
+            SELECT t.id, a.client_id, t.points, t.created_at
               FROM loyalty_transactions t
               JOIN loyalty_accounts a ON a.id = t.account_id
-              JOIN users u ON u.id = a.client_id
              WHERE a.restaurant_id = :restaurantId
                AND t.reason = 'welcome'
              ORDER BY t.created_at DESC
@@ -184,13 +188,23 @@ public class EnrollmentService {
             .setParameter("limit", Math.max(1, Math.min(limit, 100)))
             .getResultList();
 
+        // Enrichissement noms/email via contrat identity (anti-N+1 : un seul batch).
+        List<UUID> clientIds = rows.stream()
+            .map(r -> (UUID) r[1]).filter(java.util.Objects::nonNull).distinct().toList();
+        java.util.Map<UUID, UserDirectoryApi.UserName> names = userDirectory.namesByIds(clientIds).stream()
+            .collect(java.util.stream.Collectors.toMap(UserDirectoryApi.UserName::id, n -> n, (a, b) -> a));
+
         List<EnrollmentRecordDto> result = new ArrayList<>(rows.size());
         for (Object[] r : rows) {
+            UUID clientId = (UUID) r[1];
+            UserDirectoryApi.UserName n = clientId != null ? names.get(clientId) : null;
             result.add(new EnrollmentRecordDto(
-                (UUID) r[0], (UUID) r[1],
-                (String) r[2], (String) r[3], (String) r[4],
-                ((Number) r[5]).intValue(),
-                toInstant(r[6])
+                (UUID) r[0], clientId,
+                n != null ? n.firstName() : null,
+                n != null ? n.lastName() : null,
+                n != null ? n.email() : null,
+                ((Number) r[2]).intValue(),
+                toInstant(r[3])
             ));
         }
         return result;

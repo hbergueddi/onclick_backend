@@ -28,8 +28,8 @@ class UserDirectoryServiceTest {
     private final UserRepository repo = mock(UserRepository.class);
     private final UserDirectoryService service = new UserDirectoryService(repo);
 
-    private User user(UUID id, String first, String last, String phone, boolean deleted) {
-        User u = new User(id, null, null, null, first, last);
+    private User user(UUID id, String first, String last, String phone, String email, boolean deleted) {
+        User u = new User(id, null, email, null, first, last);
         u.setPhone(phone);
         if (deleted) u.markDeleted();
         return u;
@@ -38,18 +38,18 @@ class UserDirectoryServiceTest {
     @Test
     void nameById_activeUser_mapsProjection() {
         UUID id = UUID.randomUUID();
-        when(repo.findById(id)).thenReturn(Optional.of(user(id, "Ali", "Bennani", "+212", false)));
+        when(repo.findById(id)).thenReturn(Optional.of(user(id, "Ali", "Bennani", "+212", "ali@x.ma", false)));
 
         Optional<UserName> res = service.nameById(id);
 
         assertThat(res).isPresent();
-        assertThat(res.get()).isEqualTo(new UserName(id, "Ali", "Bennani", "+212"));
+        assertThat(res.get()).isEqualTo(new UserName(id, "Ali", "Bennani", "+212", "ali@x.ma"));
     }
 
     @Test
     void nameById_softDeletedUser_filteredOut() {
         UUID id = UUID.randomUUID();
-        when(repo.findById(id)).thenReturn(Optional.of(user(id, "X", "Y", null, true)));
+        when(repo.findById(id)).thenReturn(Optional.of(user(id, "X", "Y", null, "x@x.ma", true)));
 
         assertThat(service.nameById(id)).isEmpty();
     }
@@ -72,13 +72,13 @@ class UserDirectoryServiceTest {
         UUID a = UUID.randomUUID();
         UUID b = UUID.randomUUID();
         when(repo.findAllByIds(List.of(a, b)))
-            .thenReturn(List.of(user(a, "Ali", "B", null, false), user(b, "Sara", "C", "+1", false)));
+            .thenReturn(List.of(user(a, "Ali", "B", null, "a@x.ma", false), user(b, "Sara", "C", "+1", "b@x.ma", false)));
 
         List<UserName> res = service.namesByIds(List.of(a, b));
 
         assertThat(res).containsExactlyInAnyOrder(
-            new UserName(a, "Ali", "B", null),
-            new UserName(b, "Sara", "C", "+1"));
+            new UserName(a, "Ali", "B", null, "a@x.ma"),
+            new UserName(b, "Sara", "C", "+1", "b@x.ma"));
         verify(repo).findAllByIds(List.of(a, b));
     }
 }

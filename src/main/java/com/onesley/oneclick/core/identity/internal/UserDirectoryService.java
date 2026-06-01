@@ -41,6 +41,6 @@ class UserDirectoryService implements UserDirectoryApi {
     }
 
     private UserName toName(com.onesley.oneclick.core.identity.api.User u) {
-        return new UserName(u.getId(), u.getFirstName(), u.getLastName(), u.getPhone());
+        return new UserName(u.getId(), u.getFirstName(), u.getLastName(), u.getPhone(), u.getEmail());
     }
 }
