@@ -20,6 +20,15 @@ import java.util.UUID;
  * <p>Centralise le pattern qui n'existait que dupliqué en privé dans
  * {@code LoyaltyExtensionService.requireAdminOrStaffOf} — réutilisé par tous les
  * services/contrôleurs scoping par restaurant (P2 owner-check sweep).
+ *
+ * <h3>Primitive ABAC infra — exception architecturale DOCUMENTÉE (P2)</h3>
+ * <p>Vit dans {@code security} (module infra <b>OPEN</b>) et lit {@code restaurant_staffs}
+ * en SQL natif <b>volontairement</b> : c'est la primitive d'autorisation transverse de la
+ * plateforme. La placer ici (plutôt que dans {@code modules.restaurant}) permet à TOUT module
+ * business de scoper l'accès par restaurant <b>sans introduire de dépendance inter-module
+ * business</b> — l'invariant « 0 dépendance business↔business » de la plateforme tient
+ * (cf {@code modules.analytics} package-info). Vérifie l'appartenance de
+ * l'<b>utilisateur courant</b> (throw-or-pass), pas d'un {@code userId} arbitraire.
  */
 @Component
 public class RestaurantAccessGuard {
