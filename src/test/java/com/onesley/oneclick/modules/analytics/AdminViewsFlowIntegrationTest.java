@@ -47,6 +47,28 @@ class AdminViewsFlowIntegrationTest extends AbstractIntegrationTest {
             .getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
+    /**
+     * B3 — la recherche admin par nom (LIKE '%q%' sur first/last/email) sert d'E2E
+     * du chemin servi par les index trigramme V60. On cherche un fragment d'un user
+     * réel et on vérifie qu'il est renvoyé.
+     */
+    @Test
+    void adminUsers_searchByNameFragment_returnsMatch() throws Exception {
+        // Un user réel + un fragment ≥ 3 car. de son prénom (servi par idx_users_first_name_trgm).
+        java.util.Map<String, Object> u = jdbc.queryForMap(
+            "SELECT id::text AS id, lower(substring(first_name from 1 for 4)) AS frag "
+            + "FROM users WHERE length(first_name) >= 4 AND deleted_at IS NULL LIMIT 1");
+        String uid = (String) u.get("id");
+        String frag = (String) u.get("frag");
+        ResponseEntity<String> res = restTemplate.exchange(
+            url("/api/analytics/admin-users?search=" + frag + "&limit=2000"),
+            HttpMethod.GET, jwtEntity(adminBearer()), String.class);
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
+        boolean found = false;
+        for (var n : om.readTree(res.getBody())) if (uid.equals(n.get("id").asText())) found = true;
+        assertThat(found).as("le user dont le prénom contient le fragment doit être trouvé").isTrue();
+    }
+
     // ─── B1 — group-dashboard (rollup agrégé, anti N+1) ──────────────────────
 
     @Test
