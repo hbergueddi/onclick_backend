@@ -1,5 +1,6 @@
 package com.onesley.oneclick.modules.loyalty.internal;
 
+import com.onesley.oneclick.core.identity.api.UserDirectoryApi;
 import com.onesley.oneclick.modules.loyalty.api.WalletPassDtos.*;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -12,6 +13,7 @@ import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -30,8 +32,12 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 @Slf4j
 public class WalletPassService {
+
+    /** P2 — résolution du nom via le contrat identity (remplace la lecture SQL de {@code users}). */
+    private final UserDirectoryApi userDirectory;
 
     @Value("${app.wallet.apple.pass-type-id:pass.ma.oneclick.loyalty}")
     private String applePassTypeId;
@@ -55,16 +61,18 @@ public class WalletPassService {
      * Récupère les métadonnées d'un user pour son wallet pass.
      */
     public WalletPassMetadataDto getMetadata(UUID userId) {
-        Object[] row = (Object[]) em.createNativeQuery("""
-            SELECT u.first_name, u.last_name,
-                   COALESCE((SELECT SUM(balance) FROM loyalty_accounts la WHERE la.client_id = u.id AND la.deleted_at IS NULL), 0)
-              FROM users u
-             WHERE u.id = :uid AND u.deleted_at IS NULL
+        // Points : table loyalty_accounts (propre au module) → lecture native intra-module légitime.
+        Number pts = (Number) em.createNativeQuery("""
+            SELECT COALESCE(SUM(balance), 0)
+              FROM loyalty_accounts la
+             WHERE la.client_id = :uid AND la.deleted_at IS NULL
             """).setParameter("uid", userId).getSingleResult();
 
-        String firstName = (String) row[0];
-        String lastName = (String) row[1];
-        int totalPoints = ((Number) row[2]).intValue();
+        // Nom : cross-module → contrat identity (UserDirectoryApi), plus de SQL sur la table users.
+        UserDirectoryApi.UserName name = userDirectory.nameById(userId).orElse(null);
+        String firstName = name != null ? name.firstName() : null;
+        String lastName = name != null ? name.lastName() : null;
+        int totalPoints = pts.intValue();
         String tier = computeTier(totalPoints);
         String serial = "OC-" + userId.toString().substring(0, 8).toUpperCase();
 
