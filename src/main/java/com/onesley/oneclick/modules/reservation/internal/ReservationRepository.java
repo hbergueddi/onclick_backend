@@ -112,6 +112,61 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID>,
     );
 
     /**
+     * P1 (anti-N+1 shim) — réservations enrichies de PLUSIEURS restaurants en 1 requête.
+     * Remplace le fan-out {@code Promise.all(ids.map(findByRestaurant))} du shim Supabase
+     * (client.ts:211) + PulsePro. Même projection enrichie que {@link #findAllWithJoins}
+     * (LEFT JOIN users/restaurants/tables/zones/services + reason histories) ; seul le
+     * filtre change : {@code restaurant_id IN (:restaurantIds)} + LIMIT global (récents d'abord).
+     */
+    @Query(value = """
+        SELECT
+            r.id              AS id,
+            r.tenant_id       AS tenantId,
+            r.client_id       AS clientId,
+            r.restaurant_id   AS restaurantId,
+            r.table_id        AS tableId,
+            r.service_id      AS serviceId,
+            r.reservation_at  AS reservationAt,
+            r.guest_count     AS guestCount,
+            r.status          AS status,
+            r.notes           AS notes,
+            r.created_at      AS createdAt,
+            u.first_name      AS clientFirstName,
+            u.last_name       AS clientLastName,
+            u.phone           AS clientPhone,
+            rest.name         AS restaurantName,
+            rest.city         AS restaurantCity,
+            rest.image        AS restaurantImage,
+            ms.name           AS mealServiceName,
+            rz.name           AS zoneName,
+            rt.table_number   AS tableNumber,
+            (
+                SELECT rsh.reason FROM reservation_status_histories rsh
+                WHERE rsh.reservation_id = r.id AND rsh.new_status = 'refused'
+                ORDER BY rsh.changed_at DESC LIMIT 1
+            )                 AS refusalReason,
+            (
+                SELECT rsh.reason FROM reservation_status_histories rsh
+                WHERE rsh.reservation_id = r.id AND rsh.new_status = 'cancelled'
+                ORDER BY rsh.changed_at DESC LIMIT 1
+            )                 AS cancellationReason
+        FROM reservations r
+        LEFT JOIN users               u    ON u.id    = r.client_id
+        LEFT JOIN restaurants         rest ON rest.id = r.restaurant_id
+        LEFT JOIN restaurant_tables   rt   ON rt.id   = r.table_id
+        LEFT JOIN restaurant_zones    rz   ON rz.id   = rt.zone_id
+        LEFT JOIN restaurant_services ms   ON ms.id   = r.service_id
+        WHERE r.deleted_at IS NULL
+          AND r.restaurant_id IN (:restaurantIds)
+        ORDER BY r.reservation_at DESC
+        LIMIT :limit
+        """,
+        nativeQuery = true)
+    java.util.List<ReservationWithJoinsView> findEnrichedByRestaurantIds(
+        @Param("restaurantIds") java.util.List<UUID> restaurantIds,
+        @Param("limit") int limit);
+
+    /**
      * Bug 31 — Agrégat (restaurantId, count) sur une période + statut optionnel,
      * pour la widget admin "Top Réservations · Par Ville".
      *

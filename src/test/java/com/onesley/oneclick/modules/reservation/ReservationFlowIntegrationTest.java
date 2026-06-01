@@ -149,4 +149,46 @@ class ReservationFlowIntegrationTest extends AbstractIntegrationTest {
         assertThat(restTemplate.exchange(url("/api/reservations?page=0&size=5"), HttpMethod.GET, jwtEntity(null), String.class)
             .getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
+
+    // ─── P1 (anti-N+1 shim) — GET /by-restaurants (batch, ABAC par resto) ────
+
+    @Test
+    void byRestaurants_admin_returns200_array() throws Exception {
+        String rid = restoTenant()[0];
+        ResponseEntity<String> res = restTemplate.exchange(
+            url("/api/reservations/by-restaurants?restaurantIds=" + rid + "&limit=50"),
+            HttpMethod.GET, jwtEntity(adminBearer()), String.class);
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(om.readTree(res.getBody()).isArray()).isTrue();
+    }
+
+    /** Scoping ABAC : un RESTAURATEUR voit le batch de SON resto (200), pas d'un resto étranger (403). */
+    @Test
+    void byRestaurants_restaurateur_ownRestaurant200_foreignRestaurant403() {
+        Map<String, Object> row = jdbc.queryForMap(
+            "SELECT u.id::text AS uid, rs.restaurant_id::text AS rid "
+            + "FROM users u JOIN roles r ON r.id = u.role_id "
+            + "JOIN restaurant_staffs rs ON rs.user_id = u.id "
+            + "WHERE r.code = 'RESTAURATEUR' AND rs.deleted_at IS NULL AND u.deleted_at IS NULL "
+            + "ORDER BY u.id LIMIT 1");
+        String ownerId = (String) row.get("uid");
+        String ownedRid = (String) row.get("rid");
+        String ownerBearer = jwtIssuer.issueAccessToken(UUID.fromString(ownerId), "RESTAURATEUR").token();
+        String foreignRid = jdbc.queryForObject(
+            "SELECT id::text FROM restaurants WHERE deleted_at IS NULL "
+            + "AND id NOT IN (SELECT restaurant_id FROM restaurant_staffs WHERE user_id = ?::uuid AND deleted_at IS NULL) LIMIT 1",
+            String.class, ownerId);
+
+        assertThat(restTemplate.exchange(url("/api/reservations/by-restaurants?restaurantIds=" + ownedRid),
+            HttpMethod.GET, jwtEntity(ownerBearer), String.class).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(restTemplate.exchange(url("/api/reservations/by-restaurants?restaurantIds=" + foreignRid),
+            HttpMethod.GET, jwtEntity(ownerBearer), String.class).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void byRestaurants_noBearer_401() {
+        String rid = restoTenant()[0];
+        assertThat(restTemplate.exchange(url("/api/reservations/by-restaurants?restaurantIds=" + rid),
+            HttpMethod.GET, jwtEntity(null), String.class).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
 }

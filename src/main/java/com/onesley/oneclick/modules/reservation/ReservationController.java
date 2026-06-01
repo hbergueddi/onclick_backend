@@ -6,10 +6,14 @@ import com.onesley.oneclick.shared.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -49,6 +53,7 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/reservations")
 @Tag(name = "Reservations", description = "Workflow réservations (§5)")
 @RequiredArgsConstructor
+@Validated
 public class ReservationController {
 
     /** Whitelist Phase 4 §6.3 — champs filtrables/sortables. */
@@ -118,6 +123,22 @@ public class ReservationController {
     @PreAuthorize("hasAuthority('VIEW:RESERVATIONS')")
     public List<ReservationDto> findByIds(@RequestBody List<UUID> ids) {
         return service.findAccessibleByIds(ids);
+    }
+
+    @GetMapping("/by-restaurants")
+    @Operation(
+        summary = "P1 anti-N+1 — réservations enrichies de PLUSIEURS restaurants (vue groupe/staff)",
+        description = "Remplace le fan-out par-restaurant (shim Supabase client.ts:211 + PulsePro). "
+                    + "ABAC : l'appelant doit être admin OU staff actif de CHAQUE restaurant demandé "
+                    + "(403 sinon). Résultat trié récents d'abord, plafonné par `limit`."
+    )
+    @PreAuthorize("hasAuthority('VIEW:RESERVATIONS')")
+    public List<ReservationDto> findByRestaurants(
+        @RequestParam @Size(min = 1, max = 1000) List<UUID> restaurantIds,
+        @RequestParam(defaultValue = "500") @Min(1) @Max(5000) int limit
+    ) {
+        restaurantIds.forEach(restaurantAccessGuard::requireAdminOrActiveStaffOf);
+        return service.findByRestaurants(restaurantIds, limit);
     }
 
     @PostMapping

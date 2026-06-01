@@ -62,6 +62,20 @@ public class ReservationService {
     }
 
     /**
+     * P1 (anti-N+1 shim) — réservations enrichies de plusieurs restaurants en 1 requête.
+     * L'ABAC (staff/admin de CHAQUE restaurant) est appliqué au controller via
+     * {@code RestaurantAccessGuard} avant l'appel ; ici pas de re-scoping clientId
+     * (vue groupe/staff, pas vue client). {@code limit} borné au controller (@Max).
+     */
+    @Transactional(readOnly = true)
+    public List<ReservationDto> findByRestaurants(List<UUID> restaurantIds, int limit) {
+        if (restaurantIds == null || restaurantIds.isEmpty()) return List.of();
+        return repository.findEnrichedByRestaurantIds(restaurantIds, limit).stream()
+            .map(ReservationService::toDto)
+            .toList();
+    }
+
+    /**
      * Conversion projection joints → DTO public. Préserve l'ordre des champs
      * documenté dans {@link ReservationDto}.
      */

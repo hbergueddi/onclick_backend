@@ -28,8 +28,10 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -213,5 +215,34 @@ class ReservationServiceTest {
         assertThat(service.findAccessibleByIds(null)).isEmpty();
         assertThat(service.findAccessibleByIds(List.of())).isEmpty();
         verify(repository, never()).findAllById(any());
+    }
+
+    // ─── P1 (anti-N+1 shim) — findByRestaurants ─────────────────────────────
+
+    @Test
+    void findByRestaurants_nullOrEmpty_returnsEmpty_noRepoCall() {
+        assertThat(service.findByRestaurants(null, 500)).isEmpty();
+        assertThat(service.findByRestaurants(List.of(), 500)).isEmpty();
+        verify(repository, never()).findEnrichedByRestaurantIds(any(), anyInt());
+    }
+
+    @Test
+    void findByRestaurants_mapsEnrichedViewsToDto() {
+        UUID rid = UUID.randomUUID();
+        UUID id = UUID.randomUUID();
+        ReservationWithJoinsView v = mock(ReservationWithJoinsView.class);
+        when(v.getId()).thenReturn(id);
+        when(v.getRestaurantId()).thenReturn(rid);
+        when(v.getStatus()).thenReturn("confirmée");
+        when(v.getClientFirstName()).thenReturn("Ada");
+        when(repository.findEnrichedByRestaurantIds(List.of(rid), 500)).thenReturn(List.of(v));
+
+        var out = service.findByRestaurants(List.of(rid), 500);
+
+        assertThat(out).hasSize(1);
+        assertThat(out.get(0).id()).isEqualTo(id);
+        assertThat(out.get(0).restaurantId()).isEqualTo(rid);
+        assertThat(out.get(0).status()).isEqualTo("confirmée");
+        assertThat(out.get(0).clientFirstName()).isEqualTo("Ada");
     }
 }
