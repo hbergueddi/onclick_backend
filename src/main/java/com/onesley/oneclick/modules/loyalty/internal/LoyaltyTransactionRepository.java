@@ -118,6 +118,28 @@ public interface LoyaltyTransactionRepository extends JpaRepository<LoyaltyTrans
     );
 
     /**
+     * P1 (anti-N+1 shim) — transactions enrichies de PLUSIEURS restaurants en 1 requête.
+     * Remplace le fan-out {@code Promise.all(ids.map(findTransactionsByRestaurant))} du shim
+     * (client.ts:285/321) + PulsePro. Même projection enrichie (clientId+restaurantId via
+     * JOIN LoyaltyAccount) que {@link #findAllByRestaurantIdEnriched} ; WHERE IN (:ids).
+     */
+    @Query("""
+        SELECT new com.onesley.oneclick.modules.loyalty.api.LoyaltyTransactionDto(
+            t.id, t.accountId, t.type, t.points, t.amount, t.reason,
+            t.expiresAt, t.createdAt, t.createdById,
+            a.clientId, a.restaurantId
+        )
+        FROM LoyaltyTransaction t
+        JOIN LoyaltyAccount a ON a.id = t.accountId
+        WHERE a.restaurantId IN :restaurantIds
+        ORDER BY t.createdAt DESC
+        """)
+    java.util.List<LoyaltyTransactionDto> findAllByRestaurantIdInEnriched(
+        @Param("restaurantIds") java.util.List<UUID> restaurantIds,
+        Pageable pageable
+    );
+
+    /**
      * Agrégat plateforme des tickets scannés (Snap2Earn) — carte « Tickets &
      * Lounge » du PulseBoard admin. Un « ticket scanné » = transaction
      * {@code type='earn'} dont le {@code reason} encode un scan

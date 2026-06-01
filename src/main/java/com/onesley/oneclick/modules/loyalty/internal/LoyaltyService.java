@@ -102,6 +102,14 @@ public class LoyaltyService {
             .toList();
     }
 
+    /** P1 (anti-N+1 shim) — comptes de PLUSIEURS restaurants en 1 requête. ABAC par resto au controller. */
+    public List<LoyaltyAccountDto> findAccountsByRestaurants(List<UUID> restaurantIds) {
+        if (restaurantIds == null || restaurantIds.isEmpty()) return List.of();
+        return accountRepository.findAllByRestaurantIdIn(restaurantIds).stream()
+            .map(LoyaltyAccount::toDto)
+            .toList();
+    }
+
     /**
      * Résout les noms des clients pour les dashboards staff (PulsePro — Top clients).
      *
@@ -463,6 +471,12 @@ public class LoyaltyService {
      */
     public List<LoyaltyTransactionDto> findTransactionsByRestaurant(UUID restaurantId, int limit) {
         return transactionRepository.findAllByRestaurantIdEnriched(restaurantId, PageRequest.of(0, limit));
+    }
+
+    /** P1 (anti-N+1 shim) — transactions enrichies de PLUSIEURS restaurants en 1 requête. ABAC par resto au controller. */
+    public List<LoyaltyTransactionDto> findTransactionsByRestaurants(List<UUID> restaurantIds, int limit) {
+        if (restaurantIds == null || restaurantIds.isEmpty()) return List.of();
+        return transactionRepository.findAllByRestaurantIdInEnriched(restaurantIds, PageRequest.of(0, limit));
     }
 
     /**

@@ -19,6 +19,8 @@ import java.util.UUID;
 public interface LoyaltyAccountRepository extends JpaRepository<LoyaltyAccount, UUID>, JpaSpecificationExecutor<LoyaltyAccount> {
     java.util.List<LoyaltyAccount> findAllByClientId(java.util.UUID clientId);
     java.util.List<LoyaltyAccount> findAllByRestaurantId(java.util.UUID restaurantId);
+    /** P1 (anti-N+1 shim) — comptes de PLUSIEURS restaurants en 1 requête (shim client.ts:321/356 + PulsePro). */
+    java.util.List<LoyaltyAccount> findAllByRestaurantIdIn(java.util.List<java.util.UUID> restaurantIds);
     java.util.List<LoyaltyAccount> findAllByTierId(java.util.UUID tierId);
 
     /**

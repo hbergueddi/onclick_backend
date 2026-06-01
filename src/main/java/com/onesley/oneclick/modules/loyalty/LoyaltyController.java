@@ -31,7 +31,9 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -48,6 +50,7 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/loyalty")
 @Tag(name = "Loyalty", description = "Comptes + transactions fidélité (§6)")
 @RequiredArgsConstructor
+@Validated
 public class LoyaltyController {
 
     private final LoyaltyService service;
@@ -113,6 +116,35 @@ public class LoyaltyController {
     public List<LoyaltyAccountDto> findAccountsByRestaurant(@PathVariable UUID restaurantId) {
         restaurantAccessGuard.requireAdminOrActiveStaffOf(restaurantId);
         return service.findAccountsByRestaurant(restaurantId);
+    }
+
+    @GetMapping("/accounts/by-restaurants")
+    @Operation(
+        summary = "P1 anti-N+1 — comptes fidélité de PLUSIEURS restaurants (vue groupe/staff)",
+        description = "Remplace le fan-out par-restaurant (shim Supabase client.ts:321/356 + PulsePro). "
+                    + "ABAC : admin OU staff actif de CHAQUE restaurant demandé (403 sinon)."
+    )
+    @PreAuthorize("hasAuthority('VIEW:LOYALTY')")
+    public List<LoyaltyAccountDto> findAccountsByRestaurants(
+        @RequestParam @Size(min = 1, max = 1000) List<UUID> restaurantIds
+    ) {
+        restaurantIds.forEach(restaurantAccessGuard::requireAdminOrActiveStaffOf);
+        return service.findAccountsByRestaurants(restaurantIds);
+    }
+
+    @GetMapping("/transactions/by-restaurants")
+    @Operation(
+        summary = "P1 anti-N+1 — transactions fidélité enrichies de PLUSIEURS restaurants",
+        description = "Remplace le fan-out par-restaurant (shim Supabase client.ts:285/321 + PulsePro). "
+                    + "Projection enrichie clientId+restaurantId. ABAC : admin OU staff actif de CHAQUE resto."
+    )
+    @PreAuthorize("hasAuthority('VIEW:LOYALTY')")
+    public List<LoyaltyTransactionDto> findTransactionsByRestaurants(
+        @RequestParam @Size(min = 1, max = 1000) List<UUID> restaurantIds,
+        @RequestParam(required = false, defaultValue = "2000") @Min(1) @Max(10000) int limit
+    ) {
+        restaurantIds.forEach(restaurantAccessGuard::requireAdminOrActiveStaffOf);
+        return service.findTransactionsByRestaurants(restaurantIds, limit);
     }
 
     /** Requête de résolution des noms clients pour les dashboards staff (PulsePro). */

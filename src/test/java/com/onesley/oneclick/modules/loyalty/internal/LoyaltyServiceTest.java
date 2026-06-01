@@ -560,4 +560,37 @@ class LoyaltyServiceTest {
         assertThatThrownBy(() -> service.resolveClientByCode("NOPECODE"))
             .isInstanceOf(NotFoundException.class);
     }
+
+    // ─── P1 (anti-N+1 shim) — batch by-restaurants ──────────────────────────
+
+    @Test
+    void findAccountsByRestaurants_nullOrEmpty_returnsEmpty_noRepoCall() {
+        assertThat(service.findAccountsByRestaurants(null)).isEmpty();
+        assertThat(service.findAccountsByRestaurants(List.of())).isEmpty();
+        verify(accountRepository, org.mockito.Mockito.never()).findAllByRestaurantIdIn(any());
+    }
+
+    @Test
+    void findAccountsByRestaurants_mapsAllToDto() {
+        UUID r1 = UUID.randomUUID();
+        UUID r2 = UUID.randomUUID();
+        when(accountRepository.findAllByRestaurantIdIn(List.of(r1, r2)))
+            .thenReturn(List.of(account(UUID.randomUUID(), r1, 100), account(UUID.randomUUID(), r2, 50)));
+        assertThat(service.findAccountsByRestaurants(List.of(r1, r2))).hasSize(2);
+    }
+
+    @Test
+    void findTransactionsByRestaurants_nullOrEmpty_returnsEmpty_noRepoCall() {
+        assertThat(service.findTransactionsByRestaurants(null, 2000)).isEmpty();
+        assertThat(service.findTransactionsByRestaurants(List.of(), 2000)).isEmpty();
+        verify(transactionRepository, org.mockito.Mockito.never()).findAllByRestaurantIdInEnriched(any(), any());
+    }
+
+    @Test
+    void findTransactionsByRestaurants_delegatesToEnrichedRepo() {
+        UUID r1 = UUID.randomUUID();
+        when(transactionRepository.findAllByRestaurantIdInEnriched(eq(List.of(r1)), any())).thenReturn(List.of());
+        service.findTransactionsByRestaurants(List.of(r1), 2000);
+        verify(transactionRepository).findAllByRestaurantIdInEnriched(eq(List.of(r1)), any());
+    }
 }
