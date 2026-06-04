@@ -33,6 +33,7 @@ public interface ReservationWithJoinsView {
     String getNotes();
     Instant getCreatedAt();
     Boolean getLateCancellation();
+    Instant getNoShowMarkedAt();
 
     // ─── Joins ─────────────────────────────────────────────────────────────
     String getClientFirstName();

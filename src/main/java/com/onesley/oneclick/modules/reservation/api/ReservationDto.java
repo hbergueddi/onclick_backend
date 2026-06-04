@@ -38,6 +38,8 @@ public record ReservationDto(
     Instant createdAt,
     // ─── Feature #4 — flag annulation tardive (toujours rempli) ───────────
     boolean lateCancellation,
+    // ─── Feature #3/#4 — horodatage du passage en no_show (null sinon) ────
+    Instant noShowMarkedAt,
     // ─── Joins frontend (anti N+1) — null pour les lectures unitaires ──────
     String clientFirstName,
     String clientLastName,
@@ -56,10 +58,10 @@ public record ReservationDto(
     public ReservationDto(
         UUID id, UUID tenantId, UUID clientId, UUID restaurantId, UUID tableId, UUID serviceId,
         Instant reservationAt, Integer guestCount, String status, String notes, Instant createdAt,
-        boolean lateCancellation
+        boolean lateCancellation, Instant noShowMarkedAt
     ) {
         this(id, tenantId, clientId, restaurantId, tableId, serviceId,
-            reservationAt, guestCount, status, notes, createdAt, lateCancellation,
+            reservationAt, guestCount, status, notes, createdAt, lateCancellation, noShowMarkedAt,
             null, null, null, null, null, null, null, null, null, null, null);
     }
 }

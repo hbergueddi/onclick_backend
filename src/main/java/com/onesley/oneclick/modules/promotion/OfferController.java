@@ -21,7 +21,9 @@ import com.onesley.oneclick.modules.promotion.api.OfferCreateDto;
 import com.onesley.oneclick.modules.promotion.api.OfferDto;
 import com.onesley.oneclick.modules.promotion.api.OfferImpressionDto;
 import com.onesley.oneclick.modules.promotion.api.OfferPatchDto;
+import com.onesley.oneclick.modules.promotion.api.OfferReadDto;
 import com.onesley.oneclick.modules.promotion.internal.Offer;
+import com.onesley.oneclick.modules.promotion.internal.OfferReadService;
 import com.onesley.oneclick.modules.promotion.internal.OfferRepository;
 import com.onesley.oneclick.modules.promotion.internal.OfferService;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +45,7 @@ public class OfferController {
 
     private final OfferService service;
     private final OfferRepository offerRepository;
+    private final OfferReadService readService;
 
     // Bug 32 (Batch A RBAC v2) — RBAC v2 senior strict hasAuthority('VERB:OFFERS')
     @GetMapping
@@ -116,5 +119,26 @@ public class OfferController {
     ) {
         service.recordImpression(id, body != null ? body.type() : null);
         return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    // ─── Reads (suivi lu/non-lu par client — offer_reads V63) ─────────────────
+    // RBAC : on réutilise VIEW:OFFERS (le client l'a déjà via V29 pour le catalogue
+    // public). Pas de nouvelle autorité — calque du mark-read de core/notification
+    // (réutilise UPDATE:NOTIFICATIONS au lieu d'ajouter un verbe). Le verrou est
+    // l'ABAC dans OfferReadService : tout porte sur currentUser, jamais un userId
+    // arbitraire → un user ne lit/écrit QUE ses propres états de lecture.
+
+    @PostMapping("/{id}/read")
+    @Operation(summary = "Marque l'offre comme lue pour l'utilisateur courant (upsert idempotent)")
+    @PreAuthorize("hasAuthority('VIEW:OFFERS')")
+    public ResponseEntity<OfferReadDto> markRead(@PathVariable UUID id) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(readService.markRead(id));
+    }
+
+    @GetMapping("/reads")
+    @Operation(summary = "Ids des offres lues par l'utilisateur courant (pour la logique « épinglées non-lues » front)")
+    @PreAuthorize("hasAuthority('VIEW:OFFERS')")
+    public List<UUID> readOfferIds() {
+        return readService.listReadOfferIds();
     }
 }

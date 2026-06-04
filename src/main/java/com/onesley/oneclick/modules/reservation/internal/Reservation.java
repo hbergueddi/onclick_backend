@@ -102,7 +102,7 @@ public class Reservation extends SoftDeletableAuditedEntity {
     /** Mapping vers le DTO public exposé hors du module. */
     public ReservationDto toDto() {
         return new ReservationDto(id, tenantId, clientId, restaurantId, tableId, serviceId,
-            reservationAt, guestCount, status, notes, getCreatedAt(), lateCancellation);
+            reservationAt, guestCount, status, notes, getCreatedAt(), lateCancellation, noShowMarkedAt);
     }
 
     @Override

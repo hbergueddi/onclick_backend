@@ -93,6 +93,7 @@ public class ReservationService {
             v.getNotes(),
             v.getCreatedAt(),
             Boolean.TRUE.equals(v.getLateCancellation()),
+            v.getNoShowMarkedAt(),
             v.getClientFirstName(),
             v.getClientLastName(),
             v.getClientPhone(),

@@ -288,4 +288,44 @@ class ReservationServiceTest {
         assertThat(out.get(0).status()).isEqualTo("confirmée");
         assertThat(out.get(0).clientFirstName()).isEqualTo("Ada");
     }
+
+    // ─── ITEM 1 — noShowMarkedAt exposé dans le DTO ───────────────────────────
+
+    @Test
+    void toDto_exposesNoShowMarkedAt_whenNoShow() {
+        Instant markedAt = Instant.parse("2026-06-01T12:00:00Z");
+        Reservation r = reservation("no_show");
+        r.setNoShowMarkedAt(markedAt);
+
+        ReservationDto dto = r.toDto();
+
+        assertThat(dto.status()).isEqualTo("no_show");
+        assertThat(dto.noShowMarkedAt()).isEqualTo(markedAt);
+    }
+
+    @Test
+    void toDto_noShowMarkedAtNull_whenNotMarked() {
+        // Réservation non marquée absente → champ null (pas de fenêtre de contestation).
+        ReservationDto dto = reservation("confirmée").toDto();
+        assertThat(dto.noShowMarkedAt()).isNull();
+    }
+
+    @Test
+    void joinsViewMapper_propagatesNoShowMarkedAt() {
+        // Le chemin lecture groupée (findByRestaurants → projection) doit aussi
+        // porter noShowMarkedAt jusqu'au DTO.
+        Instant markedAt = Instant.parse("2026-06-02T09:30:00Z");
+        UUID rid = UUID.randomUUID();
+        ReservationWithJoinsView v = mock(ReservationWithJoinsView.class);
+        when(v.getId()).thenReturn(UUID.randomUUID());
+        when(v.getRestaurantId()).thenReturn(rid);
+        when(v.getStatus()).thenReturn("no_show");
+        when(v.getNoShowMarkedAt()).thenReturn(markedAt);
+        when(repository.findEnrichedByRestaurantIds(List.of(rid), 500)).thenReturn(List.of(v));
+
+        var out = service.findByRestaurants(List.of(rid), 500);
+
+        assertThat(out).hasSize(1);
+        assertThat(out.get(0).noShowMarkedAt()).isEqualTo(markedAt);
+    }
 }

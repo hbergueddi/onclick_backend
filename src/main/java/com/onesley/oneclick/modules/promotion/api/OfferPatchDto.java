@@ -40,6 +40,8 @@ public record OfferPatchDto(
     @Positive Integer pts,
     Boolean pushNotify,
     @Size(min = 1, max = 512) String image,
-    List<String> segments
+    List<String> segments,
+    // V63 — épingle / désépingle l'offre (mise en avant Pocket). null = pas de modif.
+    Boolean isPinned
 ) {
 }

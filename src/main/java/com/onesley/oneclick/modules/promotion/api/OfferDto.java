@@ -25,6 +25,8 @@ public record OfferDto(
     boolean pushNotify, String image, List<String> segments,
     Instant createdAt,
     // V53 — regroupement de campagne multi-restaurant (null si offre isolée).
-    UUID campaignId
+    UUID campaignId,
+    // V63 — offre épinglée (mise en avant prioritaire Pocket).
+    boolean isPinned
 ) {
 }

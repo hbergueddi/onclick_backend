@@ -55,6 +55,13 @@ public class Offer extends SoftDeletableAuditedEntity {
     /** V53 — regroupement de campagne multi-restaurant (null si offre isolée). */
     @Column(name = "campaign_id") @Setter private UUID campaignId;
 
+    /**
+     * V63 — offre épinglée (mise en avant prioritaire côté Pocket). Pilote la
+     * logique « épinglées non-lues » du front (combinée à {@code offer_reads}).
+     * Défaut false.
+     */
+    @Column(name = "is_pinned", nullable = false) @Setter private boolean isPinned = false;
+
     public Offer(UUID id, UUID restaurantId, String title, Instant startsAt, Instant expiresAt) {
         this.id = id; this.restaurantId = restaurantId; this.title = title; this.startsAt = startsAt; this.expiresAt = expiresAt;
     }
@@ -64,7 +71,7 @@ public class Offer extends SoftDeletableAuditedEntity {
         return new OfferDto(id, restaurantId, title, description, startsAt, expiresAt,
             discountPct, discountAmount, enabled, type, pts,
             pushNotify, image, segments == null ? List.of() : List.of(segments),
-            getCreatedAt(), campaignId);
+            getCreatedAt(), campaignId, isPinned);
     }
 
     @Override

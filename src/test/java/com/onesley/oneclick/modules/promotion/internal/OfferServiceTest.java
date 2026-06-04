@@ -110,7 +110,7 @@ class OfferServiceTest {
     void patch_notFound_throwsNotFound() {
         when(repository.findById(any())).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.patch(UUID.randomUUID(),
-            new OfferPatchDto("X", null, null, null, null, null, null, null, null, null, null, null)))
+            new OfferPatchDto("X", null, null, null, null, null, null, null, null, null, null, null, null)))
             .isInstanceOf(NotFoundException.class);
     }
 
@@ -118,7 +118,7 @@ class OfferServiceTest {
     void patch_success_appliesFields() {
         Offer o = offer();
         when(repository.findById(any())).thenReturn(Optional.of(o));
-        service.patch(o.getId(), new OfferPatchDto("Renommé", "d", null, null, null, null, true, "bonus", 20, true, "i", null));
+        service.patch(o.getId(), new OfferPatchDto("Renommé", "d", null, null, null, null, true, "bonus", 20, true, "i", null, null));
         assertThat(o.getTitle()).isEqualTo("Renommé");
         assertThat(o.getType()).isEqualTo("bonus");
     }
@@ -128,7 +128,7 @@ class OfferServiceTest {
         Offer o = offer();
         when(repository.findById(any())).thenReturn(Optional.of(o));
         assertThatThrownBy(() -> service.patch(o.getId(),
-            new OfferPatchDto(null, null, null, start.minusSeconds(3600), null, null, null, null, null, null, null, null)))
+            new OfferPatchDto(null, null, null, start.minusSeconds(3600), null, null, null, null, null, null, null, null, null)))
             .isInstanceOf(BadRequestException.class);
     }
 
@@ -137,8 +137,33 @@ class OfferServiceTest {
         Offer o = offer();
         when(repository.findById(any())).thenReturn(Optional.of(o));
         assertThatThrownBy(() -> service.patch(o.getId(),
-            new OfferPatchDto(null, null, null, null, null, null, null, "bogus", null, null, null, null)))
+            new OfferPatchDto(null, null, null, null, null, null, null, "bogus", null, null, null, null, null)))
             .isInstanceOf(BadRequestException.class);
+    }
+
+    // ─── ITEM 2 — is_pinned : PATCH applique le flag + DTO le renvoie ─────────
+
+    @Test
+    void patch_setsPinned_andDtoReflectsIt() {
+        Offer o = offer();
+        assertThat(o.isPinned()).isFalse(); // défaut
+        when(repository.findById(any())).thenReturn(Optional.of(o));
+        OfferDto dto = service.patch(o.getId(),
+            new OfferPatchDto(null, null, null, null, null, null, null, null, null, null, null, null, true));
+        assertThat(o.isPinned()).isTrue();
+        assertThat(dto.isPinned()).isTrue();
+    }
+
+    @Test
+    void patch_nullIsPinned_leavesPinnedUnchanged() {
+        Offer o = offer();
+        o.setPinned(true); // déjà épinglée
+        when(repository.findById(any())).thenReturn(Optional.of(o));
+        // isPinned null → pas de modification (sémantique PATCH)
+        OfferDto dto = service.patch(o.getId(),
+            new OfferPatchDto("Titre", null, null, null, null, null, null, null, null, null, null, null, null));
+        assertThat(o.isPinned()).isTrue();
+        assertThat(dto.isPinned()).isTrue();
     }
 
     @Test

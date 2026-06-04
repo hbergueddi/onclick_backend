@@ -124,6 +124,7 @@ public class OfferService {
         if (dto.pushNotify() != null) o.setPushNotify(dto.pushNotify());
         if (dto.image() != null) o.setImage(dto.image());
         if (dto.segments() != null) o.setSegments(dto.segments().toArray(new String[0]));
+        if (dto.isPinned() != null) o.setPinned(dto.isPinned());
 
         // Invariants finaux (post-merge)
         if (o.getExpiresAt().isBefore(o.getStartsAt())) {
