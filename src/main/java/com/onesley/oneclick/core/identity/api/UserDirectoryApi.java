@@ -25,4 +25,13 @@ public interface UserDirectoryApi {
 
     /** Noms de plusieurs utilisateurs actifs en une requête (anti N+1). Ordre non garanti. */
     List<UserName> namesByIds(List<UUID> userIds);
+
+    /**
+     * Tenant d'un utilisateur actif (soft-delete exclus). Vide si introuvable/supprimé
+     * OU si l'utilisateur est global (admin plateforme sans tenant).
+     *
+     * <p>Contrat typé pour les modules qui ont besoin du tenant d'un user sans lire la
+     * table {@code users} en SQL natif (ex: loyalty punch-cards scopées par tenant).</p>
+     */
+    Optional<UUID> tenantIdById(UUID userId);
 }

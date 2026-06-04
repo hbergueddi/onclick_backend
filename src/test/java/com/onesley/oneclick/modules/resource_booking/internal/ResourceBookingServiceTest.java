@@ -50,6 +50,7 @@ class ResourceBookingServiceTest {
     @Mock ResourcePricingRepository pricingRepo;
     @Mock ResourceBookingRepository bookingRepo;
     @Mock ResourceBookingGuestRepository guestRepo;
+    @Mock org.springframework.context.ApplicationEventPublisher eventPublisher;
     @Mock EntityManager em;
     /** Horloge fixe → la fenêtre H-2 est déterministe (les bookings de test démarrent à +1h..+2h). */
     private final java.time.Clock fixedClock = java.time.Clock.fixed(Instant.now(), java.time.ZoneOffset.UTC);
@@ -57,7 +58,7 @@ class ResourceBookingServiceTest {
 
     @BeforeEach
     void setup() {
-        service = new ResourceBookingService(resourceRepo, pricingRepo, bookingRepo, guestRepo, fixedClock);
+        service = new ResourceBookingService(resourceRepo, pricingRepo, bookingRepo, guestRepo, fixedClock, eventPublisher);
         ReflectionTestUtils.setField(service, "entityManager", em);
         lenient().when(em.getReference(eq(Tenant.class), any())).thenReturn(new Tenant(UUID.randomUUID(), "T", "t"));
         lenient().when(em.getReference(eq(User.class), any())).thenReturn(new User(UUID.randomUUID(), null, "u@x.ma", "h", "U", "U"));
@@ -183,6 +184,46 @@ class ResourceBookingServiceTest {
             service.updateBooking(b.getId(), new BookingUpdateDto("cancelled", "raison"));
             assertThat(b.getStatus()).isEqualTo("cancelled");
         }
+    }
+
+    @Test
+    void updateBooking_statusChanged_publishesEvent() {
+        // Booking 'pending' → 'completed' déclenche un ResourceBookingStatusChangedEvent
+        // (consommé par loyalty → auto-punch).
+        ResourceBooking b = booking();
+        ReflectionTestUtils.setField(b, "status", "pending");
+        when(bookingRepo.findById(b.getId())).thenReturn(Optional.of(b));
+        org.mockito.ArgumentCaptor<com.onesley.oneclick.shared.events.ResourceBookingStatusChangedEvent> cap =
+            org.mockito.ArgumentCaptor.forClass(
+                com.onesley.oneclick.shared.events.ResourceBookingStatusChangedEvent.class);
+
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::currentUserId).thenReturn(UUID.randomUUID());
+            sec.when(SecurityHelper::isStaffOrAdmin).thenReturn(true);
+            service.updateBooking(b.getId(), new BookingUpdateDto("completed", null));
+        }
+        verify(eventPublisher).publishEvent(cap.capture());
+        assertThat(cap.getValue().oldStatus()).isEqualTo("pending");
+        assertThat(cap.getValue().newStatus()).isEqualTo("completed");
+        assertThat(cap.getValue().bookingId()).isEqualTo(b.getId());
+    }
+
+    @Test
+    void updateBooking_statusUnchanged_doesNotPublishEvent() {
+        // Même statut (ou seulement les notes changent) → AUCUN event publié.
+        ResourceBooking b = booking();
+        ReflectionTestUtils.setField(b, "status", "confirmed");
+        when(bookingRepo.findById(b.getId())).thenReturn(Optional.of(b));
+
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::currentUserId).thenReturn(UUID.randomUUID());
+            sec.when(SecurityHelper::isStaffOrAdmin).thenReturn(true);
+            // status identique + maj notes uniquement
+            service.updateBooking(b.getId(), new BookingUpdateDto("confirmed", "juste une note"));
+            // status null (non fourni) → pas de changement
+            service.updateBooking(b.getId(), new BookingUpdateDto(null, "autre note"));
+        }
+        org.mockito.Mockito.verifyNoInteractions(eventPublisher);
     }
 
     @Test

@@ -40,6 +40,14 @@ class UserDirectoryService implements UserDirectoryApi {
             .toList();
     }
 
+    @Override
+    public Optional<UUID> tenantIdById(UUID userId) {
+        if (userId == null) return Optional.empty();
+        return userRepository.findById(userId)
+            .filter(u -> u.getDeletedAt() == null)
+            .map(com.onesley.oneclick.core.identity.api.User::getTenantId);
+    }
+
     private UserName toName(com.onesley.oneclick.core.identity.api.User u) {
         return new UserName(u.getId(), u.getFirstName(), u.getLastName(), u.getPhone(), u.getEmail());
     }

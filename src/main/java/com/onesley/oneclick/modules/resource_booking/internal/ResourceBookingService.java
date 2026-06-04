@@ -6,8 +6,10 @@ import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.exception.UnprocessableException;
 import com.onesley.oneclick.security.SecurityHelper;
+import com.onesley.oneclick.shared.events.ResourceBookingStatusChangedEvent;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -48,6 +50,13 @@ public class ResourceBookingService {
     private final ResourceBookingGuestRepository guestRepo;
     /** Horloge injectée → la fenêtre d'annulation H-2 est testable (mockée en test). */
     private final Clock clock;
+    /**
+     * Publication d'events inter-modules (frontière Modulith). Sur un changement de statut
+     * de booking, on publie {@link ResourceBookingStatusChangedEvent} consommé par le
+     * module loyalty (auto-punch des cartes de fidélité). JAMAIS d'appel direct
+     * resource_booking → loyalty.
+     */
+    private final ApplicationEventPublisher eventPublisher;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -165,9 +174,30 @@ public class ResourceBookingService {
         // ABAC : owner du booking OU staff/admin. Le staff confirme/annule/marque
         // (demandee→confirmee, honoree, no_show, annulee) ; le membre gère le sien.
         requireOwnerOrStaff(b.getOrganizerId());
+        String oldStatus = b.getStatus();
         if (dto.status() != null) b.setStatus(dto.status());
         if (dto.notes() != null)  b.setNotes(dto.notes());
-        return bookingRepo.save(b).toDto();
+        ResourceBooking saved = bookingRepo.save(b);
+
+        // Publication inter-modules : UNIQUEMENT si le statut change réellement.
+        // Consommé par loyalty (ResourceBookingPunchListener) — auto-punch sur 'completed'.
+        // tenantId + resourceType viennent de la ressource du booking (le module
+        // resource_booking les connaît), pour éviter au listener loyalty de résoudre
+        // la ressource cross-module.
+        String newStatus = saved.getStatus();
+        if (dto.status() != null && !dto.status().equals(oldStatus)) {
+            Resource resource = saved.getResource();
+            eventPublisher.publishEvent(new ResourceBookingStatusChangedEvent(
+                saved.getId(),
+                saved.getOrganizerId(),
+                saved.getResourceId(),
+                resource != null ? resource.getTenantId() : null,
+                resource != null ? resource.getResourceType() : null,
+                oldStatus, newStatus,
+                Instant.now()
+            ));
+        }
+        return saved.toDto();
     }
 
     @Transactional
