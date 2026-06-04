@@ -22,6 +22,7 @@ public record UserDto(
     String firstName,
     String lastName,
     String avatarUrl,
+    String city,
     String language,
     String status,
     boolean accountNonExpired,

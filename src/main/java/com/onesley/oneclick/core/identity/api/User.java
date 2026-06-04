@@ -78,6 +78,10 @@ public class User extends SoftDeletableAuditedEntity {
     @Column(name = "avatar_url", length = 512)
     @Setter private String avatarUrl;
 
+    /** Ville du user (PersonalInfo Pocket) — V64, optionnel, éditable via PATCH /me. */
+    @Column(name = "city", length = 128)
+    @Setter private String city;
+
     @Column(name = "language", nullable = false, length = 64)
     @Setter private String language = "fr";
 
@@ -123,7 +127,7 @@ public class User extends SoftDeletableAuditedEntity {
         return new UserDto(
             id, tenantId, roleId,
             role != null ? role.getCode() : null,
-            email, phone, firstName, lastName, avatarUrl, language, status,
+            email, phone, firstName, lastName, avatarUrl, city, language, status,
             accountNonExpired, accountNonLocked, credentialsNonExpired, enabled,
             lastLoginAt, getCreatedAt(), referralCode
         );

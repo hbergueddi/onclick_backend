@@ -27,6 +27,7 @@ public record MeContextDto(
         String lastName,
         String phone,
         String avatarUrl,
+        String city,
         String language,
         String status,
         UUID tenantId

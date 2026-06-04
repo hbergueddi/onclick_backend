@@ -5,15 +5,23 @@ import com.onesley.oneclick.core.identity.api.UserRepository;
 import com.onesley.oneclick.exception.ConflictException;
 import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
+import com.onesley.oneclick.exception.TooManyRequestsException;
+import com.onesley.oneclick.exception.UnprocessableException;
 import com.onesley.oneclick.security.SecurityHelper;
 import com.onesley.oneclick.shared.events.FriendshipRequestedEvent;
 import com.onesley.oneclick.shared.events.FriendshipRespondedEvent;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -34,6 +42,8 @@ import com.onesley.oneclick.modules.social.api.SocialDtos.FriendGroupCreateDto;
 import com.onesley.oneclick.modules.social.api.SocialDtos.FriendGroupUpdateDto;
 import com.onesley.oneclick.modules.social.api.SocialDtos.FriendGroupMemberDto;
 import com.onesley.oneclick.modules.social.api.SocialDtos.FriendGroupMemberAddDto;
+import com.onesley.oneclick.modules.social.api.SocialDtos.ContactImportRequestDto;
+import com.onesley.oneclick.modules.social.api.SocialDtos.ContactImportResultDto;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -46,8 +56,18 @@ public class SocialService {
     private final UserFavoriteRepository favoriteRepo;
     private final FriendGroupRepository groupRepo;
     private final FriendGroupMemberRepository groupMemberRepo;
+    private final ContactImportRepository contactImportRepo; // V64 — quota import contacts
     private final UserRepository userRepository; // domaine identity (API publique) — enrichissement profils amis
     private final ApplicationEventPublisher eventPublisher; // notif server-side (FriendshipRequestedEvent)
+    private final Clock clock; // horloge injectable (UTC) — fenêtre quota testable (cf NoShowDisputeService)
+
+    /** Quota d'imports de contacts par fenêtre glissante de 24 h, par user (défaut 10). Configurable. */
+    @Value("${app.social.contact-import.daily-limit:10}")
+    private int contactImportDailyLimit;
+
+    /** Plafond d'amitiés acceptées par user (défaut 50). Configurable. */
+    @Value("${app.social.friends.cap:50}")
+    private int friendsCap;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -189,6 +209,17 @@ public class SocialService {
             && !current.equals(dto.user1Id()) && !current.equals(dto.user2Id())) {
             throw new ForbiddenException("Accès interdit : vous devez être l'une des parties de l'amitié");
         }
+        // Plafond d'amis (défaut 50) : le DEMANDEUR ne peut plus envoyer de demande au-delà
+        // de friendsCap amitiés ACCEPTÉES. Le demandeur est l'appelant pour un user normal ;
+        // pour un admin qui crée pour un tiers, on contrôle la partie qui INITIE (user1 si non
+        // ré-ordonné). On borne l'initiateur réel : current s'il est partie, sinon user1Id.
+        UUID initiator = (current.equals(dto.user1Id()) || current.equals(dto.user2Id()))
+            ? current : dto.user1Id();
+        long initiatorFriends = friendshipRepo.countAcceptedFriendshipsOf(initiator);
+        if (initiatorFriends >= friendsCap) {
+            throw new UnprocessableException(
+                "Plafond d'amis atteint (" + friendsCap + ") — impossible d'ajouter un nouvel ami");
+        }
         UUID a = dto.user1Id();
         UUID b = dto.user2Id();
         if (a.toString().compareTo(b.toString()) > 0) { UUID tmp = a; a = b; b = tmp; }
@@ -261,6 +292,83 @@ public class SocialService {
         if (current.equals(f.getUser1Id()) || current.equals(f.getUser2Id())) return;
         if (SecurityHelper.isAdmin()) return;
         throw new ForbiddenException("Accès interdit : vous n'êtes pas partie de cette amitié");
+    }
+
+    /**
+     * Nombre d'amis ACCEPTÉS d'un user — expose le compteur qui pilote le plafond
+     * ({@link #friendsCap}). ABAC self/admin (un user ne lit pas le compteur d'un tiers).
+     * Réutilisé par le front pour afficher « X/50 amis » et désactiver le bouton « Ajouter »
+     * sans deviner l'état serveur.
+     */
+    public long acceptedFriendCount(UUID userId) {
+        SecurityHelper.requireOwnerOrAdmin(userId);
+        return friendshipRepo.countAcceptedFriendshipsOf(userId);
+    }
+
+    // ─── Import de contacts (carnet d'adresses → matching OneClick) — V64 ──────
+
+    /**
+     * Importe une liste de téléphones/emails (carnet d'adresses) et renvoie les
+     * utilisateurs OneClick correspondants (profil public minimal).
+     *
+     * <p><b>Quota</b> : {@link #contactImportDailyLimit} imports / fenêtre glissante
+     * de 24 h, par user. Au-delà → {@link TooManyRequestsException} (429), AVANT tout
+     * matching (on ne consomme pas de ressource quand le quota est dépassé).
+     *
+     * <p><b>ABAC</b> : self-scope strict — un user n'importe QUE pour lui-même
+     * ({@code requireOwnerOrAdmin(userId)}) ; jamais un {@code userId} arbitraire.
+     * Le gate RBAC {@code CREATE:COMMUNITY} (détenu par CLIENT depuis V38) ne porte
+     * pas sur l'identité → contrôle ABAC ici, comme {@link #request}.
+     *
+     * <p>Le matching réutilise les lookups identity existants ({@code findByPhone} /
+     * {@code findByEmailIgnoreCase}, soft-deletes exclus). Self-match exclu (on ne se
+     * propose pas soi-même comme contact). Doublons dédupliqués par id.
+     */
+    @Transactional
+    public ContactImportResultDto importContacts(ContactImportRequestDto dto) {
+        SecurityHelper.requireOwnerOrAdmin(dto.userId());
+
+        // 1) Quota AVANT matching — fenêtre glissante 24 h (Clock injectable = testable).
+        Instant since = Instant.now(clock).minus(Duration.ofHours(24));
+        long usedToday = contactImportRepo.countByUserIdAndCreatedAtAfter(dto.userId(), since);
+        if (usedToday >= contactImportDailyLimit) {
+            throw new TooManyRequestsException(
+                "Quota d'import de contacts atteint (" + contactImportDailyLimit
+                + "/jour) — réessayez plus tard");
+        }
+
+        List<String> phones = dto.phones() == null ? List.of() : dto.phones();
+        List<String> emails = dto.emails() == null ? List.of() : dto.emails();
+        int submitted = phones.size() + emails.size();
+
+        // 2) Matching — réutilise les lookups identity (anti-doublon par id, self exclu).
+        Map<UUID, User> matched = new LinkedHashMap<>();
+        for (String phone : phones) {
+            if (phone == null || phone.isBlank()) continue;
+            userRepository.findByPhone(phone.trim())
+                .filter(u -> !u.isDeleted())
+                .filter(u -> !u.getId().equals(dto.userId()))
+                .ifPresent(u -> matched.putIfAbsent(u.getId(), u));
+        }
+        for (String email : emails) {
+            if (email == null || email.isBlank()) continue;
+            userRepository.findByEmailIgnoreCase(email.trim())
+                .filter(u -> !u.isDeleted())
+                .filter(u -> !u.getId().equals(dto.userId()))
+                .ifPresent(u -> matched.putIfAbsent(u.getId(), u));
+        }
+
+        // 3) Enregistre l'import (consomme 1 unité de quota) — APRÈS le matching pour
+        //    ne tracer que les imports effectivement traités.
+        User userRef = entityManager.getReference(User.class, dto.userId());
+        contactImportRepo.save(new ContactImport(UUID.randomUUID(), userRef, submitted));
+
+        List<PublicProfileDto> matches = new ArrayList<>(matched.values().stream()
+            .map(u -> new PublicProfileDto(u.getId(), u.getFirstName(), u.getLastName(),
+                u.getAvatarUrl(), u.getPhone()))
+            .toList());
+        // usedToday + 1 = compteur APRÈS cet import (ce que le front affiche).
+        return new ContactImportResultDto(matches, submitted, usedToday + 1, contactImportDailyLimit);
     }
 
     // ─── Referrals ───────────────────────────────────────────────────────────

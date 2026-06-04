@@ -7,6 +7,7 @@ import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.modules.social.api.SocialDtos.FriendGroupCreateDto;
 import com.onesley.oneclick.modules.social.api.SocialDtos.FriendGroupMemberAddDto;
 import com.onesley.oneclick.modules.social.api.SocialDtos.FriendGroupUpdateDto;
+import com.onesley.oneclick.modules.social.api.SocialDtos;
 import com.onesley.oneclick.modules.social.api.SocialDtos.FriendshipCreateDto;
 import com.onesley.oneclick.modules.social.api.SocialDtos.ReferralCreateDto;
 import com.onesley.oneclick.modules.social.api.SocialDtos.UserFavoriteCreateDto;
@@ -50,16 +51,24 @@ class SocialServiceTest {
     @Mock UserFavoriteRepository favoriteRepo;
     @Mock FriendGroupRepository groupRepo;
     @Mock FriendGroupMemberRepository groupMemberRepo;
+    @Mock ContactImportRepository contactImportRepo; // V64 — quota import contacts
     @Mock EntityManager entityManager;
     @Mock com.onesley.oneclick.core.identity.api.UserRepository userRepository; // enrichissement profils amis (findFriendsOf)
     @Mock org.springframework.context.ApplicationEventPublisher eventPublisher; // FriendshipRequestedEvent
     @InjectMocks SocialService service;
 
     private final UUID me = UUID.randomUUID();
+    /** Horloge fixe — fenêtre glissante du quota import déterministe dans les tests. */
+    private final java.time.Clock fixedClock =
+        java.time.Clock.fixed(java.time.Instant.parse("2026-06-04T12:00:00Z"), java.time.ZoneOffset.UTC);
 
     @BeforeEach
     void setup() {
         ReflectionTestUtils.setField(service, "entityManager", entityManager);
+        // @Value + @Bean(Clock) ne sont pas injectés par @InjectMocks → posés par réflexion.
+        ReflectionTestUtils.setField(service, "clock", fixedClock);
+        ReflectionTestUtils.setField(service, "contactImportDailyLimit", 10);
+        ReflectionTestUtils.setField(service, "friendsCap", 50);
         lenient().when(entityManager.getReference(eq(User.class), any()))
             .thenReturn(new User(UUID.randomUUID(), null, "x@x.ma", "h", "X", "Y"));
         lenient().when(friendshipRepo.save(any())).thenAnswer(i -> i.getArgument(0));
@@ -68,6 +77,9 @@ class SocialServiceTest {
         lenient().when(groupRepo.save(any())).thenAnswer(i -> i.getArgument(0));
         lenient().when(groupMemberRepo.save(any())).thenAnswer(i -> i.getArgument(0));
         lenient().when(groupMemberRepo.countByFriendGroupId(any())).thenReturn(1L);
+        lenient().when(contactImportRepo.save(any())).thenAnswer(i -> i.getArgument(0));
+        // Par défaut le demandeur est sous le plafond (les tests cap le surchargent).
+        lenient().when(friendshipRepo.countAcceptedFriendshipsOf(any())).thenReturn(0L);
     }
 
     private Friendship friendship(String status, UUID u1, UUID u2) {
@@ -511,5 +523,127 @@ class SocialServiceTest {
             sec.when(SecurityHelper::isAdmin).thenReturn(false);
             assertThatThrownBy(() -> service.removeGroupMember(g.getId(), target)).isInstanceOf(ForbiddenException.class);
         }
+    }
+
+    // ─── ITEM 2 — Plafond d'amis (50) dans request() ───────────────────────────
+
+    @Test
+    void request_underCap_succeeds() {
+        UUID lo = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        UUID hi = UUID.fromString("ffffffff-ffff-ffff-ffff-ffffffffffff");
+        when(friendshipRepo.countAcceptedFriendshipsOf(lo)).thenReturn(49L); // 49 < 50 → OK
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::currentUserId).thenReturn(lo);
+            sec.when(SecurityHelper::isAdmin).thenReturn(false);
+            assertThat(service.request(new FriendshipCreateDto(lo, hi))).isNotNull();
+        }
+        verify(friendshipRepo).save(any());
+    }
+
+    @Test
+    void request_atCap_throwsUnprocessable_andDoesNotSave() {
+        UUID lo = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        UUID hi = UUID.fromString("ffffffff-ffff-ffff-ffff-ffffffffffff");
+        when(friendshipRepo.countAcceptedFriendshipsOf(lo)).thenReturn(50L); // 50 == cap → rejet
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::currentUserId).thenReturn(lo);
+            sec.when(SecurityHelper::isAdmin).thenReturn(false);
+            assertThatThrownBy(() -> service.request(new FriendshipCreateDto(lo, hi)))
+                .isInstanceOf(com.onesley.oneclick.exception.UnprocessableException.class)
+                .hasMessageContaining("Plafond d'amis atteint");
+        }
+        verify(friendshipRepo, org.mockito.Mockito.never()).save(any());
+    }
+
+    @Test
+    void acceptedFriendCount_returnsRepoCount() {
+        when(friendshipRepo.countAcceptedFriendshipsOf(me)).thenReturn(7L);
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            // requireOwnerOrAdmin(me) → no-op sous mockStatic
+            assertThat(service.acceptedFriendCount(me)).isEqualTo(7L);
+        }
+    }
+
+    // ─── ITEM 2 — Quota d'import de contacts (10/jour/user) ────────────────────
+
+    @Test
+    void importContacts_underQuota_returnsMatches_andRecordsImport() {
+        // 9 imports déjà consommés → le 10e passe (9 < 10).
+        when(contactImportRepo.countByUserIdAndCreatedAtAfter(eq(me), any())).thenReturn(9L);
+        User match = new User(UUID.randomUUID(), null, "friend@x.ma", "h", "Fri", "End");
+        ReflectionTestUtils.setField(match, "phone", "+212600000001");
+        when(userRepository.findByPhone("+212600000001")).thenReturn(Optional.of(match));
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            var result = service.importContacts(new SocialDtos.ContactImportRequestDto(
+                me, List.of("+212600000001"), List.of()));
+            assertThat(result.matches()).hasSize(1);
+            assertThat(result.matches().get(0).id()).isEqualTo(match.getId());
+            assertThat(result.submittedCount()).isEqualTo(1);
+            assertThat(result.dailyCount()).isEqualTo(10L);  // 9 + cet import
+            assertThat(result.dailyLimit()).isEqualTo(10);
+        }
+        verify(contactImportRepo).save(any(ContactImport.class)); // import journalisé
+    }
+
+    @Test
+    void importContacts_atQuota_throwsTooManyRequests_andDoesNotRecord() {
+        // 10 imports déjà consommés → le 11e est rejeté (10 >= 10), avant tout matching.
+        when(contactImportRepo.countByUserIdAndCreatedAtAfter(eq(me), any())).thenReturn(10L);
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            assertThatThrownBy(() -> service.importContacts(
+                new SocialDtos.ContactImportRequestDto(me, List.of("+212600000002"), List.of())))
+                .isInstanceOf(com.onesley.oneclick.exception.TooManyRequestsException.class)
+                .hasMessageContaining("Quota d'import de contacts atteint");
+        }
+        verify(contactImportRepo, org.mockito.Mockito.never()).save(any());
+        org.mockito.Mockito.verifyNoInteractions(userRepository); // pas de matching quand quota dépassé
+    }
+
+    @Test
+    void importContacts_quotaResets_whenWindowEmpty() {
+        // 0 import dans la fenêtre 24 h (reset) → l'import passe et compte 1.
+        when(contactImportRepo.countByUserIdAndCreatedAtAfter(eq(me), any())).thenReturn(0L);
+        when(userRepository.findByEmailIgnoreCase("known@x.ma"))
+            .thenReturn(Optional.of(new User(UUID.randomUUID(), null, "known@x.ma", "h", "K", "N")));
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            var result = service.importContacts(new SocialDtos.ContactImportRequestDto(
+                me, List.of(), List.of("known@x.ma")));
+            assertThat(result.dailyCount()).isEqualTo(1L);
+            assertThat(result.matches()).hasSize(1);
+        }
+        verify(contactImportRepo).save(any(ContactImport.class));
+    }
+
+    @Test
+    void importContacts_excludesSelfMatch_andDeduplicates() {
+        when(contactImportRepo.countByUserIdAndCreatedAtAfter(eq(me), any())).thenReturn(0L);
+        // Le téléphone résout vers MOI → exclu (on ne se propose pas comme contact).
+        User self = new User(me, null, "me@x.ma", "h", "Me", "Self");
+        when(userRepository.findByPhone("+212600000003")).thenReturn(Optional.of(self));
+        // Email résout vers le même ami que… un autre email (dédup par id).
+        User friend = new User(UUID.randomUUID(), null, "dup@x.ma", "h", "Dup", "Lic");
+        when(userRepository.findByEmailIgnoreCase("dup@x.ma")).thenReturn(Optional.of(friend));
+        when(userRepository.findByEmailIgnoreCase("dup2@x.ma")).thenReturn(Optional.of(friend));
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            var result = service.importContacts(new SocialDtos.ContactImportRequestDto(
+                me, List.of("+212600000003"), List.of("dup@x.ma", "dup2@x.ma")));
+            assertThat(result.matches()).hasSize(1);            // self exclu + doublon fusionné
+            assertThat(result.matches().get(0).id()).isEqualTo(friend.getId());
+            assertThat(result.submittedCount()).isEqualTo(3);   // 1 phone + 2 emails soumis
+        }
+    }
+
+    @Test
+    void importContacts_selfScope_enforcedBeforeQuota() {
+        // ABAC : requireOwnerOrAdmin(userId) doit lever un Forbidden pour un userId arbitraire.
+        UUID other = UUID.randomUUID();
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(() -> SecurityHelper.requireOwnerOrAdmin(other))
+                .thenThrow(new ForbiddenException("Accès interdit"));
+            assertThatThrownBy(() -> service.importContacts(
+                new SocialDtos.ContactImportRequestDto(other, List.of("+212600000004"), List.of())))
+                .isInstanceOf(ForbiddenException.class);
+        }
+        verify(contactImportRepo, org.mockito.Mockito.never()).save(any());
     }
 }

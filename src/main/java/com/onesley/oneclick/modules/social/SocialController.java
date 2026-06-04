@@ -75,6 +75,31 @@ public class SocialController {
         return service.findUserByPhone(phone);
     }
 
+    @PostMapping("/contact-import")
+    @Operation(
+        summary = "Import du carnet d'adresses → utilisateurs OneClick correspondants (quota 10/jour/user).",
+        description = "Soumet une liste de téléphones/emails et renvoie les profils publics minimaux des " +
+                      "utilisateurs OneClick correspondants. Quota : 10 imports / fenêtre 24 h / user (429 au-delà). " +
+                      "Gardé CREATE:COMMUNITY (que le CLIENT détient, V38) car l'import journalise une ligne ; " +
+                      "ABAC self-scope dans le service (jamais un userId arbitraire)."
+    )
+    @PreAuthorize("hasAuthority('CREATE:COMMUNITY')")
+    public ContactImportResultDto importContacts(@Valid @RequestBody ContactImportRequestDto dto) {
+        return service.importContacts(dto);
+    }
+
+    @GetMapping("/friends-count/by-user/{userId}")
+    @Operation(
+        summary = "Nombre d'amis acceptés d'un user — pilote l'affichage « X/50 » + le plafond.",
+        description = "ABAC self/admin. Permet au front de connaître l'état du plafond d'amis sans deviner " +
+                      "le compteur serveur."
+    )
+    @PreAuthorize("hasAuthority('VIEW:COMMUNITY')")
+    public java.util.Map<String, Long> friendsCount(@PathVariable UUID userId) {
+        SecurityHelper.requireOwnerOrAdmin(userId);
+        return java.util.Map.of("count", service.acceptedFriendCount(userId));
+    }
+
     @PatchMapping("/friendships/{id}/accept")
     @Operation(summary = "Accepte une demande d'amitié")
     @PreAuthorize("hasAuthority('UPDATE:COMMUNITY')")

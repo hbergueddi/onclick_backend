@@ -60,6 +60,22 @@ public class SupportController {
         return ResponseEntity.created(URI.create("/api/support/tickets/" + t.id())).body(t);
     }
 
+    /** Corps minimal pour l'ouverture d'un ticket friends_cap (self-scope). */
+    public record FriendsCapTicketDto(@jakarta.validation.constraints.NotNull UUID userId) {}
+
+    @PostMapping("/friends-cap-ticket")
+    @Operation(
+        summary = "Ouvre un ticket « plafond d'amis atteint » — dédupliqué 1/24 h par user.",
+        description = "Appelé par le Pocket quand l'ajout d'ami est refusé (plafond atteint). Réutilise la " +
+                      "création de ticket (catégorie friends_cap). Dédup 1/24 h (409 si déjà ouvert). " +
+                      "CREATE:SUPPORT (que le CLIENT détient) + ABAC self-scope (userId == soi)."
+    )
+    @PreAuthorize("hasAuthority('CREATE:SUPPORT')")
+    public ResponseEntity<TicketDto> createFriendsCapTicket(@Valid @RequestBody FriendsCapTicketDto dto) {
+        TicketDto t = service.createFriendsCapTicket(dto.userId());
+        return ResponseEntity.created(URI.create("/api/support/tickets/" + t.id())).body(t);
+    }
+
     @PatchMapping("/tickets/{id}")
     @Operation(summary = "Mise à jour status / priority / assignation. status=resolved → resolved_at, status=closed → closed_at.")
     @PreAuthorize("hasAuthority('UPDATE:SUPPORT')")

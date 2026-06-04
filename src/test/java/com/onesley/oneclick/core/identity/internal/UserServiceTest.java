@@ -159,7 +159,7 @@ class UserServiceTest {
     @Test
     void patch_notFound() {
         when(repository.findById(any())).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> service.patch(UUID.randomUUID(), new UserUpdateDto("F", null, null, null, null)))
+        assertThatThrownBy(() -> service.patch(UUID.randomUUID(), new UserUpdateDto("F", null, null, null, null, null)))
             .isInstanceOf(NotFoundException.class);
     }
 
@@ -168,9 +168,10 @@ class UserServiceTest {
         User u = user();
         when(repository.findById(u.getId())).thenReturn(Optional.of(u));
         when(repository.existsByPhone(any())).thenReturn(false);
-        service.patch(u.getId(), new UserUpdateDto("Nouveau", "Nom", "0700", "http://avatar", "en"));
+        service.patch(u.getId(), new UserUpdateDto("Nouveau", "Nom", "0700", "http://avatar", "Casablanca", "en"));
         assertThat(u.getFirstName()).isEqualTo("Nouveau");
         assertThat(u.getPhone()).isEqualTo("0700");
+        assertThat(u.getCity()).isEqualTo("Casablanca"); // ITEM 1 — city persisté via patch self-service
     }
 
     @Test
@@ -178,7 +179,7 @@ class UserServiceTest {
         User u = user();
         when(repository.findById(u.getId())).thenReturn(Optional.of(u));
         when(repository.existsByPhone(any())).thenReturn(true);
-        assertThatThrownBy(() -> service.patch(u.getId(), new UserUpdateDto(null, null, "0700", null, null)))
+        assertThatThrownBy(() -> service.patch(u.getId(), new UserUpdateDto(null, null, "0700", null, null, null)))
             .isInstanceOf(ConflictException.class);
     }
 

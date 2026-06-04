@@ -45,9 +45,16 @@ class SupportServiceTest {
     @Mock UserRepository userRepository;
     @InjectMocks SupportService service;
 
+    /** Horloge fixe — fenêtre de dédup du ticket friends_cap déterministe. */
+    private final java.time.Clock fixedClock =
+        java.time.Clock.fixed(java.time.Instant.parse("2026-06-04T12:00:00Z"), java.time.ZoneOffset.UTC);
+
     @BeforeEach
     void setup() {
         ReflectionTestUtils.setField(service, "entityManager", em);
+        // @Value + @Bean(Clock) ne sont pas injectés par @InjectMocks → posés par réflexion.
+        ReflectionTestUtils.setField(service, "clock", fixedClock);
+        ReflectionTestUtils.setField(service, "dedupWindowHours", 24L);
         lenient().when(em.getReference(eq(User.class), any())).thenReturn(new User(UUID.randomUUID(), null, "u@x.ma", "h", "U", "U"));
         lenient().when(em.getReference(eq(SupportTicket.class), any())).thenReturn(ticket());
         lenient().when(ticketRepo.save(any())).thenAnswer(i -> i.getArgument(0));
@@ -136,5 +143,47 @@ class SupportServiceTest {
         when(ticketRepo.findById(any())).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.postMessage(new MessageCreateDto(UUID.randomUUID(), UUID.randomUUID(), "x")))
             .isInstanceOf(NotFoundException.class);
+    }
+
+    // ─── ITEM 2 — Ticket friends_cap dédupliqué 1/24 h ─────────────────────────
+
+    @Test
+    void createFriendsCapTicket_firstTime_createsTicket() {
+        UUID me = UUID.randomUUID();
+        when(ticketRepo.existsRecentByOpenerAndCategory(eq(me),
+            eq(SupportService.CATEGORY_FRIENDS_CAP), any())).thenReturn(false);
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            var dto = service.createFriendsCapTicket(me); // requireOwnerOrAdmin(me) → no-op sous mockStatic
+            assertThat(dto).isNotNull();
+            assertThat(dto.category()).isEqualTo(SupportService.CATEGORY_FRIENDS_CAP);
+        }
+        org.mockito.Mockito.verify(ticketRepo).save(any(SupportTicket.class));
+    }
+
+    @Test
+    void createFriendsCapTicket_secondWithin24h_throwsConflict_andDoesNotSave() {
+        UUID me = UUID.randomUUID();
+        // Un ticket friends_cap existe déjà dans la fenêtre → dédup → 409.
+        when(ticketRepo.existsRecentByOpenerAndCategory(eq(me),
+            eq(SupportService.CATEGORY_FRIENDS_CAP), any())).thenReturn(true);
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            assertThatThrownBy(() -> service.createFriendsCapTicket(me))
+                .isInstanceOf(com.onesley.oneclick.exception.ConflictException.class)
+                .hasMessageContaining("déjà été ouvert");
+        }
+        org.mockito.Mockito.verify(ticketRepo, org.mockito.Mockito.never()).save(any());
+    }
+
+    @Test
+    void createFriendsCapTicket_selfScope_enforced() {
+        // ABAC : requireOwnerOrAdmin(userId) lève Forbidden pour un userId arbitraire.
+        UUID other = UUID.randomUUID();
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(() -> SecurityHelper.requireOwnerOrAdmin(other))
+                .thenThrow(new com.onesley.oneclick.exception.ForbiddenException("Accès interdit"));
+            assertThatThrownBy(() -> service.createFriendsCapTicket(other))
+                .isInstanceOf(com.onesley.oneclick.exception.ForbiddenException.class);
+        }
+        org.mockito.Mockito.verify(ticketRepo, org.mockito.Mockito.never()).save(any());
     }
 }

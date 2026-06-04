@@ -38,6 +38,33 @@ public final class SocialDtos {
      */
     public record PublicProfileDto(UUID id, String firstName, String lastName, String avatarUrl, String phone) {}
 
+    // ─── Import de contacts (carnet d'adresses → matching OneClick) ───────────
+
+    /**
+     * Requête d'import du carnet d'adresses (Pocket → « Inviter mes contacts »).
+     * {@code userId} : l'utilisateur qui importe (validé self/admin côté service, ABAC).
+     * {@code phones} / {@code emails} : identifiants des contacts du carnet à résoudre.
+     * Listes optionnelles (au moins l'une non vide) — bornées pour éviter les abus.
+     */
+    public record ContactImportRequestDto(
+        @NotNull UUID userId,
+        @Size(max = 1000) java.util.List<@Size(min = 1, max = 64) String> phones,
+        @Size(max = 1000) java.util.List<@Size(min = 1, max = 256) String> emails
+    ) {}
+
+    /**
+     * Résultat d'un import : les utilisateurs OneClick correspondant aux contacts
+     * soumis (profil public minimal, comme {@link PublicProfileDto}), + le compteur
+     * d'imports déjà consommés sur la fenêtre 24 h ({@code dailyCount}) et le quota
+     * ({@code dailyLimit}) pour l'affichage « il vous reste N imports ».
+     */
+    public record ContactImportResultDto(
+        java.util.List<PublicProfileDto> matches,
+        int submittedCount,
+        long dailyCount,
+        int dailyLimit
+    ) {}
+
     public record ReferralDto(UUID id, UUID referrerId, UUID referredUserId, String referralCode, String status, Instant activatedAt, Instant createdAt) {}
 
     public record ReferralCreateDto(@NotNull UUID referrerId, @NotBlank @Size(min = 1, max = 64) String referralCode) {}
