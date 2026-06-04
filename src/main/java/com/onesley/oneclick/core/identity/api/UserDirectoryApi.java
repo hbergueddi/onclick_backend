@@ -17,8 +17,13 @@ import java.util.UUID;
  */
 public interface UserDirectoryApi {
 
-    /** Projection légère d'un utilisateur pour affichage/contact hors module. */
-    record UserName(UUID id, String firstName, String lastName, String phone, String email) {}
+    /**
+     * Projection légère d'un utilisateur pour affichage/contact hors module.
+     *
+     * <p>{@code avatarUrl} ajouté pour « Ma Famille » (PCC Lot 5 — la liste famille affiche
+     * la photo du proche). Champ optionnel : null si l'utilisateur n'a pas d'avatar.</p>
+     */
+    record UserName(UUID id, String firstName, String lastName, String phone, String email, String avatarUrl) {}
 
     /** Nom d'un utilisateur actif (soft-delete exclus). Vide si introuvable/supprimé. */
     Optional<UserName> nameById(UUID userId);
@@ -34,4 +39,21 @@ public interface UserDirectoryApi {
      * table {@code users} en SQL natif (ex: loyalty punch-cards scopées par tenant).</p>
      */
     Optional<UUID> tenantIdById(UUID userId);
+
+    /**
+     * Résolution d'un membre par identifiant « humain », scopée à un tenant donné.
+     * Auto-détecte le format de {@code identifier} :
+     * <ul>
+     *   <li>contient {@code '@'} → email (insensible à la casse) ;</li>
+     *   <li>commence par {@code 'OC-'} (insensible à la casse) → code de parrainage
+     *       ({@code referral_code}, comparé en majuscules) ;</li>
+     *   <li>sinon → téléphone (espaces / tirets / points retirés avant comparaison).</li>
+     * </ul>
+     *
+     * <p>Toujours filtré {@code tenant_id = :tenantId AND deleted_at IS NULL}. Vide si
+     * {@code identifier}/{@code tenantId} null/blank ou aucun membre actif correspondant
+     * dans le tenant. Contrat typé pour « Ma Famille » (PCC Lot 5) : résolution du proche
+     * à ajouter sans lire la table {@code users} en SQL natif hors module identity.</p>
+     */
+    Optional<UserName> findByIdentifier(String identifier, UUID tenantId);
 }

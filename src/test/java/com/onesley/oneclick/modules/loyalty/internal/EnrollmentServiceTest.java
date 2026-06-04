@@ -259,7 +259,7 @@ class EnrollmentServiceTest {
         Object[] row = { txId, clientId, 100, java.time.Instant.now() };
         when(query.getResultList()).thenReturn(java.util.Collections.singletonList(row));
         when(userDirectory.namesByIds(any())).thenReturn(List.of(
-            new UserDirectoryApi.UserName(clientId, "Ada", "L", null, "a@x.ma")));
+            new UserDirectoryApi.UserName(clientId, "Ada", "L", null, "a@x.ma", null)));
         try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
             adminContext(sec);
             var res = service.listRecentEnrollments(resto, 10);

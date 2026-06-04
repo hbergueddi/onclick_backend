@@ -2,6 +2,7 @@ package com.onesley.oneclick.core.notification.internal;
 
 import com.onesley.oneclick.core.notification.api.NotificationDtos.NotificationCreateDto;
 import com.onesley.oneclick.core.notification.api.NotificationDtos.PushReservationDto;
+import com.onesley.oneclick.shared.events.FamilyMemberAddedEvent;
 import com.onesley.oneclick.shared.events.FriendshipRequestedEvent;
 import com.onesley.oneclick.shared.events.FriendshipRespondedEvent;
 import com.onesley.oneclick.shared.events.ReservationCreatedEvent;
@@ -44,6 +45,7 @@ public class NotificationEventHandler {
 
     private static final String DEEP_LINK = "/pocket/oneclick?tab=suivi";
     private static final String COMMUNITY_LINK = "/pocket/circle";
+    private static final String FAMILY_LINK = "/pocket/pcc/family";
 
     /**
      * Demande d'amitié → notif in-app au destinataire. Server-side car le CLIENT
@@ -67,6 +69,18 @@ public class NotificationEventHandler {
             ? "Votre demande d'ami a été acceptée !"
             : "Votre demande d'ami a été refusée.";
         createInApp(event.recipientUserId(), "community", title, body, COMMUNITY_LINK);
+    }
+
+    /**
+     * Un membre ajoute un proche à sa liste « Ma Famille » (PCC Lot 5) → notif in-app au proche.
+     * Server-side car le CLIENT qui ajoute n'a pas {@code CREATE:NOTIFICATIONS} (un POST front
+     * 403'ait). Type {@code community} (relation sociale, valeur whitelistée du CHECK notifications.type).
+     */
+    @ApplicationModuleListener
+    public void onFamilyMemberAdded(FamilyMemberAddedEvent event) {
+        createInApp(event.relatedMemberId(), "community", "Ajouté à une famille 👨‍👩‍👧",
+            "Un membre vous a ajouté à sa liste famille. Vous pouvez retirer ce lien depuis votre profil.",
+            FAMILY_LINK);
     }
 
     /**

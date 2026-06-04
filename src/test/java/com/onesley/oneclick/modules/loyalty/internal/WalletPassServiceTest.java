@@ -42,7 +42,7 @@ class WalletPassServiceTest {
         UUID uid = UUID.randomUUID();
         UserDirectoryApi dir = mock(UserDirectoryApi.class);
         when(dir.nameById(eq(uid)))
-            .thenReturn(Optional.of(new UserDirectoryApi.UserName(uid, "Ali", "Bennani", "+212600000000", "ali@x.ma")));
+            .thenReturn(Optional.of(new UserDirectoryApi.UserName(uid, "Ali", "Bennani", "+212600000000", "ali@x.ma", null)));
 
         var dto = service(dir, 1500).getMetadata(uid);
 

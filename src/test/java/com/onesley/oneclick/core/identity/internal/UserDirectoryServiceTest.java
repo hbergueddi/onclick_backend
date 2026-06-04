@@ -43,7 +43,7 @@ class UserDirectoryServiceTest {
         Optional<UserName> res = service.nameById(id);
 
         assertThat(res).isPresent();
-        assertThat(res.get()).isEqualTo(new UserName(id, "Ali", "Bennani", "+212", "ali@x.ma"));
+        assertThat(res.get()).isEqualTo(new UserName(id, "Ali", "Bennani", "+212", "ali@x.ma", null));
     }
 
     @Test
@@ -77,8 +77,70 @@ class UserDirectoryServiceTest {
         List<UserName> res = service.namesByIds(List.of(a, b));
 
         assertThat(res).containsExactlyInAnyOrder(
-            new UserName(a, "Ali", "B", null, "a@x.ma"),
-            new UserName(b, "Sara", "C", "+1", "b@x.ma"));
+            new UserName(a, "Ali", "B", null, "a@x.ma", null),
+            new UserName(b, "Sara", "C", "+1", "b@x.ma", null));
         verify(repo).findAllByIds(List.of(a, b));
+    }
+
+    // ─── findByIdentifier (PCC Lot 5 — résolution proche scopée tenant) ─────────
+
+    @Test
+    void findByIdentifier_nullOrBlank_returnsEmpty_noRepoCall() {
+        UUID tenant = UUID.randomUUID();
+        assertThat(service.findByIdentifier(null, tenant)).isEmpty();
+        assertThat(service.findByIdentifier("   ", tenant)).isEmpty();
+        assertThat(service.findByIdentifier("ali@x.ma", null)).isEmpty();
+        verifyNoInteractions(repo);
+    }
+
+    @Test
+    void findByIdentifier_email_routesToEmailLookup() {
+        UUID tenant = UUID.randomUUID();
+        UUID id = UUID.randomUUID();
+        when(repo.findByEmailIgnoreCaseAndTenant("ali@x.ma", tenant))
+            .thenReturn(Optional.of(user(id, "Ali", "B", null, "ali@x.ma", false)));
+
+        Optional<UserName> res = service.findByIdentifier("  ali@x.ma ", tenant); // trim appliqué
+
+        assertThat(res).map(UserName::id).contains(id);
+        verify(repo).findByEmailIgnoreCaseAndTenant("ali@x.ma", tenant);
+        verify(repo, never()).findByReferralCodeIgnoreCaseAndTenant(any(), any());
+        verify(repo, never()).findByNormalizedPhoneAndTenant(any(), any());
+    }
+
+    @Test
+    void findByIdentifier_referralCode_routesToCodeLookup_caseInsensitivePrefix() {
+        UUID tenant = UUID.randomUUID();
+        UUID id = UUID.randomUUID();
+        when(repo.findByReferralCodeIgnoreCaseAndTenant("oc-abc123", tenant))
+            .thenReturn(Optional.of(user(id, "Sara", "C", null, "s@x.ma", false)));
+
+        // préfixe 'oc-' minuscule → détecté comme code (toUpperCase().startsWith("OC-")).
+        Optional<UserName> res = service.findByIdentifier("oc-abc123", tenant);
+
+        assertThat(res).map(UserName::id).contains(id);
+        verify(repo).findByReferralCodeIgnoreCaseAndTenant("oc-abc123", tenant);
+        verify(repo, never()).findByNormalizedPhoneAndTenant(any(), any());
+    }
+
+    @Test
+    void findByIdentifier_phone_routesToPhoneLookup() {
+        UUID tenant = UUID.randomUUID();
+        UUID id = UUID.randomUUID();
+        when(repo.findByNormalizedPhoneAndTenant("06 12-34.56", tenant))
+            .thenReturn(Optional.of(user(id, "Yan", "D", "0612345 6", "y@x.ma", false)));
+
+        Optional<UserName> res = service.findByIdentifier("06 12-34.56", tenant);
+
+        assertThat(res).map(UserName::id).contains(id);
+        verify(repo).findByNormalizedPhoneAndTenant("06 12-34.56", tenant);
+        verify(repo, never()).findByEmailIgnoreCaseAndTenant(any(), any());
+    }
+
+    @Test
+    void findByIdentifier_notFound_returnsEmpty() {
+        UUID tenant = UUID.randomUUID();
+        when(repo.findByEmailIgnoreCaseAndTenant("none@x.ma", tenant)).thenReturn(Optional.empty());
+        assertThat(service.findByIdentifier("none@x.ma", tenant)).isEmpty();
     }
 }

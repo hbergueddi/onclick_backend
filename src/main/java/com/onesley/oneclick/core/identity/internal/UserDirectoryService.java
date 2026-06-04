@@ -48,7 +48,27 @@ class UserDirectoryService implements UserDirectoryApi {
             .map(com.onesley.oneclick.core.identity.api.User::getTenantId);
     }
 
+    @Override
+    public Optional<UserName> findByIdentifier(String identifier, UUID tenantId) {
+        if (tenantId == null || identifier == null) return Optional.empty();
+        String clean = identifier.trim();
+        if (clean.isEmpty()) return Optional.empty();
+
+        // Auto-detect format (aligné sur le legacy RPC add_pcc_family_member) :
+        //   email (contient '@') | code parrainage (préfixe OC-) | sinon téléphone.
+        final Optional<com.onesley.oneclick.core.identity.api.User> match;
+        if (clean.contains("@")) {
+            match = userRepository.findByEmailIgnoreCaseAndTenant(clean, tenantId);
+        } else if (clean.toUpperCase().startsWith("OC-")) {
+            match = userRepository.findByReferralCodeIgnoreCaseAndTenant(clean, tenantId);
+        } else {
+            match = userRepository.findByNormalizedPhoneAndTenant(clean, tenantId);
+        }
+        // Le filtre deleted_at IS NULL est porté par chaque requête repo.
+        return match.map(this::toName);
+    }
+
     private UserName toName(com.onesley.oneclick.core.identity.api.User u) {
-        return new UserName(u.getId(), u.getFirstName(), u.getLastName(), u.getPhone(), u.getEmail());
+        return new UserName(u.getId(), u.getFirstName(), u.getLastName(), u.getPhone(), u.getEmail(), u.getAvatarUrl());
     }
 }

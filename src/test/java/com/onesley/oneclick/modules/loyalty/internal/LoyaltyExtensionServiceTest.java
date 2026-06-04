@@ -268,7 +268,7 @@ class LoyaltyExtensionServiceTest {
         Object[] row = { clientId, 30, Instant.now(), resto, "Resto" };
         when(query.getResultList()).thenReturn(Collections.singletonList(row));
         when(userDirectory.namesByIds(any())).thenReturn(List.of(
-            new UserDirectoryApi.UserName(clientId, "Ada", "L", null, null)));
+            new UserDirectoryApi.UserName(clientId, "Ada", "L", null, null, null)));
         try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
             sec.when(SecurityHelper::isAdmin).thenReturn(true);
             var out = service.findExpiredPointsAdmin(resto, 10);

@@ -36,6 +36,49 @@ public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificat
     @Query("SELECT u FROM User u WHERE u.id IN :ids AND u.deletedAt IS NULL")
     java.util.List<User> findAllByIds(@Param("ids") java.util.Collection<UUID> ids);
 
+    /**
+     * Résolution « Ma Famille » (PCC Lot 5) — email scopé tenant, insensible à la casse,
+     * soft-deletes exclus. Le filtre {@code tenant_id} garantit qu'on ne résout qu'un membre
+     * du tenant du caller (générique, pas de tenant en dur).
+     */
+    @Query("""
+        SELECT u FROM User u
+        WHERE LOWER(u.email) = LOWER(:email)
+          AND u.tenantId = :tenantId
+          AND u.deletedAt IS NULL
+        """)
+    Optional<User> findByEmailIgnoreCaseAndTenant(@Param("email") String email, @Param("tenantId") UUID tenantId);
+
+    /**
+     * Résolution « Ma Famille » — code de parrainage scopé tenant (comparé en majuscules),
+     * soft-deletes exclus.
+     */
+    @Query("""
+        SELECT u FROM User u
+        WHERE UPPER(u.referralCode) = UPPER(:code)
+          AND u.tenantId = :tenantId
+          AND u.deletedAt IS NULL
+        """)
+    Optional<User> findByReferralCodeIgnoreCaseAndTenant(@Param("code") String code, @Param("tenantId") UUID tenantId);
+
+    /**
+     * Résolution « Ma Famille » — téléphone scopé tenant, normalisé (espaces / tirets /
+     * points retirés des 2 côtés, exactement comme le legacy RPC). Native query : la
+     * normalisation par {@code REPLACE} imbriqués n'est pas exprimable en JPQL portable.
+     * {@code LIMIT 1} : si 2 membres partagent un numéro normalisé (improbable, phone UNIQUE),
+     * on en prend un déterministe par id.
+     */
+    @Query(value = """
+        SELECT * FROM users u
+        WHERE REPLACE(REPLACE(REPLACE(u.phone, ' ', ''), '-', ''), '.', '')
+            = REPLACE(REPLACE(REPLACE(:phone, ' ', ''), '-', ''), '.', '')
+          AND u.tenant_id = :tenantId
+          AND u.deleted_at IS NULL
+        ORDER BY u.id
+        LIMIT 1
+        """, nativeQuery = true)
+    Optional<User> findByNormalizedPhoneAndTenant(@Param("phone") String phone, @Param("tenantId") UUID tenantId);
+
     /** Existence rapide par email (signup uniqueness check). */
     boolean existsByEmailIgnoreCase(String email);
 
