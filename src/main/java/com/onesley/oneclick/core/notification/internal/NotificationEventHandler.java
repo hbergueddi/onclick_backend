@@ -3,6 +3,8 @@ package com.onesley.oneclick.core.notification.internal;
 import com.onesley.oneclick.core.notification.api.NotificationDtos.NotificationCreateDto;
 import com.onesley.oneclick.core.notification.api.NotificationDtos.PushReservationDto;
 import com.onesley.oneclick.shared.events.FamilyMemberAddedEvent;
+import com.onesley.oneclick.shared.events.FeedbackCreatedEvent;
+import com.onesley.oneclick.shared.events.FeedbackRepliedEvent;
 import com.onesley.oneclick.shared.events.FriendshipRequestedEvent;
 import com.onesley.oneclick.shared.events.FriendshipRespondedEvent;
 import com.onesley.oneclick.shared.events.ReservationCreatedEvent;
@@ -46,6 +48,7 @@ public class NotificationEventHandler {
     private static final String DEEP_LINK = "/pocket/oneclick?tab=suivi";
     private static final String COMMUNITY_LINK = "/pocket/circle";
     private static final String FAMILY_LINK = "/pocket/pcc/family";
+    private static final String FEEDBACK_OWNER_LINK = "/prodesk/pcc-feedbacks";
 
     /**
      * Demande d'amitié → notif in-app au destinataire. Server-side car le CLIENT
@@ -81,6 +84,32 @@ public class NotificationEventHandler {
         createInApp(event.relatedMemberId(), "community", "Ajouté à une famille 👨‍👩‍👧",
             "Un membre vous a ajouté à sa liste famille. Vous pouvez retirer ce lien depuis votre profil.",
             FAMILY_LINK);
+    }
+
+    /**
+     * Avis membre (PCC Lot 7) → notif in-app aux destinataires résolus côté feedback
+     * (owners du resto ciblé + tenant-admins), auteur exclu. Server-side (le CLIENT qui
+     * envoie n'a pas {@code CREATE:NOTIFICATIONS}). Type {@code community} (whitelisté).
+     */
+    @ApplicationModuleListener
+    public void onFeedbackCreated(FeedbackCreatedEvent event) {
+        if (event.recipientUserIds() == null || event.recipientUserIds().isEmpty()) return;
+        String title = "happy".equals(event.sentiment()) ? "Nouvel avis positif 💚" : "Nouvel avis à traiter 🟠";
+        String body = "Un membre a laissé un avis" + (event.category() != null ? " (" + event.category() + ")." : ".");
+        for (UUID recipient : event.recipientUserIds()) {
+            createInApp(recipient, "community", title, body, FEEDBACK_OWNER_LINK);
+        }
+    }
+
+    /**
+     * Réponse d'Adil (owner/admin) à un avis (PCC Lot 7) → notif in-app au membre auteur,
+     * deep-link vers le thread. Server-side (cohérent avec les autres notifs relationnelles).
+     */
+    @ApplicationModuleListener
+    public void onFeedbackReplied(FeedbackRepliedEvent event) {
+        String link = "/pocket/pcc/feedback?thread=" + event.feedbackId();
+        createInApp(event.memberId(), "community", "Réponse à votre avis ✍️",
+            "Adil a répondu à votre avis. Touchez pour lire la réponse.", link);
     }
 
     /**
