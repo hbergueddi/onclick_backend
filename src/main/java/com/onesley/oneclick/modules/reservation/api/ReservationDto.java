@@ -36,6 +36,8 @@ public record ReservationDto(
     String status,
     String notes,
     Instant createdAt,
+    // ─── Feature #4 — flag annulation tardive (toujours rempli) ───────────
+    boolean lateCancellation,
     // ─── Joins frontend (anti N+1) — null pour les lectures unitaires ──────
     String clientFirstName,
     String clientLastName,
@@ -53,10 +55,11 @@ public record ReservationDto(
     /** Constructeur "léger" — utilisé par {@code Reservation.toDto()} pour les écritures (champs joints null). */
     public ReservationDto(
         UUID id, UUID tenantId, UUID clientId, UUID restaurantId, UUID tableId, UUID serviceId,
-        Instant reservationAt, Integer guestCount, String status, String notes, Instant createdAt
+        Instant reservationAt, Integer guestCount, String status, String notes, Instant createdAt,
+        boolean lateCancellation
     ) {
         this(id, tenantId, clientId, restaurantId, tableId, serviceId,
-            reservationAt, guestCount, status, notes, createdAt,
+            reservationAt, guestCount, status, notes, createdAt, lateCancellation,
             null, null, null, null, null, null, null, null, null, null, null);
     }
 }

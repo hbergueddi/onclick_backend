@@ -169,6 +169,49 @@ class ReservationServiceTest {
         verify(entityManager, never()).getReference(eq(User.class), any()); // pas d'acteur résolu
     }
 
+    // ─── Feature #4 — no_show : lateCancellation + no_show_marked_at ──────────────
+
+    @Test
+    void changeStatus_noShow_lateCancellationTrue_persistsFlag_andStampsMarkedAt() {
+        Reservation r = reservation("confirmed");
+        when(repository.findById(any())).thenReturn(Optional.of(r));
+        when(repository.save(any(Reservation.class))).thenAnswer(i -> i.getArgument(0));
+
+        ReservationDto dto = service.changeStatus(UUID.randomUUID(), "no_show", null, "absent", true);
+
+        assertThat(dto.status()).isEqualTo("no_show");
+        assertThat(dto.lateCancellation()).isTrue();
+        assertThat(r.isLateCancellation()).isTrue();
+        assertThat(r.getNoShowMarkedAt()).isNotNull();
+        verify(eventPublisher).publishEvent(any(ReservationStatusChangedEvent.class));
+    }
+
+    @Test
+    void changeStatus_noShow_defaultLateCancellationFalse_butStampsMarkedAt() {
+        Reservation r = reservation("confirmed");
+        when(repository.findById(any())).thenReturn(Optional.of(r));
+        when(repository.save(any(Reservation.class))).thenAnswer(i -> i.getArgument(0));
+
+        // overload sans lateCancellation → false par défaut, mais no_show_marked_at posé.
+        ReservationDto dto = service.changeStatus(UUID.randomUUID(), "no_show", null, "absent");
+
+        assertThat(dto.lateCancellation()).isFalse();
+        assertThat(r.isLateCancellation()).isFalse();
+        assertThat(r.getNoShowMarkedAt()).isNotNull();
+    }
+
+    @Test
+    void changeStatus_nonNoShow_doesNotStampMarkedAt() {
+        Reservation r = reservation("pending");
+        when(repository.findById(any())).thenReturn(Optional.of(r));
+        when(repository.save(any(Reservation.class))).thenAnswer(i -> i.getArgument(0));
+
+        service.changeStatus(UUID.randomUUID(), "confirmed", null, null, true);
+
+        assertThat(r.getNoShowMarkedAt()).isNull(); // lateCancellation ignoré hors no_show
+        assertThat(r.isLateCancellation()).isFalse();
+    }
+
     // ─── counts / findAll / batch ────────────────────────────────────────────────
 
     @Test

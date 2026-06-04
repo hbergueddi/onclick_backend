@@ -73,6 +73,22 @@ public class Reservation extends SoftDeletableAuditedEntity {
     @Column(name = "notes", length = 1024)
     @Setter private String notes;
 
+    /**
+     * Feature #4 — true si le passage en {@code no_show} fait suite à une annulation
+     * tardive (le client a prévenu trop tard). Rend la résa NON contestable et la
+     * pénalité non reversable. Défaut false.
+     */
+    @Column(name = "late_cancellation", nullable = false)
+    @Setter private boolean lateCancellation = false;
+
+    /**
+     * Feature #3/#4 — horodatage du passage {@code status → no_show}. Base de calcul
+     * des fenêtres de contestation (resto 0-1h, support 1-48h, expiré 48h+). NULL tant
+     * que la résa n'est pas marquée absente.
+     */
+    @Column(name = "no_show_marked_at")
+    @Setter private Instant noShowMarkedAt;
+
     public Reservation(UUID id, Tenant tenant, User client, UUID restaurantId,
                        Instant reservationAt, Integer guestCount) {
         this.id = id;
@@ -86,7 +102,7 @@ public class Reservation extends SoftDeletableAuditedEntity {
     /** Mapping vers le DTO public exposé hors du module. */
     public ReservationDto toDto() {
         return new ReservationDto(id, tenantId, clientId, restaurantId, tableId, serviceId,
-            reservationAt, guestCount, status, notes, getCreatedAt());
+            reservationAt, guestCount, status, notes, getCreatedAt(), lateCancellation);
     }
 
     @Override

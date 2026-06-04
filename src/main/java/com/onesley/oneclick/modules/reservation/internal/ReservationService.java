@@ -92,6 +92,7 @@ public class ReservationService {
             v.getStatus(),
             v.getNotes(),
             v.getCreatedAt(),
+            Boolean.TRUE.equals(v.getLateCancellation()),
             v.getClientFirstName(),
             v.getClientLastName(),
             v.getClientPhone(),
@@ -244,6 +245,26 @@ public class ReservationService {
 
     @Transactional
     public ReservationDto changeStatus(UUID id, String newStatus, UUID changedById, String reason) {
+        return changeStatus(id, newStatus, changedById, reason, false);
+    }
+
+    /**
+     * Feature #4 — change le statut, avec gestion de l'annulation tardive.
+     *
+     * <p>Sur passage en {@code no_show} :
+     * <ul>
+     *   <li>{@code late_cancellation} est persisté (le client a annulé trop tard → la
+     *       résa est NON contestable, cf {@code NoShowDisputeService});</li>
+     *   <li>{@code no_show_marked_at} est horodaté (base de calcul des fenêtres de
+     *       contestation).</li>
+     * </ul>
+     * La pénalité de réputation (no_show → -X, honored → +X) est appliquée par le
+     * <b>listener loyalty</b> sur {@link ReservationStatusChangedEvent} — JAMAIS d'appel
+     * direct reservation→loyalty (frontière Modulith).
+     */
+    @Transactional
+    public ReservationDto changeStatus(UUID id, String newStatus, UUID changedById, String reason,
+                                       boolean lateCancellation) {
         if (!VALID_STATUSES.contains(newStatus)) {
             throw new BadRequestException("Status invalide : " + newStatus);
         }
@@ -255,6 +276,10 @@ public class ReservationService {
             return r.toDto(); // no-op
         }
         r.setStatus(newStatus);
+        if ("no_show".equals(newStatus)) {
+            r.setLateCancellation(lateCancellation);
+            r.setNoShowMarkedAt(Instant.now());
+        }
         User actor = changedById != null ? entityManager.getReference(User.class, changedById) : null;
         ReservationStatusHistory hist = new ReservationStatusHistory(
             UUID.randomUUID(), r, oldStatus, newStatus, actor

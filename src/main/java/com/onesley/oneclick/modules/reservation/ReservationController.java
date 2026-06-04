@@ -68,7 +68,12 @@ public class ReservationController {
     private final ReservationGuestService guestService;
     private final RestaurantAccessGuard restaurantAccessGuard;
 
-    public record StatusChangeDto(String status, UUID changedById, String reason) {}
+    /**
+     * Feature #4 — {@code lateCancellation} optionnel (défaut false) : pris en compte
+     * uniquement lorsque {@code status == "no_show"} (annulation tardive → résa NON
+     * contestable, pénalité non reversable).
+     */
+    public record StatusChangeDto(String status, UUID changedById, String reason, Boolean lateCancellation) {}
 
     /**
      * P2 owner-check : accès EN ÉCRITURE à une réservation = client-owner, staff actif
@@ -156,7 +161,8 @@ public class ReservationController {
         // findById enforce l'accès en lecture (404 si absent, 403 si aucun accès) ;
         // on resserre ensuite en écriture (exclut le simple invité).
         requireReservationWriteAccess(service.findById(id));
-        return service.changeStatus(id, body.status(), body.changedById(), body.reason());
+        boolean lateCancellation = Boolean.TRUE.equals(body.lateCancellation());
+        return service.changeStatus(id, body.status(), body.changedById(), body.reason(), lateCancellation);
     }
 
     @PostMapping("/search")
