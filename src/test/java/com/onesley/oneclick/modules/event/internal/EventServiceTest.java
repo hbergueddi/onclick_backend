@@ -9,12 +9,15 @@ import com.onesley.oneclick.modules.event.api.Event;
 import com.onesley.oneclick.modules.event.api.EventDtos.EventCreateDto;
 import com.onesley.oneclick.modules.event.api.EventDtos.EventPatchDto;
 import com.onesley.oneclick.modules.event.api.EventDtos.ParticipationCreateDto;
+import com.onesley.oneclick.security.SecurityHelper;
 import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.quality.Strictness;
 import org.springframework.data.domain.Page;
@@ -32,6 +35,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -49,17 +53,34 @@ class EventServiceTest {
     @Mock EntityManager entityManager;
     @InjectMocks EventService service;
 
+    /**
+     * ABAC self-scope (rsvp/cancelRsvp) lit {@link SecurityHelper} en statique.
+     * On simule un appelant staff/admin pour TOUTE la classe : {@code rsvp} utilise
+     * alors {@code dto.userId()} (= {@link #userId}) — ce qui matche les stubs
+     * {@code findByEventIdAndUserId(eventId, userId)} — et {@code cancelRsvp} ne lève
+     * pas Forbidden. Le scénario membre/anti-spoof est couvert en L4 (intégration).
+     */
+    private MockedStatic<SecurityHelper> securityMock;
+
     private final UUID eventId = UUID.randomUUID();
     private final UUID userId = UUID.randomUUID();
 
     @BeforeEach
     void setup() {
+        securityMock = mockStatic(SecurityHelper.class);
+        securityMock.when(SecurityHelper::isStaffOrAdmin).thenReturn(true);
+        securityMock.when(SecurityHelper::currentUserId).thenReturn(userId);
         ReflectionTestUtils.setField(service, "entityManager", entityManager);
         lenient().when(entityManager.getReference(eq(Tenant.class), any())).thenReturn(new Tenant(UUID.randomUUID(), "T", "t"));
         lenient().when(entityManager.getReference(eq(Event.class), any())).thenReturn(event(null));
         lenient().when(entityManager.getReference(eq(User.class), any())).thenReturn(new User(UUID.randomUUID(), null, "u@x.ma", "h", "U", "U"));
         lenient().when(eventRepo.save(any())).thenAnswer(i -> i.getArgument(0));
         lenient().when(participationRepo.save(any())).thenAnswer(i -> i.getArgument(0));
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (securityMock != null) securityMock.close();
     }
 
     private Event event(Integer capacity) {

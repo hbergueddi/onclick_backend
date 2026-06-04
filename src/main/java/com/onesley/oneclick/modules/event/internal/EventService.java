@@ -4,7 +4,9 @@ import com.onesley.oneclick.core.identity.api.User;
 import com.onesley.oneclick.core.tenant.api.Tenant;
 import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.ConflictException;
+import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
+import com.onesley.oneclick.security.SecurityHelper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.data.domain.Page;
@@ -124,13 +126,18 @@ public class EventService {
 
     @Transactional
     public ParticipationDto rsvp(ParticipationCreateDto dto) {
+        // ABAC self-scope : un membre ne RSVP que pour LUI-MÊME (anti-spoof) ;
+        // staff/admin peuvent RSVP pour autrui (ex. inscription au guichet).
+        final UUID targetUserId =
+            SecurityHelper.isStaffOrAdmin() ? dto.userId() : SecurityHelper.currentUserId();
+
         // Sprint D — Vérifs Elite : capacity + duplicates
         Event event = eventRepo.findById(dto.eventId())
             .filter(e -> e.getDeletedAt() == null)
             .orElseThrow(() -> new NotFoundException("Event", dto.eventId()));
 
         // Anti-doublon : 1 RSVP par user par event (UNIQUE constraint DB)
-        participationRepo.findByEventIdAndUserId(dto.eventId(), dto.userId())
+        participationRepo.findByEventIdAndUserId(dto.eventId(), targetUserId)
             .ifPresent(p -> {
                 throw new ConflictException("User déjà RSVP sur cet event");
             });
@@ -143,11 +150,16 @@ public class EventService {
         }
 
         Event eventRef = entityManager.getReference(Event.class, dto.eventId());
-        User userRef = entityManager.getReference(User.class, dto.userId());
+        User userRef = entityManager.getReference(User.class, targetUserId);
         EventParticipation p = new EventParticipation(UUID.randomUUID(), eventRef, userRef, status);
         if (dto.plusOneName() != null) p.setPlusOneName(dto.plusOneName());
 
         EventParticipation saved = participationRepo.save(p);
+        // user_id/event_id sont insertable=false (colonnes portées par les associations) :
+        // flush + refresh pour que le DTO de réponse porte le userId/eventId persistés
+        // (sinon null dans la réponse POST — cohérent avec un GET ultérieur).
+        entityManager.flush();
+        entityManager.refresh(saved);
 
         // Atomique : increment places_taken (denormalisé pour fast read)
         if ("going".equals(status)) {
@@ -164,6 +176,10 @@ public class EventService {
      */
     @Transactional
     public void cancelRsvp(UUID eventId, UUID userId) {
+        // ABAC self-scope : un membre n'annule que SON propre RSVP ; staff/admin pour autrui.
+        if (!SecurityHelper.isStaffOrAdmin() && !userId.equals(SecurityHelper.currentUserId())) {
+            throw new ForbiddenException("Annulation RSVP limitée à son propre compte");
+        }
         EventParticipation p = participationRepo.findByEventIdAndUserId(eventId, userId)
             .orElseThrow(() -> new NotFoundException("EventParticipation for user " + userId, eventId));
 

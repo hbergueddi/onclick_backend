@@ -30,6 +30,22 @@ class EventFlowIntegrationTest extends AbstractIntegrationTest {
         return jdbc.queryForObject("SELECT id::text FROM users WHERE deleted_at IS NULL LIMIT 1", String.class);
     }
 
+    /** Crée un CLIENT jetable via l'API admin (users isolés → ABAC déterministe, self-clean). */
+    private String createClient(String admin) throws Exception {
+        String roleId = jdbc.queryForObject("SELECT id::text FROM roles WHERE code='CLIENT' LIMIT 1", String.class);
+        ResponseEntity<String> r = restTemplate.exchange(url("/api/users"), HttpMethod.POST, jsonJwtEntity(Map.of(
+            "roleId", roleId, "email", "evt-abac-" + UUID.randomUUID() + "@x.ma",
+            "phone", "+2126" + (1_000_0000 + (int) (Math.random() * 8_999_9999)),
+            "password", "password1234", "firstName", "Evt", "lastName", "Abac"), admin), String.class);
+        assertThat(r.getStatusCode().is2xxSuccessful())
+            .as("création CLIENT jetable — reçu %s, body=%s", r.getStatusCode(), r.getBody()).isTrue();
+        return om.readTree(r.getBody()).get("id").asText();
+    }
+
+    private String bearerCl(String userId) {
+        return jwtIssuer.issueAccessToken(UUID.fromString(userId), "CLIENT").token();
+    }
+
     @Test
     void event_fullLifecycle_withRsvp() throws Exception {
         String admin = adminBearer();
@@ -146,5 +162,67 @@ class EventFlowIntegrationTest extends AbstractIntegrationTest {
 
         // cleanup
         restTemplate.exchange(url("/api/events/" + eventId), HttpMethod.DELETE, jwtEntity(admin), String.class);
+    }
+
+    /**
+     * ABAC self-scope (Lot 0, niveau service) sur la stack réelle (filter chain → JwtDecoder →
+     * UserRoleAuthoritiesConverter → @PreAuthorize → SecurityHelper → EventService → DB), avec
+     * des CLIENTs jetables (isolés → déterministe, pas de RSVP résiduel du seed) :
+     *
+     * <ul>
+     *   <li>CLIENT A RSVP pour LUI-MÊME → 201, et la participation créée est bien LA SIENNE
+     *       ({@code userId} = A dans le DTO retourné + visible via {@code by-user/A}).</li>
+     *   <li>CLIENT A tente d'annuler le RSVP de CLIENT B → 403 (ForbiddenException ABAC).</li>
+     * </ul>
+     */
+    @Test
+    void rsvp_disposableClient_selfScopedCreate_andForbiddenCancelOther() throws Exception {
+        String admin = adminBearer();
+        String clientA = createClient(admin);
+        String clientB = createClient(admin);
+        String bearerA = bearerCl(clientA);
+        String bearerB = bearerCl(clientB);
+
+        // Event actif (capacité large) créé par l'admin.
+        ResponseEntity<String> post = restTemplate.exchange(url("/api/events"), HttpMethod.POST,
+            jsonJwtEntity(Map.of(
+                "tenantId", tenantId(), "title", "ABAC RSVP self-scope",
+                "eventAt", Instant.now().plus(7, ChronoUnit.DAYS).toString(),
+                "capacity", 50, "isActive", true), admin), String.class);
+        assertThat(post.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        String eventId = om.readTree(post.getBody()).get("id").asText();
+
+        // A RSVP pour LUI-MÊME → 201 ; la participation créée porte SON userId.
+        ResponseEntity<String> rsvpA = restTemplate.exchange(url("/api/events/participations"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("eventId", eventId, "userId", clientA, "status", "going"), bearerA), String.class);
+        assertThat(rsvpA.getStatusCode())
+            .as("A RSVP self → 201, body=%s", rsvpA.getBody()).isEqualTo(HttpStatus.CREATED);
+        JsonNode created = om.readTree(rsvpA.getBody());
+        assertThat(created.get("userId").asText()).as("participation rattachée à A").isEqualTo(clientA);
+        assertThat(created.get("eventId").asText()).isEqualTo(eventId);
+
+        // …et A retrouve SA participation via by-user/A (lecture self autorisée).
+        ResponseEntity<String> mine = restTemplate.exchange(
+            url("/api/events/participations/by-user/" + clientA), HttpMethod.GET, jwtEntity(bearerA), String.class);
+        assertThat(mine.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(mine.getBody()).contains(eventId);
+
+        // B RSVP pour LUI-MÊME (prépare la cible du test négatif).
+        assertThat(restTemplate.exchange(url("/api/events/participations"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("eventId", eventId, "userId", clientB, "status", "going"), bearerB), String.class)
+            .getStatusCode()).isEqualTo(HttpStatus.CREATED);
+
+        // A tente d'annuler le RSVP de B → 403 (ABAC : annulation limitée à son propre compte).
+        assertThat(restTemplate.exchange(
+            url("/api/events/participations/by-event/" + eventId + "/user/" + clientB),
+            HttpMethod.DELETE, jwtEntity(bearerA), String.class).getStatusCode())
+            .as("A annule le RSVP de B → 403").isEqualTo(HttpStatus.FORBIDDEN);
+
+        // self-clean : participations (CASCADE event delete), event, users jetables.
+        restTemplate.exchange(url("/api/events/" + eventId), HttpMethod.DELETE, jwtEntity(admin), String.class);
+        jdbc.update("DELETE FROM event_participations WHERE event_id = ?::uuid", UUID.fromString(eventId));
+        for (String u : java.util.List.of(clientA, clientB)) {
+            restTemplate.exchange(url("/api/users/" + u), HttpMethod.DELETE, jwtEntity(admin), String.class);
+        }
     }
 }
