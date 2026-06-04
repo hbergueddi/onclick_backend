@@ -97,6 +97,9 @@ public class ReservationService {
             v.getClientFirstName(),
             v.getClientLastName(),
             v.getClientPhone(),
+            // CSV → List<String> : array_to_string(u.allergens, ',') côté SQL (cf
+            // ReservationWithJoinsView.getClientAllergens). Vide → liste vide.
+            splitAllergens(v.getClientAllergens()),
             v.getRestaurantName(),
             v.getRestaurantCity(),
             v.getRestaurantImage(),
@@ -106,6 +109,16 @@ public class ReservationService {
             v.getRefusalReason(),
             v.getCancellationReason()
         );
+    }
+
+    /**
+     * Découpe le CSV d'allergènes (issu de {@code array_to_string(u.allergens, ',')})
+     * en {@code List<String>}. Null ou vide → liste vide (jamais null dans le DTO).
+     * Les slugs d'allergènes sont en {@code [a-z_]} (sans virgule) → split sûr.
+     */
+    private static List<String> splitAllergens(String csv) {
+        if (csv == null || csv.isBlank()) return List.of();
+        return java.util.Arrays.asList(csv.split(","));
     }
 
     public ReservationDto findById(UUID id) {

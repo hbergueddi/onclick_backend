@@ -1,6 +1,7 @@
 package com.onesley.oneclick.core.identity.api;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -23,6 +24,7 @@ public record UserDto(
     String lastName,
     String avatarUrl,
     String city,
+    List<String> allergens,
     String language,
     String status,
     boolean accountNonExpired,

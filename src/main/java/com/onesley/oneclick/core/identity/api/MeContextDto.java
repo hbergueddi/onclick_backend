@@ -28,6 +28,7 @@ public record MeContextDto(
         String phone,
         String avatarUrl,
         String city,
+        List<String> allergens,
         String language,
         String status,
         UUID tenantId

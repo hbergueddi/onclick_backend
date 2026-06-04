@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.reservation.api;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -44,6 +45,11 @@ public record ReservationDto(
     String clientFirstName,
     String clientLastName,
     String clientPhone,
+    // ─── Visibilité staff (V65) — allergènes du client sur la fiche réservation ──
+    // Rempli uniquement par les lectures enrichies (findAll / by-restaurants) ;
+    // null/[] pour les lectures unitaires (Reservation.toDto). La résa est déjà
+    // scopée (VIEW:RESERVATIONS + ABAC) → pas de nouvelle autorité.
+    List<String> clientAllergens,
     String restaurantName,
     String restaurantCity,
     String restaurantImage,
@@ -62,6 +68,9 @@ public record ReservationDto(
     ) {
         this(id, tenantId, clientId, restaurantId, tableId, serviceId,
             reservationAt, guestCount, status, notes, createdAt, lateCancellation, noShowMarkedAt,
-            null, null, null, null, null, null, null, null, null, null, null);
+            // joints (clientFirstName, clientLastName, clientPhone, clientAllergens,
+            // restaurantName, restaurantCity, restaurantImage, mealServiceName,
+            // zoneName, tableNumber, refusalReason, cancellationReason) → null pour les écritures.
+            null, null, null, null, null, null, null, null, null, null, null, null);
     }
 }

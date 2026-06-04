@@ -39,6 +39,17 @@ public interface ReservationWithJoinsView {
     String getClientFirstName();
     String getClientLastName();
     String getClientPhone();
+    /**
+     * Allergènes du client, projetés via {@code array_to_string(u.allergens, ',')}.
+     * <p>On expose un {@code String} (CSV) plutôt qu'un {@code String[]} : les
+     * projections par interface Spring Data sur une {@code nativeQuery} mappent
+     * les colonnes depuis le {@code ResultSet} JDBC brut, où un {@code text[]}
+     * Postgres arrive en {@code java.sql.Array} — non assignable de façon fiable
+     * à un getter {@code String[]} (aucun précédent de ce type dans le repo). Le
+     * CSV est splitté en {@code List<String>} dans le mapper DTO. Les slugs
+     * d'allergènes sont en {@code [a-z_]} (sans virgule), le split est donc sûr.
+     */
+    String getClientAllergens();
     String getRestaurantName();
     String getRestaurantCity();
     String getRestaurantImage();

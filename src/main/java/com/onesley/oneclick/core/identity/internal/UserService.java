@@ -155,6 +155,7 @@ public class UserService {
         }
         if (dto.avatarUrl() != null) user.setAvatarUrl(dto.avatarUrl());
         if (dto.city() != null) user.setCity(dto.city());
+        if (dto.allergens() != null) user.setAllergens(dto.allergens().toArray(new String[0]));
         if (dto.language() != null) user.setLanguage(dto.language());
         return repository.save(user).toDto();
     }
@@ -344,7 +345,9 @@ public class UserService {
 
         return new MeContextDto(
             new MeContextDto.UserSummary(u.getId(), u.getEmail(), u.getFirstName(), u.getLastName(),
-                u.getPhone(), u.getAvatarUrl(), u.getCity(), u.getLanguage(), u.getStatus(), u.getTenantId()),
+                u.getPhone(), u.getAvatarUrl(), u.getCity(),
+                u.getAllergens() == null ? List.of() : java.util.Arrays.asList(u.getAllergens()),
+                u.getLanguage(), u.getStatus(), u.getTenantId()),
             role != null ? new MeContextDto.RoleSummary(role.getCode(), role.getName()) : null,
             menus,
             List.copyOf(permissions)

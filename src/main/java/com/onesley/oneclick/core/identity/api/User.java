@@ -9,9 +9,13 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.proxy.HibernateProxy;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import lombok.AccessLevel;
@@ -82,6 +86,17 @@ public class User extends SoftDeletableAuditedEntity {
     @Column(name = "city", length = 128)
     @Setter private String city;
 
+    /**
+     * Allergènes du user (profil client) — V65, parité legacy {@code profiles.allergens}.
+     * Liste de slugs EU (gluten, lactose, …). Éditable via PATCH /me (UPDATE:PROFILE) ;
+     * visible par le staff sur la fiche réservation (read-view). Mappé directement sur
+     * la colonne PostgreSQL {@code text[]} (même pattern que {@code Restaurant.tags}).
+     * NOT NULL côté DB (DEFAULT '{}') → jamais null, on initialise à un tableau vide.
+     */
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Column(name = "allergens", columnDefinition = "text[]")
+    @Setter private String[] allergens = new String[0];
+
     @Column(name = "language", nullable = false, length = 64)
     @Setter private String language = "fr";
 
@@ -127,7 +142,9 @@ public class User extends SoftDeletableAuditedEntity {
         return new UserDto(
             id, tenantId, roleId,
             role != null ? role.getCode() : null,
-            email, phone, firstName, lastName, avatarUrl, city, language, status,
+            email, phone, firstName, lastName, avatarUrl, city,
+            allergens == null ? List.of() : Arrays.asList(allergens),
+            language, status,
             accountNonExpired, accountNonLocked, credentialsNonExpired, enabled,
             lastLoginAt, getCreatedAt(), referralCode
         );

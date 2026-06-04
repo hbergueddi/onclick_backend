@@ -159,7 +159,7 @@ class UserServiceTest {
     @Test
     void patch_notFound() {
         when(repository.findById(any())).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> service.patch(UUID.randomUUID(), new UserUpdateDto("F", null, null, null, null, null)))
+        assertThatThrownBy(() -> service.patch(UUID.randomUUID(), new UserUpdateDto("F", null, null, null, null, null, null)))
             .isInstanceOf(NotFoundException.class);
     }
 
@@ -168,10 +168,42 @@ class UserServiceTest {
         User u = user();
         when(repository.findById(u.getId())).thenReturn(Optional.of(u));
         when(repository.existsByPhone(any())).thenReturn(false);
-        service.patch(u.getId(), new UserUpdateDto("Nouveau", "Nom", "0700", "http://avatar", "Casablanca", "en"));
+        service.patch(u.getId(), new UserUpdateDto("Nouveau", "Nom", "0700", "http://avatar", "Casablanca", "en",
+            List.of("gluten", "lactose")));
         assertThat(u.getFirstName()).isEqualTo("Nouveau");
         assertThat(u.getPhone()).isEqualTo("0700");
         assertThat(u.getCity()).isEqualTo("Casablanca"); // ITEM 1 — city persisté via patch self-service
+        // V65 — allergènes persistés via patch self-service : List<String> → String[].
+        assertThat(u.getAllergens()).containsExactly("gluten", "lactose");
+    }
+
+    /**
+     * V65 — patch allergens : la liste fournie écrase le tableau de l'entité.
+     * Cas isolé (sans toucher aux autres champs) pour prouver l'indépendance du champ.
+     */
+    @Test
+    void patch_allergens_setsArray() {
+        User u = user();
+        u.setAllergens(new String[]{"eggs"}); // valeur initiale
+        when(repository.findById(u.getId())).thenReturn(Optional.of(u));
+        service.patch(u.getId(), new UserUpdateDto(null, null, null, null, null, null,
+            List.of("peanuts", "soy", "fish")));
+        assertThat(u.getAllergens()).containsExactly("peanuts", "soy", "fish");
+    }
+
+    /**
+     * V65 — patch SANS allergens (null) : le tableau existant reste inchangé
+     * (même garde {@code if (dto.allergens() != null)} que pour city/language).
+     */
+    @Test
+    void patch_allergensNull_leavesArrayUnchanged() {
+        User u = user();
+        u.setAllergens(new String[]{"celery", "mustard"});
+        when(repository.findById(u.getId())).thenReturn(Optional.of(u));
+        when(repository.existsByPhone(any())).thenReturn(false);
+        service.patch(u.getId(), new UserUpdateDto("OnlyName", null, null, null, null, null, null));
+        assertThat(u.getFirstName()).isEqualTo("OnlyName");
+        assertThat(u.getAllergens()).containsExactly("celery", "mustard"); // inchangé
     }
 
     @Test
@@ -179,7 +211,7 @@ class UserServiceTest {
         User u = user();
         when(repository.findById(u.getId())).thenReturn(Optional.of(u));
         when(repository.existsByPhone(any())).thenReturn(true);
-        assertThatThrownBy(() -> service.patch(u.getId(), new UserUpdateDto(null, null, "0700", null, null, null)))
+        assertThatThrownBy(() -> service.patch(u.getId(), new UserUpdateDto(null, null, "0700", null, null, null, null)))
             .isInstanceOf(ConflictException.class);
     }
 
