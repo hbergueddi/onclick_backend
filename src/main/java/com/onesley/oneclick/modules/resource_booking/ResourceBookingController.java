@@ -12,14 +12,31 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
+
+import org.springframework.format.annotation.DateTimeFormat;
 
 import static com.onesley.oneclick.modules.resource_booking.api.ResourceBookingDtos.*;
 import lombok.RequiredArgsConstructor;
 
 /**
- * Bug 32 (Batch D RBAC v2) — RBAC v2 senior strict hasAuthority('VERB:RESOURCE_BOOKINGS')
+ * RBAC v2 senior strict — {@code @PreAuthorize("hasAuthority('VERB:RESOURCE')")} uniquement.
+ *
+ * <p><b>Split d'autorité (PCC Lot 0, migration V66)</b> — deux ressources distinctes :
+ * <ul>
+ *   <li><b>RESOURCE_BOOKINGS</b> = gestion du <b>parc</b> (ressources + tarifs) :
+ *       {@code /resources} (GET/POST/DELETE) + {@code /pricings} (POST). Réservé admin/staff
+ *       qui détiennent {VERB}:RESOURCE_BOOKINGS. Le CLIENT ne garde que VIEW:RESOURCE_BOOKINGS
+ *       pour <i>lister</i> les ressources réservables.</li>
+ *   <li><b>BOOKINGS</b> = workflow <b>réservation membre</b> : {@code /bookings} (GET/POST/PATCH/
+ *       DELETE) + {@code /guests} (POST) + {@code /busy-slots} (GET). Le CLIENT détient
+ *       {VERB}:BOOKINGS et gère SES bookings (self-scope ABAC forcé côté service) ; le staff/admin
+ *       confirme/annule/marque.</li>
+ * </ul>
+ * Séparer ces deux autorités empêche l'escalade : donner à un membre le droit de réserver
+ * (CREATE:BOOKINGS) ne lui donne PAS le droit de créer des ressources (CREATE:RESOURCE_BOOKINGS).
  */
 @RestController
 @RequestMapping("/api/resource-bookings")
@@ -77,11 +94,31 @@ public class ResourceBookingController {
         return ResponseEntity.status(HttpStatus.CREATED).body(p);
     }
 
+    // ─── Disponibilité (calendrier) ────────────────────────────────────────────
+
+    /**
+     * Créneaux occupés d'une ressource un jour donné — SANS aucune PII.
+     *
+     * <p>Le calendrier de réservation membre a besoin de savoir QUELS créneaux sont pris,
+     * mais PAS QUI a réservé. On expose donc uniquement {@code (startAt, endAt)} (aucun
+     * organizer / invité). Garde {@code VIEW:BOOKINGS} : tout membre PCC peut consulter la
+     * disponibilité pour choisir un créneau libre.</p>
+     */
+    @GetMapping("/resources/{resourceId}/busy-slots")
+    @Operation(summary = "Créneaux occupés d'une ressource un jour donné (sans PII : start/end uniquement)")
+    @PreAuthorize("hasAuthority('VIEW:BOOKINGS')")
+    public List<BusySlotDto> findBusySlots(
+        @PathVariable UUID resourceId,
+        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+    ) {
+        return service.findBusySlots(resourceId, date);
+    }
+
     // ─── Bookings ────────────────────────────────────────────────────────────
 
     @GetMapping("/bookings")
     @Operation(summary = "Bookings paginés — filtres resourceId / organizerId / status")
-    @PreAuthorize("hasAuthority('VIEW:RESOURCE_BOOKINGS')")
+    @PreAuthorize("hasAuthority('VIEW:BOOKINGS')")
     public PageResponse<BookingDto> findAllBookings(
         @RequestParam(required = false) UUID resourceId,
         @RequestParam(required = false) UUID organizerId,
@@ -99,24 +136,24 @@ public class ResourceBookingController {
     }
 
     @GetMapping("/bookings/{id}")
-    @PreAuthorize("hasAuthority('VIEW:RESOURCE_BOOKINGS')")
+    @PreAuthorize("hasAuthority('VIEW:BOOKINGS')")
     public BookingDto findBookingById(@PathVariable UUID id) { return service.findBookingById(id); }
 
     @PostMapping("/bookings")
-    @PreAuthorize("hasAuthority('CREATE:RESOURCE_BOOKINGS')")
+    @PreAuthorize("hasAuthority('CREATE:BOOKINGS')")
     public ResponseEntity<BookingDto> createBooking(@Valid @RequestBody BookingCreateDto dto) {
         BookingDto b = service.createBooking(dto);
         return ResponseEntity.created(URI.create("/api/resource-bookings/bookings/" + b.id())).body(b);
     }
 
     @PatchMapping("/bookings/{id}")
-    @PreAuthorize("hasAuthority('UPDATE:RESOURCE_BOOKINGS')")
+    @PreAuthorize("hasAuthority('UPDATE:BOOKINGS')")
     public BookingDto updateBooking(@PathVariable UUID id, @Valid @RequestBody BookingUpdateDto dto) {
         return service.updateBooking(id, dto);
     }
 
     @DeleteMapping("/bookings/{id}")
-    @PreAuthorize("hasAuthority('DELETE:RESOURCE_BOOKINGS')")
+    @PreAuthorize("hasAuthority('DELETE:BOOKINGS')")
     public ResponseEntity<Void> deleteBooking(@PathVariable UUID id) {
         service.softDeleteBooking(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
@@ -125,13 +162,13 @@ public class ResourceBookingController {
     // ─── Guests ──────────────────────────────────────────────────────────────
 
     @GetMapping("/bookings/{bookingId}/guests")
-    @PreAuthorize("hasAuthority('VIEW:RESOURCE_BOOKINGS')")
+    @PreAuthorize("hasAuthority('VIEW:BOOKINGS')")
     public List<GuestDto> findGuestsByBooking(@PathVariable UUID bookingId) {
         return service.findGuestsByBooking(bookingId);
     }
 
     @PostMapping("/guests")
-    @PreAuthorize("hasAuthority('UPDATE:RESOURCE_BOOKINGS')")
+    @PreAuthorize("hasAuthority('UPDATE:BOOKINGS')")
     public ResponseEntity<GuestDto> addGuest(@Valid @RequestBody GuestCreateDto dto) {
         GuestDto g = service.addGuest(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(g);

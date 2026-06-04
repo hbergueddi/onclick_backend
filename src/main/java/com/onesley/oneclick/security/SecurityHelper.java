@@ -55,6 +55,20 @@ public final class SecurityHelper {
         return hasRole("SUPERADMIN") || hasRole("GROUP_ADMIN");
     }
 
+    /**
+     * true si le user courant agit côté « gestion » (admin OU staff opérationnel),
+     * par opposition à un membre/client.
+     *
+     * <p>Discriminant ABAC pour les workflows où le staff agit pour le compte de
+     * l'établissement (ex: confirmer/annuler/marquer une réservation de ressource d'un
+     * membre PCC) tandis que le membre (CLIENT) ne gère que ce qui lui appartient. Couvre
+     * SUPERADMIN/GROUP_ADMIN (via {@link #isAdmin()}) + les rôles opérationnels STAFF et
+     * RESTAURATEUR. Le CLIENT renvoie {@code false} → self-scope forcé.</p>
+     */
+    public static boolean isStaffOrAdmin() {
+        return isAdmin() || hasRole("STAFF") || hasRole("RESTAURATEUR");
+    }
+
     /** Vrai si le user courant détient l'autorité {@code ACTION:MENU} donnée (ex: "CREATE:LOYALTY"). */
     public static boolean hasAuthority(String authority) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();

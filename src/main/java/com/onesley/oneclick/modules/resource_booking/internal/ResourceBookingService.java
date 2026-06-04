@@ -2,7 +2,9 @@ package com.onesley.oneclick.modules.resource_booking.internal;
 
 import com.onesley.oneclick.core.identity.api.User;
 import com.onesley.oneclick.core.tenant.api.Tenant;
+import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
+import com.onesley.oneclick.exception.UnprocessableException;
 import com.onesley.oneclick.security.SecurityHelper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -13,7 +15,13 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import static com.onesley.oneclick.modules.resource_booking.api.ResourceBookingDtos.*;
@@ -38,9 +46,21 @@ public class ResourceBookingService {
     private final ResourcePricingRepository pricingRepo;
     private final ResourceBookingRepository bookingRepo;
     private final ResourceBookingGuestRepository guestRepo;
+    /** Horloge injectée → la fenêtre d'annulation H-2 est testable (mockée en test). */
+    private final Clock clock;
 
     @PersistenceContext
     private EntityManager entityManager;
+
+    /**
+     * Statuts qui occupent réellement un créneau (busy-slots). Les annulées / no_show
+     * libèrent le créneau et sont donc exclues. Aligné sur le CHECK de la table
+     * {@code resource_bookings} (migration V5).
+     */
+    private static final Set<String> OCCUPYING_STATUSES = Set.of("pending", "confirmed");
+
+    /** Fenêtre minimale d'annulation membre : H-2 (un membre ne peut pas annuler &lt; 2h avant). */
+    private static final Duration MIN_CANCEL_LEAD = Duration.ofHours(2);
 
     // ─── Resources ───────────────────────────────────────────────────────────
 
@@ -109,21 +129,32 @@ public class ResourceBookingService {
         ResourceBooking b = bookingRepo.findById(id)
             .filter(x -> x.getDeletedAt() == null)
             .orElseThrow(() -> new NotFoundException("ResourceBooking", id));
-        SecurityHelper.requireOwnerOrAdmin(b.getOrganizerId());
+        // Owner OU staff/admin : le staff doit pouvoir consulter un booking pour le confirmer.
+        requireOwnerOrStaff(b.getOrganizerId());
         return b.toDto();
     }
 
     @Transactional
     public BookingDto createBooking(BookingCreateDto dto) {
+        // ABAC self-scope : un membre (non staff/admin) ne réserve QUE pour lui-même.
+        // On force organizer_id = currentUserId même si le DTO porte un autre id (anti-spoof).
+        // Le staff/admin peut réserver pour le compte d'un membre → organizer du DTO respecté.
+        UUID organizerId = resolveOrganizerId(dto.organizerId());
         Resource resourceRef = entityManager.getReference(Resource.class, dto.resourceId());
-        User organizerRef = entityManager.getReference(User.class, dto.organizerId());
+        User organizerRef = entityManager.getReference(User.class, organizerId);
         ResourceBooking b = new ResourceBooking(UUID.randomUUID(), resourceRef, organizerRef, dto.startAt(), dto.endAt());
         if (dto.pricingId() != null) {
             b.setPricing(entityManager.getReference(ResourcePricing.class, dto.pricingId()));
         }
         if (dto.status() != null) b.setStatus(dto.status());
         if (dto.notes() != null)  b.setNotes(dto.notes());
-        return bookingRepo.save(b).toDto();
+        ResourceBooking saved = bookingRepo.save(b);
+        // Les colonnes FK en lecture seule (organizer_id/resource_id/pricing_id, insertable=false)
+        // ne sont peuplées par Hibernate qu'après un refresh : on flush+refresh pour que le DTO
+        // renvoyé porte bien organizer_id (= self forcé) — cohérent avec un GET ultérieur.
+        entityManager.flush();
+        entityManager.refresh(saved);
+        return saved.toDto();
     }
 
     @Transactional
@@ -131,7 +162,9 @@ public class ResourceBookingService {
         ResourceBooking b = bookingRepo.findById(id)
             .filter(x -> x.getDeletedAt() == null)
             .orElseThrow(() -> new NotFoundException("ResourceBooking", id));
-        SecurityHelper.requireOwnerOrAdmin(b.getOrganizerId());
+        // ABAC : owner du booking OU staff/admin. Le staff confirme/annule/marque
+        // (demandee→confirmee, honoree, no_show, annulee) ; le membre gère le sien.
+        requireOwnerOrStaff(b.getOrganizerId());
         if (dto.status() != null) b.setStatus(dto.status());
         if (dto.notes() != null)  b.setNotes(dto.notes());
         return bookingRepo.save(b).toDto();
@@ -142,7 +175,13 @@ public class ResourceBookingService {
         ResourceBooking b = bookingRepo.findById(id)
             .filter(x -> x.getDeletedAt() == null)
             .orElseThrow(() -> new NotFoundException("ResourceBooking", id));
-        SecurityHelper.requireOwnerOrAdmin(b.getOrganizerId());
+        // ABAC : owner du booking OU staff/admin.
+        requireOwnerOrStaff(b.getOrganizerId());
+        // Règle H-2 : un MEMBRE ne peut pas annuler moins de 2h avant le début (le staff,
+        // lui, peut toujours — annulation administrative). 422 Unprocessable sinon.
+        if (!SecurityHelper.isStaffOrAdmin()) {
+            requireCancellableByMember(b);
+        }
         b.markDeleted();
         bookingRepo.save(b);
     }
@@ -153,7 +192,8 @@ public class ResourceBookingService {
         ResourceBooking b = bookingRepo.findById(bookingId)
             .filter(x -> x.getDeletedAt() == null)
             .orElseThrow(() -> new NotFoundException("ResourceBooking", bookingId));
-        SecurityHelper.requireOwnerOrAdmin(b.getOrganizerId());
+        // Owner OU staff/admin (cohérent avec findBookingById).
+        requireOwnerOrStaff(b.getOrganizerId());
         return guestRepo.findAllByBookingId(bookingId).stream().map(ResourceBookingGuest::toDto).toList();
     }
 
@@ -162,12 +202,79 @@ public class ResourceBookingService {
         ResourceBooking b = bookingRepo.findById(dto.bookingId())
             .filter(x -> x.getDeletedAt() == null)
             .orElseThrow(() -> new NotFoundException("ResourceBooking", dto.bookingId()));
-        SecurityHelper.requireOwnerOrAdmin(b.getOrganizerId());
+        // Owner du booking OU staff/admin : le membre ajoute SES invités, le staff peut aussi.
+        requireOwnerOrStaff(b.getOrganizerId());
         ResourceBooking bookingRef = entityManager.getReference(ResourceBooking.class, dto.bookingId());
         User guestUserRef = dto.guestUserId() != null
             ? entityManager.getReference(User.class, dto.guestUserId())
             : null;
         ResourceBookingGuest g = new ResourceBookingGuest(UUID.randomUUID(), bookingRef, guestUserRef, dto.guestName());
         return guestRepo.save(g).toDto();
+    }
+
+    // ─── Busy slots (disponibilité calendrier, sans PII) ───────────────────────
+
+    /**
+     * Créneaux occupés d'une ressource pour un jour donné — projection {@link BusySlotDto}
+     * (start/end uniquement, aucune PII).
+     *
+     * <p>Fenêtre = [date 00:00 UTC, date+1 00:00 UTC). On retient les bookings dont le statut
+     * occupe le créneau ({@link #OCCUPYING_STATUSES}) ; les annulées / no_show le libèrent.
+     * Aucun contrôle d'ownership : tout membre détenant {@code VIEW:BOOKINGS} (garde du
+     * contrôleur) peut consulter la disponibilité, mais ne voit jamais QUI a réservé.</p>
+     */
+    public List<BusySlotDto> findBusySlots(UUID resourceId, LocalDate date) {
+        Instant from = date.atStartOfDay(ZoneOffset.UTC).toInstant();
+        Instant to = date.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant();
+        return bookingRepo.findActiveInRange(resourceId, from, to, OCCUPYING_STATUSES).stream()
+            .map(b -> new BusySlotDto(b.getStartAt(), b.getEndAt()))
+            .toList();
+    }
+
+    // ─── ABAC helpers ──────────────────────────────────────────────────────────
+
+    /**
+     * Résout l'organisateur d'un booking selon l'appelant : un membre (non staff/admin)
+     * est TOUJOURS organisateur de son propre booking (anti-spoof) ; le staff/admin peut
+     * réserver pour le compte d'un membre (organizer du DTO respecté).
+     */
+    private UUID resolveOrganizerId(UUID requestedOrganizerId) {
+        if (SecurityHelper.isStaffOrAdmin()) {
+            return requestedOrganizerId;
+        }
+        UUID current = SecurityHelper.currentUserId();
+        if (current == null) {
+            throw new ForbiddenException("Authentification requise");
+        }
+        return current; // self-scope forcé pour le membre
+    }
+
+    /**
+     * 403 si l'appelant n'est ni l'organisateur du booking, ni staff/admin.
+     * <p>Pour le membre : seul SON booking. Pour le staff/admin : tous (confirme/annule/marque).</p>
+     */
+    private void requireOwnerOrStaff(UUID organizerId) {
+        UUID current = SecurityHelper.currentUserId();
+        if (current == null) {
+            throw new ForbiddenException("Authentification requise");
+        }
+        if (current.equals(organizerId)) return;
+        if (SecurityHelper.isStaffOrAdmin()) return;
+        throw new ForbiddenException(
+            "Accès interdit : vous n'êtes pas l'organisateur de cette réservation");
+    }
+
+    /**
+     * Règle H-2 (annulation membre) : refuse si on est à moins de 2h du début du créneau.
+     * Le staff/admin n'est PAS soumis à cette règle (annulation administrative).
+     *
+     * @throws UnprocessableException (422) si le délai H-2 n'est pas respecté
+     */
+    private void requireCancellableByMember(ResourceBooking b) {
+        Instant now = Instant.now(clock);
+        if (now.plus(MIN_CANCEL_LEAD).isAfter(b.getStartAt())) {
+            throw new UnprocessableException(
+                "Annulation impossible à moins de 2h du début (H-2). Contactez l'accueil.");
+        }
     }
 }

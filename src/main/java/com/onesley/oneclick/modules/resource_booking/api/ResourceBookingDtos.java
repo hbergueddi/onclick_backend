@@ -67,6 +67,17 @@ public final class ResourceBookingDtos {
         @Size(min = 1, max = 1024) String notes
     ) {}
 
+    // ─── Busy slot (disponibilité calendrier, sans PII) ───────────────────────
+
+    /**
+     * Créneau occupé d'une ressource — exposé au calendrier de réservation membre.
+     *
+     * <p><b>Volontairement sans PII</b> : ni organisateur, ni invités, ni notes, ni statut.
+     * Le membre voit uniquement QU'un créneau est pris, jamais QUI l'a réservé. Conçu pour
+     * {@code GET /resources/{id}/busy-slots?date=YYYY-MM-DD}.</p>
+     */
+    public record BusySlotDto(Instant startAt, Instant endAt) {}
+
     // ─── Guest ───────────────────────────────────────────────────────────────
 
     public record GuestDto(UUID id, UUID bookingId, UUID guestUserId, String guestName, Instant createdAt) {}

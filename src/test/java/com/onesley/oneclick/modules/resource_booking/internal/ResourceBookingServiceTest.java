@@ -35,6 +35,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -50,10 +51,13 @@ class ResourceBookingServiceTest {
     @Mock ResourceBookingRepository bookingRepo;
     @Mock ResourceBookingGuestRepository guestRepo;
     @Mock EntityManager em;
-    @InjectMocks ResourceBookingService service;
+    /** Horloge fixe → la fenêtre H-2 est déterministe (les bookings de test démarrent à +1h..+2h). */
+    private final java.time.Clock fixedClock = java.time.Clock.fixed(Instant.now(), java.time.ZoneOffset.UTC);
+    ResourceBookingService service;
 
     @BeforeEach
     void setup() {
+        service = new ResourceBookingService(resourceRepo, pricingRepo, bookingRepo, guestRepo, fixedClock);
         ReflectionTestUtils.setField(service, "entityManager", em);
         lenient().when(em.getReference(eq(Tenant.class), any())).thenReturn(new Tenant(UUID.randomUUID(), "T", "t"));
         lenient().when(em.getReference(eq(User.class), any())).thenReturn(new User(UUID.randomUUID(), null, "u@x.ma", "h", "U", "U"));
@@ -137,33 +141,45 @@ class ResourceBookingServiceTest {
     void findBookingById_notFoundAndFound() {
         when(bookingRepo.findById(any())).thenReturn(Optional.empty());
         try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::isStaffOrAdmin).thenReturn(true);
             assertThatThrownBy(() -> service.findBookingById(UUID.randomUUID())).isInstanceOf(NotFoundException.class);
         }
         ResourceBooking b = booking();
         when(bookingRepo.findById(b.getId())).thenReturn(Optional.of(b));
         try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            // Staff/admin → accès à n'importe quel booking (confirme/consulte).
+            sec.when(SecurityHelper::currentUserId).thenReturn(UUID.randomUUID());
+            sec.when(SecurityHelper::isStaffOrAdmin).thenReturn(true);
             assertThat(service.findBookingById(b.getId())).isNotNull();
         }
     }
 
     @Test
     void createBooking_fullAndMinimal() {
-        assertThat(service.createBooking(new BookingCreateDto(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-            Instant.now().plusSeconds(3600), Instant.now().plusSeconds(7200), "confirmed", "notes"))).isNotNull();
-        assertThat(service.createBooking(new BookingCreateDto(UUID.randomUUID(), UUID.randomUUID(), null,
-            Instant.now().plusSeconds(3600), Instant.now().plusSeconds(7200), null, null))).isNotNull();
+        // Staff/admin : organizer du DTO respecté (réservation pour le compte d'un membre).
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::isStaffOrAdmin).thenReturn(true);
+            assertThat(service.createBooking(new BookingCreateDto(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+                Instant.now().plusSeconds(3600), Instant.now().plusSeconds(7200), "confirmed", "notes"))).isNotNull();
+            assertThat(service.createBooking(new BookingCreateDto(UUID.randomUUID(), UUID.randomUUID(), null,
+                Instant.now().plusSeconds(3600), Instant.now().plusSeconds(7200), null, null))).isNotNull();
+        }
     }
 
     @Test
     void updateBooking_notFoundAndSuccess() {
         when(bookingRepo.findById(any())).thenReturn(Optional.empty());
         try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::isStaffOrAdmin).thenReturn(true);
             assertThatThrownBy(() -> service.updateBooking(UUID.randomUUID(), new BookingUpdateDto("cancelled", "x")))
                 .isInstanceOf(NotFoundException.class);
         }
         ResourceBooking b = booking();
         when(bookingRepo.findById(b.getId())).thenReturn(Optional.of(b));
         try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            // Staff/admin confirme/annule n'importe quel booking.
+            sec.when(SecurityHelper::currentUserId).thenReturn(UUID.randomUUID());
+            sec.when(SecurityHelper::isStaffOrAdmin).thenReturn(true);
             service.updateBooking(b.getId(), new BookingUpdateDto("cancelled", "raison"));
             assertThat(b.getStatus()).isEqualTo("cancelled");
         }
@@ -173,11 +189,15 @@ class ResourceBookingServiceTest {
     void softDeleteBooking_notFoundAndSuccess() {
         when(bookingRepo.findById(any())).thenReturn(Optional.empty());
         try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::isStaffOrAdmin).thenReturn(true);
             assertThatThrownBy(() -> service.softDeleteBooking(UUID.randomUUID())).isInstanceOf(NotFoundException.class);
         }
         ResourceBooking b = booking();
         when(bookingRepo.findById(b.getId())).thenReturn(Optional.of(b));
         try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            // Staff/admin : annulation administrative, non soumise à H-2.
+            sec.when(SecurityHelper::currentUserId).thenReturn(UUID.randomUUID());
+            sec.when(SecurityHelper::isStaffOrAdmin).thenReturn(true);
             service.softDeleteBooking(b.getId());
             assertThat(b.getDeletedAt()).isNotNull();
         }
@@ -192,6 +212,8 @@ class ResourceBookingServiceTest {
         when(guestRepo.findAllByBookingId(any())).thenReturn(List.of(
             new ResourceBookingGuest(UUID.randomUUID(), b, null, "Invité")));
         try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::currentUserId).thenReturn(UUID.randomUUID());
+            sec.when(SecurityHelper::isStaffOrAdmin).thenReturn(true);
             assertThat(service.findGuestsByBooking(b.getId())).hasSize(1);
             assertThat(service.addGuest(new GuestCreateDto(b.getId(), UUID.randomUUID(), "Invité"))).isNotNull();
             assertThat(service.addGuest(new GuestCreateDto(b.getId(), null, "Sans compte"))).isNotNull();
@@ -205,5 +227,116 @@ class ResourceBookingServiceTest {
             assertThatThrownBy(() -> service.findGuestsByBooking(UUID.randomUUID())).isInstanceOf(NotFoundException.class);
             assertThatThrownBy(() -> service.addGuest(new GuestCreateDto(UUID.randomUUID(), null, "X"))).isInstanceOf(NotFoundException.class);
         }
+    }
+
+    // ─── ABAC self-scope (Lot 0) ─────────────────────────────────────────────────
+
+    @Test
+    void createBooking_member_forcesSelfOrganizer_ignoringDtoOrganizer() {
+        UUID memberId = UUID.randomUUID();
+        UUID spoofedOrganizer = UUID.randomUUID(); // le membre tente de réserver pour un AUTRE
+        org.mockito.ArgumentCaptor<UUID> userIdCaptor = org.mockito.ArgumentCaptor.forClass(UUID.class);
+
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::isStaffOrAdmin).thenReturn(false); // membre
+            sec.when(SecurityHelper::currentUserId).thenReturn(memberId);
+
+            service.createBooking(new BookingCreateDto(UUID.randomUUID(), spoofedOrganizer, null,
+                Instant.now().plusSeconds(3600), Instant.now().plusSeconds(7200), "pending", null));
+        }
+        // L'organizer résolu (passé à em.getReference(User.class, ?)) = le membre, PAS le spoof.
+        verify(em).getReference(eq(User.class), userIdCaptor.capture());
+        assertThat(userIdCaptor.getValue()).isEqualTo(memberId).isNotEqualTo(spoofedOrganizer);
+    }
+
+    @Test
+    void createBooking_member_noAuth_throwsForbidden() {
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::isStaffOrAdmin).thenReturn(false);
+            sec.when(SecurityHelper::currentUserId).thenReturn(null); // pas authentifié
+            assertThatThrownBy(() -> service.createBooking(new BookingCreateDto(
+                UUID.randomUUID(), UUID.randomUUID(), null,
+                Instant.now().plusSeconds(3600), Instant.now().plusSeconds(7200), null, null)))
+                .isInstanceOf(com.onesley.oneclick.exception.ForbiddenException.class);
+        }
+    }
+
+    @Test
+    void softDeleteBooking_member_withinH2_throwsUnprocessable() {
+        // Booking qui démarre dans 1h → < 2h → annulation membre refusée (H-2).
+        UUID owner = UUID.randomUUID();
+        ResourceBooking soon = new ResourceBooking(UUID.randomUUID(), resource(),
+            new User(owner, null, "u@x.ma", "h", "U", "U"),
+            Instant.now(fixedClock).plusSeconds(3600), Instant.now(fixedClock).plusSeconds(5400));
+        // organizerId est dérivé du FK (insertable=false) → non rempli par le constructeur en test.
+        ReflectionTestUtils.setField(soon, "organizerId", owner);
+        when(bookingRepo.findById(soon.getId())).thenReturn(Optional.of(soon));
+
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::currentUserId).thenReturn(owner); // owner du booking
+            sec.when(SecurityHelper::isStaffOrAdmin).thenReturn(false); // mais simple membre
+            assertThatThrownBy(() -> service.softDeleteBooking(soon.getId()))
+                .isInstanceOf(com.onesley.oneclick.exception.UnprocessableException.class);
+        }
+        assertThat(soon.getDeletedAt()).isNull(); // pas annulé
+    }
+
+    @Test
+    void softDeleteBooking_member_beyondH2_succeeds() {
+        // Booking qui démarre dans 5h → > 2h → annulation membre autorisée.
+        UUID owner = UUID.randomUUID();
+        ResourceBooking later = new ResourceBooking(UUID.randomUUID(), resource(),
+            new User(owner, null, "u@x.ma", "h", "U", "U"),
+            Instant.now(fixedClock).plusSeconds(5 * 3600), Instant.now(fixedClock).plusSeconds(6 * 3600));
+        ReflectionTestUtils.setField(later, "organizerId", owner);
+        when(bookingRepo.findById(later.getId())).thenReturn(Optional.of(later));
+
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::currentUserId).thenReturn(owner);
+            sec.when(SecurityHelper::isStaffOrAdmin).thenReturn(false);
+            service.softDeleteBooking(later.getId());
+        }
+        assertThat(later.getDeletedAt()).isNotNull(); // annulé
+    }
+
+    @Test
+    void softDeleteBooking_member_notOwner_throwsForbidden() {
+        UUID owner = UUID.randomUUID();
+        ResourceBooking b = booking();
+        ReflectionTestUtils.setField(b, "organizerId", owner);
+        when(bookingRepo.findById(b.getId())).thenReturn(Optional.of(b));
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::currentUserId).thenReturn(UUID.randomUUID()); // autre user ≠ owner
+            sec.when(SecurityHelper::isStaffOrAdmin).thenReturn(false);
+            assertThatThrownBy(() -> service.softDeleteBooking(b.getId()))
+                .isInstanceOf(com.onesley.oneclick.exception.ForbiddenException.class);
+        }
+    }
+
+    // ─── Busy slots (Lot 1) ──────────────────────────────────────────────────────
+
+    @Test
+    void findBusySlots_mapsToStartEndOnly_withOccupyingStatuses() {
+        ResourceBooking b = booking();
+        when(bookingRepo.findActiveInRange(any(), any(), any(), any())).thenReturn(List.of(b));
+
+        UUID resourceId = UUID.randomUUID();
+        List<com.onesley.oneclick.modules.resource_booking.api.ResourceBookingDtos.BusySlotDto> slots =
+            service.findBusySlots(resourceId, java.time.LocalDate.of(2026, 6, 1));
+
+        assertThat(slots).hasSize(1);
+        assertThat(slots.get(0).startAt()).isEqualTo(b.getStartAt());
+        assertThat(slots.get(0).endAt()).isEqualTo(b.getEndAt());
+
+        // Vérifie la fenêtre [00:00, +1j) et les statuts occupants passés au repo.
+        org.mockito.ArgumentCaptor<Instant> fromC = org.mockito.ArgumentCaptor.forClass(Instant.class);
+        org.mockito.ArgumentCaptor<Instant> toC = org.mockito.ArgumentCaptor.forClass(Instant.class);
+        @SuppressWarnings("unchecked")
+        org.mockito.ArgumentCaptor<java.util.Collection<String>> statusC =
+            org.mockito.ArgumentCaptor.forClass(java.util.Collection.class);
+        verify(bookingRepo).findActiveInRange(eq(resourceId), fromC.capture(), toC.capture(), statusC.capture());
+        assertThat(fromC.getValue()).isEqualTo(java.time.LocalDate.of(2026, 6, 1).atStartOfDay(java.time.ZoneOffset.UTC).toInstant());
+        assertThat(toC.getValue()).isEqualTo(java.time.LocalDate.of(2026, 6, 2).atStartOfDay(java.time.ZoneOffset.UTC).toInstant());
+        assertThat(statusC.getValue()).containsExactlyInAnyOrder("pending", "confirmed");
     }
 }
