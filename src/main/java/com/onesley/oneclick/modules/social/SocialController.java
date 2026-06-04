@@ -75,6 +75,18 @@ public class SocialController {
         return service.findUserByPhone(phone);
     }
 
+    @GetMapping("/users/by-email")
+    @Operation(
+        summary = "Découverte sociale — profil public minimal par email (invitation/ajout d'ami).",
+        description = "Pendant de /api/social/users/by-phone pour le toggle « Email » du Pocket. Gardé " +
+                      "VIEW:COMMUNITY (que le CLIENT détient) ; ne renvoie qu'un profil d'affichage minimal " +
+                      "(anti-énumération RGPD), 404 si introuvable."
+    )
+    @PreAuthorize("hasAuthority('VIEW:COMMUNITY')")
+    public PublicProfileDto findUserByEmail(@RequestParam String email) {
+        return service.findUserByEmail(email);
+    }
+
     @PostMapping("/contact-import")
     @Operation(
         summary = "Import du carnet d'adresses → utilisateurs OneClick correspondants (quota 10/jour/user).",

@@ -38,13 +38,18 @@ class SocialQuotasFlowIntegrationTest extends AbstractIntegrationTest {
     private final ObjectMapper om = new ObjectMapper();
 
     private String createClient(String admin) throws Exception {
-        String roleId = jdbc.queryForObject("SELECT id::text FROM roles WHERE code='CLIENT' LIMIT 1", String.class);
+        return createUser(admin, "CLIENT");
+    }
+
+    /** Crée un user jetable du rôle donné (CLIENT pour les flux, STAFF pour le négatif RBAC). */
+    private String createUser(String admin, String roleCode) throws Exception {
+        String roleId = jdbc.queryForObject("SELECT id::text FROM roles WHERE code=? LIMIT 1", String.class, roleCode);
         var r = restTemplate.exchange(url("/api/users"), HttpMethod.POST, jsonJwtEntity(Map.of(
             "roleId", roleId, "email", "soc-quota-" + UUID.randomUUID() + "@x.ma",
             "phone", "+2126" + (1_000_0000 + (int) (Math.random() * 8_999_9999)),
             "password", "password1234", "firstName", "Quota", "lastName", "Soc"), admin), String.class);
         assertThat(r.getStatusCode().is2xxSuccessful())
-            .as("création user jetable — reçu %s, body=%s", r.getStatusCode(), r.getBody()).isTrue();
+            .as("création user jetable (%s) — reçu %s, body=%s", roleCode, r.getStatusCode(), r.getBody()).isTrue();
         return om.readTree(r.getBody()).get("id").asText();
     }
 
@@ -173,6 +178,52 @@ class SocialQuotasFlowIntegrationTest extends AbstractIntegrationTest {
         jdbc.update("DELETE FROM friendships WHERE id IN (?::uuid, ?::uuid)",
             UUID.fromString(id1), UUID.fromString(id2));
         for (String u : List.of(me, f1, f2, f3)) {
+            restTemplate.exchange(url("/api/users/" + u), HttpMethod.DELETE, jwtEntity(admin), String.class);
+        }
+    }
+
+    // ─── Découverte sociale par email (toggle « Email » du Pocket « Ajouter un ami ») ──
+
+    @Test
+    void socialUserByEmail_scopedLookup_rbac_andNotFound() throws Exception {
+        String admin = adminBearer();
+        String me = createClient(admin), friend = createClient(admin);
+        String bearerMe = bearerCl(me);
+
+        // 200 : le CLIENT (VIEW:COMMUNITY) résout le profil PUBLIC minimal d'un user par email.
+        ResponseEntity<String> ok = restTemplate.exchange(
+            url("/api/social/users/by-email?email=" + emailOf(friend)),
+            HttpMethod.GET, jwtEntity(bearerMe), String.class);
+        assertThat(ok.getStatusCode()).as("by-email 200 — body=%s", ok.getBody()).isEqualTo(HttpStatus.OK);
+        var body = om.readTree(ok.getBody());
+        assertThat(body.get("id").asText()).isEqualTo(friend);
+        assertThat(body.has("email")).as("profil PUBLIC minimal — l'email ne doit pas être ré-exposé").isFalse();
+
+        // Insensible à la casse (findByEmailIgnoreCase, comme le matching de l'import contacts).
+        assertThat(restTemplate.exchange(
+            url("/api/social/users/by-email?email=" + emailOf(friend).toUpperCase()),
+            HttpMethod.GET, jwtEntity(bearerMe), String.class).getStatusCode())
+            .as("lookup email insensible à la casse").isEqualTo(HttpStatus.OK);
+
+        // 404 : email inconnu (jamais un 200 vide → pas d'oracle d'énumération RGPD).
+        assertThat(restTemplate.exchange(
+            url("/api/social/users/by-email?email=ghost-" + UUID.randomUUID() + "@x.ma"),
+            HttpMethod.GET, jwtEntity(bearerMe), String.class).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+
+        // 403 : STAFF ne détient PAS VIEW:COMMUNITY (seuls CLIENT/RESTAURATEUR/GROUP_ADMIN/SUPERADMIN l'ont).
+        String staff = createUser(admin, "STAFF");
+        String bearerStaff = jwtIssuer.issueAccessToken(UUID.fromString(staff), "STAFF").token();
+        assertThat(restTemplate.exchange(
+            url("/api/social/users/by-email?email=" + emailOf(friend)),
+            HttpMethod.GET, jwtEntity(bearerStaff), String.class).getStatusCode())
+            .as("STAFF sans VIEW:COMMUNITY → 403").isEqualTo(HttpStatus.FORBIDDEN);
+
+        // 401 : sans JWT.
+        assertThat(restTemplate.exchange(
+            url("/api/social/users/by-email?email=" + emailOf(friend)),
+            HttpMethod.GET, jwtEntity((String) null), String.class).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        for (String u : List.of(me, friend, staff)) {
             restTemplate.exchange(url("/api/users/" + u), HttpMethod.DELETE, jwtEntity(admin), String.class);
         }
     }

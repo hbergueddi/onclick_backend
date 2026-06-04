@@ -190,6 +190,20 @@ public class SocialService {
     }
 
     /**
+     * Découverte sociale par EMAIL — pendant exact de {@link #findUserByPhone(String)}
+     * (toggle « Téléphone / Email » du Pocket « Ajouter un ami »). Insensible à la casse
+     * ({@code findByEmailIgnoreCase}, comme le matching de l'import contacts), trimé, filtre
+     * les comptes supprimés, 404 si introuvable. Ne renvoie qu'un {@link SocialDtos.PublicProfileDto}
+     * (profil d'affichage minimal — anti-énumération RGPD, jamais le UserDto complet admin).
+     */
+    public PublicProfileDto findUserByEmail(String email) {
+        User u = userRepository.findByEmailIgnoreCase(email.trim())
+            .filter(x -> !x.isDeleted())
+            .orElseThrow(() -> new NotFoundException("User", email));
+        return new PublicProfileDto(u.getId(), u.getFirstName(), u.getLastName(), u.getAvatarUrl(), u.getPhone());
+    }
+
+    /**
      * Crée une demande d'amitié. La contrainte DB {@code friendships_check} exige
      * {@code user1_id < user2_id} pour empêcher les doublons bidirectionnels.
      *
