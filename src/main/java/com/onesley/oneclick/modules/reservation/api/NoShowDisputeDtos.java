@@ -20,7 +20,17 @@ public final class NoShowDisputeDtos {
 
     private NoShowDisputeDtos() {}
 
-    /** DTO public d'une contestation de no_show. */
+    /**
+     * DTO public d'une contestation de no_show.
+     *
+     * <p>Enrichi (résolu côté service, jamais stocké) du <b>contexte d'affichage</b> pour la
+     * page admin/support de litiges : le nom du client ({@code clientName} = "Prénom Nom" via
+     * {@code UserDirectoryApi}), le nom du restaurant ({@code restaurantName}) et l'horodatage
+     * de la réservation contestée ({@code reservationDateTime}, {@code reservation_at} de la
+     * résa) — résolus par read-view native ({@code reservations} JOIN {@code restaurants}).
+     * Le front affiche ainsi des NOMS au lieu d'UUID. Ces trois champs peuvent être {@code null}
+     * si l'entité référencée est introuvable / supprimée (résolution best-effort).</p>
+     */
     public record NoShowDisputeDto(
         UUID id,
         UUID reservationId,
@@ -33,7 +43,10 @@ public final class NoShowDisputeDtos {
         String resolutionNote,
         UUID resolvedBy,
         Instant resolvedAt,
-        Instant createdAt
+        Instant createdAt,
+        String clientName,
+        String restaurantName,
+        Instant reservationDateTime
     ) {}
 
     /**

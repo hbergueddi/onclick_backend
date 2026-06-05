@@ -1,5 +1,7 @@
 package com.onesley.oneclick.modules.reservation.internal;
 
+import com.onesley.oneclick.core.identity.api.UserDirectoryApi;
+import com.onesley.oneclick.core.identity.api.UserDirectoryApi.UserName;
 import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.ConflictException;
 import com.onesley.oneclick.exception.ForbiddenException;
@@ -31,7 +33,9 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -64,14 +68,21 @@ class NoShowDisputeServiceTest {
     @Mock ReservationRepository reservationRepository;
     @Mock RestaurantAccessGuard restaurantAccessGuard;
     @Mock ApplicationEventPublisher eventPublisher;
+    @Mock UserDirectoryApi userDirectory;
 
     NoShowDisputeService service;
 
     @BeforeEach
     void setup() {
         service = new NoShowDisputeService(
-            disputeRepository, reservationRepository, restaurantAccessGuard, eventPublisher, FIXED_CLOCK);
+            disputeRepository, reservationRepository, restaurantAccessGuard, eventPublisher,
+            userDirectory, FIXED_CLOCK);
         when(disputeRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        // Enrichissement DTO : par défaut, annuaire vide + aucun contexte résa (les tests qui
+        // assertent les noms surchargent ces stubs). LENIENT car les chemins d'erreur ne mappent pas.
+        when(userDirectory.nameById(any())).thenReturn(Optional.empty());
+        when(userDirectory.namesByIds(any())).thenReturn(List.of());
+        when(disputeRepository.findReservationContextByIds(any())).thenReturn(List.of());
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -92,6 +103,15 @@ class NoShowDisputeServiceTest {
             phase, "raison", null);
         d.setStatus(status);
         return d;
+    }
+
+    /** Projection read-view simulée (nom resto + horodatage résa) pour un reservationId donné. */
+    private DisputeReservationView reservationContext(UUID reservationId, String restaurantName, Instant when) {
+        DisputeReservationView v = mock(DisputeReservationView.class);
+        when(v.getReservationId()).thenReturn(reservationId);
+        when(v.getRestaurantName()).thenReturn(restaurantName);
+        when(v.getReservationDateTime()).thenReturn(when);
+        return v;
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -345,6 +365,109 @@ class NoShowDisputeServiceTest {
             assertThat(service.findAll(null, null)).hasSize(2);
             assertThat(service.findAll("pending", null)).hasSize(1);
             assertThat(service.findAll(null, "support")).hasSize(1);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  Enrichissement DTO (clientName + restaurantName + reservationDateTime)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    private static final Instant RESA_AT = Instant.parse("2026-06-10T19:30:00Z");
+
+    @Test
+    void create_enrichesDto_withClientName_restaurantName_reservationDateTime() {
+        when(reservationRepository.findById(RESERVATION)).thenReturn(Optional.of(noShowReservation(30, false)));
+        when(disputeRepository.findByReservationIdOrderByCreatedAtDesc(RESERVATION)).thenReturn(List.of());
+        // Annuaire : "Prénom Nom".
+        when(userDirectory.nameById(CLIENT))
+            .thenReturn(Optional.of(new UserName(CLIENT, "Hicham", "Bennani", "0600", "h@x.ma", null)));
+        // Read-view : nom resto + horodatage résa pour CETTE réservation.
+        // (mock construit AVANT le when() externe — sinon nested stubbing → UnfinishedStubbingException)
+        var ctx1 = reservationContext(RESERVATION, "Le Padel", RESA_AT);
+        when(disputeRepository.findReservationContextByIds(List.of(RESERVATION)))
+            .thenReturn(List.of(ctx1));
+
+        try (MockedStatic<SecurityHelper> sec = staticSecurity(CLIENT, false)) {
+            NoShowDisputeDto out = service.create(RESERVATION, new CreateDisputeDto("présent", null));
+            assertThat(out.clientName()).isEqualTo("Hicham Bennani");
+            assertThat(out.restaurantName()).isEqualTo("Le Padel");
+            assertThat(out.reservationDateTime()).isEqualTo(RESA_AT);
+        }
+    }
+
+    @Test
+    void resolve_enrichesDto_withDisplayContext() {
+        NoShowDispute d = disputeWithStatus("pending", "support");
+        when(disputeRepository.findById(d.getId())).thenReturn(Optional.of(d));
+        when(userDirectory.nameById(CLIENT))
+            .thenReturn(Optional.of(new UserName(CLIENT, "Sara", "Idrissi", null, null, null)));
+        var ctx = reservationContext(d.getReservationId(), "Le Spa", RESA_AT);
+        when(disputeRepository.findReservationContextByIds(List.of(d.getReservationId())))
+            .thenReturn(List.of(ctx));
+
+        try (MockedStatic<SecurityHelper> sec = staticSecurity(OTHER_USER, true)) {
+            NoShowDisputeDto out = service.resolve(d.getId(), new ResolveDisputeDto("accepted", null));
+            assertThat(out.clientName()).isEqualTo("Sara Idrissi");
+            assertThat(out.restaurantName()).isEqualTo("Le Spa");
+            assertThat(out.reservationDateTime()).isEqualTo(RESA_AT);
+        }
+    }
+
+    @Test
+    void findAll_batchEnriches_noNPlusOne_singleNamesAndContextQuery() {
+        UUID resa2 = UUID.randomUUID();
+        UUID client2 = UUID.randomUUID();
+        NoShowDispute d1 = disputeWithStatus("pending", "resto");            // CLIENT / RESERVATION
+        NoShowDispute d2 = new NoShowDispute(UUID.randomUUID(), resa2, client2, RESTAURANT,
+            "support", "raison2", null);
+        when(disputeRepository.findAllByOrderByCreatedAtDesc()).thenReturn(List.of(d1, d2));
+        // 1 SEULE requête annuaire pour TOUS les clients (anti N+1).
+        when(userDirectory.namesByIds(any())).thenReturn(List.of(
+            new UserName(CLIENT, "Hicham", "Bennani", null, null, null),
+            new UserName(client2, "Sara", "Idrissi", null, null, null)));
+        // 1 SEULE read-view pour TOUTES les résas (anti N+1).
+        var ctxA = reservationContext(RESERVATION, "Le Padel", RESA_AT);
+        var ctxB = reservationContext(resa2, "Le Golf", RESA_AT.plusSeconds(3600));
+        when(disputeRepository.findReservationContextByIds(any())).thenReturn(List.of(ctxA, ctxB));
+
+        try (MockedStatic<SecurityHelper> sec = staticSecurity(OTHER_USER, true)) {
+            List<NoShowDisputeDto> out = service.findAll(null, null);
+            assertThat(out).hasSize(2);
+            assertThat(out).extracting(NoShowDisputeDto::clientName)
+                .containsExactlyInAnyOrder("Hicham Bennani", "Sara Idrissi");
+            assertThat(out).extracting(NoShowDisputeDto::restaurantName)
+                .containsExactlyInAnyOrder("Le Padel", "Le Golf");
+            assertThat(out).allSatisfy(dto -> assertThat(dto.reservationDateTime()).isNotNull());
+        }
+        // Anti N+1 : exactement 1 appel batch chacun, quel que soit le nombre de disputes.
+        verify(userDirectory, times(1)).namesByIds(any());
+        verify(disputeRepository, times(1)).findReservationContextByIds(any());
+        verify(userDirectory, never()).nameById(any());
+    }
+
+    @Test
+    void findAll_emptyResult_skipsEnrichmentQueries() {
+        when(disputeRepository.findAllByOrderByCreatedAtDesc()).thenReturn(List.of());
+        try (MockedStatic<SecurityHelper> sec = staticSecurity(OTHER_USER, true)) {
+            assertThat(service.findAll(null, null)).isEmpty();
+        }
+        verify(userDirectory, never()).namesByIds(any());
+        verify(disputeRepository, never()).findReservationContextByIds(any());
+    }
+
+    @Test
+    void findAll_missingContext_yieldsNullDisplayFields_notCrash() {
+        NoShowDispute d1 = disputeWithStatus("pending", "resto");
+        when(disputeRepository.findAllByOrderByCreatedAtDesc()).thenReturn(List.of(d1));
+        // Annuaire ET read-view vides (résa/resto supprimés) → champs null, pas de NPE.
+        when(userDirectory.namesByIds(any())).thenReturn(List.of());
+        when(disputeRepository.findReservationContextByIds(any())).thenReturn(List.of());
+        try (MockedStatic<SecurityHelper> sec = staticSecurity(OTHER_USER, true)) {
+            List<NoShowDisputeDto> out = service.findAll(null, null);
+            assertThat(out).hasSize(1);
+            assertThat(out.get(0).clientName()).isNull();
+            assertThat(out.get(0).restaurantName()).isNull();
+            assertThat(out.get(0).reservationDateTime()).isNull();
         }
     }
 

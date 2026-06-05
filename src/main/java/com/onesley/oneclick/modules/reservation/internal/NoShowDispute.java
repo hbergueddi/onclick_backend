@@ -86,11 +86,27 @@ public class NoShowDispute {
         this.photoUrl = photoUrl;
     }
 
-    /** Mapping vers le DTO public exposé hors du module. */
+    /**
+     * Mapping vers le DTO public exposé hors du module, <b>sans</b> contexte d'affichage
+     * (noms / horodatage résa à null). Utilisé quand l'enrichissement n'est pas requis
+     * (ex. réponse de création/résolution où le front a déjà le contexte de la résa).
+     */
     public NoShowDisputeDto toDto() {
+        return toDto(null, null, null);
+    }
+
+    /**
+     * Mapping vers le DTO public enrichi du contexte d'affichage résolu côté service
+     * ({@code clientName} = "Prénom Nom", {@code restaurantName}, {@code reservationDateTime}).
+     * L'entité reste « dumb » : la résolution (UserDirectoryApi + read-view native) est faite
+     * en amont par {@code NoShowDisputeService} et injectée ici — pas de couplage cross-module
+     * dans l'entité.
+     */
+    public NoShowDisputeDto toDto(String clientName, String restaurantName, Instant reservationDateTime) {
         return new NoShowDisputeDto(
             id, reservationId, clientId, restaurantId, status, escalationPhase,
-            reason, photoUrl, resolutionNote, resolvedBy, resolvedAt, createdAt);
+            reason, photoUrl, resolutionNote, resolvedBy, resolvedAt, createdAt,
+            clientName, restaurantName, reservationDateTime);
     }
 
     @Override

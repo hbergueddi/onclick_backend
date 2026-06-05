@@ -159,6 +159,68 @@ class NoShowDisputeFlowIntegrationTest extends AbstractIntegrationTest {
         assertThat(reversed).as("pénalité no_show reversée via listener loyalty (reason dispute_accepted)").isTrue();
     }
 
+    /**
+     * Enrichissement DTO (page admin de litiges) : après création d'une contestation, le
+     * {@code GET /api/disputes} (admin) renvoie le contexte d'affichage résolu côté serveur —
+     * {@code clientName} ("Prénom Nom" via UserDirectoryApi), {@code restaurantName} +
+     * {@code reservationDateTime} (read-view native {@code reservations} JOIN {@code restaurants}).
+     * Le front affiche ainsi des NOMS au lieu d'UUID.
+     */
+    @Test
+    void listDisputes_admin_returnsResolvedNames_notIds() throws Exception {
+        String admin = adminBearer();
+        Map<String, Object> ctx = restaurateurContext();
+        String restaurantId = (String) ctx.get("restaurantId");
+        String tenantId = (String) ctx.get("tenantId");
+        String clientId = clientNotStaffOf(restaurantId);
+        String clientBearer = jwtIssuer.issueAccessToken(UUID.fromString(clientId), "CLIENT").token();
+
+        UUID resaId = createNoShowReservation(tenantId, clientId, restaurantId, admin);
+        restTemplate.exchange(url("/api/reservations/" + resaId + "/status"), HttpMethod.PATCH,
+            jsonJwtEntity(Map.of("status", "no_show", "lateCancellation", false), admin), String.class);
+
+        // Le client conteste (phase resto).
+        ResponseEntity<String> contest = restTemplate.exchange(url("/api/reservations/" + resaId + "/disputes"),
+            HttpMethod.POST, jsonJwtEntity(Map.of("reason", "présent à l'heure"), clientBearer), String.class);
+        assertThat(contest.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        UUID disputeId = UUID.fromString(om.readTree(contest.getBody()).get("id").asText());
+
+        // Réponse de création déjà enrichie (clientName non null).
+        assertThat(om.readTree(contest.getBody()).get("clientName").isNull()).isFalse();
+
+        // Référentiel attendu (résolu en DB) : "Prénom Nom" + nom resto.
+        Map<String, Object> ref = jdbc.queryForMap("""
+            SELECT trim(coalesce(u.first_name,'') || ' ' || coalesce(u.last_name,'')) AS clientName,
+                   r.name AS restaurantName
+              FROM users u, restaurants r
+             WHERE u.id = ?::uuid AND r.id = ?::uuid
+            """, clientId, restaurantId);
+        String expectedClient = ((String) ref.get("clientName")).trim();
+        String expectedRestaurant = (String) ref.get("restaurantName");
+
+        // GET /api/disputes (admin) → la dispute créée porte des NOMS résolus.
+        ResponseEntity<String> list = restTemplate.exchange(url("/api/disputes"), HttpMethod.GET,
+            jwtEntity(admin), String.class);
+        assertThat(list.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        var arr = om.readTree(list.getBody());
+        var mine = StreamSupportFindById(arr, disputeId);
+        assertThat(mine).as("la dispute créée doit être présente dans le dashboard admin").isNotNull();
+        assertThat(mine.get("clientName").asText()).isEqualTo(expectedClient);
+        assertThat(mine.get("restaurantName").asText()).isEqualTo(expectedRestaurant);
+        assertThat(mine.get("reservationDateTime").isNull())
+            .as("reservationDateTime doit être renseigné").isFalse();
+    }
+
+    /** Petite recherche d'un noeud dispute par id dans le tableau JSON renvoyé par GET /api/disputes. */
+    private com.fasterxml.jackson.databind.JsonNode StreamSupportFindById(
+            com.fasterxml.jackson.databind.JsonNode arr, UUID disputeId) {
+        for (com.fasterxml.jackson.databind.JsonNode n : arr) {
+            if (disputeId.toString().equals(n.get("id").asText())) return n;
+        }
+        return null;
+    }
+
     @Test
     void noShow_lateCancellation_persistsFlag_andBlocksDispute() throws Exception {
         String admin = adminBearer();

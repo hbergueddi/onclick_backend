@@ -1,5 +1,7 @@
 package com.onesley.oneclick.modules.reservation.internal;
 
+import com.onesley.oneclick.core.identity.api.UserDirectoryApi;
+import com.onesley.oneclick.core.identity.api.UserDirectoryApi.UserName;
 import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.ConflictException;
 import com.onesley.oneclick.exception.ForbiddenException;
@@ -21,7 +23,10 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Service du domaine contestation no-show (Feature #3).
@@ -57,6 +62,7 @@ public class NoShowDisputeService {
     private final ReservationRepository reservationRepository;
     private final RestaurantAccessGuard restaurantAccessGuard;
     private final ApplicationEventPublisher eventPublisher;
+    private final UserDirectoryApi userDirectory;
     private final Clock clock;
 
     @PersistenceContext
@@ -146,7 +152,7 @@ public class NoShowDisputeService {
         NoShowDispute dispute = new NoShowDispute(
             UUID.randomUUID(), reservationId, r.getClientId(), r.getRestaurantId(),
             phase, dto.reason(), dto.photoUrl());
-        return disputeRepository.save(dispute).toDto();
+        return toEnrichedDto(disputeRepository.save(dispute));
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -159,8 +165,7 @@ public class NoShowDisputeService {
             .filter(x -> x.getDeletedAt() == null)
             .orElseThrow(() -> new NotFoundException("Reservation", reservationId));
         requireReadAccess(r);
-        return disputeRepository.findByReservationIdOrderByCreatedAtDesc(reservationId).stream()
-            .map(NoShowDispute::toDto).toList();
+        return toEnrichedDtos(disputeRepository.findByReservationIdOrderByCreatedAtDesc(reservationId));
     }
 
     /**
@@ -179,11 +184,11 @@ public class NoShowDisputeService {
             if (myRestaurants.isEmpty()) return List.of();
             rows = disputeRepository.findByRestaurantIdInOrderByCreatedAtDesc(myRestaurants);
         }
-        return rows.stream()
+        List<NoShowDispute> filtered = rows.stream()
             .filter(d -> status == null || status.isBlank() || status.equals(d.getStatus()))
             .filter(d -> phase == null || phase.isBlank() || phase.equals(d.getEscalationPhase()))
-            .map(NoShowDispute::toDto)
             .toList();
+        return toEnrichedDtos(filtered);
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -223,7 +228,7 @@ public class NoShowDisputeService {
             saved.getId(), saved.getReservationId(), saved.getClientId(),
             saved.getRestaurantId(), accepted));
 
-        return saved.toDto();
+        return toEnrichedDto(saved);
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -255,6 +260,69 @@ public class NoShowDisputeService {
         // Phase support : escaladé hors du restaurant → admin / support uniquement.
         throw new ForbiddenException(
             "Accès interdit : en phase 'support', seule l'équipe support / admin peut résoudre");
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  Enrichissement DTO (contexte d'affichage : noms + horodatage résa)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /**
+     * Mappe une dispute unique en DTO enrichi (création / résolution). Résout le nom client
+     * ({@code UserDirectoryApi.nameById}) + le nom resto / horodatage résa (read-view native).
+     * Coût : 1 lookup user + 1 lecture read-view — acceptable pour un objet unique.
+     */
+    private NoShowDisputeDto toEnrichedDto(NoShowDispute d) {
+        String clientName = userDirectory.nameById(d.getClientId())
+            .map(NoShowDisputeService::fullName).orElse(null);
+        DisputeReservationView ctx = disputeRepository
+            .findReservationContextByIds(List.of(d.getReservationId())).stream()
+            .findFirst().orElse(null);
+        return d.toDto(
+            clientName,
+            ctx != null ? ctx.getRestaurantName() : null,
+            ctx != null ? ctx.getReservationDateTime() : null);
+    }
+
+    /**
+     * Mappe une <b>liste</b> de disputes en DTOs enrichis (dashboard / listing par résa) en
+     * <b>batch</b> pour éviter le N+1 :
+     * <ul>
+     *   <li>1 seule requête {@code UserDirectoryApi.namesByIds} pour TOUS les clients (déduplis) ;</li>
+     *   <li>1 seule read-view {@code findReservationContextByIds} pour TOUTES les résas (déduplis).</li>
+     * </ul>
+     * On indexe ensuite par id et on mappe en O(n). Quel que soit le nombre de disputes, on émet
+     * exactement 2 requêtes d'enrichissement (au lieu de 2 par ligne).
+     */
+    private List<NoShowDisputeDto> toEnrichedDtos(List<NoShowDispute> disputes) {
+        if (disputes.isEmpty()) return List.of();
+
+        List<UUID> clientIds = disputes.stream()
+            .map(NoShowDispute::getClientId).distinct().toList();
+        List<UUID> reservationIds = disputes.stream()
+            .map(NoShowDispute::getReservationId).distinct().toList();
+
+        Map<UUID, String> nameByClient = userDirectory.namesByIds(clientIds).stream()
+            .collect(Collectors.toMap(UserName::id, NoShowDisputeService::fullName, (a, b) -> a));
+        Map<UUID, DisputeReservationView> ctxByReservation = disputeRepository
+            .findReservationContextByIds(reservationIds).stream()
+            .collect(Collectors.toMap(DisputeReservationView::getReservationId, Function.identity(), (a, b) -> a));
+
+        return disputes.stream().map(d -> {
+            DisputeReservationView ctx = ctxByReservation.get(d.getReservationId());
+            return d.toDto(
+                nameByClient.get(d.getClientId()),
+                ctx != null ? ctx.getRestaurantName() : null,
+                ctx != null ? ctx.getReservationDateTime() : null);
+        }).toList();
+    }
+
+    /** "Prénom Nom" depuis la projection annuaire (gère les composantes nulles/vides). */
+    private static String fullName(UserName u) {
+        if (u == null) return null;
+        String first = u.firstName() == null ? "" : u.firstName().trim();
+        String last = u.lastName() == null ? "" : u.lastName().trim();
+        String full = (first + " " + last).trim();
+        return full.isEmpty() ? null : full;
     }
 
     /** IDs des restaurants dont le user est staff actif (scope dashboard non-admin). */
