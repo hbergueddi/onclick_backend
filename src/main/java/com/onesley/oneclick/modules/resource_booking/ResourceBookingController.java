@@ -2,6 +2,7 @@ package com.onesley.oneclick.modules.resource_booking;
 
 import com.onesley.oneclick.shared.PageResponse;
 import com.onesley.oneclick.modules.resource_booking.internal.ResourceBookingService;
+import com.onesley.oneclick.modules.resource_booking.internal.ResourceBookingDashboardPublisher;
 import com.onesley.oneclick.security.SecurityHelper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -45,6 +46,13 @@ import lombok.RequiredArgsConstructor;
 public class ResourceBookingController {
 
     private final ResourceBookingService service;
+
+    /**
+     * Publisher temps réel du board staff (STOMP {@code /topic/resource-bookings}). Appelé
+     * APRÈS commit (depuis le controller, comme {@code DisputeController}) à chaque mutation
+     * de booking → latence dashboard minimale, 0 polling. Push best-effort (cf {@link #safePush()}).
+     */
+    private final ResourceBookingDashboardPublisher dashboardPublisher;
 
     // ─── Resources ───────────────────────────────────────────────────────────
 
@@ -135,6 +143,25 @@ public class ResourceBookingController {
         return PageResponse.from(service.findAllBookings(resourceId, organizerId, status, page, size));
     }
 
+    @GetMapping("/bookings/tenant")
+    @Operation(summary = "Board staff : toutes les réservations du tenant (nom orga/ressource) — live /topic/resource-bookings")
+    @PreAuthorize("hasAuthority('VIEW:BOOKINGS')")
+    public PageResponse<StaffBookingDto> findTenantBookings(
+        @RequestParam(required = false) UUID resourceId,
+        @RequestParam(required = false) String status,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size
+    ) {
+        // ABAC service : staff/admin uniquement (un CLIENT → 403) + scope tenant du caller
+        // (anti-spoof : le tenant n'est jamais un paramètre client, il vient du JWT).
+        return PageResponse.from(service.findTenantBookings(resourceId, status, page, size));
+    }
+
+    /** Push STOMP best-effort du board staff (un échec de push ne casse jamais la mutation). */
+    private void safePush() {
+        try { dashboardPublisher.pushNow(); } catch (RuntimeException ignored) { /* best-effort */ }
+    }
+
     @GetMapping("/bookings/{id}")
     @PreAuthorize("hasAuthority('VIEW:BOOKINGS')")
     public BookingDto findBookingById(@PathVariable UUID id) { return service.findBookingById(id); }
@@ -143,19 +170,23 @@ public class ResourceBookingController {
     @PreAuthorize("hasAuthority('CREATE:BOOKINGS')")
     public ResponseEntity<BookingDto> createBooking(@Valid @RequestBody BookingCreateDto dto) {
         BookingDto b = service.createBooking(dto);
+        safePush();
         return ResponseEntity.created(URI.create("/api/resource-bookings/bookings/" + b.id())).body(b);
     }
 
     @PatchMapping("/bookings/{id}")
     @PreAuthorize("hasAuthority('UPDATE:BOOKINGS')")
     public BookingDto updateBooking(@PathVariable UUID id, @Valid @RequestBody BookingUpdateDto dto) {
-        return service.updateBooking(id, dto);
+        BookingDto r = service.updateBooking(id, dto);
+        safePush();
+        return r;
     }
 
     @DeleteMapping("/bookings/{id}")
     @PreAuthorize("hasAuthority('DELETE:BOOKINGS')")
     public ResponseEntity<Void> deleteBooking(@PathVariable UUID id) {
         service.softDeleteBooking(id);
+        safePush();
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 

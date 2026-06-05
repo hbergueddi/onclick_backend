@@ -8,7 +8,7 @@
     type = org.springframework.modulith.ApplicationModule.Type.CLOSED,
     id = "modules.resource_booking",
     displayName = "modules/resource_booking",
-    allowedDependencies = {"core.identity", "core.tenant", "audit", "exception", "security", "shared"}
+    allowedDependencies = {"core.identity", "core.tenant", "audit", "exception", "security", "shared", "realtime"}
 )
 package com.onesley.oneclick.modules.resource_booking;
 

@@ -51,6 +51,7 @@ class ResourceBookingServiceTest {
     @Mock ResourceBookingRepository bookingRepo;
     @Mock ResourceBookingGuestRepository guestRepo;
     @Mock org.springframework.context.ApplicationEventPublisher eventPublisher;
+    @Mock com.onesley.oneclick.core.identity.api.UserDirectoryApi userDirectory;
     @Mock EntityManager em;
     /** Horloge fixe → la fenêtre H-2 est déterministe (les bookings de test démarrent à +1h..+2h). */
     private final java.time.Clock fixedClock = java.time.Clock.fixed(Instant.now(), java.time.ZoneOffset.UTC);
@@ -58,7 +59,7 @@ class ResourceBookingServiceTest {
 
     @BeforeEach
     void setup() {
-        service = new ResourceBookingService(resourceRepo, pricingRepo, bookingRepo, guestRepo, fixedClock, eventPublisher);
+        service = new ResourceBookingService(resourceRepo, pricingRepo, bookingRepo, guestRepo, fixedClock, eventPublisher, userDirectory);
         ReflectionTestUtils.setField(service, "entityManager", em);
         lenient().when(em.getReference(eq(Tenant.class), any())).thenReturn(new Tenant(UUID.randomUUID(), "T", "t"));
         lenient().when(em.getReference(eq(User.class), any())).thenReturn(new User(UUID.randomUUID(), null, "u@x.ma", "h", "U", "U"));
@@ -136,6 +137,43 @@ class ResourceBookingServiceTest {
         when(bookingRepo.findAll(any(Specification.class), any(Pageable.class))).thenReturn(Page.empty());
         assertThat(service.findAllBookings(UUID.randomUUID(), UUID.randomUUID(), "confirmed", 0, 20).getContent()).isEmpty();
         assertThat(service.findAllBookings(null, null, null, 0, 20).getContent()).isEmpty();
+    }
+
+    // ─── Board staff (W2-A) : ABAC findTenantBookings ────────────────────────────
+
+    @Test
+    void findTenantBookings_clientForbidden() {
+        // Un CLIENT (non staff/admin) ne voit JAMAIS les réservations des autres → 403.
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::isStaffOrAdmin).thenReturn(false);
+            assertThatThrownBy(() -> service.findTenantBookings(null, null, 0, 20))
+                .isInstanceOf(com.onesley.oneclick.exception.ForbiddenException.class);
+        }
+    }
+
+    @Test
+    void findTenantBookings_staffWithoutTenant_returnsEmpty() {
+        // Staff/admin SANS tenant (admin plateforme global) → aucun parc tenant → page vide.
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::isStaffOrAdmin).thenReturn(true);
+            sec.when(SecurityHelper::currentUserId).thenReturn(UUID.randomUUID());
+            when(userDirectory.tenantIdById(any())).thenReturn(Optional.empty());
+            assertThat(service.findTenantBookings(null, null, 0, 20).getContent()).isEmpty();
+        }
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void findTenantBookings_staffWithTenant_scopesAndEnriches() {
+        // Staff/admin AVEC tenant → scope tenant (Specification sur resources.tenant_id) + enrichissement.
+        // Page vide → enrichForStaff no-op (aucun appel namesByIds) → board renvoyé vide, sans erreur.
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::isStaffOrAdmin).thenReturn(true);
+            sec.when(SecurityHelper::currentUserId).thenReturn(UUID.randomUUID());
+            when(userDirectory.tenantIdById(any())).thenReturn(Optional.of(UUID.randomUUID()));
+            when(bookingRepo.findAll(any(Specification.class), any(Pageable.class))).thenReturn(Page.empty());
+            assertThat(service.findTenantBookings(null, "confirmed", 0, 20).getContent()).isEmpty();
+        }
     }
 
     @Test

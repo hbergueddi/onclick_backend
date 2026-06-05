@@ -52,6 +52,22 @@ public final class ResourceBookingDtos {
     public record BookingDto(UUID id, UUID resourceId, UUID organizerId, UUID pricingId, Instant startAt,
                              Instant endAt, String status, String notes, Instant createdAt) {}
 
+    /**
+     * Booking enrichi pour le <b>dashboard staff</b> ({@code GET /bookings?scope=tenant}).
+     *
+     * <p>Le board opérationnel staff doit afficher QUI a réservé QUELLE ressource — contrairement
+     * au {@link BusySlotDto} (calendrier membre, zéro PII). On expose donc le <b>nom d'affichage</b>
+     * de l'organisateur ({@code organizerName}, prénom + nom via {@code UserDirectoryApi}) et le
+     * <b>nom de la ressource</b> ({@code resourceName}), mais <b>jamais</b> le téléphone/email de
+     * l'organisateur (PII minimisée : un dashboard de planning n'en a pas besoin).</p>
+     *
+     * <p>Réservé au staff/admin du tenant (ABAC service : un CLIENT qui demande {@code scope=tenant}
+     * est refusé 403). Les noms sont résolus en un seul batch (anti-N+1).</p>
+     */
+    public record StaffBookingDto(UUID id, UUID resourceId, String resourceName, UUID organizerId,
+                                  String organizerName, UUID pricingId, Instant startAt, Instant endAt,
+                                  String status, String notes, Instant createdAt) {}
+
     public record BookingCreateDto(
         @NotNull UUID resourceId,
         @NotNull UUID organizerId,

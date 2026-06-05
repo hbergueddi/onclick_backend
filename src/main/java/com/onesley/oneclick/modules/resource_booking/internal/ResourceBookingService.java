@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.resource_booking.internal;
 
 import com.onesley.oneclick.core.identity.api.User;
+import com.onesley.oneclick.core.identity.api.UserDirectoryApi;
 import com.onesley.oneclick.core.tenant.api.Tenant;
 import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
@@ -22,9 +23,13 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static com.onesley.oneclick.modules.resource_booking.api.ResourceBookingDtos.*;
 import com.onesley.oneclick.modules.resource_booking.api.ResourceBookingDtos;
@@ -57,6 +62,15 @@ public class ResourceBookingService {
      * resource_booking → loyalty.
      */
     private final ApplicationEventPublisher eventPublisher;
+
+    /**
+     * Annuaire utilisateur (contrat typé {@code core.identity} — frontière Modulith).
+     * Sert au dashboard staff à résoudre, en un seul batch (anti-N+1), le NOM d'affichage
+     * de l'organisateur de chaque booking ({@code namesByIds}) et le TENANT du staff
+     * appelant ({@code tenantIdById}) pour scoper le listing au parc de SON tenant. Jamais
+     * de lecture SQL native de la table {@code users} hors du module identity.
+     */
+    private final UserDirectoryApi userDirectory;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -132,6 +146,91 @@ public class ResourceBookingService {
         if (status != null)      spec = spec.and((root, q, cb) -> cb.equal(root.get("status"), status));
         return bookingRepo.findAll(spec, PageRequest.of(page, size, Sort.by("startAt").descending()))
             .map(ResourceBooking::toDto);
+    }
+
+    /**
+     * Listing <b>staff</b> : TOUS les bookings (non soft-deleted) des ressources du tenant de
+     * l'appelant — board opérationnel du dashboard staff PCC ({@code GET /bookings?scope=tenant}).
+     *
+     * <p><b>ABAC</b> : réservé au staff/admin ({@link SecurityHelper#isStaffOrAdmin()}). Un CLIENT
+     * est refusé ({@link ForbiddenException} → 403) : il n'a aucune raison de voir les réservations
+     * des autres membres (le membre garde {@code GET /bookings} self-scopé). Le tenant n'est PAS un
+     * paramètre client (anti-spoof) : il est résolu serveur depuis le sub du JWT via
+     * {@link UserDirectoryApi#tenantIdById(UUID)} → le staff ne voit QUE le parc de SON tenant. Si
+     * l'appelant n'a pas de tenant (admin plateforme global sans tenant), le scope tenant n'a pas de
+     * sens → liste vide (un SUPERADMIN global passe par les filtres explicites, pas par ce board).</p>
+     *
+     * <p>Scoping SQL natif sur {@code resources.tenant_id} via un JOIN ({@code root.join("resource")})
+     * — exactement la « read-view native sur resources.tenant_id » attendue. Enrichissement noms
+     * d'affichage (organizer) + noms de ressources en deux batchs (anti-N+1), sans PII superflue.</p>
+     */
+    public Page<StaffBookingDto> findTenantBookings(UUID resourceId, String status, int page, int size) {
+        if (!SecurityHelper.isStaffOrAdmin()) {
+            throw new ForbiddenException(
+                "Accès interdit : le périmètre tenant est réservé au staff/admin");
+        }
+        UUID current = SecurityHelper.currentUserId();
+        UUID tenantId = current != null ? userDirectory.tenantIdById(current).orElse(null) : null;
+        if (tenantId == null) {
+            // Staff/admin sans tenant (admin plateforme global) → aucun parc tenant à afficher.
+            return Page.empty(PageRequest.of(page, size));
+        }
+
+        final UUID scopedTenantId = tenantId;
+        Specification<ResourceBooking> spec = (root, q, cb) -> {
+            // Évite un produit cartésien sur les count queries (le join n'est utile que pour le filtre).
+            if (q != null && q.getResultType() != Long.class && q.getResultType() != long.class) {
+                root.fetch("resource", jakarta.persistence.criteria.JoinType.INNER);
+            }
+            return cb.and(
+                cb.isNull(root.get("deletedAt")),
+                cb.equal(root.join("resource").get("tenantId"), scopedTenantId));
+        };
+        if (resourceId != null) spec = spec.and((root, q, cb) -> cb.equal(root.get("resourceId"), resourceId));
+        if (status != null)     spec = spec.and((root, q, cb) -> cb.equal(root.get("status"), status));
+
+        Page<ResourceBooking> bookings = bookingRepo.findAll(
+            spec, PageRequest.of(page, size, Sort.by("startAt").descending()));
+        return enrichForStaff(bookings);
+    }
+
+    /**
+     * Enrichit une page de bookings pour le staff : nom d'affichage organizer (via
+     * {@link UserDirectoryApi#namesByIds}) + nom de la ressource (repo local du module).
+     * Deux requêtes batch au total (anti-N+1), aucune PII contact (téléphone/email) exposée.
+     */
+    private Page<StaffBookingDto> enrichForStaff(Page<ResourceBooking> bookings) {
+        List<ResourceBooking> content = bookings.getContent();
+        List<UUID> organizerIds = content.stream()
+            .map(ResourceBooking::getOrganizerId)
+            .filter(java.util.Objects::nonNull).distinct().toList();
+        Map<UUID, UserDirectoryApi.UserName> names = organizerIds.isEmpty()
+            ? Map.of()
+            : userDirectory.namesByIds(organizerIds).stream()
+                .collect(Collectors.toMap(UserDirectoryApi.UserName::id, Function.identity(), (a, b) -> a));
+
+        List<UUID> resourceIds = content.stream()
+            .map(ResourceBooking::getResourceId)
+            .filter(java.util.Objects::nonNull).distinct().toList();
+        Map<UUID, String> resourceNames = resourceIds.isEmpty()
+            ? Map.of()
+            : resourceRepo.findAllById(resourceIds).stream()
+                .collect(Collectors.toMap(Resource::getId, Resource::getName, (a, b) -> a));
+
+        List<StaffBookingDto> dtos = new ArrayList<>(content.size());
+        for (ResourceBooking b : content) {
+            UserDirectoryApi.UserName n = b.getOrganizerId() != null ? names.get(b.getOrganizerId()) : null;
+            String organizerName = n != null
+                ? java.util.stream.Stream.of(n.firstName(), n.lastName())
+                    .filter(s -> s != null && !s.isBlank())
+                    .collect(Collectors.joining(" ")).trim()
+                : null;
+            dtos.add(new StaffBookingDto(
+                b.getId(), b.getResourceId(), resourceNames.get(b.getResourceId()),
+                b.getOrganizerId(), (organizerName == null || organizerName.isBlank()) ? null : organizerName,
+                b.getPricingId(), b.getStartAt(), b.getEndAt(), b.getStatus(), b.getNotes(), b.getCreatedAt()));
+        }
+        return new org.springframework.data.domain.PageImpl<>(dtos, bookings.getPageable(), bookings.getTotalElements());
     }
 
     public BookingDto findBookingById(UUID id) {
