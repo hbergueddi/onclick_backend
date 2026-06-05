@@ -2,6 +2,7 @@ package com.onesley.oneclick.core.notification.internal;
 
 import com.onesley.oneclick.core.notification.api.NotificationDtos.NotificationCreateDto;
 import com.onesley.oneclick.core.notification.api.NotificationDtos.PushReservationDto;
+import com.onesley.oneclick.shared.events.AnnouncementPublishedEvent;
 import com.onesley.oneclick.shared.events.FamilyMemberAddedEvent;
 import com.onesley.oneclick.shared.events.FeedbackCreatedEvent;
 import com.onesley.oneclick.shared.events.FeedbackRepliedEvent;
@@ -49,6 +50,7 @@ public class NotificationEventHandler {
     private static final String COMMUNITY_LINK = "/pocket/circle";
     private static final String FAMILY_LINK = "/pocket/pcc/family";
     private static final String FEEDBACK_OWNER_LINK = "/prodesk/pcc-feedbacks";
+    private static final String ANNOUNCEMENT_STAFF_LINK = "/prodesk/announcements";
 
     /**
      * Demande d'amitié → notif in-app au destinataire. Server-side car le CLIENT
@@ -113,6 +115,24 @@ public class NotificationEventHandler {
     }
 
     /**
+     * Annonce tenant publiée (Lot 8) → notif in-app au staff actif du tenant (destinataires résolus
+     * côté {@code modules.announcement} et portés sur l'event, auteur exclu). Server-side : c'est une
+     * comm B2B descendante, le staff ne s'auto-notifie pas. Type {@code announcement} (whitelisté
+     * dans le CHECK {@code notifications.type}). Deep-link vers la page annonces du staff.
+     */
+    @ApplicationModuleListener
+    public void onAnnouncementPublished(AnnouncementPublishedEvent event) {
+        if (event.recipientUserIds() == null || event.recipientUserIds().isEmpty()) return;
+        String prefix = "urgent".equals(event.priority()) ? "🔴 Annonce urgente" : "📢 Nouvelle annonce";
+        String title = prefix + (event.title() != null ? " : " + truncate(event.title(), 80) : "");
+        for (UUID recipient : event.recipientUserIds()) {
+            createInApp(recipient, "announcement", title,
+                "Une nouvelle annonce a été publiée pour votre établissement. Touchez pour la lire.",
+                ANNOUNCEMENT_STAFF_LINK);
+        }
+    }
+
+    /**
      * Invité IDENTIFIÉ ajouté à une réservation → notif « Invitation à dîner » +
      * push best-effort (canal réservation). Guests anonymes non concernés (pas d'event).
      */
@@ -147,6 +167,12 @@ public class NotificationEventHandler {
         String[] tb = titleAndBody(event.newStatus());
         if (tb == null) return; // statuts sans notification client (ex: pending)
         notify(event.clientId(), event.reservationId(), event.newStatus(), tb[0], tb[1]);
+    }
+
+    /** Tronque un libellé à {@code max} caractères (garde-fou pour le title notif, borné à 128). */
+    private static String truncate(String s, int max) {
+        if (s == null || s.length() <= max) return s;
+        return s.substring(0, Math.max(0, max - 1)) + "…";
     }
 
     /** Notif in-app seule (sans push) — pour les events non-réservation (ex: communauté). */
