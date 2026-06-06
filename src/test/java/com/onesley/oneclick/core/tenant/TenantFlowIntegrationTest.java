@@ -60,4 +60,55 @@ class TenantFlowIntegrationTest extends AbstractIntegrationTest {
             jsonJwtEntity(Map.of("name", "X", "slug", "l4x"), bearerForRole("CLIENT")), String.class)
             .getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
+
+    // ─── C1 portail tenant-admin (SUPERADMIN-only) : PATCH + branding + features ──
+
+    @Test
+    void tenantAdmin_update_branding_features_flow() {
+        String admin = adminBearer();
+        String slug = "c1-" + UUID.randomUUID().toString().substring(0, 8);
+        assertThat(restTemplate.exchange(url("/api/tenants"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("name", "C1 Tenant", "slug", slug), admin), String.class)
+            .getStatusCode().is2xxSuccessful()).isTrue();
+        UUID id = UUID.fromString(jdbc.queryForObject("SELECT id::text FROM tenants WHERE slug = ?", String.class, slug));
+        try {
+            // PATCH nom + statut → 200, reflété.
+            ResponseEntity<String> patch = restTemplate.exchange(url("/api/tenants/" + id), HttpMethod.PATCH,
+                jsonJwtEntity(Map.of("name", "C1 Renamed", "status", "paused"), admin), String.class);
+            assertThat(patch.getStatusCode())
+                .as("PATCH tenant — reçu %s, body=%s", patch.getStatusCode(), patch.getBody())
+                .isEqualTo(HttpStatus.OK);
+            assertThat(patch.getBody()).contains("C1 Renamed").contains("paused");
+
+            // PUT branding → 200 ; GET branding reflète.
+            assertThat(restTemplate.exchange(url("/api/tenants/" + id + "/branding"), HttpMethod.PUT,
+                jsonJwtEntity(Map.of("primaryColor", "#714B67", "logoUrl", "https://cdn/logo.png"), admin), String.class)
+                .getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(restTemplate.exchange(url("/api/tenants/" + id + "/branding"), HttpMethod.GET,
+                jwtEntity(admin), String.class).getBody()).contains("#714B67");
+
+            // PUT feature toggle → 200 ; GET features reflète.
+            assertThat(restTemplate.exchange(url("/api/tenants/" + id + "/features/boutique"), HttpMethod.PUT,
+                jsonJwtEntity(Map.of("enabled", true), admin), String.class)
+                .getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(restTemplate.exchange(url("/api/tenants/" + id + "/features"), HttpMethod.GET,
+                jwtEntity(admin), String.class).getBody()).contains("boutique");
+
+            // RBAC : RESTAURATEUR (sans accès TENANTS) → 403 sur PATCH.
+            assertThat(restTemplate.exchange(url("/api/tenants/" + id), HttpMethod.PATCH,
+                jsonJwtEntity(Map.of("name", "Hack"), bearerForRole("RESTAURATEUR")), String.class)
+                .getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        } finally {
+            jdbc.update("DELETE FROM tenant_features WHERE tenant_id = ?", id);
+            jdbc.update("DELETE FROM tenant_brandings WHERE tenant_id = ?", id);
+            jdbc.update("DELETE FROM tenants WHERE id = ?", id);
+        }
+    }
+
+    @Test
+    void update_noJwt_401() {
+        assertThat(restTemplate.exchange(url("/api/tenants/" + UUID.randomUUID()), HttpMethod.PATCH,
+            jsonJwtEntity(Map.of("name", "X"), null), String.class)
+            .getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
 }

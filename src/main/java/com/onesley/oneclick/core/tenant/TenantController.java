@@ -17,6 +17,11 @@ import java.util.Set;
 import java.util.UUID;
 import com.onesley.oneclick.core.tenant.api.TenantCreateDto;
 import com.onesley.oneclick.core.tenant.api.TenantDto;
+import com.onesley.oneclick.core.tenant.api.TenantAdminDtos.TenantBrandingDto;
+import com.onesley.oneclick.core.tenant.api.TenantAdminDtos.TenantBrandingUpdateDto;
+import com.onesley.oneclick.core.tenant.api.TenantAdminDtos.TenantFeatureDto;
+import com.onesley.oneclick.core.tenant.api.TenantAdminDtos.TenantFeatureToggleDto;
+import com.onesley.oneclick.core.tenant.api.TenantAdminDtos.TenantUpdateDto;
 import com.onesley.oneclick.core.tenant.api.Tenant;
 import com.onesley.oneclick.core.tenant.internal.TenantRepository;
 import lombok.RequiredArgsConstructor;
@@ -65,5 +70,45 @@ public class TenantController {
         return PageResponse.from(
             Searchable.execute(tenantRepository, req, SEARCHABLE_FIELDS, Tenant::toDto)
         );
+    }
+
+    // ─── C1 portail tenant-admin (SUPERADMIN-only — hasAuthority('VERB:TENANTS')) ──
+    // Décision projet : SUPERADMIN-only, pas d'ABAC self-scope ni d'impersonation. UPDATE:TENANTS
+    // déjà accordé à SUPERADMIN (V32 — 6 actions × toutes les feuilles).
+
+    @PatchMapping("/{id}")
+    @Operation(summary = "Met à jour un tenant (nom/statut ; SUPERADMIN only)")
+    @PreAuthorize("hasAuthority('UPDATE:TENANTS')")
+    public TenantDto update(@PathVariable UUID id, @Valid @RequestBody TenantUpdateDto body) {
+        return service.updateTenant(id, body);
+    }
+
+    @GetMapping("/{id}/branding")
+    @Operation(summary = "Branding visuel d'un tenant")
+    @PreAuthorize("hasAuthority('VIEW:TENANTS')")
+    public TenantBrandingDto getBranding(@PathVariable UUID id) {
+        return service.getBranding(id);
+    }
+
+    @PutMapping("/{id}/branding")
+    @Operation(summary = "Remplace le branding d'un tenant (SUPERADMIN only)")
+    @PreAuthorize("hasAuthority('UPDATE:TENANTS')")
+    public TenantBrandingDto updateBranding(@PathVariable UUID id, @Valid @RequestBody TenantBrandingUpdateDto body) {
+        return service.updateBranding(id, body);
+    }
+
+    @GetMapping("/{id}/features")
+    @Operation(summary = "Feature flags d'un tenant")
+    @PreAuthorize("hasAuthority('VIEW:TENANTS')")
+    public List<TenantFeatureDto> features(@PathVariable UUID id) {
+        return service.listFeatures(id);
+    }
+
+    @PutMapping("/{id}/features/{code}")
+    @Operation(summary = "Active/désactive un feature flag (SUPERADMIN only)")
+    @PreAuthorize("hasAuthority('UPDATE:TENANTS')")
+    public TenantFeatureDto toggleFeature(@PathVariable UUID id, @PathVariable String code,
+                                          @Valid @RequestBody TenantFeatureToggleDto body) {
+        return service.toggleFeature(id, code, body.enabled());
     }
 }
