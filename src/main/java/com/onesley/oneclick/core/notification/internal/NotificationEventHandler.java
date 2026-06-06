@@ -12,6 +12,8 @@ import com.onesley.oneclick.shared.events.ReservationCreatedEvent;
 import com.onesley.oneclick.shared.events.ReservationGuestAddedEvent;
 import com.onesley.oneclick.shared.events.ReservationGuestRespondedEvent;
 import com.onesley.oneclick.shared.events.ReservationStatusChangedEvent;
+import com.onesley.oneclick.shared.events.SeminarRequestedEvent;
+import com.onesley.oneclick.shared.events.SeminarStatusChangedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.modulith.events.ApplicationModuleListener;
@@ -51,6 +53,8 @@ public class NotificationEventHandler {
     private static final String FAMILY_LINK = "/pocket/pcc/family";
     private static final String FEEDBACK_OWNER_LINK = "/prodesk/pcc-feedbacks";
     private static final String ANNOUNCEMENT_STAFF_LINK = "/prodesk/announcements";
+    private static final String SEMINAR_STAFF_LINK = "/prodesk/pcc-seminars";
+    private static final String SEMINAR_MEMBER_LINK = "/pocket/pcc/seminaires";
 
     /**
      * Demande d'amitié → notif in-app au destinataire. Server-side car le CLIENT
@@ -130,6 +134,49 @@ public class NotificationEventHandler {
                 "Une nouvelle annonce a été publiée pour votre établissement. Touchez pour la lire.",
                 ANNOUNCEMENT_STAFF_LINK);
         }
+    }
+
+    /**
+     * Nouvelle demande de séminaire (PCC) → notif in-app au staff/admin (« commercial ») du tenant,
+     * destinataires résolus côté {@code modules.seminar} et portés sur l'event (auteur exclu).
+     * Server-side (le CLIENT qui soumet n'a pas {@code CREATE:NOTIFICATIONS}). Type {@code seminar}
+     * (whitelisté V73). Deep-link vers l'inbox commercial.
+     */
+    @ApplicationModuleListener
+    public void onSeminarRequested(SeminarRequestedEvent event) {
+        if (event.recipientUserIds() == null || event.recipientUserIds().isEmpty()) return;
+        String company = event.companyName() != null ? event.companyName() : "une entreprise";
+        String body = "Demande de devis de " + company + ". Touchez pour la traiter.";
+        for (UUID recipient : event.recipientUserIds()) {
+            createInApp(recipient, "seminar", "Nouvelle demande de séminaire 📩", body, SEMINAR_STAFF_LINK);
+        }
+    }
+
+    /**
+     * Changement de statut d'une demande de séminaire → notif in-app à l'organisateur (membre),
+     * libellé dépendant du statut (port des templates de l'EF legacy
+     * {@code send-pcc-seminar-status-update}). Server-side. Type {@code seminar} (whitelisté V73).
+     * Si {@code organizerId} est null (demande sans compte rattaché), {@link #createInApp} skip.
+     */
+    @ApplicationModuleListener
+    public void onSeminarStatusChanged(SeminarStatusChangedEvent event) {
+        String[] tb = seminarStatusMessage(event.newStatus(), event.companyName());
+        if (tb == null) return; // statut inconnu → pas de notif
+        createInApp(event.organizerId(), "seminar", tb[0], tb[1], SEMINAR_MEMBER_LINK);
+    }
+
+    /** Libellés membre par statut de séminaire ; {@code null} = statut inconnu (pas de notif). */
+    private String[] seminarStatusMessage(String status, String companyName) {
+        String c = companyName != null ? companyName : "votre demande";
+        return switch (status == null ? "" : status) {
+            case "demandee"      -> new String[]{"Demande reçue — " + c, "Notre équipe commerciale a bien reçu votre demande."};
+            case "en_traitement" -> new String[]{"Demande prise en charge — " + c, "Votre demande est en cours d'étude. Devis sous 24h."};
+            case "devis_envoye"  -> new String[]{"Devis envoyé — " + c, "Le devis vient de vous être envoyé par email. Vérifiez votre boîte mail."};
+            case "confirmee"     -> new String[]{"Séminaire confirmé — " + c, "Votre séminaire est confirmé. À très bientôt !"};
+            case "refusee"       -> new String[]{"Demande déclinée — " + c, "Nous ne pouvons malheureusement pas accueillir votre événement aux dates demandées. Notre équipe vous contactera pour une alternative."};
+            case "annulee"       -> new String[]{"Demande annulée — " + c, "Votre demande de séminaire a été annulée."};
+            default              -> null;
+        };
     }
 
     /**
