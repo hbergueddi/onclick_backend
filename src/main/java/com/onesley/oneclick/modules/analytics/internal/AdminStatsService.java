@@ -27,7 +27,6 @@ public class AdminStatsService {
 
     public AdminStatsDto computeStats(UUID tenantId) {
         String tenantFilter = tenantId != null ? "AND tenant_id = :tenantId" : "";
-        String tenantFilterNoAnd = tenantId != null ? "WHERE tenant_id = :tenantId" : "";
 
         long totalUsers          = count("SELECT COUNT(*) FROM users WHERE deleted_at IS NULL " + tenantFilter, tenantId);
         long totalClients        = count("SELECT COUNT(u.*) FROM users u JOIN roles r ON r.id = u.role_id " +
@@ -38,7 +37,14 @@ public class AdminStatsService {
         // `restaurant_staff` (singulier). Cf AdminStatsFullService qui utilise
         // déjà le bon nom. Le typo causait un 500 silencieux sur le KPI
         // /api/analytics/admin-stats utilisé par les anciennes pages admin.
-        long totalStaff          = count("SELECT COUNT(*) FROM restaurant_staffs " + tenantFilterNoAnd, tenantId);
+        // C3b — `restaurant_staffs` n'a PAS de colonne `tenant_id` : le filtre
+        // per-tenant doit passer par un JOIN sur `restaurants` (qui porte le
+        // tenant_id). Sans ça, le chemin per-tenant (TenantDashboard) plantait
+        // sur « column "tenant_id" does not exist ».
+        String staffSql = tenantId != null
+            ? "SELECT COUNT(*) FROM restaurant_staffs rs JOIN restaurants r ON r.id = rs.restaurant_id WHERE r.tenant_id = :tenantId"
+            : "SELECT COUNT(*) FROM restaurant_staffs";
+        long totalStaff          = count(staffSql, tenantId);
         long totalRestaurants    = count("SELECT COUNT(*) FROM restaurants WHERE deleted_at IS NULL " + tenantFilter, tenantId);
         // Bug 29 — Spring DB stocke status='active' (anglais) ; le legacy
         // Supabase utilisait 'actif' (français). Cf AdminStatsFullService idem.
