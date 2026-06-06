@@ -5,10 +5,15 @@ import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyExtensionDtos.*;
+import com.onesley.oneclick.modules.loyalty.api.RedemptionDto;
 import com.onesley.oneclick.security.SecurityHelper;
+import com.onesley.oneclick.shared.PageResponse;
 import static com.onesley.oneclick.shared.Temporals.toInstant;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,7 +21,10 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -34,6 +42,7 @@ public class LoyaltyExtensionService {
     private final ClientRatingRepository ratingRepo;
     private final AIUsageRepository aiUsageRepo;
     private final RestaurantRestitutionRepository restitutionRepo;
+    private final RedemptionRepository redemptionRepo;
     private final RestaurantTierStatusRepository tierStatusRepo;
     private final ClientScoreConfigRepository scoreConfigRepo;
     /** P2 — noms clients via contrat identity (plus de JOIN users pour l'enrichissement). */
@@ -196,6 +205,216 @@ public class LoyaltyExtensionService {
         r.setPoints(points);
         r.setReason(reason);
         return RestaurantRestitutionDto.from(restitutionRepo.save(r));
+    }
+
+    // ─── Audit listings (Forge — RedemptionAudit / RestaurantRestitutions) ──────
+
+    /**
+     * Audit paginé des rédemptions ({@code /forge/redemptions}).
+     *
+     * <p><b>ABAC</b> : admin (SUPERADMIN/GROUP_ADMIN) → toutes ; non-admin (RESTAURATEUR/STAFF)
+     * → uniquement les rédemptions des restaurants dont il est staff actif. Un CLIENT (qui
+     * détient pourtant VIEW:LOYALTY) n'est staff d'aucun resto → page vide. Si {@code restaurantId}
+     * est fourni par un non-admin et n'appartient pas à son périmètre → {@code 403} (porté par
+     * le contrôleur avant l'appel).
+     *
+     * <p><b>Anti-N+1</b> : la page est lue en 2 requêtes (rows + count) via JOIN
+     * {@code loyalty_accounts} (dérive client/resto) + read-view {@code restaurants} (nom resto),
+     * puis <b>un seul</b> batch {@code UserDirectoryApi.namesByIds} résout tous les noms clients
+     * de la page. Quel que soit {@code size}, 3 requêtes au total.
+     *
+     * @param status filtre optionnel sur la validation OTP : {@code "otp_validated"} (gros
+     *               montants) / {@code "standard"}. La table {@code redemptions} ne porte pas de
+     *               statut accepté/refusé (toute rédemption est effective) ; {@code null}/valeur
+     *               inconnue = aucun filtre.
+     */
+    @Transactional(readOnly = true)
+    public PageResponse<RedemptionDto> findRedemptionsAudit(
+            UUID restaurantId, Instant from, Instant to, String status, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+
+        // Scope ABAC : admin = pas de restriction ; sinon restreint aux restos du staff.
+        List<UUID> scopeRestaurantIds = adminOrNull();
+        if (scopeRestaurantIds != null && scopeRestaurantIds.isEmpty()) {
+            return PageResponse.from(new PageImpl<RedemptionDto>(List.of(), pageable, 0));
+        }
+
+        // Filtre OTP optionnel (seul "statut" disponible sur l'entité Redemption).
+        Boolean otpFilter = otpFilter(status);
+
+        StringBuilder where = new StringBuilder(" WHERE 1=1 ");
+        if (restaurantId != null)        where.append(" AND la.restaurant_id = :restaurantId ");
+        if (scopeRestaurantIds != null)  where.append(" AND la.restaurant_id IN :scope ");
+        if (from != null)                where.append(" AND rd.created_at >= :from ");
+        if (to != null)                  where.append(" AND rd.created_at <  :to ");
+        if (otpFilter != null)           where.append(" AND rd.otp_validated = :otp ");
+
+        Number total = (Number) bind(em.createNativeQuery(
+                "SELECT COUNT(*) FROM redemptions rd "
+                + "JOIN loyalty_accounts la ON la.id = rd.account_id" + where),
+                restaurantId, scopeRestaurantIds, from, to, otpFilter).getSingleResult();
+        long totalElements = total.longValue();
+        if (totalElements == 0) {
+            return PageResponse.from(new PageImpl<RedemptionDto>(List.of(), pageable, 0));
+        }
+
+        @SuppressWarnings("unchecked")
+        List<Object[]> rows = bind(em.createNativeQuery("""
+                SELECT rd.id, rd.account_id, la.client_id, la.restaurant_id, r.name,
+                       rd.points_used, rd.discount_amount, rd.otp_validated, rd.created_at
+                  FROM redemptions rd
+                  JOIN loyalty_accounts la ON la.id = rd.account_id
+                  LEFT JOIN restaurants r ON r.id = la.restaurant_id
+                """ + where + " ORDER BY rd.created_at DESC "),
+                restaurantId, scopeRestaurantIds, from, to, otpFilter)
+            .setFirstResult((int) pageable.getOffset())
+            .setMaxResults(pageable.getPageSize())
+            .getResultList();
+
+        // Batch résolution des noms clients (anti-N+1, un seul appel pour la page).
+        List<UUID> clientIds = rows.stream()
+            .map(row -> (UUID) row[2]).filter(Objects::nonNull).distinct().toList();
+        Map<UUID, String> nameByClient = userDirectory.namesByIds(clientIds).stream()
+            .collect(Collectors.toMap(UserDirectoryApi.UserName::id,
+                LoyaltyExtensionService::fullName, (a, b) -> a));
+
+        List<RedemptionDto> content = rows.stream().map(row -> {
+            UUID clientId = row[2] != null ? (UUID) row[2] : null;
+            return new RedemptionDto(
+                row[0] != null ? (UUID) row[0] : null,
+                row[1] != null ? (UUID) row[1] : null,
+                clientId,
+                clientId != null ? nameByClient.get(clientId) : null,
+                row[3] != null ? (UUID) row[3] : null,
+                (String) row[4],
+                row[5] != null ? ((Number) row[5]).intValue() : 0,
+                row[6] != null ? (BigDecimal) row[6] : null,
+                row[7] != null && (Boolean) row[7],
+                row[8] != null ? toInstant(row[8]) : null
+            );
+        }).toList();
+
+        return PageResponse.from(new PageImpl<>(content, pageable, totalElements));
+    }
+
+    /**
+     * Audit paginé des restitutions resto ({@code /forge/restitutions}).
+     *
+     * <p>Même <b>ABAC</b> que {@link #findRedemptionsAudit} (admin → tout ; owner → ses restos ;
+     * client → vide). Filtres optionnels {@code restaurantId} + fenêtre {@code [from, to[}.
+     *
+     * <p>Implémentation native à {@code WHERE} dynamique (clause ajoutée seulement si le filtre
+     * est présent) — alignée sur {@link #findRedemptionsAudit} et {@code findExpiredPointsAdmin}.
+     * Évite le piège PostgreSQL {@code could not determine data type of parameter} du motif JPQL
+     * {@code :param IS NULL OR ...} sur un bind {@code null} non typé. Page lue en 2 requêtes
+     * (count + rows) ; {@code restaurantName} enrichi via read-view {@code restaurants} en
+     * <b>un seul</b> batch (anti-N+1).
+     */
+    @Transactional(readOnly = true)
+    public PageResponse<RestaurantRestitutionDto> findRestitutionsAudit(
+            UUID restaurantId, Instant from, Instant to, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+
+        List<UUID> scopeRestaurantIds = adminOrNull();
+        if (scopeRestaurantIds != null && scopeRestaurantIds.isEmpty()) {
+            return PageResponse.from(new PageImpl<RestaurantRestitutionDto>(List.of(), pageable, 0));
+        }
+
+        StringBuilder where = new StringBuilder(" WHERE 1=1 ");
+        if (restaurantId != null)        where.append(" AND rr.restaurant_id = :restaurantId ");
+        if (scopeRestaurantIds != null)  where.append(" AND rr.restaurant_id IN :scope ");
+        if (from != null)                where.append(" AND rr.created_at >= :from ");
+        if (to != null)                  where.append(" AND rr.created_at <  :to ");
+
+        Number total = (Number) bind(em.createNativeQuery(
+                "SELECT COUNT(*) FROM restaurant_restitutions rr" + where),
+                restaurantId, scopeRestaurantIds, from, to, null).getSingleResult();
+        long totalElements = total.longValue();
+        if (totalElements == 0) {
+            return PageResponse.from(new PageImpl<RestaurantRestitutionDto>(List.of(), pageable, 0));
+        }
+
+        @SuppressWarnings("unchecked")
+        List<RestaurantRestitution> rows = bind(em.createNativeQuery(
+                "SELECT rr.* FROM restaurant_restitutions rr" + where
+                + " ORDER BY rr.created_at DESC", RestaurantRestitution.class),
+                restaurantId, scopeRestaurantIds, from, to, null)
+            .setFirstResult((int) pageable.getOffset())
+            .setMaxResults(pageable.getPageSize())
+            .getResultList();
+
+        // Enrichissement noms resto via read-view native (batch unique pour la page).
+        List<UUID> restoIds = rows.stream()
+            .map(RestaurantRestitution::getRestaurantId).filter(Objects::nonNull).distinct().toList();
+        Map<UUID, String> nameByResto = restaurantNames(restoIds);
+
+        List<RestaurantRestitutionDto> content = rows.stream()
+            .map(r -> RestaurantRestitutionDto.from(r, nameByResto.get(r.getRestaurantId())))
+            .toList();
+
+        return PageResponse.from(new PageImpl<>(content, pageable, totalElements));
+    }
+
+    // ─── Helpers (audit) ────────────────────────────────────────────────────────
+
+    /**
+     * Scope ABAC commun aux audits : {@code null} si l'appelant est admin (= pas de
+     * restriction par restaurant), sinon la liste (possiblement vide) des restaurants dont
+     * il est staff actif (read-view {@code restaurant_staffs}). {@code 401} si non authentifié.
+     */
+    @SuppressWarnings("unchecked")
+    private List<UUID> adminOrNull() {
+        if (SecurityHelper.isAdmin()) return null;
+        UUID callerId = SecurityHelper.currentUserId();
+        if (callerId == null) throw new ForbiddenException("Authentification requise");
+        return em.createNativeQuery("""
+                SELECT restaurant_id FROM restaurant_staffs
+                 WHERE user_id = :uid AND deleted_at IS NULL
+                """)
+            .setParameter("uid", callerId)
+            .getResultList();
+    }
+
+    /** Noms des restaurants par id (read-view native — Modulith CLOSED). Batch anti-N+1. */
+    @SuppressWarnings("unchecked")
+    private Map<UUID, String> restaurantNames(List<UUID> restaurantIds) {
+        if (restaurantIds.isEmpty()) return Map.of();
+        List<Object[]> rows = em.createNativeQuery(
+                "SELECT id, name FROM restaurants WHERE id IN :ids")
+            .setParameter("ids", restaurantIds)
+            .getResultList();
+        return rows.stream().collect(Collectors.toMap(
+            row -> (UUID) row[0], row -> (String) row[1], (a, b) -> a));
+    }
+
+    /** Lie les paramètres optionnels présents dans le {@code WHERE} dynamique. */
+    private static jakarta.persistence.Query bind(
+            jakarta.persistence.Query q, UUID restaurantId, List<UUID> scope,
+            Instant from, Instant to, Boolean otp) {
+        if (restaurantId != null) q.setParameter("restaurantId", restaurantId);
+        if (scope != null)        q.setParameter("scope", scope);
+        if (from != null)         q.setParameter("from", java.sql.Timestamp.from(from));
+        if (to != null)           q.setParameter("to", java.sql.Timestamp.from(to));
+        if (otp != null)          q.setParameter("otp", otp);
+        return q;
+    }
+
+    /** {@code "otp_validated"}→true, {@code "standard"}→false, sinon {@code null} (pas de filtre). */
+    private static Boolean otpFilter(String status) {
+        if (status == null) return null;
+        String s = status.trim().toLowerCase();
+        if (s.equals("otp_validated") || s.equals("otp")) return Boolean.TRUE;
+        if (s.equals("standard") || s.equals("no_otp"))   return Boolean.FALSE;
+        return null;
+    }
+
+    /** "Prénom Nom" depuis la projection annuaire (null si toutes composantes vides). */
+    private static String fullName(UserDirectoryApi.UserName u) {
+        if (u == null) return null;
+        String first = u.firstName() == null ? "" : u.firstName().trim();
+        String last = u.lastName() == null ? "" : u.lastName().trim();
+        String full = (first + " " + last).trim();
+        return full.isEmpty() ? null : full;
     }
 
     // ─── Restaurant tier status ──────────────────────────────────────

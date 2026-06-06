@@ -123,18 +123,35 @@ public final class LoyaltyExtensionDtos {
         }
     }
 
+    /**
+     * Restitution de points/CA due à un restaurant (audit Forge — {@code /forge/restitutions}).
+     *
+     * <p>{@code restaurantName} (nullable) ajouté pour la vue d'audit paginée admin/owner :
+     * résolu serveur-side via read-view native {@code restaurants} (Modulith CLOSED — pas
+     * d'import de l'entité {@code Restaurant}). Sur le chemin standard {@code from(entity)}
+     * (lectures by-restaurant/by-restaurants existantes), il reste {@code null} —
+     * l'appelant qui n'en a pas besoin l'ignore (backward-compatible).
+     */
     public record RestaurantRestitutionDto(
         UUID id,
         UUID restaurantId,
+        /** Nom du restaurant résolu via read-view native (null sur le chemin standard). */
+        String restaurantName,
         BigDecimal amount,
         Integer points,
         String reason,
         String status,
         Instant createdAt
     ) {
+        /** Chemin standard (sans enrichissement) — {@code restaurantName} à {@code null}. */
         public static RestaurantRestitutionDto from(RestaurantRestitution r) {
+            return from(r, null);
+        }
+
+        /** Vue d'audit paginée — {@code restaurantName} résolu via read-view native. */
+        public static RestaurantRestitutionDto from(RestaurantRestitution r, String restaurantName) {
             return new RestaurantRestitutionDto(
-                r.getId(), r.getRestaurantId(), r.getAmount(), r.getPoints(),
+                r.getId(), r.getRestaurantId(), restaurantName, r.getAmount(), r.getPoints(),
                 r.getReason(), r.getStatus(), r.getCreatedAt()
             );
         }

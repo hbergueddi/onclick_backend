@@ -1,9 +1,11 @@
 package com.onesley.oneclick.modules.loyalty;
 
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyExtensionDtos.*;
+import com.onesley.oneclick.modules.loyalty.api.RedemptionDto;
 import com.onesley.oneclick.modules.loyalty.internal.LoyaltyExtensionService;
 import com.onesley.oneclick.security.SecurityHelper;
 import com.onesley.oneclick.security.RestaurantAccessGuard;
+import com.onesley.oneclick.shared.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -11,10 +13,12 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -137,6 +141,53 @@ public class LoyaltyExtensionController {
     @PreAuthorize("hasAuthority('UPDATE:LOYALTY')")
     public RestaurantRestitutionDto createRestitution(@Valid @RequestBody RestitutionCreateDto dto) {
         return service.createRestitution(dto.restaurantId(), dto.amount(), dto.points() == null ? 0 : dto.points(), dto.reason());
+    }
+
+    @GetMapping("/restitutions")
+    @Operation(
+        summary = "Audit paginé des restitutions resto (/forge/restitutions) — filtres restaurantId / fenêtre de dates",
+        description = "VIEW:LOYALTY + ABAC : admin (SUPERADMIN/GROUP_ADMIN) → toutes ; owner (RESTAURATEUR/STAFF) "
+                    + "→ uniquement ses restaurants (sinon page vide / 403 si restaurantId hors périmètre). "
+                    + "restaurantName résolu serveur-side (read-view). Bornes [from, to[ sur created_at (ISO-8601)."
+    )
+    @PreAuthorize("hasAuthority('VIEW:LOYALTY')")
+    public PageResponse<RestaurantRestitutionDto> listRestitutionsAudit(
+        @RequestParam(required = false) UUID restaurantId,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
+        @RequestParam(defaultValue = "0") @Min(0) int page,
+        @RequestParam(defaultValue = "20") @Min(1) @Max(200) int size
+    ) {
+        // restaurantId explicite + non-admin → 403 si l'appelant n'est pas staff de CE resto.
+        // restaurantId absent → le service scope automatiquement (owner = ses restos ; client = vide).
+        if (restaurantId != null && !SecurityHelper.isAdmin()) {
+            restaurantAccessGuard.requireAdminOrActiveStaffOf(restaurantId);
+        }
+        return service.findRestitutionsAudit(restaurantId, from, to, page, size);
+    }
+
+    // ─── Redemptions audit (Forge — /forge/redemptions) ─────────────────────
+    @GetMapping("/redemptions")
+    @Operation(
+        summary = "Audit paginé des rédemptions de points (/forge/redemptions) — filtres restaurantId / dates / statut OTP",
+        description = "VIEW:LOYALTY + ABAC : admin → toutes ; owner → uniquement ses restaurants ; client → vide. "
+                    + "client/restaurant résolus via JOIN loyalty_accounts ; noms enrichis serveur-side (anti-N+1). "
+                    + "status = 'otp_validated' | 'standard' (la table redemptions n'a pas de statut accepté/refusé). "
+                    + "Bornes [from, to[ sur created_at (ISO-8601)."
+    )
+    @PreAuthorize("hasAuthority('VIEW:LOYALTY')")
+    public PageResponse<RedemptionDto> listRedemptionsAudit(
+        @RequestParam(required = false) UUID restaurantId,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
+        @RequestParam(required = false) String status,
+        @RequestParam(defaultValue = "0") @Min(0) int page,
+        @RequestParam(defaultValue = "20") @Min(1) @Max(200) int size
+    ) {
+        if (restaurantId != null && !SecurityHelper.isAdmin()) {
+            restaurantAccessGuard.requireAdminOrActiveStaffOf(restaurantId);
+        }
+        return service.findRedemptionsAudit(restaurantId, from, to, status, page, size);
     }
 
     // ─── Restaurant tier status ──────────────────────────────────────────

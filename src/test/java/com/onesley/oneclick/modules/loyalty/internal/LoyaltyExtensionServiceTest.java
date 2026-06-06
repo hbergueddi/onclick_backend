@@ -28,7 +28,9 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
@@ -47,6 +49,7 @@ class LoyaltyExtensionServiceTest {
     @Mock ClientRatingRepository ratingRepo;
     @Mock AIUsageRepository aiUsageRepo;
     @Mock RestaurantRestitutionRepository restitutionRepo;
+    @Mock RedemptionRepository redemptionRepo;
     @Mock RestaurantTierStatusRepository tierStatusRepo;
     @Mock ClientScoreConfigRepository scoreConfigRepo;
     @Mock UserDirectoryApi userDirectory;
@@ -356,5 +359,154 @@ class LoyaltyExtensionServiceTest {
         assertThat(dto.minReservations()).isEqualTo(7);   // patché
         assertThat(dto.fenetreMois()).isEqualTo(12);       // patché
         assertThat(dto.honoreesPourRemonter()).isEqualTo(5); // défaut préservé
+    }
+
+    // ─── Audit listings : restitutions (paginé + ABAC) ──────────────────────────
+
+    private RestaurantRestitution restitution(UUID rid, String amount, int points, String status) {
+        RestaurantRestitution r = new RestaurantRestitution();
+        r.setRestaurantId(rid);
+        r.setAmount(new BigDecimal(amount));
+        r.setPoints(points);
+        r.setStatus(status);
+        return r;
+    }
+
+    @Test
+    void findRestitutionsAudit_admin_mapsRow_enrichesRestaurantName() {
+        // Admin scope = null → query native count + rows (entité), puis read-view noms resto.
+        when(em.createNativeQuery(anyString(), eq(RestaurantRestitution.class))).thenReturn(query);
+        when(query.setFirstResult(anyInt())).thenReturn(query);
+        when(query.setMaxResults(anyInt())).thenReturn(query);
+        when(query.getSingleResult()).thenReturn(1L); // count
+        when(query.getResultList())
+            .thenReturn(Collections.singletonList(restitution(resto, "100.00", 50, "paid"))) // rows (entité)
+            .thenReturn(Collections.singletonList(new Object[]{ resto, "Le Resto" }));         // restaurantNames()
+
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::isAdmin).thenReturn(true);
+            var out = service.findRestitutionsAudit(resto, null, null, 0, 20);
+            assertThat(out.totalElements()).isEqualTo(1);
+            assertThat(out.content()).hasSize(1);
+            assertThat(out.content().get(0).restaurantId()).isEqualTo(resto);
+            assertThat(out.content().get(0).restaurantName()).isEqualTo("Le Resto");
+            assertThat(out.content().get(0).points()).isEqualTo(50);
+        }
+    }
+
+    @Test
+    void findRestitutionsAudit_owner_scopedToStaffRestaurants() {
+        when(em.createNativeQuery(anyString(), eq(RestaurantRestitution.class))).thenReturn(query);
+        when(query.setFirstResult(anyInt())).thenReturn(query);
+        when(query.setMaxResults(anyInt())).thenReturn(query);
+        when(query.getSingleResult()).thenReturn(1L); // count (scope non vide)
+        when(query.getResultList())
+            .thenReturn(Collections.singletonList(resto))                                      // adminOrNull() : scope staff
+            .thenReturn(Collections.singletonList(restitution(resto, "75.00", 30, "pending"))) // rows
+            .thenReturn(Collections.singletonList(new Object[]{ resto, "Le Resto" }));         // restaurantNames()
+
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::isAdmin).thenReturn(false);
+            sec.when(SecurityHelper::currentUserId).thenReturn(user);
+            var out = service.findRestitutionsAudit(null, null, null, 0, 20);
+            assertThat(out.content()).hasSize(1);
+            assertThat(out.content().get(0).restaurantName()).isEqualTo("Le Resto");
+        }
+    }
+
+    @Test
+    void findRestitutionsAudit_clientWithoutStaff_returnsEmpty_noCountQuery() {
+        when(query.getResultList()).thenReturn(Collections.emptyList()); // aucun resto staff
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::isAdmin).thenReturn(false);
+            sec.when(SecurityHelper::currentUserId).thenReturn(user);
+            var out = service.findRestitutionsAudit(null, null, null, 0, 20);
+            assertThat(out.content()).isEmpty();
+            assertThat(out.totalElements()).isZero();
+        }
+        // scope vide → on ne lance jamais le COUNT.
+        verify(query, never()).getSingleResult();
+    }
+
+    @Test
+    void findRestitutionsAudit_unauthenticated_throwsForbidden() {
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::isAdmin).thenReturn(false);
+            sec.when(SecurityHelper::currentUserId).thenReturn(null);
+            assertThatThrownBy(() -> service.findRestitutionsAudit(null, null, null, 0, 20))
+                .isInstanceOf(ForbiddenException.class);
+        }
+    }
+
+    // ─── Audit listings : redemptions (paginé natif + ABAC + enrichissement noms) ──
+
+    @Test
+    void findRedemptionsAudit_admin_mapsRows_enrichesClientAndRestaurantNames() {
+        UUID redemptionId = UUID.randomUUID();
+        UUID accountId = UUID.randomUUID();
+        UUID clientId = UUID.randomUUID();
+        // count → 1 ; puis rows.
+        when(query.getSingleResult()).thenReturn(1L);
+        Object[] row = { redemptionId, accountId, clientId, resto, "Le Resto",
+                         200, new BigDecimal("40.00"), Boolean.TRUE, Instant.now() };
+        when(query.getResultList()).thenReturn(Collections.singletonList(row));
+        // pagination chain (native) doit renvoyer le mock pour ne pas casser le fluent.
+        when(query.setFirstResult(anyInt())).thenReturn(query);
+        when(query.setMaxResults(anyInt())).thenReturn(query);
+        when(userDirectory.namesByIds(any())).thenReturn(List.of(
+            new UserDirectoryApi.UserName(clientId, "Sara", "B", null, null, null)));
+
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::isAdmin).thenReturn(true);
+            var out = service.findRedemptionsAudit(null, null, null, null, 0, 20);
+            assertThat(out.totalElements()).isEqualTo(1);
+            assertThat(out.content()).hasSize(1);
+            var dto = out.content().get(0);
+            assertThat(dto.id()).isEqualTo(redemptionId);
+            assertThat(dto.clientId()).isEqualTo(clientId);
+            assertThat(dto.clientName()).isEqualTo("Sara B");
+            assertThat(dto.restaurantId()).isEqualTo(resto);
+            assertThat(dto.restaurantName()).isEqualTo("Le Resto");
+            assertThat(dto.pointsUsed()).isEqualTo(200);
+            assertThat(dto.discountAmount()).isEqualByComparingTo("40.00");
+            assertThat(dto.otpValidated()).isTrue();
+        }
+    }
+
+    @Test
+    void findRedemptionsAudit_admin_zeroCount_shortCircuits_noRowFetch() {
+        when(query.getSingleResult()).thenReturn(0L); // count = 0
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::isAdmin).thenReturn(true);
+            var out = service.findRedemptionsAudit(resto, null, null, null, 0, 20);
+            assertThat(out.content()).isEmpty();
+            assertThat(out.totalElements()).isZero();
+        }
+        // count-only : pas de fetch des lignes ni de résolution de noms.
+        verify(query, never()).getResultList();
+        verify(userDirectory, never()).namesByIds(any());
+    }
+
+    @Test
+    void findRedemptionsAudit_clientWithoutStaff_returnsEmpty_noCountQuery() {
+        when(query.getResultList()).thenReturn(Collections.emptyList()); // aucun resto staff
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::isAdmin).thenReturn(false);
+            sec.when(SecurityHelper::currentUserId).thenReturn(user);
+            var out = service.findRedemptionsAudit(null, null, null, null, 0, 20);
+            assertThat(out.content()).isEmpty();
+        }
+        // scope vide → on ne lance jamais le COUNT redemptions.
+        verify(query, never()).getSingleResult();
+    }
+
+    @Test
+    void findRedemptionsAudit_unauthenticated_throwsForbidden() {
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::isAdmin).thenReturn(false);
+            sec.when(SecurityHelper::currentUserId).thenReturn(null);
+            assertThatThrownBy(() -> service.findRedemptionsAudit(null, null, null, null, 0, 20))
+                .isInstanceOf(ForbiddenException.class);
+        }
     }
 }
