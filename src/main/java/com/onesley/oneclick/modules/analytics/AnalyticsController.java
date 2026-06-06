@@ -9,6 +9,7 @@ import com.onesley.oneclick.modules.analytics.api.TenantRestaurantDtos.TenantRes
 import com.onesley.oneclick.modules.analytics.api.TenantRestaurantDtos.TenantRestaurantDto;
 import com.onesley.oneclick.modules.analytics.api.TenantReservationDtos.TenantReservationsResultDto;
 import com.onesley.oneclick.modules.analytics.api.TenantOfferDtos.TenantOffersResultDto;
+import com.onesley.oneclick.modules.analytics.api.TenantStaffDtos.TenantStaffResultDto;
 import com.onesley.oneclick.modules.analytics.internal.AdminStatsService;
 import com.onesley.oneclick.modules.analytics.internal.AnalyticsService;
 import com.onesley.oneclick.modules.analytics.internal.CrossTenantStatsService;
@@ -16,6 +17,7 @@ import com.onesley.oneclick.modules.analytics.internal.TenantClientsService;
 import com.onesley.oneclick.modules.analytics.internal.TenantRestaurantsService;
 import com.onesley.oneclick.modules.analytics.internal.TenantReservationsService;
 import com.onesley.oneclick.modules.analytics.internal.TenantOffersService;
+import com.onesley.oneclick.modules.analytics.internal.TenantStaffService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -44,6 +46,7 @@ public class AnalyticsController {
     private final TenantRestaurantsService tenantRestaurantsService;
     private final TenantReservationsService tenantReservationsService;
     private final TenantOffersService tenantOffersService;
+    private final TenantStaffService tenantStaffService;
 
     // ─── Admin stats — Sprint G.2.4 ────────────────────────────────────────
 
@@ -148,6 +151,20 @@ public class AnalyticsController {
     @PreAuthorize("hasAuthority('VIEW:TENANTS')")
     public TenantOffersResultDto tenantOffers(@RequestParam UUID tenantId) {
         return tenantOffersService.list(tenantId);
+    }
+
+    // ─── Portail tenant-admin « Équipe » (C4.5, SUPERADMIN via VIEW:TENANTS) ──
+
+    @GetMapping("/tenant-staff")
+    @Operation(
+        summary = "Équipe d'un tenant — staff agrégé cross-restos + résumé (SUPERADMIN)",
+        description = "Staff de tous les restaurants du tenant (restaurant_staffs → restaurants → "
+                    + "tenant), enrichi user + nom resto, avec résumé (owners/managers/staff/cross-resto). "
+                    + "Native SQL. Les mutations réutilisent les endpoints staff existants."
+    )
+    @PreAuthorize("hasAuthority('VIEW:TENANTS')")
+    public TenantStaffResultDto tenantStaff(@RequestParam UUID tenantId) {
+        return tenantStaffService.list(tenantId);
     }
 
     // ─── API clients ─────────────────────────────────────────────────────────
