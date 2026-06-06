@@ -1,9 +1,11 @@
 package com.onesley.oneclick.core.tenant.api;
 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
+import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -71,5 +73,28 @@ public final class TenantAdminDtos {
     /** Activation / désactivation d'un feature flag (PUT). */
     public record TenantFeatureToggleDto(
         @NotNull Boolean enabled
+    ) {}
+
+    /** Rôles valides d'un admin de tenant (CHECK tenant_admins_role_chk V75). */
+    public static final String ADMIN_ROLE_REGEX = "^(owner|admin|viewer)$";
+
+    /** Un administrateur d'un tenant (lecture), enrichi du nom/contact via UserDirectoryApi. */
+    public record TenantAdminDto(
+        UUID userId,
+        String firstName,
+        String lastName,
+        String email,
+        String role,
+        UUID invitedBy,
+        Instant createdAt
+    ) {}
+
+    /**
+     * Ajout d'un admin par identifiant « humain » (email / téléphone / code parrainage), résolu
+     * dans le tenant ciblé via UserDirectoryApi. {@code role} optionnel (défaut {@code admin}).
+     */
+    public record AddTenantAdminDto(
+        @NotBlank @Size(max = 320) String identifier,
+        @Pattern(regexp = ADMIN_ROLE_REGEX, message = "role invalide (owner|admin|viewer)") String role
     ) {}
 }

@@ -114,4 +114,41 @@ class TenantFlowIntegrationTest extends AbstractIntegrationTest {
             jsonJwtEntity(Map.of("name", "X"), null), String.class)
             .getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
+
+    // ─── C2 administrateurs de tenant (SUPERADMIN-only) : add → list → remove ─────
+
+    @Test
+    void tenantAdmins_add_list_remove_flow() {
+        String admin = adminBearer();
+        UUID tenantId = UUID.fromString(jdbc.queryForObject(
+            "SELECT id::text FROM tenants WHERE slug = 'palmeraie'", String.class));
+        UUID memberId = UUID.fromString(jdbc.queryForObject(
+            "SELECT id::text FROM users WHERE email = 'member1@palmeraie.com'", String.class));
+        try {
+            // add → 201
+            ResponseEntity<String> add = restTemplate.exchange(url("/api/tenants/" + tenantId + "/admins"),
+                HttpMethod.POST,
+                jsonJwtEntity(Map.of("identifier", "member1@palmeraie.com", "role", "admin"), admin), String.class);
+            assertThat(add.getStatusCode())
+                .as("add admin — reçu %s, body=%s", add.getStatusCode(), add.getBody())
+                .isEqualTo(HttpStatus.CREATED);
+            assertThat(add.getBody()).contains(memberId.toString());
+
+            // list contient le membre
+            assertThat(restTemplate.exchange(url("/api/tenants/" + tenantId + "/admins"),
+                HttpMethod.GET, jwtEntity(admin), String.class).getBody()).contains(memberId.toString());
+
+            // RBAC : RESTAURATEUR (sans accès TENANTS) → 403
+            assertThat(restTemplate.exchange(url("/api/tenants/" + tenantId + "/admins"),
+                HttpMethod.POST, jsonJwtEntity(Map.of("identifier", "x@x.com"), bearerForRole("RESTAURATEUR")), String.class)
+                .getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+            // remove → 204
+            assertThat(restTemplate.exchange(url("/api/tenants/" + tenantId + "/admins/" + memberId),
+                HttpMethod.DELETE, jwtEntity(admin), String.class).getStatusCode())
+                .isEqualTo(HttpStatus.NO_CONTENT);
+        } finally {
+            jdbc.update("DELETE FROM tenant_admins WHERE tenant_id = ? AND user_id = ?", tenantId, memberId);
+        }
+    }
 }

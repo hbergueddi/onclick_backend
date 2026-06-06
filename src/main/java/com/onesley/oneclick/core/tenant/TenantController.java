@@ -22,8 +22,12 @@ import com.onesley.oneclick.core.tenant.api.TenantAdminDtos.TenantBrandingUpdate
 import com.onesley.oneclick.core.tenant.api.TenantAdminDtos.TenantFeatureDto;
 import com.onesley.oneclick.core.tenant.api.TenantAdminDtos.TenantFeatureToggleDto;
 import com.onesley.oneclick.core.tenant.api.TenantAdminDtos.TenantUpdateDto;
+import com.onesley.oneclick.core.tenant.api.TenantAdminDtos.TenantAdminDto;
+import com.onesley.oneclick.core.tenant.api.TenantAdminDtos.AddTenantAdminDto;
 import com.onesley.oneclick.core.tenant.api.Tenant;
 import com.onesley.oneclick.core.tenant.internal.TenantRepository;
+import com.onesley.oneclick.core.tenant.internal.TenantAdminService;
+import org.springframework.http.HttpStatus;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -38,6 +42,7 @@ public class TenantController {
     );
 
     private final TenantService service;
+    private final TenantAdminService adminService;
     private final TenantRepository tenantRepository;
 
     // Bug 32 (Batch B RBAC v2) — RBAC v2 senior strict hasAuthority('VERB:TENANTS')
@@ -110,5 +115,30 @@ public class TenantController {
     public TenantFeatureDto toggleFeature(@PathVariable UUID id, @PathVariable String code,
                                           @Valid @RequestBody TenantFeatureToggleDto body) {
         return service.toggleFeature(id, code, body.enabled());
+    }
+
+    // ─── C2 administrateurs de tenant (SUPERADMIN-only) ───────────────────────────
+
+    @GetMapping("/{id}/admins")
+    @Operation(summary = "Administrateurs d'un tenant (enrichis nom/contact)")
+    @PreAuthorize("hasAuthority('VIEW:TENANTS')")
+    public List<TenantAdminDto> admins(@PathVariable UUID id) {
+        return adminService.listAdmins(id);
+    }
+
+    @PostMapping("/{id}/admins")
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Ajoute un administrateur au tenant (par identifiant ; SUPERADMIN only)")
+    @PreAuthorize("hasAuthority('UPDATE:TENANTS')")
+    public TenantAdminDto addAdmin(@PathVariable UUID id, @Valid @RequestBody AddTenantAdminDto body) {
+        return adminService.addAdmin(id, body);
+    }
+
+    @DeleteMapping("/{id}/admins/{userId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Retire un administrateur du tenant (SUPERADMIN only)")
+    @PreAuthorize("hasAuthority('UPDATE:TENANTS')")
+    public void removeAdmin(@PathVariable UUID id, @PathVariable UUID userId) {
+        adminService.removeAdmin(id, userId);
     }
 }
