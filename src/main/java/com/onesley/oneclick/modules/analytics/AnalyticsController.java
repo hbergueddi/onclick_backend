@@ -3,9 +3,12 @@ package com.onesley.oneclick.modules.analytics;
 import com.onesley.oneclick.shared.PageResponse;
 import com.onesley.oneclick.modules.analytics.api.AdminStatsDto;
 import com.onesley.oneclick.modules.analytics.api.CrossTenantDtos.CrossTenantStatsDto;
+import com.onesley.oneclick.modules.analytics.api.TenantClientDtos.TenantClientDetailDto;
+import com.onesley.oneclick.modules.analytics.api.TenantClientDtos.TenantClientDto;
 import com.onesley.oneclick.modules.analytics.internal.AdminStatsService;
 import com.onesley.oneclick.modules.analytics.internal.AnalyticsService;
 import com.onesley.oneclick.modules.analytics.internal.CrossTenantStatsService;
+import com.onesley.oneclick.modules.analytics.internal.TenantClientsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -30,6 +33,7 @@ public class AnalyticsController {
     private final AnalyticsService service;
     private final AdminStatsService adminStatsService;
     private final CrossTenantStatsService crossTenantStatsService;
+    private final TenantClientsService tenantClientsService;
 
     // ─── Admin stats — Sprint G.2.4 ────────────────────────────────────────
 
@@ -57,6 +61,30 @@ public class AnalyticsController {
     @PreAuthorize("hasAuthority('VIEW:TENANTS')")
     public CrossTenantStatsDto crossTenantStats(@RequestParam(defaultValue = "30") int days) {
         return crossTenantStatsService.compute(days);
+    }
+
+    // ─── CRM tenant-admin « Mes clients » (C4.1, SUPERADMIN via VIEW:TENANTS) ──
+
+    @GetMapping("/tenant-clients")
+    @Operation(
+        summary = "CRM d'un tenant — liste agrégée des clients (SUPERADMIN)",
+        description = "Un client = a ≥ 1 ticket Snap2Earn OU ≥ 1 réservation dans un resto du tenant. "
+                    + "Agrégats serveur-side (CA / visites / points / segment / resto favori). "
+                    + "Native SQL groupé (anti N+1)."
+    )
+    @PreAuthorize("hasAuthority('VIEW:TENANTS')")
+    public List<TenantClientDto> tenantClients(@RequestParam UUID tenantId) {
+        return tenantClientsService.list(tenantId);
+    }
+
+    @GetMapping("/tenant-clients/{clientId}")
+    @Operation(summary = "CRM d'un tenant — fiche 360° d'un client (KPIs + top restos + timeline)")
+    @PreAuthorize("hasAuthority('VIEW:TENANTS')")
+    public ResponseEntity<TenantClientDetailDto> tenantClientDetail(
+        @PathVariable UUID clientId, @RequestParam UUID tenantId
+    ) {
+        TenantClientDetailDto dto = tenantClientsService.detail(tenantId, clientId);
+        return dto == null ? ResponseEntity.notFound().build() : ResponseEntity.ok(dto);
     }
 
     // ─── API clients ─────────────────────────────────────────────────────────
