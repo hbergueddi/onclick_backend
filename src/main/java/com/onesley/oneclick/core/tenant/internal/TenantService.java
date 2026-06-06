@@ -86,10 +86,7 @@ public class TenantService {
     /** Branding d'un tenant ; retourne un branding vide (tenantId + nulls) si pas encore défini. */
     public TenantBrandingDto getBranding(UUID id) {
         requireTenant(id);
-        return brandingRepository.findById(id)
-            .map(b -> new TenantBrandingDto(b.getTenantId(), b.getLogoUrl(), b.getPrimaryColor(),
-                b.getAccentColor(), b.getCustomDomain()))
-            .orElse(new TenantBrandingDto(id, null, null, null, null));
+        return brandingRepository.findById(id).map(TenantService::toBrandingDto).orElse(emptyBranding(id));
     }
 
     /** Remplace le branding (upsert sur la PK tenant_id @MapsId). */
@@ -101,9 +98,13 @@ public class TenantService {
         b.setPrimaryColor(trimToNull(dto.primaryColor()));
         b.setAccentColor(trimToNull(dto.accentColor()));
         b.setCustomDomain(trimToNull(dto.customDomain()));
-        TenantBranding saved = brandingRepository.save(b);
-        return new TenantBrandingDto(saved.getTenantId(), saved.getLogoUrl(), saved.getPrimaryColor(),
-            saved.getAccentColor(), saved.getCustomDomain());
+        b.setBackgroundColor(trimToNull(dto.backgroundColor()));
+        b.setLogoDarkUrl(trimToNull(dto.logoDarkUrl()));
+        b.setFaviconUrl(trimToNull(dto.faviconUrl()));
+        b.setTagline(trimToNull(dto.tagline()));
+        b.setAppNameWin(trimToNull(dto.appNameWin()));
+        b.setAppNameStore(trimToNull(dto.appNameStore()));
+        return toBrandingDto(brandingRepository.save(b));
     }
 
     /** Liste des feature flags d'un tenant. */
@@ -134,6 +135,16 @@ public class TenantService {
             saved = featureRepository.save(new TenantFeature(UUID.randomUUID(), t, code, enabled));
         }
         return new TenantFeatureDto(saved.getFeatureCode(), saved.isEnabled());
+    }
+
+    private static TenantBrandingDto toBrandingDto(TenantBranding b) {
+        return new TenantBrandingDto(b.getTenantId(), b.getLogoUrl(), b.getPrimaryColor(),
+            b.getAccentColor(), b.getCustomDomain(), b.getBackgroundColor(), b.getLogoDarkUrl(),
+            b.getFaviconUrl(), b.getTagline(), b.getAppNameWin(), b.getAppNameStore());
+    }
+
+    private static TenantBrandingDto emptyBranding(UUID id) {
+        return new TenantBrandingDto(id, null, null, null, null, null, null, null, null, null, null);
     }
 
     private Tenant requireTenant(UUID id) {

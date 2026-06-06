@@ -126,10 +126,15 @@ class TenantServiceTest {
         when(brandingRepository.findById(id)).thenReturn(Optional.empty());
         when(brandingRepository.save(any())).thenAnswer(i -> i.getArgument(0));
         TenantBrandingDto dto = service.updateBranding(id,
-            new TenantBrandingUpdateDto("https://cdn/logo.png", "#714B67", "#28A745", null));
+            new TenantBrandingUpdateDto("https://cdn/logo.png", "#714B67", "#28A745", null,
+                "#FDFBF9", "https://cdn/logo-dark.png", "https://cdn/favicon.ico", "Le club",
+                "My PCC", "PCC Store"));
         assertThat(dto.logoUrl()).isEqualTo("https://cdn/logo.png");
         assertThat(dto.primaryColor()).isEqualTo("#714B67");
         assertThat(dto.customDomain()).isNull();
+        assertThat(dto.backgroundColor()).isEqualTo("#FDFBF9");
+        assertThat(dto.tagline()).isEqualTo("Le club");
+        assertThat(dto.appNameWin()).isEqualTo("My PCC");
         verify(brandingRepository).save(any(TenantBranding.class));
     }
 

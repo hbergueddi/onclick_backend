@@ -82,10 +82,13 @@ class TenantFlowIntegrationTest extends AbstractIntegrationTest {
 
             // PUT branding → 200 ; GET branding reflète.
             assertThat(restTemplate.exchange(url("/api/tenants/" + id + "/branding"), HttpMethod.PUT,
-                jsonJwtEntity(Map.of("primaryColor", "#714B67", "logoUrl", "https://cdn/logo.png"), admin), String.class)
+                jsonJwtEntity(Map.of("primaryColor", "#714B67", "logoUrl", "https://cdn/logo.png",
+                    "backgroundColor", "#FDFBF9", "tagline", "Le club", "appNameWin", "My PCC"), admin), String.class)
                 .getStatusCode()).isEqualTo(HttpStatus.OK);
-            assertThat(restTemplate.exchange(url("/api/tenants/" + id + "/branding"), HttpMethod.GET,
-                jwtEntity(admin), String.class).getBody()).contains("#714B67");
+            // GET branding reflète les nouveaux champs V74 (parité 1:1).
+            String brandingBody = restTemplate.exchange(url("/api/tenants/" + id + "/branding"), HttpMethod.GET,
+                jwtEntity(admin), String.class).getBody();
+            assertThat(brandingBody).contains("#714B67").contains("Le club").contains("My PCC");
 
             // PUT feature toggle → 200 ; GET features reflète.
             assertThat(restTemplate.exchange(url("/api/tenants/" + id + "/features/boutique"), HttpMethod.PUT,

@@ -35,18 +35,31 @@ public final class TenantAdminDtos {
         String logoUrl,
         String primaryColor,
         String accentColor,
-        String customDomain
+        String customDomain,
+        // V74 — parité 1:1 éditeur branding.
+        String backgroundColor,
+        String logoDarkUrl,
+        String faviconUrl,
+        String tagline,
+        String appNameWin,
+        String appNameStore
     ) {}
 
     /**
-     * Remplacement du branding (PUT). Les 4 champs sont posés tels quels (null = effacé) —
+     * Remplacement du branding (PUT). Tous les champs sont posés tels quels (null = effacé) —
      * le front envoie l'objet complet. {@code customDomain} unique en base.
      */
     public record TenantBrandingUpdateDto(
         @Size(max = 512) String logoUrl,
         @Size(max = 64) String primaryColor,
         @Size(max = 64) String accentColor,
-        @Size(max = 512) String customDomain
+        @Size(max = 512) String customDomain,
+        @Size(max = 64) String backgroundColor,
+        @Size(max = 512) String logoDarkUrl,
+        @Size(max = 512) String faviconUrl,
+        @Size(max = 256) String tagline,
+        @Size(max = 64) String appNameWin,
+        @Size(max = 64) String appNameStore
     ) {}
 
     /** Un feature flag d'un tenant (lecture). */

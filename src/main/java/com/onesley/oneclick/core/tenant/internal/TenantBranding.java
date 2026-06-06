@@ -49,6 +49,27 @@ public class TenantBranding extends TimestampedEntity {
     @Column(name = "custom_domain", unique = true, length = 512)
     @Setter private String customDomain;
 
+    // V74 — parité 1:1 éditeur branding (champs additionnels whitelabel).
+    @Column(name = "background_color", length = 64)
+    @Setter private String backgroundColor;
+
+    @Column(name = "logo_dark_url", length = 512)
+    @Setter private String logoDarkUrl;
+
+    @Column(name = "favicon_url", length = 512)
+    @Setter private String faviconUrl;
+
+    @Column(name = "tagline", length = 256)
+    @Setter private String tagline;
+
+    /** Nom de l'app iOS Win (stocké, non consommé par les builds dans ce périmètre). */
+    @Column(name = "app_name_win", length = 64)
+    @Setter private String appNameWin;
+
+    /** Nom de l'app iOS Store (stocké, non consommé par les builds dans ce périmètre). */
+    @Column(name = "app_name_store", length = 64)
+    @Setter private String appNameStore;
+
     public TenantBranding(Tenant tenant) {
         this.tenant = tenant;
     }
