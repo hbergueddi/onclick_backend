@@ -2,8 +2,10 @@ package com.onesley.oneclick.modules.analytics;
 
 import com.onesley.oneclick.shared.PageResponse;
 import com.onesley.oneclick.modules.analytics.api.AdminStatsDto;
+import com.onesley.oneclick.modules.analytics.api.CrossTenantDtos.CrossTenantStatsDto;
 import com.onesley.oneclick.modules.analytics.internal.AdminStatsService;
 import com.onesley.oneclick.modules.analytics.internal.AnalyticsService;
+import com.onesley.oneclick.modules.analytics.internal.CrossTenantStatsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -27,6 +29,7 @@ public class AnalyticsController {
 
     private final AnalyticsService service;
     private final AdminStatsService adminStatsService;
+    private final CrossTenantStatsService crossTenantStatsService;
 
     // ─── Admin stats — Sprint G.2.4 ────────────────────────────────────────
 
@@ -40,6 +43,20 @@ public class AnalyticsController {
     @PreAuthorize("hasAuthority('VIEW:ANALYTICS')")
     public AdminStatsDto getAdminStats(@RequestParam(required = false) UUID tenantId) {
         return adminStatsService.computeStats(tenantId);
+    }
+
+    // ─── CrossTenantDashboard (C3, SUPERADMIN) — temps réel via STOMP /topic/admin/cross-tenant ──
+
+    @GetMapping("/cross-tenant-stats")
+    @Operation(
+        summary = "KPIs cross-tenant (SUPERADMIN) — snapshot sur fenêtre N jours",
+        description = "Agrégat par tenant (restos / CA Snap2Earn / tickets / clients / réservations + "
+                    + "delta vs période précédente). Le dashboard est poussé en temps réel via STOMP "
+                    + "(/topic/admin/cross-tenant) ; cet endpoint sert le snapshot REST initial."
+    )
+    @PreAuthorize("hasAuthority('VIEW:TENANTS')")
+    public CrossTenantStatsDto crossTenantStats(@RequestParam(defaultValue = "30") int days) {
+        return crossTenantStatsService.compute(days);
     }
 
     // ─── API clients ─────────────────────────────────────────────────────────
