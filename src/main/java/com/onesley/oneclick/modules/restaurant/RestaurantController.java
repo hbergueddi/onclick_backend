@@ -107,6 +107,20 @@ public class RestaurantController {
         return service.patch(id, dto);
     }
 
+    @PostMapping("/{id}/onboarding-complete")
+    @Operation(
+        summary = "E1 — marque l'onboarding self-service du restaurant comme terminé",
+        description = "Pose restaurants.onboarding_completed_at = now(). Appelé en fin de wizard " +
+                      "1re connexion owner. Owner du restaurant (staff actif) ou SUPERADMIN/GROUP_ADMIN."
+    )
+    @PreAuthorize("hasAuthority('UPDATE:RESTAURANTS')")
+    public RestaurantDto completeOnboarding(@PathVariable UUID id) {
+        // ABAC : seul un staff actif / admin du restaurant clôture SON onboarding
+        // (cohérent avec les sous-ressources staff/services/zones/tables).
+        restaurantAccessGuard.requireAdminOrActiveStaffOf(id);
+        return service.markOnboardingComplete(id);
+    }
+
     @DeleteMapping("/{id}")
     @Operation(summary = "Soft delete d'un restaurant")
     @PreAuthorize("hasAuthority('DELETE:RESTAURANTS')")

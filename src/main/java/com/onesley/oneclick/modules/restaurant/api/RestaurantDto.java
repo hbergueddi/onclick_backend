@@ -43,6 +43,8 @@ public record RestaurantDto(
     /** JSON brut de regularOpeningHours Google — frontend désérialise. */
     String openingHours,
     Instant googleUpdatedAt,
-    Instant createdAt
+    Instant createdAt,
+    /** E1 — onboarding self-service terminé (null si wizard non complété). */
+    Instant onboardingCompletedAt
 ) {
 }

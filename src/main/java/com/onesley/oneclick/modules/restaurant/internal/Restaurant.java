@@ -134,6 +134,10 @@ public class Restaurant extends SoftDeletableAuditedEntity {
     @Column(name = "google_updated_at")
     private java.time.Instant googleUpdatedAt;
 
+    /** E1 — Onboarding self-service terminé (null = wizard pas encore complété). V77. */
+    @Column(name = "onboarding_completed_at")
+    @Setter private java.time.Instant onboardingCompletedAt;
+
     public Restaurant(UUID id, Tenant tenant, String name, String city) {
         this.id = id;
         this.tenant = tenant;
@@ -148,7 +152,7 @@ public class Restaurant extends SoftDeletableAuditedEntity {
             tags == null ? java.util.List.of() : java.util.List.of(tags),
             loungePts == null ? 0 : loungePts, image, cuisine, maxStaff, groupId,
             googlePlaceId, googleRating, googleReviewsCount, websiteUrl, openingHours, googleUpdatedAt,
-            getCreatedAt());
+            getCreatedAt(), onboardingCompletedAt);
     }
 
     @Override

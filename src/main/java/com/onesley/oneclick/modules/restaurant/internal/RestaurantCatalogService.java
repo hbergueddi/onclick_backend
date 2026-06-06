@@ -140,6 +140,20 @@ public class RestaurantCatalogService {
     }
 
     /**
+     * E1 — marque l'onboarding self-service du restaurant comme terminé (timestamp serveur).
+     * Idempotent (ré-appel = re-stampe). Dirty-checking persiste via save().
+     */
+    @Transactional
+    @CacheEvict(value = CacheConfig.CACHE_RESTAURANTS, key = "#id")
+    public RestaurantDto markOnboardingComplete(UUID id) {
+        Restaurant r = repository.findById(id)
+            .filter(x -> x.getDeletedAt() == null)
+            .orElseThrow(() -> new NotFoundException("Restaurant", id));
+        r.setOnboardingCompletedAt(java.time.Instant.now());
+        return repository.save(r).toDto();
+    }
+
+    /**
      * Mappe le nouveau statut canonique EN ({@code active|paused|archived}) vers la
      * clé d'événement FR attendue par la page admin CycleDeVie ({@code eventConfig}).
      *

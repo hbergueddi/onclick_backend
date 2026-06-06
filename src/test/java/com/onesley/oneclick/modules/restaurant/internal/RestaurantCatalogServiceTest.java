@@ -173,4 +173,33 @@ class RestaurantCatalogServiceTest {
         service.patch(r.getId(), patchStatus("active"));
         verify(lifecycleEventService, never()).record(any(), any(), any());
     }
+
+    // ─── E1 — markOnboardingComplete (V77) ───────────────────────────────────
+
+    @Test
+    void markOnboardingComplete_notFound_throwsNotFound() {
+        when(repository.findById(any())).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.markOnboardingComplete(UUID.randomUUID()))
+            .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void markOnboardingComplete_softDeleted_throwsNotFound() {
+        Restaurant r = restaurant();
+        r.markDeleted();
+        when(repository.findById(r.getId())).thenReturn(Optional.of(r));
+        assertThatThrownBy(() -> service.markOnboardingComplete(r.getId()))
+            .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void markOnboardingComplete_success_stampsTimestamp() {
+        Restaurant r = restaurant();
+        assertThat(r.getOnboardingCompletedAt()).isNull();
+        when(repository.findById(r.getId())).thenReturn(Optional.of(r));
+        var dto = service.markOnboardingComplete(r.getId());
+        assertThat(r.getOnboardingCompletedAt()).isNotNull();
+        assertThat(dto.onboardingCompletedAt()).isEqualTo(r.getOnboardingCompletedAt());
+        verify(repository).save(r);
+    }
 }
