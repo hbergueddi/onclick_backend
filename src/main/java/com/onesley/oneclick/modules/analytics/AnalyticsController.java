@@ -7,11 +7,13 @@ import com.onesley.oneclick.modules.analytics.api.TenantClientDtos.TenantClientD
 import com.onesley.oneclick.modules.analytics.api.TenantClientDtos.TenantClientDto;
 import com.onesley.oneclick.modules.analytics.api.TenantRestaurantDtos.TenantRestaurantDetailDto;
 import com.onesley.oneclick.modules.analytics.api.TenantRestaurantDtos.TenantRestaurantDto;
+import com.onesley.oneclick.modules.analytics.api.TenantReservationDtos.TenantReservationsResultDto;
 import com.onesley.oneclick.modules.analytics.internal.AdminStatsService;
 import com.onesley.oneclick.modules.analytics.internal.AnalyticsService;
 import com.onesley.oneclick.modules.analytics.internal.CrossTenantStatsService;
 import com.onesley.oneclick.modules.analytics.internal.TenantClientsService;
 import com.onesley.oneclick.modules.analytics.internal.TenantRestaurantsService;
+import com.onesley.oneclick.modules.analytics.internal.TenantReservationsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -38,6 +40,7 @@ public class AnalyticsController {
     private final CrossTenantStatsService crossTenantStatsService;
     private final TenantClientsService tenantClientsService;
     private final TenantRestaurantsService tenantRestaurantsService;
+    private final TenantReservationsService tenantReservationsService;
 
     // ─── Admin stats — Sprint G.2.4 ────────────────────────────────────────
 
@@ -112,6 +115,22 @@ public class AnalyticsController {
     ) {
         TenantRestaurantDetailDto dto = tenantRestaurantsService.detail(tenantId, restaurantId);
         return dto == null ? ResponseEntity.notFound().build() : ResponseEntity.ok(dto);
+    }
+
+    // ─── Portail tenant-admin « Mes réservations » (C4.3, SUPERADMIN via VIEW:TENANTS) ──
+
+    @GetMapping("/tenant-reservations")
+    @Operation(
+        summary = "Réservations d'un tenant — vue transverse + résumé (SUPERADMIN)",
+        description = "Toutes les réservations des restaurants du tenant sur une fenêtre glissante "
+                    + "(défaut 60j, passées + futures), enrichies resto + client, avec résumé "
+                    + "(par statut, par resto, à venir, aujourd'hui, en attente). Native SQL."
+    )
+    @PreAuthorize("hasAuthority('VIEW:TENANTS')")
+    public TenantReservationsResultDto tenantReservations(
+        @RequestParam UUID tenantId, @RequestParam(defaultValue = "60") int days
+    ) {
+        return tenantReservationsService.list(tenantId, days);
     }
 
     // ─── API clients ─────────────────────────────────────────────────────────
