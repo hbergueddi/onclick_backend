@@ -5,10 +5,13 @@ import com.onesley.oneclick.modules.analytics.api.AdminStatsDto;
 import com.onesley.oneclick.modules.analytics.api.CrossTenantDtos.CrossTenantStatsDto;
 import com.onesley.oneclick.modules.analytics.api.TenantClientDtos.TenantClientDetailDto;
 import com.onesley.oneclick.modules.analytics.api.TenantClientDtos.TenantClientDto;
+import com.onesley.oneclick.modules.analytics.api.TenantRestaurantDtos.TenantRestaurantDetailDto;
+import com.onesley.oneclick.modules.analytics.api.TenantRestaurantDtos.TenantRestaurantDto;
 import com.onesley.oneclick.modules.analytics.internal.AdminStatsService;
 import com.onesley.oneclick.modules.analytics.internal.AnalyticsService;
 import com.onesley.oneclick.modules.analytics.internal.CrossTenantStatsService;
 import com.onesley.oneclick.modules.analytics.internal.TenantClientsService;
+import com.onesley.oneclick.modules.analytics.internal.TenantRestaurantsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -34,6 +37,7 @@ public class AnalyticsController {
     private final AdminStatsService adminStatsService;
     private final CrossTenantStatsService crossTenantStatsService;
     private final TenantClientsService tenantClientsService;
+    private final TenantRestaurantsService tenantRestaurantsService;
 
     // ─── Admin stats — Sprint G.2.4 ────────────────────────────────────────
 
@@ -84,6 +88,29 @@ public class AnalyticsController {
         @PathVariable UUID clientId, @RequestParam UUID tenantId
     ) {
         TenantClientDetailDto dto = tenantClientsService.detail(tenantId, clientId);
+        return dto == null ? ResponseEntity.notFound().build() : ResponseEntity.ok(dto);
+    }
+
+    // ─── Portail tenant-admin « Mes restaurants » (C4.2, SUPERADMIN via VIEW:TENANTS) ──
+
+    @GetMapping("/tenant-restaurants")
+    @Operation(
+        summary = "Restaurants d'un tenant — liste enrichie KPI 30j (SUPERADMIN)",
+        description = "Liste des restaurants du tenant + CA/tickets/réservations/staff 30j par resto. "
+                    + "Native SQL (restaurants.tenant_id direct)."
+    )
+    @PreAuthorize("hasAuthority('VIEW:TENANTS')")
+    public List<TenantRestaurantDto> tenantRestaurants(@RequestParam UUID tenantId) {
+        return tenantRestaurantsService.list(tenantId);
+    }
+
+    @GetMapping("/tenant-restaurants/{restaurantId}")
+    @Operation(summary = "Restaurants d'un tenant — fiche (KPIs + delta + tendance + staff + offres + résas)")
+    @PreAuthorize("hasAuthority('VIEW:TENANTS')")
+    public ResponseEntity<TenantRestaurantDetailDto> tenantRestaurantDetail(
+        @PathVariable UUID restaurantId, @RequestParam UUID tenantId
+    ) {
+        TenantRestaurantDetailDto dto = tenantRestaurantsService.detail(tenantId, restaurantId);
         return dto == null ? ResponseEntity.notFound().build() : ResponseEntity.ok(dto);
     }
 
