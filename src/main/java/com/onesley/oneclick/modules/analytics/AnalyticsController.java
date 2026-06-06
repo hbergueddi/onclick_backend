@@ -11,6 +11,7 @@ import com.onesley.oneclick.modules.analytics.api.TenantReservationDtos.TenantRe
 import com.onesley.oneclick.modules.analytics.api.TenantOfferDtos.TenantOffersResultDto;
 import com.onesley.oneclick.modules.analytics.api.TenantStaffDtos.TenantStaffResultDto;
 import com.onesley.oneclick.modules.analytics.api.TenantContractDtos.TenantContractsResultDto;
+import com.onesley.oneclick.modules.analytics.api.TenantAnnouncementDtos.TenantAnnouncementsResultDto;
 import com.onesley.oneclick.modules.analytics.internal.AdminStatsService;
 import com.onesley.oneclick.modules.analytics.internal.AnalyticsService;
 import com.onesley.oneclick.modules.analytics.internal.CrossTenantStatsService;
@@ -20,6 +21,7 @@ import com.onesley.oneclick.modules.analytics.internal.TenantReservationsService
 import com.onesley.oneclick.modules.analytics.internal.TenantOffersService;
 import com.onesley.oneclick.modules.analytics.internal.TenantStaffService;
 import com.onesley.oneclick.modules.analytics.internal.TenantContractsService;
+import com.onesley.oneclick.modules.analytics.internal.TenantAnnouncementsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -50,6 +52,7 @@ public class AnalyticsController {
     private final TenantOffersService tenantOffersService;
     private final TenantStaffService tenantStaffService;
     private final TenantContractsService tenantContractsService;
+    private final TenantAnnouncementsService tenantAnnouncementsService;
 
     // ─── Admin stats — Sprint G.2.4 ────────────────────────────────────────
 
@@ -182,6 +185,19 @@ public class AnalyticsController {
     @PreAuthorize("hasAuthority('VIEW:TENANTS')")
     public TenantContractsResultDto tenantContracts(@RequestParam UUID tenantId) {
         return tenantContractsService.list(tenantId);
+    }
+
+    // ─── Portail tenant-admin « Annonces » (C4.8a, SUPERADMIN via VIEW:TENANTS) ──
+
+    @GetMapping("/tenant-announcements")
+    @Operation(
+        summary = "Annonces d'un tenant — liste (lecture seule) + résumé (SUPERADMIN)",
+        description = "Annonces du tenant (tenant_announcements) enrichies auteur, avec résumé "
+                    + "(total/actives/programmées/archivées). Native SQL. Rédaction côté app staff du tenant."
+    )
+    @PreAuthorize("hasAuthority('VIEW:TENANTS')")
+    public TenantAnnouncementsResultDto tenantAnnouncements(@RequestParam UUID tenantId) {
+        return tenantAnnouncementsService.list(tenantId);
     }
 
     // ─── API clients ─────────────────────────────────────────────────────────
