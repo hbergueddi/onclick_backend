@@ -10,6 +10,7 @@ import com.onesley.oneclick.modules.analytics.api.TenantRestaurantDtos.TenantRes
 import com.onesley.oneclick.modules.analytics.api.TenantReservationDtos.TenantReservationsResultDto;
 import com.onesley.oneclick.modules.analytics.api.TenantOfferDtos.TenantOffersResultDto;
 import com.onesley.oneclick.modules.analytics.api.TenantStaffDtos.TenantStaffResultDto;
+import com.onesley.oneclick.modules.analytics.api.TenantContractDtos.TenantContractsResultDto;
 import com.onesley.oneclick.modules.analytics.internal.AdminStatsService;
 import com.onesley.oneclick.modules.analytics.internal.AnalyticsService;
 import com.onesley.oneclick.modules.analytics.internal.CrossTenantStatsService;
@@ -18,6 +19,7 @@ import com.onesley.oneclick.modules.analytics.internal.TenantRestaurantsService;
 import com.onesley.oneclick.modules.analytics.internal.TenantReservationsService;
 import com.onesley.oneclick.modules.analytics.internal.TenantOffersService;
 import com.onesley.oneclick.modules.analytics.internal.TenantStaffService;
+import com.onesley.oneclick.modules.analytics.internal.TenantContractsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -47,6 +49,7 @@ public class AnalyticsController {
     private final TenantReservationsService tenantReservationsService;
     private final TenantOffersService tenantOffersService;
     private final TenantStaffService tenantStaffService;
+    private final TenantContractsService tenantContractsService;
 
     // ─── Admin stats — Sprint G.2.4 ────────────────────────────────────────
 
@@ -165,6 +168,20 @@ public class AnalyticsController {
     @PreAuthorize("hasAuthority('VIEW:TENANTS')")
     public TenantStaffResultDto tenantStaff(@RequestParam UUID tenantId) {
         return tenantStaffService.list(tenantId);
+    }
+
+    // ─── Portail tenant-admin « Contrats » (C4.6, SUPERADMIN via VIEW:TENANTS) ──
+
+    @GetMapping("/tenant-contracts")
+    @Operation(
+        summary = "Contrats d'un tenant — liste (lecture seule) + résumé (SUPERADMIN)",
+        description = "Contrats des restaurants du tenant (contracts → restaurants → tenant) enrichis "
+                    + "nom resto + statut, avec résumé (total/actifs/expirant 30j/par statut). Native SQL. "
+                    + "Édition/signature hors de cette vue (super-admin OneClick)."
+    )
+    @PreAuthorize("hasAuthority('VIEW:TENANTS')")
+    public TenantContractsResultDto tenantContracts(@RequestParam UUID tenantId) {
+        return tenantContractsService.list(tenantId);
     }
 
     // ─── API clients ─────────────────────────────────────────────────────────
