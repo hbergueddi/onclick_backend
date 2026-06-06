@@ -18,6 +18,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import com.onesley.oneclick.core.identity.api.UserRepository;
+import com.onesley.oneclick.modules.restaurant.api.BusinessHourDtos.BusinessHourDto;
+import com.onesley.oneclick.modules.restaurant.api.BusinessHourDtos.BusinessHoursPutDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantCreateDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantPatchDto;
@@ -35,6 +37,7 @@ import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.Res
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantTableDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantZoneCreateDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantZoneDto;
+import com.onesley.oneclick.modules.restaurant.internal.BusinessHourService;
 import com.onesley.oneclick.modules.restaurant.internal.Restaurant;
 import com.onesley.oneclick.modules.restaurant.internal.RestaurantCatalogService;
 import com.onesley.oneclick.modules.restaurant.internal.RestaurantRepository;
@@ -56,6 +59,7 @@ public class RestaurantController {
     private final RestaurantCatalogService service;
     private final RestaurantRepository restaurantRepository;
     private final RestaurantSubResourceService subResourceService;
+    private final BusinessHourService businessHourService;
     private final UserRepository userRepository;
     private final RestaurantAccessGuard restaurantAccessGuard;
 
@@ -136,6 +140,33 @@ public class RestaurantController {
         return PageResponse.from(
             Searchable.execute(restaurantRepository, req, SEARCHABLE_FIELDS, Restaurant::toDto)
         );
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  Horaires d'ouverture (table normalisée business_hours) — wizard E1
+    // ═══════════════════════════════════════════════════════════════════════
+
+    @GetMapping("/{restaurantId}/business-hours")
+    @Operation(summary = "Horaires d'ouverture structurés d'un restaurant (table business_hours)")
+    @PreAuthorize("hasAuthority('VIEW:RESTAURANTS')")
+    public List<BusinessHourDto> listBusinessHours(@PathVariable UUID restaurantId) {
+        restaurantAccessGuard.requireAdminOrActiveStaffOf(restaurantId);
+        return businessHourService.getForRestaurant(restaurantId);
+    }
+
+    @PutMapping("/{restaurantId}/business-hours")
+    @Operation(
+        summary = "Remplace les horaires d'ouverture d'un restaurant (wizard onboarding E1)",
+        description = "Remplacement complet de la semaine. Liste vide = fermé tous les jours. " +
+                      "Owner du restaurant (staff actif) ou SUPERADMIN/GROUP_ADMIN."
+    )
+    @PreAuthorize("hasAuthority('UPDATE:RESTAURANTS')")
+    public List<BusinessHourDto> putBusinessHours(
+        @PathVariable UUID restaurantId,
+        @Valid @RequestBody BusinessHoursPutDto dto
+    ) {
+        restaurantAccessGuard.requireAdminOrActiveStaffOf(restaurantId);
+        return businessHourService.replaceForRestaurant(restaurantId, dto);
     }
 
     // ═══════════════════════════════════════════════════════════════════════
