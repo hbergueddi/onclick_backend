@@ -12,6 +12,7 @@ import com.onesley.oneclick.modules.analytics.api.TenantOfferDtos.TenantOffersRe
 import com.onesley.oneclick.modules.analytics.api.TenantStaffDtos.TenantStaffResultDto;
 import com.onesley.oneclick.modules.analytics.api.TenantContractDtos.TenantContractsResultDto;
 import com.onesley.oneclick.modules.analytics.api.TenantAnnouncementDtos.TenantAnnouncementsResultDto;
+import com.onesley.oneclick.modules.analytics.api.TenantStoryDtos.TenantStoriesResultDto;
 import com.onesley.oneclick.modules.analytics.internal.AdminStatsService;
 import com.onesley.oneclick.modules.analytics.internal.AnalyticsService;
 import com.onesley.oneclick.modules.analytics.internal.CrossTenantStatsService;
@@ -22,6 +23,7 @@ import com.onesley.oneclick.modules.analytics.internal.TenantOffersService;
 import com.onesley.oneclick.modules.analytics.internal.TenantStaffService;
 import com.onesley.oneclick.modules.analytics.internal.TenantContractsService;
 import com.onesley.oneclick.modules.analytics.internal.TenantAnnouncementsService;
+import com.onesley.oneclick.modules.analytics.internal.TenantStoriesService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -53,6 +55,7 @@ public class AnalyticsController {
     private final TenantStaffService tenantStaffService;
     private final TenantContractsService tenantContractsService;
     private final TenantAnnouncementsService tenantAnnouncementsService;
+    private final TenantStoriesService tenantStoriesService;
 
     // ─── Admin stats — Sprint G.2.4 ────────────────────────────────────────
 
@@ -198,6 +201,19 @@ public class AnalyticsController {
     @PreAuthorize("hasAuthority('VIEW:TENANTS')")
     public TenantAnnouncementsResultDto tenantAnnouncements(@RequestParam UUID tenantId) {
         return tenantAnnouncementsService.list(tenantId);
+    }
+
+    // ─── Portail tenant-admin « Stories » (C4.8b, SUPERADMIN via VIEW:TENANTS) ──
+
+    @GetMapping("/tenant-stories")
+    @Operation(
+        summary = "Stories d'un tenant — liste (lecture seule) + résumé (SUPERADMIN)",
+        description = "Stories du tenant (pcc_stories) enrichies auteur, avec résumé "
+                    + "(total/actives/programmées/expirées). Native SQL. Création côté app staff du tenant."
+    )
+    @PreAuthorize("hasAuthority('VIEW:TENANTS')")
+    public TenantStoriesResultDto tenantStories(@RequestParam UUID tenantId) {
+        return tenantStoriesService.list(tenantId);
     }
 
     // ─── API clients ─────────────────────────────────────────────────────────
