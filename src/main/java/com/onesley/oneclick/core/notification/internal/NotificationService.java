@@ -2,6 +2,8 @@ package com.onesley.oneclick.core.notification.internal;
 
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.security.SecurityHelper;
+import com.onesley.oneclick.shared.events.NotificationCreatedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -40,6 +42,7 @@ public class NotificationService {
     private final NotificationRepository notifRepo;
     private final NotificationCampaignRepository campaignRepo;
     private final DeviceTokenRepository tokenRepo;
+    private final ApplicationEventPublisher events;
 
     // ─── Notifications ───────────────────────────────────────────────────────
 
@@ -61,7 +64,12 @@ public class NotificationService {
         Notification n = new Notification(UUID.randomUUID(), dto.recipientUserId(), dto.type(), channel,
             dto.title(), dto.body());
         if (dto.link() != null) n.setLink(dto.link());
-        return notifRepo.save(n).toDto();
+        NotificationDto saved = notifRepo.save(n).toDto();
+        // Temps réel (G) : signal STOMP poussé après commit au destinataire (cloche live, pas de polling).
+        // Listener dans le package realtime (frontière Modulith : core.notification ne dépend pas de realtime).
+        events.publishEvent(new NotificationCreatedEvent(
+            saved.recipientUserId(), saved.id(), saved.type(), Instant.now()));
+        return saved;
     }
 
     @Transactional

@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.quality.Strictness;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -42,6 +43,7 @@ class NotificationServiceTest {
     @Mock NotificationRepository notifRepo;
     @Mock NotificationCampaignRepository campaignRepo;
     @Mock DeviceTokenRepository tokenRepo;
+    @Mock ApplicationEventPublisher events;
     @InjectMocks NotificationService service;
 
     @BeforeEach
