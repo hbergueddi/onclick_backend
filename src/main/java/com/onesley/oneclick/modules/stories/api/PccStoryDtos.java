@@ -79,6 +79,11 @@ public final class PccStoryDtos {
         boolean visible,
         Instant deletedAt,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        /** Gap #7 — la story a-t-elle été vue par le caller (ring unread/read côté membre). */
+        boolean viewed
     ) {}
+
+    /** Gap #7 — nombre de vues d'une story (stats staff/admin « vue par X membres »). */
+    public record StoryViewCountDto(UUID storyId, long viewCount) {}
 }

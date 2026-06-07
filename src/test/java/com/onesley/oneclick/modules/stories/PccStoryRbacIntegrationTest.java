@@ -60,6 +60,7 @@ class PccStoryRbacIntegrationTest extends AbstractIntegrationTest {
     @AfterEach
     void cleanup() {
         for (UUID id : createdIds) {
+            jdbc.update("DELETE FROM pcc_story_views WHERE story_id = ?", id); // Gap #7 (FK CASCADE le ferait aussi)
             jdbc.update("DELETE FROM pcc_stories WHERE id = ?", id);
         }
         createdIds.clear();
@@ -230,5 +231,90 @@ class PccStoryRbacIntegrationTest extends AbstractIntegrationTest {
             "SELECT COUNT(*) FROM pcc_stories WHERE id = ? AND deleted_at IS NULL",
             Integer.class, id);
         assertThat(alive).isEqualTo(0);
+    }
+
+    // ─── G. Gap #7 — markViewed (membre) + enrichissement `viewed` + idempotence ──
+
+    @Test
+    void member_marksViewed_thenStoryFlaggedViewed_idempotent() throws Exception {
+        String owner = bearerFor(PALMERAIE_OWNER);
+        String member = bearerFor(PALMERAIE_MEMBER);
+
+        // Story palmeraie publiée (visible du membre).
+        ResponseEntity<String> createResp = restTemplate.exchange(url("/api/pcc/stories"),
+            HttpMethod.POST,
+            jsonJwtEntity("{\"mediaUrl\":\"https://cdn/view.jpg\",\"caption\":\"À voir\"}", owner),
+            String.class);
+        UUID id = UUID.fromString(om.readTree(createResp.getBody()).get("id").asText());
+        createdIds.add(id);
+
+        // Avant : le membre voit la story avec viewed=false.
+        assertThat(viewedFlagFor(member, id)).isFalse();
+
+        // POST /{id}/view → 204 (marque vue).
+        assertThat(restTemplate.exchange(url("/api/pcc/stories/" + id + "/view"),
+            HttpMethod.POST, jwtEntity(member), Void.class).getStatusCode())
+            .isEqualTo(HttpStatus.NO_CONTENT);
+        // Idempotent : 2e POST → toujours 204.
+        assertThat(restTemplate.exchange(url("/api/pcc/stories/" + id + "/view"),
+            HttpMethod.POST, jwtEntity(member), Void.class).getStatusCode())
+            .isEqualTo(HttpStatus.NO_CONTENT);
+
+        // Après : viewed=true côté membre ; 1 seule ligne en DB (idempotence).
+        assertThat(viewedFlagFor(member, id)).isTrue();
+        Integer views = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM pcc_story_views WHERE story_id = ?", Integer.class, id);
+        assertThat(views).isEqualTo(1);
+    }
+
+    // ─── H. Gap #7 — view-counts : staff 200, membre 403 ─────────────────────────
+
+    @Test
+    void viewCounts_staff_ok_member_forbidden() throws Exception {
+        String owner = bearerFor(PALMERAIE_OWNER);
+        String member = bearerFor(PALMERAIE_MEMBER);
+
+        ResponseEntity<String> createResp = restTemplate.exchange(url("/api/pcc/stories"),
+            HttpMethod.POST,
+            jsonJwtEntity("{\"mediaUrl\":\"https://cdn/cnt.jpg\",\"caption\":\"Compteur\"}", owner),
+            String.class);
+        UUID id = UUID.fromString(om.readTree(createResp.getBody()).get("id").asText());
+        createdIds.add(id);
+
+        // Le membre voit la story (count attendu = 1 après).
+        restTemplate.exchange(url("/api/pcc/stories/" + id + "/view"),
+            HttpMethod.POST, jwtEntity(member), Void.class);
+
+        // Staff : 200 + la story apparaît avec viewCount >= 1.
+        ResponseEntity<String> counts = restTemplate.exchange(url("/api/pcc/stories/view-counts"),
+            HttpMethod.GET, jwtEntity(owner), String.class);
+        assertThat(counts.getStatusCode()).isEqualTo(HttpStatus.OK);
+        JsonNode arr = om.readTree(counts.getBody());
+        boolean found = false;
+        for (JsonNode n : arr) {
+            if (id.toString().equals(n.get("storyId").asText())) {
+                found = true;
+                assertThat(n.get("viewCount").asLong()).isGreaterThanOrEqualTo(1L);
+            }
+        }
+        assertThat(found).as("la story doit figurer dans les view-counts staff").isTrue();
+
+        // Membre : 403 (pas de stats pour un membre).
+        assertThat(restTemplate.exchange(url("/api/pcc/stories/view-counts"),
+            HttpMethod.GET, jwtEntity(member), String.class).getStatusCode())
+            .isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    /** Lit le flag {@code viewed} de la story {@code id} dans le GET / du caller (ou false si absente). */
+    private boolean viewedFlagFor(String bearer, UUID id) throws Exception {
+        ResponseEntity<String> list = restTemplate.exchange(url("/api/pcc/stories"),
+            HttpMethod.GET, jwtEntity(bearer), String.class);
+        JsonNode arr = om.readTree(list.getBody());
+        for (JsonNode n : arr) {
+            if (id.toString().equals(n.get("id").asText())) {
+                return n.get("viewed").asBoolean();
+            }
+        }
+        return false;
     }
 }

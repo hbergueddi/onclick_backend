@@ -2,6 +2,7 @@ package com.onesley.oneclick.modules.stories;
 
 import com.onesley.oneclick.modules.stories.api.PccStoryDtos.CreateStoryDto;
 import com.onesley.oneclick.modules.stories.api.PccStoryDtos.StoryDto;
+import com.onesley.oneclick.modules.stories.api.PccStoryDtos.StoryViewCountDto;
 import com.onesley.oneclick.modules.stories.api.PccStoryDtos.UpdateStoryDto;
 import com.onesley.oneclick.modules.stories.internal.PccStoryService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -78,5 +79,22 @@ public class PccStoryController {
     @PreAuthorize("hasAuthority('DELETE:STORIES')")
     public void delete(@PathVariable UUID id) {
         service.softDelete(id);
+    }
+
+    // ─── Gap #7 — tracking de vues (Instagram-style) ─────────────────────────────
+
+    @PostMapping("/{id}/view")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Marque une story « vue » par le membre (idempotent ; ring unread→read)")
+    @PreAuthorize("hasAuthority('VIEW:STORIES')")  // le membre visionne ; ABAC service (tenant de la story)
+    public void markViewed(@PathVariable UUID id) {
+        service.markViewed(id);
+    }
+
+    @GetMapping("/view-counts")
+    @Operation(summary = "Nombre de vues par story du tenant (stats staff/admin « vue par X membres »)")
+    @PreAuthorize("hasAuthority('VIEW:STORIES')")  // ABAC service : staff/admin du tenant only (membre → 403)
+    public List<StoryViewCountDto> viewCounts() {
+        return service.viewCounts();
     }
 }

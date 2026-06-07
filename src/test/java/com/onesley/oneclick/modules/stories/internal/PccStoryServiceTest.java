@@ -6,6 +6,7 @@ import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.modules.stories.api.PccStoryDtos.CreateStoryDto;
 import com.onesley.oneclick.modules.stories.api.PccStoryDtos.StoryDto;
+import com.onesley.oneclick.modules.stories.api.PccStoryDtos.StoryViewCountDto;
 import com.onesley.oneclick.modules.stories.api.PccStoryDtos.UpdateStoryDto;
 import com.onesley.oneclick.security.SecurityHelper;
 import org.junit.jupiter.api.AfterEach;
@@ -55,6 +56,7 @@ import static org.mockito.Mockito.when;
 class PccStoryServiceTest {
 
     @Mock PccStoryRepository repo;
+    @Mock PccStoryViewRepository viewRepo;
     @Mock UserDirectoryApi userDirectory;
     @InjectMocks PccStoryService service;
 
@@ -72,6 +74,8 @@ class PccStoryServiceTest {
         lenient().when(userDirectory.tenantIdById(caller)).thenReturn(Optional.of(tenant));
         lenient().when(userDirectory.nameById(any())).thenReturn(Optional.empty());
         lenient().when(repo.save(any())).thenAnswer(i -> i.getArgument(0));
+        // Gap #7 — défaut : aucune story vue (les tests d'enrichissement la surchargent).
+        lenient().when(viewRepo.findViewedStoryIds(any(), any())).thenReturn(List.of());
     }
 
     @AfterEach
@@ -322,5 +326,85 @@ class PccStoryServiceTest {
 
         verify(repo).findActiveForTenant(eq(tenant), any());
         verify(repo, never()).findAllForStaff(any());
+    }
+
+    // ─── Gap #7 — markViewed / viewCounts / enrichissement `viewed` ───────────────
+
+    @Test
+    void markViewed_member_recordsWhenNew() {
+        PccStory s = story(Instant.now(), null);
+        when(repo.findById(s.getId())).thenReturn(Optional.of(s));
+        when(viewRepo.existsByStoryIdAndUserId(s.getId(), caller)).thenReturn(false);
+
+        service.markViewed(s.getId());
+
+        verify(viewRepo).save(any(PccStoryView.class));
+    }
+
+    @Test
+    void markViewed_idempotent_skipsWhenAlreadyViewed() {
+        PccStory s = story(Instant.now(), null);
+        when(repo.findById(s.getId())).thenReturn(Optional.of(s));
+        when(viewRepo.existsByStoryIdAndUserId(s.getId(), caller)).thenReturn(true);
+
+        service.markViewed(s.getId());
+
+        verify(viewRepo, never()).save(any());
+    }
+
+    @Test
+    void markViewed_crossTenant_forbidden() {
+        // Story d'un AUTRE tenant que celui du caller (non-admin) → 403.
+        UUID otherTenant = UUID.randomUUID();
+        PccStory s = new PccStory(UUID.randomUUID(), otherTenant, caller,
+            "https://cdn/x.jpg", "image", null, 15, 0, Instant.now(), null);
+        when(repo.findById(s.getId())).thenReturn(Optional.of(s));
+
+        assertThatThrownBy(() -> service.markViewed(s.getId())).isInstanceOf(ForbiddenException.class);
+        verify(viewRepo, never()).save(any());
+    }
+
+    @Test
+    void markViewed_notFound_throws404() {
+        UUID id = UUID.randomUUID();
+        when(repo.findById(id)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.markViewed(id)).isInstanceOf(NotFoundException.class);
+        verify(viewRepo, never()).save(any());
+    }
+
+    @Test
+    void viewCounts_member_forbidden() {
+        // CLIENT (pas staff du tenant) → pas de stats → 403.
+        assertThatThrownBy(() -> service.viewCounts()).isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
+    void viewCounts_staff_returnsAggregates() {
+        asTenantStaff();
+        PccStory a = story(Instant.now(), null);
+        PccStory b = story(Instant.now(), null);
+        when(repo.findAllForStaff(tenant)).thenReturn(List.of(a, b));
+        when(viewRepo.countByStoryIds(List.of(a.getId(), b.getId())))
+            .thenReturn(List.<Object[]>of(new Object[]{a.getId(), 3L}, new Object[]{b.getId(), 1L}));
+
+        List<StoryViewCountDto> out = service.viewCounts();
+
+        assertThat(out).hasSize(2);
+        assertThat(out).anyMatch(c -> c.storyId().equals(a.getId()) && c.viewCount() == 3L);
+        assertThat(out).anyMatch(c -> c.storyId().equals(b.getId()) && c.viewCount() == 1L);
+    }
+
+    @Test
+    void listForMe_member_enrichesViewedFlag() {
+        PccStory seen = story(Instant.now().minus(1, ChronoUnit.HOURS), null);
+        PccStory unseen = story(Instant.now().minus(2, ChronoUnit.HOURS), null);
+        when(repo.findActiveForTenant(eq(tenant), any())).thenReturn(List.of(seen, unseen));
+        when(viewRepo.findViewedStoryIds(eq(caller), any())).thenReturn(List.of(seen.getId()));
+
+        List<StoryDto> out = service.listForMe();
+
+        assertThat(out).hasSize(2);
+        assertThat(out.stream().filter(d -> d.id().equals(seen.getId())).findFirst().orElseThrow().viewed()).isTrue();
+        assertThat(out.stream().filter(d -> d.id().equals(unseen.getId())).findFirst().orElseThrow().viewed()).isFalse();
     }
 }

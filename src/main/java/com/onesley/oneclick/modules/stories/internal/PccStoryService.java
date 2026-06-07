@@ -7,6 +7,7 @@ import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.modules.stories.api.PccStoryDtos.CreateStoryDto;
 import com.onesley.oneclick.modules.stories.api.PccStoryDtos.StoryDto;
+import com.onesley.oneclick.modules.stories.api.PccStoryDtos.StoryViewCountDto;
 import com.onesley.oneclick.modules.stories.api.PccStoryDtos.UpdateStoryDto;
 import com.onesley.oneclick.security.SecurityHelper;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -48,6 +50,7 @@ import java.util.UUID;
 public class PccStoryService {
 
     private final PccStoryRepository repo;
+    private final PccStoryViewRepository viewRepo;
     private final UserDirectoryApi userDirectory;
 
     private static final String DEFAULT_MEDIA_TYPE = "image";
@@ -77,7 +80,58 @@ public class PccStoryService {
             // Membre du tenant (ou tout caller non-staff) → uniquement les stories visibles.
             rows = repo.findActiveForTenant(tenantId, now);
         }
-        return rows.stream().map(s -> toDto(s, now)).toList();
+        // Gap #7 — enrichit `viewed` (ring unread/read) : 1 requête batch des vues du caller.
+        Set<UUID> viewedIds = rows.isEmpty()
+            ? Set.of()
+            : Set.copyOf(viewRepo.findViewedStoryIds(caller, rows.stream().map(PccStory::getId).toList()));
+        return rows.stream().map(s -> toDto(s, now, viewedIds.contains(s.getId()))).toList();
+    }
+
+    // ─── markViewed (membre ouvre une story) ─────────────────────────────────────
+
+    /**
+     * Marque une story « vue » par le caller (Gap #7) — idempotent (1ère vue préservée).
+     * Défense : la story doit exister, ne pas être supprimée, et appartenir au tenant du caller
+     * (ou caller admin global). 404 si introuvable/supprimée ; 403 si cross-tenant non-admin.
+     */
+    @Transactional
+    public void markViewed(UUID storyId) {
+        UUID caller = requireCaller();
+        PccStory s = repo.findById(storyId)
+            .filter(x -> x.getDeletedAt() == null)
+            .orElseThrow(() -> new NotFoundException("PccStory", storyId));
+        if (!SecurityHelper.isAdmin()) {
+            UUID callerTenant = userDirectory.tenantIdById(caller).orElse(null);
+            if (callerTenant == null || !callerTenant.equals(s.getTenantId())) {
+                throw new ForbiddenException("Story hors de votre établissement");
+            }
+        }
+        if (!viewRepo.existsByStoryIdAndUserId(storyId, caller)) {
+            viewRepo.save(new PccStoryView(storyId, caller, Instant.now()));
+        }
+    }
+
+    // ─── viewCounts (stats staff/admin « vue par X membres ») ─────────────────────
+
+    /**
+     * Nombre de vues par story du tenant du caller (Gap #7) — réservé au staff/admin du tenant
+     * (un membre ne voit pas les stats). Caller sans tenant gérable → liste vide.
+     */
+    public List<StoryViewCountDto> viewCounts() {
+        UUID caller = requireCaller();
+        UUID tenantId = userDirectory.tenantIdById(caller).orElse(null);
+        if (tenantId == null || !canManageInTenant(caller, tenantId)) {
+            // Membre (ou admin global sans tenant) → pas de stats par-tenant.
+            if (tenantId != null) {
+                requireTenantStaff(caller, tenantId); // membre du tenant → 403 explicite
+            }
+            return List.of();
+        }
+        List<UUID> ids = repo.findAllForStaff(tenantId).stream().map(PccStory::getId).toList();
+        if (ids.isEmpty()) return List.of();
+        return viewRepo.countByStoryIds(ids).stream()
+            .map(row -> new StoryViewCountDto((UUID) row[0], ((Number) row[1]).longValue()))
+            .toList();
     }
 
     // ─── create (staff publie) ───────────────────────────────────────────────────
@@ -116,7 +170,7 @@ public class PccStoryService {
         log.info("[stories] create (id={}, tenant={}, author={}, type={}, publishAt={}, expiresAt={})",
             saved.getId(), tenantId, caller, mediaType, publishAt, expiresAt);
 
-        return toDto(saved, Instant.now());
+        return toDto(saved, Instant.now(), false);
     }
 
     // ─── update (staff édite) ────────────────────────────────────────────────────
@@ -147,7 +201,7 @@ public class PccStoryService {
         log.info("[stories] update (id={}, by={}, type={}, sortOrder={})",
             storyId, caller, mediaType, sortOrder);
 
-        return toDto(saved, Instant.now());
+        return toDto(saved, Instant.now(), false);
     }
 
     // ─── softDelete (staff supprime) ─────────────────────────────────────────────
@@ -225,8 +279,8 @@ public class PccStoryService {
 
     // ─── mapping ─────────────────────────────────────────────────────────────────
 
-    /** Mapping entité → DTO (enrichit nom de l'auteur + visibilité courante). */
-    private StoryDto toDto(PccStory s, Instant now) {
+    /** Mapping entité → DTO (enrichit nom de l'auteur + visibilité courante + {@code viewed}). */
+    private StoryDto toDto(PccStory s, Instant now, boolean viewed) {
         UserName author = userDirectory.nameById(s.getAuthorId()).orElse(null);
         return new StoryDto(
             s.getId(),
@@ -244,7 +298,8 @@ public class PccStoryService {
             s.isVisibleToMembers(now),
             s.getDeletedAt(),
             s.getCreatedAt(),
-            s.getUpdatedAt());
+            s.getUpdatedAt(),
+            viewed);
     }
 
     private static String trimToNull(String s) {
