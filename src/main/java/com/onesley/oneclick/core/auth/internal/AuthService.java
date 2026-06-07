@@ -57,6 +57,7 @@ public class AuthService {
     private final TenantRepository tenantRepo;
     private final RoleRepository roleRepository;
     private final TenantAdminInviteApi tenantAdminInviteApi;
+    private final AccountActivationService accountActivationService;
     private final PasswordEncoder passwordEncoder;
     private final JwtIssuer jwtIssuer;
 
@@ -186,6 +187,51 @@ public class AuthService {
         user.setLastLoginAt(Instant.now());
         userRepo.save(user);
 
+        return new LoginResult(
+            access.token(), access.expiresAt(),
+            refreshOpaque, refreshExp,
+            user.getId(), user.getEmail(),
+            user.getFirstName(), user.getLastName(),
+            roleCode);
+    }
+
+    /**
+     * Gap #10 — Acceptation d'un lien d'<b>activation de compte membre</b> (premier login).
+     *
+     * <p>Quand un staff inscrit un nouveau membre, le compte est créé serveur-side avec un
+     * mot de passe ALÉATOIRE que le membre ignore. Le membre reçoit un lien magique vers
+     * {@code /accept-invite?token=...} ; cet endpoint définit son mot de passe et ouvre la
+     * session — équivalent Spring du legacy Supabase ({@code AuthFlowGate} +
+     * {@code CreatePasswordDialog} → {@code auth.updateUser({password})}).</p>
+     *
+     * <p>Sécurité : PUBLIC (le membre n'a pas de session). La possession du token (haute
+     * entropie, single-use, expiry 7j, émis à cet email) tient lieu d'authentification.
+     * Contrairement à l'invite tenant-admin, le compte existe DÉJÀ (créé à l'enrôlement) :
+     * on se contente d'écrire le mot de passe choisi et de consommer l'invitation.</p>
+     */
+    @Transactional
+    public LoginResult acceptActivationInvite(String rawToken, String rawPassword) {
+        AccountActivationService.RedeemableInvite invite = accountActivationService.findRedeemable(rawToken)
+            .orElseThrow(() -> new BadRequestException("Lien d'activation invalide, expiré ou déjà utilisé."));
+
+        User user = userRepo.findById(invite.userId())
+            .filter(u -> u.getDeletedAt() == null)
+            .orElseThrow(() -> new BadRequestException("Compte introuvable pour cette invitation."));
+
+        // Écrit le mot de passe choisi par le membre (remplace le hash aléatoire d'enrôlement).
+        user.setPasswordHash(passwordEncoder.encode(rawPassword));
+        accountActivationService.redeem(invite.inviteId());
+
+        // Émet la session (même schéma que login()).
+        String roleCode = user.getRole() != null ? user.getRole().getCode() : "CLIENT";
+        JwtIssuer.IssuedToken access = jwtIssuer.issueAccessToken(user.getId(), roleCode);
+        String refreshOpaque = jwtIssuer.issueOpaqueRefreshToken();
+        Instant refreshExp = Instant.now().plusSeconds(jwtIssuer.getRefreshTtlSeconds());
+        refreshRepo.save(new RefreshToken(UUID.randomUUID(), user, refreshOpaque, refreshExp));
+        user.setLastLoginAt(Instant.now());
+        userRepo.save(user);
+
+        log.info("[account-activation] accepted invite={} user={}", invite.inviteId(), user.getId());
         return new LoginResult(
             access.token(), access.expiresAt(),
             refreshOpaque, refreshExp,

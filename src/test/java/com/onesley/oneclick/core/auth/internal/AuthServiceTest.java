@@ -47,6 +47,7 @@ class AuthServiceTest {
     @Mock TenantRepository tenantRepo;
     @Mock PasswordEncoder passwordEncoder;
     @Mock JwtIssuer jwtIssuer;
+    @Mock AccountActivationService accountActivationService;
     @InjectMocks AuthService service;
 
     private User user;
@@ -62,6 +63,35 @@ class AuthServiceTest {
             .thenReturn(new JwtIssuer.IssuedToken("access-jwt", Instant.now().plusSeconds(3600)));
         when(jwtIssuer.issueOpaqueRefreshToken()).thenReturn("refresh-opaque");
         when(jwtIssuer.getRefreshTtlSeconds()).thenReturn(2_592_000L);
+    }
+
+    // ─── acceptActivationInvite (Gap #10) ──────────────────────────────────────
+
+    @Test
+    void acceptActivationInvite_validToken_setsPassword_redeems_issuesSession() {
+        UUID inviteId = UUID.randomUUID();
+        when(accountActivationService.findRedeemable("raw-tok")).thenReturn(
+            Optional.of(new AccountActivationService.RedeemableInvite(inviteId, user.getId(), user.getEmail())));
+        when(userRepo.findById(user.getId())).thenReturn(Optional.of(user));
+        when(passwordEncoder.encode("MyNewPass1")).thenReturn("$2a$encoded");
+        stubTokenIssuance();
+
+        AuthService.LoginResult r = service.acceptActivationInvite("raw-tok", "MyNewPass1");
+
+        assertThat(r.accessToken()).isEqualTo("access-jwt");
+        assertThat(r.userId()).isEqualTo(user.getId());
+        assertThat(user.getPasswordHash()).isEqualTo("$2a$encoded"); // mot de passe écrit
+        verify(accountActivationService).redeem(inviteId);            // single-use consommé
+        verify(refreshRepo).save(any(RefreshToken.class));            // session ouverte
+    }
+
+    @Test
+    void acceptActivationInvite_invalidToken_throwsBadRequest_noSession() {
+        when(accountActivationService.findRedeemable("bad")).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.acceptActivationInvite("bad", "MyNewPass1"))
+            .isInstanceOf(BadRequestException.class);
+        verify(accountActivationService, never()).redeem(any());
+        verify(refreshRepo, never()).save(any());
     }
 
     // ─── login ───────────────────────────────────────────────────────────────

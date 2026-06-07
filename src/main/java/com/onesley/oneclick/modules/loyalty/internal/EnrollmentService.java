@@ -15,8 +15,10 @@ import com.onesley.oneclick.modules.loyalty.api.EnrollmentRecordDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyEarnDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyTransactionDto;
 import com.onesley.oneclick.security.SecurityHelper;
+import com.onesley.oneclick.shared.events.MemberEnrollmentRequestedEvent;
 import static com.onesley.oneclick.shared.Temporals.toInstant;
 import jakarta.persistence.EntityManager;
+import org.springframework.context.ApplicationEventPublisher;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -71,6 +73,8 @@ public class EnrollmentService {
     private final PasswordEncoder passwordEncoder;
     /** P2 — résolution noms/email via contrat identity (plus de JOIN users cross-module). */
     private final UserDirectoryApi userDirectory;
+    /** Gap #10 — publication de l'event d'activation (1er login set-password) consommé par core.auth. */
+    private final ApplicationEventPublisher events;
 
     @PersistenceContext
     private EntityManager em;
@@ -136,10 +140,18 @@ public class EnrollmentService {
             tx = null;
         }
 
-        // 5. TODO V2 : SMTPService.sendInvite si dto.sendInvite() == true
+        // 5. Gap #10 — lien d'activation (1er login → set-password) pour un NOUVEAU membre.
+        //    On ne l'émet que si le compte vient d'être créé (mot de passe aléatoire serveur) :
+        //    un membre existant a déjà ses identifiants (anti-takeover, cf. E2 tenant-admin).
+        //    L'event est consommé par core.auth (crée l'invitation token) → core.email (envoi).
         boolean inviteSent = false;
-        if (Boolean.TRUE.equals(dto.sendInvite())) {
-            log.info("[enroll] invite email TODO V2 — clientId={} restaurantId={}",
+        if (Boolean.TRUE.equals(dto.sendInvite()) && isNewUser) {
+            TenantInfo ti = resolveTenantInfo(dto.restaurantId());
+            events.publishEvent(new MemberEnrollmentRequestedEvent(
+                clientId, dto.email().toLowerCase().trim(), dto.firstName().trim(),
+                ti.tenantId(), ti.slug(), ti.name(), callerId, java.time.Instant.now()));
+            inviteSent = true;
+            log.info("[enroll] activation invite requested clientId={} restaurantId={}",
                 clientId, dto.restaurantId());
         }
 
@@ -314,5 +326,28 @@ public class EnrollmentService {
         byte[] bytes = new byte[24];
         new SecureRandom().nextBytes(bytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    /** Tenant (id/slug/name) d'un restaurant — pour brander le mail d'activation (Gap #10). */
+    private record TenantInfo(UUID tenantId, String slug, String name) {}
+
+    /**
+     * Résout le tenant d'un restaurant via SQL natif (cross-module restaurants↔tenants).
+     * Restaurant sans tenant (standard OneClick) → {@code TenantInfo(null,null,null)} ;
+     * le listener email retombe alors sur le branding par défaut ("OneClick"/"default").
+     */
+    @SuppressWarnings("unchecked")
+    private TenantInfo resolveTenantInfo(UUID restaurantId) {
+        List<Object[]> rows = em.createNativeQuery("""
+            SELECT t.id, t.slug, t.name
+              FROM tenants t
+              JOIN restaurants r ON r.tenant_id = t.id
+             WHERE r.id = :rid
+            """)
+            .setParameter("rid", restaurantId)
+            .getResultList();
+        if (rows.isEmpty()) return new TenantInfo(null, null, null);
+        Object[] r = rows.get(0);
+        return new TenantInfo((UUID) r[0], (String) r[1], (String) r[2]);
     }
 }

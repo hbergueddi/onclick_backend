@@ -12,8 +12,11 @@ import com.onesley.oneclick.modules.loyalty.api.EnrollMemberDto;
 import com.onesley.oneclick.modules.loyalty.api.EnrollMemberResultDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyTransactionDto;
 import com.onesley.oneclick.security.SecurityHelper;
+import com.onesley.oneclick.shared.events.MemberEnrollmentRequestedEvent;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
+import org.mockito.ArgumentCaptor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,6 +39,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -52,6 +56,7 @@ class EnrollmentServiceTest {
     @Mock LoyaltyService loyaltyService;
     @Mock PasswordEncoder passwordEncoder;
     @Mock UserDirectoryApi userDirectory;
+    @Mock ApplicationEventPublisher events;
     @Mock EntityManager em;
     @Mock Query query;
     @InjectMocks EnrollmentService service;
@@ -170,6 +175,51 @@ class EnrollmentServiceTest {
             assertThat(r.clientId()).isEqualTo(client);
             assertThat(r.isNewUser()).isFalse();
             assertThat(r.pointsGranted()).isEqualTo(100);
+        }
+    }
+
+    @Test
+    void enroll_newUser_withSendInvite_publishesActivationEvent() {
+        // Gap #10 : nouveau membre créé + sendInvite=true → event d'activation publié + inviteSent.
+        UUID tenantId = UUID.randomUUID();
+        when(gainRuleRepository.findByRestaurantIdAndDeletedAtIsNull(resto)).thenReturn(Optional.of(rule(500)));
+        when(userRepository.findByEmailIgnoreCase("new@x.ma")).thenReturn(Optional.empty()); // → création
+        when(query.getSingleResult()).thenReturn(tenantId);                                  // tenant_id du resto
+        // singletonList (PAS List.of) : List.of(Object[]) déplie l'array en varargs → 3 éléments.
+        when(query.getResultList()).thenReturn(java.util.Collections.singletonList(new Object[]{tenantId, "palmeraie", "PCC"})); // resolveTenantInfo
+        when(loyaltyService.earnPoints(any())).thenReturn(tx(50));
+
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            adminContext(sec);
+            EnrollMemberDto d = new EnrollMemberDto(resto, null, "new@x.ma", null, "New", "Member", 50, true);
+            EnrollMemberResultDto r = service.enrollMember(d);
+
+            assertThat(r.isNewUser()).isTrue();
+            assertThat(r.inviteSent()).isTrue();
+
+            ArgumentCaptor<MemberEnrollmentRequestedEvent> cap =
+                ArgumentCaptor.forClass(MemberEnrollmentRequestedEvent.class);
+            verify(events).publishEvent(cap.capture());
+            MemberEnrollmentRequestedEvent ev = cap.getValue();
+            assertThat(ev.userId()).isEqualTo(r.clientId());
+            assertThat(ev.email()).isEqualTo("new@x.ma");
+            assertThat(ev.tenantSlug()).isEqualTo("palmeraie");
+        }
+    }
+
+    @Test
+    void enroll_existingUser_withSendInvite_doesNotPublish() {
+        // Membre existant → pas d'event d'activation (anti-takeover), inviteSent=false.
+        when(gainRuleRepository.findByRestaurantIdAndDeletedAtIsNull(resto)).thenReturn(Optional.of(rule(500)));
+        UUID client = UUID.randomUUID();
+        when(userRepository.findById(client)).thenReturn(Optional.of(new User(client, null, "c@x.ma", "h", "C", "E")));
+        when(loyaltyService.earnPoints(any())).thenReturn(tx(50));
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            adminContext(sec);
+            EnrollMemberDto d = new EnrollMemberDto(resto, client, null, null, null, null, 50, true);
+            EnrollMemberResultDto r = service.enrollMember(d);
+            assertThat(r.inviteSent()).isFalse();
+            verify(events, org.mockito.Mockito.never()).publishEvent(any());
         }
     }
 

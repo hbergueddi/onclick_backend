@@ -97,6 +97,18 @@ public class AuthController {
         return ResponseEntity.ok(LoginResponseDto.from(r));
     }
 
+    @PostMapping("/accept-activation-invite")
+    @Operation(
+        summary = "Gap #10 — définit le mot de passe au 1er login d'un membre enrôlé (PUBLIC, gardé par token)",
+        description = "Lien magique d'activation : le compte existe déjà (créé à l'enrôlement avec mot de passe " +
+                      "aléatoire). Cet endpoint écrit le mot de passe choisi, consomme l'invitation (single-use) " +
+                      "et renvoie access+refresh JWT. Token invalide/expiré/utilisé → 400."
+    )
+    public ResponseEntity<LoginResponseDto> acceptActivationInvite(@Valid @RequestBody AcceptActivationRequestDto body) {
+        AuthService.LoginResult r = authService.acceptActivationInvite(body.token(), body.password());
+        return ResponseEntity.ok(LoginResponseDto.from(r));
+    }
+
     // ─── Helpers ──────────────────────────────────────────────────────────────
     private static String clientIp(HttpServletRequest req) {
         String h = req.getHeader("X-Forwarded-For");
@@ -135,6 +147,12 @@ public class AuthController {
         @NotBlank @jakarta.validation.constraints.Size(max = 128) String firstName,
         @NotBlank @jakarta.validation.constraints.Size(max = 128) String lastName,
         @jakarta.validation.constraints.Size(max = 64) String phone
+    ) {}
+
+    /** Activation de compte membre (Gap #10). Le compte existe déjà : on ne collecte que le mot de passe. */
+    public record AcceptActivationRequestDto(
+        @NotBlank String token,
+        @NotBlank @jakarta.validation.constraints.Size(min = 8, max = 100) String password
     ) {}
 
     public record LoginResponseDto(

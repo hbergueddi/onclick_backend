@@ -10,12 +10,16 @@
  *
  * <h3>Dépendance</h3>
  * <p>Référence {@link com.onesley.oneclick.core.identity.api.User} pour les FKs {@code user_id}.
+ * <p>{@code shared} (module OPEN) : events d'activation de compte membre (Gap #10) —
+ * {@code MemberEnrollmentRequestedEvent} (consommé) + {@code MemberEnrollmentInvitedEvent}
+ * (publié vers core/email). La liste {@code allowedDependencies} étant explicite (modèle
+ * CLOSED exhaustif), {@code shared} doit y figurer même s'il est OPEN.
  */
 @ApplicationModule(
     type = org.springframework.modulith.ApplicationModule.Type.CLOSED,
     id = "core.auth",
     displayName = "core/auth",
-    allowedDependencies = {"core.identity", "core.tenant", "exception", "security"}
+    allowedDependencies = {"core.identity", "core.tenant", "exception", "security", "shared"}
 )
 package com.onesley.oneclick.core.auth;
 
