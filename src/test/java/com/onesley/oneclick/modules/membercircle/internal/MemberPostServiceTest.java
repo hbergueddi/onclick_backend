@@ -3,6 +3,7 @@ package com.onesley.oneclick.modules.membercircle.internal;
 import com.onesley.oneclick.core.identity.api.UserDirectoryApi;
 import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.NotFoundException;
+import com.onesley.oneclick.modules.membercircle.api.MemberPostDtos.CommentCreateDto;
 import com.onesley.oneclick.modules.membercircle.api.MemberPostDtos.LikeResultDto;
 import com.onesley.oneclick.modules.membercircle.api.MemberPostDtos.MemberPostCreateDto;
 import com.onesley.oneclick.modules.membercircle.api.MemberPostDtos.MemberPostDto;
@@ -35,6 +36,7 @@ class MemberPostServiceTest {
 
     @Mock MemberPostRepository repo;
     @Mock MemberPostLikeRepository likeRepo;
+    @Mock MemberPostCommentRepository commentRepo;
     @Mock UserDirectoryApi userDirectory;
     @InjectMocks MemberPostService service;
 
@@ -51,7 +53,7 @@ class MemberPostServiceTest {
         UUID tenant = UUID.randomUUID();
         when(userDirectory.tenantIdById(author)).thenReturn(Optional.of(tenant));
         when(repo.save(any())).thenAnswer(i -> i.getArgument(0));
-        var dto = service.create(author, new MemberPostCreateDto("Bonjour le club", null, "padel"));
+        var dto = service.create(author, new MemberPostCreateDto("Bonjour le club", null, "padel", null));
         assertThat(dto.status()).isEqualTo("pending");
         assertThat(dto.content()).isEqualTo("Bonjour le club");
         assertThat(dto.authorId()).isEqualTo(author);
@@ -62,7 +64,7 @@ class MemberPostServiceTest {
     void create_noTenant_throwsBadRequest() {
         UUID author = UUID.randomUUID();
         when(userDirectory.tenantIdById(author)).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> service.create(author, new MemberPostCreateDto("x", null, null)))
+        assertThatThrownBy(() -> service.create(author, new MemberPostCreateDto("x", null, null, null)))
             .isInstanceOf(BadRequestException.class);
         verify(repo, never()).save(any());
     }
@@ -104,6 +106,40 @@ class MemberPostServiceTest {
     void toggleLike_postNotFound_throws() {
         when(repo.findById(any())).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.toggleLike(UUID.randomUUID(), UUID.randomUUID()))
+            .isInstanceOf(NotFoundException.class);
+    }
+
+    // ─── A.2 — addComment ────────────────────────────────────────────────────
+
+    @Test
+    void addComment_onApprovedPost_persists() {
+        UUID postId = UUID.randomUUID();
+        UUID author = UUID.randomUUID();
+        MemberPost p = approvedPost(postId);
+        p.setStatus("approved");
+        when(repo.findById(postId)).thenReturn(Optional.of(p));
+        when(commentRepo.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(userDirectory.nameById(author)).thenReturn(Optional.empty());
+        var dto = service.addComment(postId, author, new CommentCreateDto("Bien joué !", null));
+        assertThat(dto.content()).isEqualTo("Bien joué !");
+        assertThat(dto.authorId()).isEqualTo(author);
+        verify(commentRepo).save(any());
+    }
+
+    @Test
+    void addComment_postNotApproved_throwsBadRequest() {
+        UUID postId = UUID.randomUUID();
+        MemberPost pending = approvedPost(postId); // status = pending par défaut
+        when(repo.findById(postId)).thenReturn(Optional.of(pending));
+        assertThatThrownBy(() -> service.addComment(postId, UUID.randomUUID(), new CommentCreateDto("x", null)))
+            .isInstanceOf(BadRequestException.class);
+        verify(commentRepo, never()).save(any());
+    }
+
+    @Test
+    void addComment_postNotFound_throws() {
+        when(repo.findById(any())).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.addComment(UUID.randomUUID(), UUID.randomUUID(), new CommentCreateDto("x", null)))
             .isInstanceOf(NotFoundException.class);
     }
 

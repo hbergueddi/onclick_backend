@@ -1,10 +1,13 @@
 package com.onesley.oneclick.modules.membercircle;
 
+import com.onesley.oneclick.modules.membercircle.api.MemberPostDtos.CommentCreateDto;
 import com.onesley.oneclick.modules.membercircle.api.MemberPostDtos.LikeResultDto;
+import com.onesley.oneclick.modules.membercircle.api.MemberPostDtos.MemberPostCommentDto;
 import com.onesley.oneclick.modules.membercircle.api.MemberPostDtos.MemberPostCreateDto;
 import com.onesley.oneclick.modules.membercircle.api.MemberPostDtos.MemberPostDto;
 import com.onesley.oneclick.modules.membercircle.api.MemberPostDtos.MemberPostFeedDto;
 import com.onesley.oneclick.modules.membercircle.api.MemberPostDtos.MemberPostsResultDto;
+import com.onesley.oneclick.modules.membercircle.api.MemberPostDtos.MentionableMemberDto;
 import com.onesley.oneclick.modules.membercircle.api.MemberPostDtos.RejectMemberPostDto;
 import com.onesley.oneclick.modules.membercircle.internal.MemberPostService;
 import com.onesley.oneclick.security.SecurityHelper;
@@ -71,6 +74,33 @@ public class MemberCircleController {
     @PreAuthorize("hasAuthority('CREATE:COMMUNITY')")
     public LikeResultDto toggleLike(@PathVariable UUID id) {
         return service.toggleLike(id, SecurityHelper.currentUserId());
+    }
+
+    @GetMapping("/{id}/comments")
+    @Operation(summary = "A.2 — commentaires d'un post approuvé (enrichis auteur)")
+    @PreAuthorize("hasAuthority('VIEW:COMMUNITY')")
+    public List<MemberPostCommentDto> comments(@PathVariable UUID id) {
+        return service.listComments(id);
+    }
+
+    @PostMapping("/{id}/comments")
+    @Operation(summary = "A.2 — ajoute un commentaire (+ mentions) à un post approuvé")
+    @PreAuthorize("hasAuthority('CREATE:COMMUNITY')")
+    public ResponseEntity<MemberPostCommentDto> addComment(
+        @PathVariable UUID id, @Valid @RequestBody CommentCreateDto dto
+    ) {
+        MemberPostCommentDto created = service.addComment(id, SecurityHelper.currentUserId(), dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    @GetMapping("/mentionable")
+    @Operation(summary = "A.2 — membres mentionnables du tenant (autocomplete @, PII-light)")
+    @PreAuthorize("hasAuthority('VIEW:COMMUNITY')")
+    public List<MentionableMemberDto> mentionable(
+        @RequestParam(required = false, defaultValue = "") String q,
+        @RequestParam(defaultValue = "8") int limit
+    ) {
+        return service.mentionableMembers(SecurityHelper.currentUserId(), q, limit);
     }
 
     @PatchMapping("/{id}/approve")

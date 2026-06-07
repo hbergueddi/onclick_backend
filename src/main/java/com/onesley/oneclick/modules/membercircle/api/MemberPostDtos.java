@@ -60,10 +60,12 @@ public final class MemberPostDtos {
         @NotBlank @Size(max = 500) String content,
         @Size(max = 512) String photoUrl,
         @Pattern(regexp = "^(padel|tennis|foot|basket|spa|golf|coiffeur|palm_gym|restaurant|event|autre)$")
-        String activityTag
+        String activityTag,
+        /** A.2 — UUID (string) des membres mentionnés (optionnel). */
+        List<String> mentionedUserIds
     ) {}
 
-    /** Post du feed membre (approuvé) enrichi auteur + likes (likedByMe pour le viewer). */
+    /** Post du feed membre (approuvé) enrichi auteur + likes (likedByMe pour le viewer) + commentaires. */
     public record MemberPostFeedDto(
         UUID id,
         UUID authorId,
@@ -75,9 +77,34 @@ public final class MemberPostDtos {
         String activityTag,
         long likesCount,
         boolean likedByMe,
+        long commentsCount,
+        List<String> mentionedUserIds,
         Instant createdAt
     ) {}
 
     /** Résultat d'un toggle like (état + compteur à jour). */
     public record LikeResultDto(boolean liked, long likesCount) {}
+
+    // ─── A.2 — commentaires + mentions ───────────────────────────────────────
+
+    /** Commentaire d'un post enrichi auteur (read-view). */
+    public record MemberPostCommentDto(
+        UUID id,
+        UUID authorId,
+        String authorFirstName,
+        String authorLastName,
+        String authorAvatarUrl,
+        String content,
+        List<String> mentionedUserIds,
+        Instant createdAt
+    ) {}
+
+    /** Création d'un commentaire (≤ 500). */
+    public record CommentCreateDto(
+        @NotBlank @Size(max = 500) String content,
+        List<String> mentionedUserIds
+    ) {}
+
+    /** Membre mentionnable (autocomplete @) — projection PII-light. */
+    public record MentionableMemberDto(UUID id, String firstName, String lastName, String avatarUrl) {}
 }

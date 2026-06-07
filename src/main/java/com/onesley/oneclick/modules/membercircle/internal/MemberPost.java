@@ -5,6 +5,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -58,6 +60,11 @@ public class MemberPost extends TimestampedEntity {
 
     @Column(name = "deleted_at")
     @Setter private Instant deletedAt;
+
+    /** A.2 — UUID (text[]) des membres mentionnés dans le post. */
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Column(name = "mentioned_user_ids", columnDefinition = "text[]")
+    @Setter private String[] mentionedUserIds;
 
     /**
      * Constructeur de création membre (A.1) : status par défaut {@code pending}
