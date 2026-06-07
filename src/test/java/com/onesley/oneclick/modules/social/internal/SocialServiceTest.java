@@ -10,6 +10,7 @@ import com.onesley.oneclick.modules.social.api.SocialDtos.FriendGroupUpdateDto;
 import com.onesley.oneclick.modules.social.api.SocialDtos;
 import com.onesley.oneclick.modules.social.api.SocialDtos.FriendshipCreateDto;
 import com.onesley.oneclick.modules.social.api.SocialDtos.ReferralCreateDto;
+import com.onesley.oneclick.modules.social.api.SocialDtos.ReferralDto;
 import com.onesley.oneclick.modules.social.api.SocialDtos.UserFavoriteCreateDto;
 import com.onesley.oneclick.security.SecurityHelper;
 import jakarta.persistence.EntityManager;
@@ -645,5 +646,87 @@ class SocialServiceTest {
                 .isInstanceOf(ForbiddenException.class);
         }
         verify(contactImportRepo, org.mockito.Mockito.never()).save(any());
+    }
+
+    // ─── Gap #8 — activateByCode (parrainage par code + auto-amitié) ──────────────
+
+    private User referrerUser(UUID id) {
+        return new User(id, null, "ref@x.ma", "h", "Ref", "Rer");
+    }
+
+    @Test
+    void activateByCode_validCode_createsActiveReferral_andFriendship() {
+        UUID referrerId = UUID.randomUUID();
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::currentUserId).thenReturn(me);
+            when(userRepository.findByReferralCodeIgnoreCase("OC-ABC")).thenReturn(Optional.of(referrerUser(referrerId)));
+            when(referralRepo.existsByReferrerIdAndReferredUserId(referrerId, me)).thenReturn(false);
+            when(friendshipRepo.findByUser1IdAndUser2Id(any(), any())).thenReturn(Optional.empty());
+
+            ReferralDto out = service.activateByCode("OC-ABC");
+
+            assertThat(out.status()).isEqualTo("activated");
+            org.mockito.ArgumentCaptor<Referral> rc = org.mockito.ArgumentCaptor.forClass(Referral.class);
+            verify(referralRepo).save(rc.capture());
+            assertThat(rc.getValue().getReferralCode()).isEqualTo("OC-ABC");
+            // auto-amitié créée (accepted)
+            org.mockito.ArgumentCaptor<Friendship> fc = org.mockito.ArgumentCaptor.forClass(Friendship.class);
+            verify(friendshipRepo).save(fc.capture());
+            assertThat(fc.getValue().getStatus()).isEqualTo("accepted");
+        }
+    }
+
+    @Test
+    void activateByCode_invalidCode_throws400() {
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::currentUserId).thenReturn(me);
+            when(userRepository.findByReferralCodeIgnoreCase("NOPE")).thenReturn(Optional.empty());
+            assertThatThrownBy(() -> service.activateByCode("NOPE"))
+                .isInstanceOf(com.onesley.oneclick.exception.BadRequestException.class);
+            verify(referralRepo, org.mockito.Mockito.never()).save(any());
+        }
+    }
+
+    @Test
+    void activateByCode_selfReferral_throws400() {
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::currentUserId).thenReturn(me);
+            when(userRepository.findByReferralCodeIgnoreCase("SELF")).thenReturn(Optional.of(referrerUser(me)));
+            assertThatThrownBy(() -> service.activateByCode("SELF"))
+                .isInstanceOf(com.onesley.oneclick.exception.BadRequestException.class);
+            verify(referralRepo, org.mockito.Mockito.never()).save(any());
+        }
+    }
+
+    @Test
+    void activateByCode_alreadyReferred_throws409() {
+        UUID referrerId = UUID.randomUUID();
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::currentUserId).thenReturn(me);
+            when(userRepository.findByReferralCodeIgnoreCase("DUP")).thenReturn(Optional.of(referrerUser(referrerId)));
+            when(referralRepo.existsByReferrerIdAndReferredUserId(referrerId, me)).thenReturn(true);
+            assertThatThrownBy(() -> service.activateByCode("DUP"))
+                .isInstanceOf(com.onesley.oneclick.exception.ConflictException.class);
+            verify(referralRepo, org.mockito.Mockito.never()).save(any());
+        }
+    }
+
+    @Test
+    void activateByCode_pendingFriendship_flipsToAccepted() {
+        UUID referrerId = UUID.randomUUID();
+        UUID a = me.toString().compareTo(referrerId.toString()) <= 0 ? me : referrerId;
+        UUID b = a.equals(me) ? referrerId : me;
+        Friendship pending = friendship("pending", a, b);
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::currentUserId).thenReturn(me);
+            when(userRepository.findByReferralCodeIgnoreCase("PEND")).thenReturn(Optional.of(referrerUser(referrerId)));
+            when(referralRepo.existsByReferrerIdAndReferredUserId(referrerId, me)).thenReturn(false);
+            when(friendshipRepo.findByUser1IdAndUser2Id(a, b)).thenReturn(Optional.of(pending));
+
+            service.activateByCode("PEND");
+
+            assertThat(pending.getStatus()).isEqualTo("accepted");
+            verify(friendshipRepo).save(pending);
+        }
     }
 }

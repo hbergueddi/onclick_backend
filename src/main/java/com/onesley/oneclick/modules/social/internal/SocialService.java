@@ -2,6 +2,7 @@ package com.onesley.oneclick.modules.social.internal;
 
 import com.onesley.oneclick.core.identity.api.User;
 import com.onesley.oneclick.core.identity.api.UserRepository;
+import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.ConflictException;
 import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
@@ -413,6 +414,66 @@ public class SocialService {
         r.setReferredUser(entityManager.getReference(User.class, referredUserId));
         r.markActivated();
         return referralRepo.save(r).toDto();
+    }
+
+    /**
+     * Active un parrainage par <b>code parrain</b> (Gap #8 — port legacy
+     * {@code activate_referral_by_code}). Le filleul = caller courant. Résout le parrain
+     * par son code de parrainage personnel, crée le parrainage actif, et établit l'amitié
+     * filleul↔parrain (le parrainage vaut relation amicale).
+     *
+     * <p>Validations (1:1 legacy) : code introuvable → 400 « Code parrain invalide » ;
+     * auto-parrainage → 400 ; parrainage déjà enregistré entre ces 2 users → 409.
+     * <b>Pas de crédit de points</b> ici (la RPC legacy n'en créditait pas non plus).
+     */
+    @Transactional
+    public ReferralDto activateByCode(String code) {
+        UUID filleul = SecurityHelper.currentUserId();
+        if (filleul == null) throw new ForbiddenException("Authentification requise");
+        String trimmed = code == null ? "" : code.trim();
+        if (trimmed.isEmpty()) throw new BadRequestException("Code parrain requis");
+
+        User referrer = userRepository.findByReferralCodeIgnoreCase(trimmed)
+            .orElseThrow(() -> new BadRequestException("Code parrain invalide"));
+        if (referrer.getId().equals(filleul)) {
+            throw new BadRequestException("Vous ne pouvez pas vous parrainer vous-même");
+        }
+        if (referralRepo.existsByReferrerIdAndReferredUserId(referrer.getId(), filleul)) {
+            throw new ConflictException("Parrainage déjà enregistré");
+        }
+
+        Referral r = new Referral(UUID.randomUUID(), referrer, trimmed);
+        r.setReferredUser(entityManager.getReference(User.class, filleul));
+        r.markActivated();
+        ReferralDto saved = referralRepo.save(r).toDto();
+
+        // Auto-amitié filleul↔parrain (idempotent + flip d'une éventuelle demande pending).
+        upsertAcceptedFriendship(filleul, referrer.getId());
+        return saved;
+    }
+
+    /**
+     * Crée (ou réactive) une amitié ACCEPTÉE entre deux users (Gap #8 — auto-amitié parrainage).
+     * Convention canonique {@code user1 < user2}. Idempotent : si l'amitié existe en pending,
+     * elle passe accepted ; si elle existe déjà accepted, no-op ; sinon création accepted.
+     */
+    private void upsertAcceptedFriendship(UUID initiator, UUID other) {
+        UUID a = initiator, b = other;
+        if (a.toString().compareTo(b.toString()) > 0) { UUID t = a; a = b; b = t; }
+        var existing = friendshipRepo.findByUser1IdAndUser2Id(a, b);
+        if (existing.isPresent()) {
+            Friendship f = existing.get();
+            if (!"accepted".equals(f.getStatus())) {
+                f.markAccepted();
+                friendshipRepo.save(f);
+            }
+            return;
+        }
+        Friendship f = new Friendship(UUID.randomUUID(),
+            entityManager.getReference(User.class, a), entityManager.getReference(User.class, b));
+        f.setRequestedBy(initiator); // le filleul a l'initiative (cohérent avec request())
+        f.markAccepted();
+        friendshipRepo.save(f);
     }
 
     // ─── Favoris (user_favorites) ────────────────────────────────────────────

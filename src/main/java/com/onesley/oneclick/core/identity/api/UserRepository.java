@@ -32,6 +32,9 @@ public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificat
     /** Lookup par code de parrainage — résolution code ami (useCareChat / useAIAssistant). */
     Optional<User> findByReferralCode(String referralCode);
 
+    /** Lookup par code de parrainage insensible à la casse (Gap #8 — activation par code saisi). */
+    Optional<User> findByReferralCodeIgnoreCase(String referralCode);
+
     /** Batch lookup par liste d'IDs — anti N+1 (useFriendships, useTeamMembers, useSupportTickets). */
     @Query("SELECT u FROM User u WHERE u.id IN :ids AND u.deletedAt IS NULL")
     java.util.List<User> findAllByIds(@Param("ids") java.util.Collection<UUID> ids);

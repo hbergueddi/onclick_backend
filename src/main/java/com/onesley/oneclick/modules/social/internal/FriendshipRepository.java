@@ -21,6 +21,13 @@ public interface FriendshipRepository extends JpaRepository<Friendship, UUID>, J
     java.util.List<Friendship> findAllByUser2Id(java.util.UUID user2Id);
 
     /**
+     * Gap #8 — amitié entre deux users en convention canonique (user1 &lt; user2).
+     * L'appelant DOIT passer (a, b) déjà triés. Sert à l'idempotence de l'auto-amitié
+     * du parrainage (création ou flip pending→accepted).
+     */
+    java.util.Optional<Friendship> findByUser1IdAndUser2Id(java.util.UUID user1Id, java.util.UUID user2Id);
+
+    /**
      * Nombre d'amitiés ACCEPTÉES dont {@code userId} est partie (user1 OU user2).
      * Sert au plafond d'amis (50) enforcé dans {@link SocialService#request}.
      * Convention canonique user1 &lt; user2 → 1 row par couple, pas de double comptage.

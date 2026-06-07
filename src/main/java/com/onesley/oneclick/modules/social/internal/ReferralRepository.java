@@ -21,6 +21,9 @@ public interface ReferralRepository extends JpaRepository<Referral, UUID>, JpaSp
     java.util.List<Referral> findAllByReferrerId(java.util.UUID referrerId);
     java.util.List<Referral> findAllByReferredUserId(java.util.UUID referredUserId);
 
+    /** Gap #8 — un parrainage existe-t-il déjà entre ce parrain et ce filleul ? (anti-doublon). */
+    boolean existsByReferrerIdAndReferredUserId(java.util.UUID referrerId, java.util.UUID referredUserId);
+
     /** Liste paginée platform-wide — admin (TableauxPulse). */
     @Query("SELECT r FROM Referral r ORDER BY r.createdAt DESC")
     Page<Referral> findAllOrdered(Pageable pageable);

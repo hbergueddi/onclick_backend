@@ -31,6 +31,9 @@ public class SocialController {
 
     public record ActivateReferralDto(UUID referredUserId) {}
 
+    /** Gap #8 — activation d'un parrainage par code parrain (le filleul = caller). */
+    public record ActivateByCodeDto(@jakarta.validation.constraints.NotBlank String referralCode) {}
+
     // ─── Friendships ─────────────────────────────────────────────────────────
 
     @GetMapping("/friendships/by-user/{userId}")
@@ -164,6 +167,14 @@ public class SocialController {
     @PreAuthorize("hasAuthority('UPDATE:COMMUNITY')")
     public ReferralDto activate(@PathVariable UUID id, @RequestBody ActivateReferralDto body) {
         return service.activate(id, body.referredUserId());
+    }
+
+    @PatchMapping("/referrals/activate")
+    @Operation(summary = "Active un parrainage par CODE parrain (filleul = caller) + auto-amitié")
+    // Self-service : le filleul (caller) saisit le code parrain. Scope intrinsèque (currentUserId).
+    @PreAuthorize("hasAuthority('UPDATE:COMMUNITY')")
+    public ReferralDto activateByCode(@Valid @RequestBody ActivateByCodeDto body) {
+        return service.activateByCode(body.referralCode());
     }
 
     // ─── Favoris (user_favorites) ────────────────────────────────────────────
