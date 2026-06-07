@@ -59,6 +59,7 @@ public class LoyaltyService {
     private final TierRepository tierRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final UserRepository userRepository; // domaine identity (API publique) — résolution noms clients
+    private final RedemptionOtpService redemptionOtpService; // Gap #2 — OTP grosses conversions
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -271,6 +272,21 @@ public class LoyaltyService {
         //    utilisables. type='spend' (CHECK loyalty_transactions), refus si solde insuffisant.
         int redeem = dto.redeemPoints() != null ? dto.redeemPoints() : 0;
         if (redeem > 0) {
+            // Gap #2 — OTP requise au-delà du seuil (anti-vidage de solde sans consentement
+            // explicite du client). Seuil = otp_required_above_pts de la gain_rule (déf. 200).
+            int otpThreshold = rule.map(GainRule::getOtpRequiredAbovePts).orElse(200);
+            if (redeem > otpThreshold) {
+                if (dto.otpRequestId() == null || dto.otpCode() == null || dto.otpCode().isBlank()) {
+                    throw new BadRequestException(
+                        "OTP_REQUIRED: cette conversion (" + redeem + " pts) dépasse le seuil de "
+                        + otpThreshold + " pts. Demandez au client son code de confirmation.");
+                }
+                String verdict = redemptionOtpService.verify(
+                    dto.otpRequestId(), dto.otpCode(), dto.clientId(), dto.restaurantId(), redeem, dto.ticketRef());
+                if (!RedemptionOtpService.OK.equals(verdict)) {
+                    throw new BadRequestException("otp_" + verdict + ": code de confirmation invalide");
+                }
+            }
             LoyaltyAccount account = findOrCreateInternal(dto.clientId(), dto.restaurantId());
             if (account.getBalance() < redeem) {
                 throw new BadRequestException(String.format(

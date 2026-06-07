@@ -10,6 +10,7 @@ import com.onesley.oneclick.shared.events.FriendshipRequestedEvent;
 import com.onesley.oneclick.shared.events.FriendshipRespondedEvent;
 import com.onesley.oneclick.shared.events.MemberPostCommentedEvent;
 import com.onesley.oneclick.shared.events.MemberPostLikedEvent;
+import com.onesley.oneclick.shared.events.RedemptionOtpRequestedEvent;
 import com.onesley.oneclick.shared.events.ReservationCreatedEvent;
 import com.onesley.oneclick.shared.events.ReservationGuestAddedEvent;
 import com.onesley.oneclick.shared.events.ReservationGuestRespondedEvent;
@@ -121,6 +122,20 @@ public class NotificationEventHandler {
      * Server-side car le CLIENT qui ajoute n'a pas {@code CREATE:NOTIFICATIONS} (un POST front
      * 403'ait). Type {@code community} (relation sociale, valeur whitelistée du CHECK notifications.type).
      */
+    /**
+     * Demande d'OTP de conversion (Gap #2) → notif in-app au CLIENT porteuse du code.
+     * Server-side : le staff n'a pas {@code CREATE:NOTIFICATIONS} et seul le client doit
+     * voir le code. Type {@code loyalty} (whitelisté ; le legacy utilisait 'otp' non porté).
+     */
+    @ApplicationModuleListener
+    public void onRedemptionOtpRequested(RedemptionOtpRequestedEvent event) {
+        String resto = event.restaurantName() != null ? event.restaurantName() : "le restaurant";
+        String body = "Code " + event.code() + " — pour valider la conversion de " + event.points()
+            + " pts (" + event.discountDh().stripTrailingZeros().toPlainString() + " MAD) chez " + resto
+            + ". Valide 5 minutes.";
+        createInApp(event.clientId(), "loyalty", "🔒 Code de confirmation", body, "/pocket/vault");
+    }
+
     @ApplicationModuleListener
     public void onFamilyMemberAdded(FamilyMemberAddedEvent event) {
         createInApp(event.relatedMemberId(), "community", "Ajouté à une famille 👨‍👩‍👧",

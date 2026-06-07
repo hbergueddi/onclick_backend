@@ -94,6 +94,21 @@ public class GainRule extends SoftDeletableAuditedEntity {
     @Column(name = "source_tier_rule_id")
     @Setter private UUID sourceTierRuleId;
 
+    /**
+     * Seuil (points) au-delà duquel une conversion (spend) requiert un OTP validé
+     * par le client (Gap #2). Anti-abus staff sur les grosses conversions.
+     */
+    @Column(name = "otp_required_above_pts", nullable = false)
+    @Setter private int otpRequiredAbovePts = 200;
+
+    /**
+     * Seuil (% du ticket) au-delà duquel un OTP est requis. Conservé pour parité
+     * legacy ; en Spring le déclencheur actif est {@code otpRequiredAbovePts}
+     * (conversion dénominée en points, pas en MAD).
+     */
+    @Column(name = "otp_required_above_ratio_pct", nullable = false, precision = 5, scale = 2)
+    @Setter private BigDecimal otpRequiredAboveRatioPct = new BigDecimal("50.00");
+
     public GainRule(UUID id, UUID restaurantId, BigDecimal conversionRate) {
         this.id = id;
         this.restaurantId = restaurantId;

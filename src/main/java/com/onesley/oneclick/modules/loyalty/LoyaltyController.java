@@ -57,6 +57,7 @@ public class LoyaltyController {
     private final OcrReceiptService ocrService;
     private final GainRuleRequestService gainRuleRequestService;
     private final RestaurantAccessGuard restaurantAccessGuard;
+    private final com.onesley.oneclick.modules.loyalty.internal.RedemptionOtpService redemptionOtpService;
 
     /**
      * P2 owner-check : un compte fidélité appartient à (client, restaurant).
@@ -221,6 +222,16 @@ public class LoyaltyController {
     @PreAuthorize("hasAuthority('CREATE:LOYALTY')")
     public Snap2EarnResultDto snap2earn(@Valid @RequestBody Snap2EarnDto dto) {
         return service.snap2earn(dto);
+    }
+
+    @PostMapping("/redemption-otp/request")
+    @Operation(summary = "Demande un OTP de conversion (Gap #2) — notifie le client in-app avec le code. Le code n'est jamais renvoyé au staff.")
+    @PreAuthorize("hasAuthority('CREATE:LOYALTY')")
+    public com.onesley.oneclick.modules.loyalty.api.RedemptionOtpRequestDto requestRedemptionOtp(
+        @Valid @RequestBody com.onesley.oneclick.modules.loyalty.api.RequestRedemptionOtpDto dto
+    ) {
+        return redemptionOtpService.requestOtp(
+            dto.clientId(), dto.restaurantId(), dto.points(), dto.montant(), dto.discountDh());
     }
 
     @PostMapping("/ocr-receipt")

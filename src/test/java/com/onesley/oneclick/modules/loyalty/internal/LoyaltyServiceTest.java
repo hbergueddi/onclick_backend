@@ -215,7 +215,7 @@ class LoyaltyServiceTest {
         UUID resto = UUID.randomUUID();
         when(transactionRepository.existsSnap2EarnByRestaurantAndTicketRef(eq(resto), anyString())).thenReturn(true);
         assertThatThrownBy(() -> service.snap2earn(new Snap2EarnDto(
-            UUID.randomUUID(), resto, new BigDecimal("100"), "TICKET-1", null, null)))
+            UUID.randomUUID(), resto, new BigDecimal("100"), "TICKET-1", null, null, null, null)))
             .isInstanceOf(BadRequestException.class);
     }
 
@@ -227,7 +227,7 @@ class LoyaltyServiceTest {
         when(gainRuleRepository.findByRestaurantIdAndDeletedAtIsNull(resto)).thenReturn(Optional.of(rule));
         when(accountRepository.findAllByClientId(client)).thenReturn(List.of(account(client, resto, 7)));
 
-        Snap2EarnResultDto r = service.snap2earn(new Snap2EarnDto(client, resto, new BigDecimal("50"), null, null, null));
+        Snap2EarnResultDto r = service.snap2earn(new Snap2EarnDto(client, resto, new BigDecimal("50"), null, null, null, null, null));
 
         assertThat(r.pointsEarned()).isZero();
         assertThat(r.accountBalance()).isEqualTo(7);
@@ -245,7 +245,7 @@ class LoyaltyServiceTest {
         when(transactionRepository.save(any())).thenAnswer(i -> i.getArgument(0));
         when(accountRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
-        Snap2EarnResultDto r = service.snap2earn(new Snap2EarnDto(client, resto, new BigDecimal("1000"), null, null, null));
+        Snap2EarnResultDto r = service.snap2earn(new Snap2EarnDto(client, resto, new BigDecimal("1000"), null, null, null, null, null));
 
         assertThat(r.pointsEarned()).isEqualTo(5); // floor(1000*0.10)=100 -> cap 5
         assertThat(r.gainRuleApplied()).isEqualTo("restaurant");
@@ -259,7 +259,7 @@ class LoyaltyServiceTest {
         when(transactionRepository.save(any())).thenAnswer(i -> i.getArgument(0));
         when(accountRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
-        Snap2EarnResultDto r = service.snap2earn(new Snap2EarnDto(client, resto, new BigDecimal("100"), null, null, null));
+        Snap2EarnResultDto r = service.snap2earn(new Snap2EarnDto(client, resto, new BigDecimal("100"), null, null, null, null, null));
 
         assertThat(r.pointsEarned()).isEqualTo(10); // floor(100*0.10)
         assertThat(r.gainRuleApplied()).isEqualTo("default");
@@ -275,7 +275,7 @@ class LoyaltyServiceTest {
         when(accountRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
         // amount 100, fallback 0.10 → earn 10 ; redeem 30 ⇒ balance 100 + 10 - 30 = 80
-        Snap2EarnResultDto r = service.snap2earn(new Snap2EarnDto(client, resto, new BigDecimal("100"), null, null, 30));
+        Snap2EarnResultDto r = service.snap2earn(new Snap2EarnDto(client, resto, new BigDecimal("100"), null, null, 30, null, null));
 
         assertThat(r.pointsEarned()).isEqualTo(10);
         assertThat(r.pointsRedeemed()).isEqualTo(30);
@@ -294,7 +294,7 @@ class LoyaltyServiceTest {
 
         // amount 100 → earn 10 → solde 15 ; redeem 50 > 15 ⇒ BadRequest (refus conversion)
         assertThatThrownBy(() -> service.snap2earn(
-            new Snap2EarnDto(client, resto, new BigDecimal("100"), null, null, 50)))
+            new Snap2EarnDto(client, resto, new BigDecimal("100"), null, null, 50, null, null)))
             .isInstanceOf(BadRequestException.class);
     }
 
@@ -308,7 +308,7 @@ class LoyaltyServiceTest {
         when(accountRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
         // redeem=0 ⇒ pas de conversion, pointsRedeemed null, solde = 10 (earn only)
-        Snap2EarnResultDto r = service.snap2earn(new Snap2EarnDto(client, resto, new BigDecimal("100"), null, null, 0));
+        Snap2EarnResultDto r = service.snap2earn(new Snap2EarnDto(client, resto, new BigDecimal("100"), null, null, 0, null, null));
 
         assertThat(r.pointsEarned()).isEqualTo(10);
         assertThat(r.pointsRedeemed()).isNull();

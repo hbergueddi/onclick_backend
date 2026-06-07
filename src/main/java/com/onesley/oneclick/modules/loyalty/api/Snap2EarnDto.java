@@ -31,6 +31,10 @@ public record Snap2EarnDto(
     @NotNull @DecimalMin("0.00") BigDecimal amount,
     @Size(min = 1, max = 64) String ticketRef,
     @Size(min = 1, max = 512) String photoUrl,
-    @Min(0) Integer redeemPoints
+    @Min(0) Integer redeemPoints,
+    /** Gap #2 — id de la demande d'OTP, requis si la conversion dépasse le seuil OTP. */
+    UUID otpRequestId,
+    /** Gap #2 — code à 6 chiffres saisi par le staff (lu par le client). */
+    @Size(min = 6, max = 6) String otpCode
 ) {
 }
