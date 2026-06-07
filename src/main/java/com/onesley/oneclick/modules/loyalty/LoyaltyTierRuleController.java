@@ -3,7 +3,11 @@ package com.onesley.oneclick.modules.loyalty;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyTierRuleCreateDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyTierRuleDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyTierRulePatchDto;
+import com.onesley.oneclick.modules.loyalty.api.RuleAssignRequest;
+import com.onesley.oneclick.modules.loyalty.api.RuleAssignmentDto;
+import com.onesley.oneclick.modules.loyalty.api.RuleAssignmentResultDto;
 import com.onesley.oneclick.modules.loyalty.internal.LoyaltyTierRuleService;
+import com.onesley.oneclick.modules.loyalty.internal.RuleAssignmentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -20,6 +24,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 
@@ -39,6 +44,7 @@ import lombok.RequiredArgsConstructor;
 public class LoyaltyTierRuleController {
 
     private final LoyaltyTierRuleService service;
+    private final RuleAssignmentService assignmentService;
 
     @GetMapping
     @Operation(summary = "Liste les paliers de fidélité plateforme")
@@ -68,5 +74,42 @@ public class LoyaltyTierRuleController {
     @PreAuthorize("hasAuthority('DELETE:LOYALTY_TIER')")
     public void delete(@PathVariable UUID id) {
         service.delete(id);
+    }
+
+    // ─── Gap #1 — assignation en masse aux restaurants (FORGE) ────────────────
+
+    @GetMapping("/assignments/counts")
+    @Operation(summary = "Compteurs d'assignation par tier-rule (badges FORGE)")
+    @PreAuthorize("hasAuthority('VIEW:LOYALTY_TIER')")
+    public Map<UUID, Long> assignmentCounts() {
+        return assignmentService.assignmentCounts();
+    }
+
+    @GetMapping("/{id}/assignments")
+    @Operation(summary = "Restaurants où cette tier-rule est assignée")
+    @PreAuthorize("hasAuthority('VIEW:LOYALTY_TIER')")
+    public List<RuleAssignmentDto> assignments(@PathVariable UUID id) {
+        return assignmentService.getAssignments(id);
+    }
+
+    @PostMapping("/{id}/assign")
+    @Operation(summary = "Assigne la tier-rule à un ensemble de restaurants (upsert)")
+    @PreAuthorize("hasAuthority('UPDATE:LOYALTY_TIER')")
+    public RuleAssignmentResultDto assign(@PathVariable UUID id, @Valid @RequestBody RuleAssignRequest req) {
+        return assignmentService.assign(id, req.restaurantIds());
+    }
+
+    @PostMapping("/{id}/unassign")
+    @Operation(summary = "Retire la tier-rule d'un ensemble de restaurants")
+    @PreAuthorize("hasAuthority('UPDATE:LOYALTY_TIER')")
+    public RuleAssignmentResultDto unassign(@PathVariable UUID id, @Valid @RequestBody RuleAssignRequest req) {
+        return assignmentService.unassign(id, req.restaurantIds());
+    }
+
+    @PostMapping("/{id}/sync")
+    @Operation(summary = "Resynchronise les restaurants assignés depuis la tier-rule source")
+    @PreAuthorize("hasAuthority('UPDATE:LOYALTY_TIER')")
+    public RuleAssignmentResultDto sync(@PathVariable UUID id) {
+        return assignmentService.sync(id);
     }
 }

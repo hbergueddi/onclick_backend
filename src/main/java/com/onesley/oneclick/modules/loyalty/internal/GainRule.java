@@ -86,6 +86,14 @@ public class GainRule extends SoftDeletableAuditedEntity {
     @Column(name = "welcome_points_max", nullable = false)
     @Setter private int welcomePointsMax = 500;
 
+    /**
+     * Tier-rule plateforme source si cette règle a été assignée en masse depuis
+     * la FORGE (Gap #1). NULL = règle par-restaurant créée/éditée manuellement.
+     * Permet la traçabilité + le resync (cf. {@code RuleAssignmentService}).
+     */
+    @Column(name = "source_tier_rule_id")
+    @Setter private UUID sourceTierRuleId;
+
     public GainRule(UUID id, UUID restaurantId, BigDecimal conversionRate) {
         this.id = id;
         this.restaurantId = restaurantId;
