@@ -37,7 +37,10 @@ import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.Res
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantTableDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantZoneCreateDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantZoneDto;
+import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantAnnouncementDto;
+import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.RestaurantAnnouncementCreateDto;
 import com.onesley.oneclick.modules.restaurant.internal.BusinessHourService;
+import com.onesley.oneclick.modules.restaurant.internal.RestaurantAnnouncementService;
 import com.onesley.oneclick.modules.restaurant.internal.Restaurant;
 import com.onesley.oneclick.modules.restaurant.internal.RestaurantCatalogService;
 import com.onesley.oneclick.modules.restaurant.internal.RestaurantRepository;
@@ -62,6 +65,7 @@ public class RestaurantController {
     private final BusinessHourService businessHourService;
     private final UserRepository userRepository;
     private final RestaurantAccessGuard restaurantAccessGuard;
+    private final RestaurantAnnouncementService announcementService;
 
     @GetMapping
     @Operation(summary = "Liste paginée des restaurants — filtres city + tenantId optionnels (PUBLIC catalogue)")
@@ -167,6 +171,39 @@ public class RestaurantController {
     ) {
         restaurantAccessGuard.requireAdminOrActiveStaffOf(restaurantId);
         return businessHourService.replaceForRestaurant(restaurantId, dto);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  Annonce éphémère 24h (Gap #6 — port legacy 14/05) — staff publie, membre voit
+    // ═══════════════════════════════════════════════════════════════════════
+
+    @GetMapping("/{restaurantId}/announcement")
+    @Operation(summary = "Annonce active 24h d'un restaurant (PUBLIC — bannière fiche spotlight). 200 avec corps, ou corps vide si aucune.")
+    // PUBLIC : la bannière apparaît sur la fiche restaurant (spotlight) accessible sans auth
+    // (mirroir de GET /{id}). Whitelist correspondante dans SecurityConfig.
+    public ResponseEntity<RestaurantAnnouncementDto> getActiveAnnouncement(@PathVariable UUID restaurantId) {
+        RestaurantAnnouncementDto active = announcementService.getActive(restaurantId);
+        // 204 si aucune annonce active (le front traite l'absence comme « pas de bannière »).
+        return active == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(active);
+    }
+
+    @PostMapping("/{restaurantId}/announcement")
+    @Operation(summary = "Publie une annonce 24h (owner/staff actif du resto ou admin). Remplace l'annonce active existante.")
+    @PreAuthorize("hasAuthority('UPDATE:RESTAURANTS')")  // gestion de contenu resto ; ABAC staff-of-resto dans le service
+    public ResponseEntity<RestaurantAnnouncementDto> publishAnnouncement(
+        @PathVariable UUID restaurantId,
+        @Valid @RequestBody RestaurantAnnouncementCreateDto dto
+    ) {
+        RestaurantAnnouncementDto created = announcementService.create(restaurantId, dto.message());
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    @DeleteMapping("/announcements/{id}")
+    @Operation(summary = "Arrête (supprime) une annonce — owner/staff actif du resto ou admin.")
+    @PreAuthorize("hasAuthority('UPDATE:RESTAURANTS')")  // ABAC sur le resto propriétaire dans le service
+    public ResponseEntity<Void> deleteAnnouncement(@PathVariable UUID id) {
+        announcementService.delete(id);
+        return ResponseEntity.noContent().build();
     }
 
     // ═══════════════════════════════════════════════════════════════════════

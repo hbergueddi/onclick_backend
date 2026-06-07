@@ -185,4 +185,21 @@ public final class RestaurantSubResourceDtos {
         @Size(max = 128) String position,
         @Size(max = 64) String status
     ) {}
+
+    // ─── Annonce éphémère 24h (Gap #6 — port legacy 14/05) ────────────────────
+
+    /** Annonce active d'un restaurant (message + expiration). */
+    public record RestaurantAnnouncementDto(
+        UUID id,
+        UUID restaurantId,
+        String message,
+        UUID authorId,
+        Instant createdAt,
+        Instant expiresAt
+    ) {}
+
+    /** Corps de publication d'une annonce (message ≤ 280 ; expiration forcée +24h serveur). */
+    public record RestaurantAnnouncementCreateDto(
+        @NotBlank @Size(min = 1, max = 280) String message
+    ) {}
 }

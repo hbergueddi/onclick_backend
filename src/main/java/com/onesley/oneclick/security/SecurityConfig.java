@@ -109,6 +109,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/audit/telemetry").permitAll()  // Sprint I.3 — ingestion telemetry sans auth
                 .requestMatchers(HttpMethod.POST, "/api/email/webhooks/resend").permitAll()  // Gap #4 — webhook Resend (auth = signature Svix)
                 .requestMatchers(HttpMethod.GET, "/api/restaurants/featured").permitAll()  // Sprint H — curation publique Explore
+                .requestMatchers(HttpMethod.GET, "/api/restaurants/*/announcement").permitAll()  // Gap #6 — bannière annonce 24h (fiche spotlight publique)
                 // Preflight CORS
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 // Tout le reste demande un JWT valide
