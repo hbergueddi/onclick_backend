@@ -2,12 +2,15 @@ package com.onesley.oneclick.modules.membercircle.internal;
 
 import com.onesley.oneclick.core.identity.api.UserDirectoryApi;
 import com.onesley.oneclick.exception.BadRequestException;
+import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.modules.membercircle.api.MemberPostDtos.CommentCreateDto;
 import com.onesley.oneclick.modules.membercircle.api.MemberPostDtos.LikeResultDto;
 import com.onesley.oneclick.modules.membercircle.api.MemberPostDtos.MemberPostCreateDto;
 import com.onesley.oneclick.modules.membercircle.api.MemberPostDtos.MemberPostDto;
 import com.onesley.oneclick.modules.membercircle.api.MemberPostDtos.MemberPostsSummaryDto;
+import com.onesley.oneclick.shared.events.MemberPostCommentedEvent;
+import com.onesley.oneclick.shared.events.MemberPostLikedEvent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -38,6 +41,7 @@ class MemberPostServiceTest {
     @Mock MemberPostLikeRepository likeRepo;
     @Mock MemberPostCommentRepository commentRepo;
     @Mock UserDirectoryApi userDirectory;
+    @Mock org.springframework.context.ApplicationEventPublisher events;
     @InjectMocks MemberPostService service;
 
     private static MemberPostDto post(String status) {
@@ -86,6 +90,20 @@ class MemberPostServiceTest {
         assertThat(r.liked()).isTrue();
         assertThat(r.likesCount()).isEqualTo(1);
         verify(likeRepo).save(any());
+        // 1re pose du like sur le post d'autrui → notif publiée.
+        verify(events).publishEvent(any(MemberPostLikedEvent.class));
+    }
+
+    @Test
+    void toggleLike_selfLike_doesNotNotify() {
+        UUID postId = UUID.randomUUID();
+        UUID author = UUID.randomUUID();
+        MemberPost own = new MemberPost(postId, UUID.randomUUID(), author, "c", null, null);
+        when(repo.findById(postId)).thenReturn(Optional.of(own));
+        when(likeRepo.findByPostIdAndUserId(postId, author)).thenReturn(Optional.empty());
+        when(likeRepo.countByPostId(postId)).thenReturn(1L);
+        service.toggleLike(postId, author); // author aime SON post → pas de notif
+        verify(events, never()).publishEvent(any(MemberPostLikedEvent.class));
     }
 
     @Test
@@ -100,6 +118,8 @@ class MemberPostServiceTest {
         assertThat(r.liked()).isFalse();
         assertThat(r.likesCount()).isZero();
         verify(likeRepo).delete(any());
+        // Un unlike ne notifie pas.
+        verify(events, never()).publishEvent(any(MemberPostLikedEvent.class));
     }
 
     @Test
@@ -124,6 +144,30 @@ class MemberPostServiceTest {
         assertThat(dto.content()).isEqualTo("Bien joué !");
         assertThat(dto.authorId()).isEqualTo(author);
         verify(commentRepo).save(any());
+        // Notif server-side émise (auteur du post ≠ commentateur).
+        verify(events).publishEvent(any(MemberPostCommentedEvent.class));
+    }
+
+    @Test
+    void addComment_carriesFilteredMentionRecipients() {
+        UUID postId = UUID.randomUUID();
+        UUID commenter = UUID.randomUUID();
+        UUID postAuthor = UUID.randomUUID();
+        UUID friend = UUID.randomUUID();
+        MemberPost p = new MemberPost(postId, UUID.randomUUID(), postAuthor, "c", null, null);
+        p.setStatus("approved");
+        when(repo.findById(postId)).thenReturn(Optional.of(p));
+        when(commentRepo.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(userDirectory.nameById(commenter)).thenReturn(Optional.empty());
+        // mentions = commentateur (exclu) + auteur du post (exclu) + un ami (gardé).
+        service.addComment(postId, commenter, new CommentCreateDto("@x",
+            List.of(commenter.toString(), postAuthor.toString(), friend.toString())));
+        var captor = org.mockito.ArgumentCaptor.forClass(MemberPostCommentedEvent.class);
+        verify(events).publishEvent(captor.capture());
+        MemberPostCommentedEvent ev = captor.getValue();
+        assertThat(ev.postAuthorRecipientId()).isEqualTo(postAuthor);
+        assertThat(ev.mentionedRecipientIds()).containsExactly(friend); // self + post author exclus
+        assertThat(ev.commenterName()).isEqualTo("Un membre"); // fallback (nameById vide)
     }
 
     @Test
@@ -141,6 +185,81 @@ class MemberPostServiceTest {
         when(repo.findById(any())).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.addComment(UUID.randomUUID(), UUID.randomUUID(), new CommentCreateDto("x", null)))
             .isInstanceOf(NotFoundException.class);
+    }
+
+    // ─── A.2 — deleteComment (ABAC author-or-postauthor) ─────────────────────
+
+    private MemberPostComment comment(UUID commentId, UUID postId, UUID authorId) {
+        return new MemberPostComment(commentId, postId, authorId, "blabla", null);
+    }
+
+    @Test
+    void deleteComment_byCommentAuthor_deletes() {
+        UUID postId = UUID.randomUUID(), commentId = UUID.randomUUID(), author = UUID.randomUUID();
+        when(commentRepo.findById(commentId)).thenReturn(Optional.of(comment(commentId, postId, author)));
+        when(repo.findById(postId)).thenReturn(Optional.of(
+            new MemberPost(postId, UUID.randomUUID(), UUID.randomUUID(), "c", null, null)));
+        service.deleteComment(postId, commentId, author); // caller = auteur du commentaire
+        verify(commentRepo).delete(any());
+    }
+
+    @Test
+    void deleteComment_byPostAuthor_deletes() {
+        UUID postId = UUID.randomUUID(), commentId = UUID.randomUUID();
+        UUID commentAuthor = UUID.randomUUID(), postAuthor = UUID.randomUUID();
+        when(commentRepo.findById(commentId)).thenReturn(Optional.of(comment(commentId, postId, commentAuthor)));
+        when(repo.findById(postId)).thenReturn(Optional.of(
+            new MemberPost(postId, UUID.randomUUID(), postAuthor, "c", null, null)));
+        service.deleteComment(postId, commentId, postAuthor); // caller = auteur du post
+        verify(commentRepo).delete(any());
+    }
+
+    @Test
+    void deleteComment_byStranger_throwsForbidden() {
+        UUID postId = UUID.randomUUID(), commentId = UUID.randomUUID();
+        when(commentRepo.findById(commentId)).thenReturn(Optional.of(comment(commentId, postId, UUID.randomUUID())));
+        when(repo.findById(postId)).thenReturn(Optional.of(
+            new MemberPost(postId, UUID.randomUUID(), UUID.randomUUID(), "c", null, null)));
+        assertThatThrownBy(() -> service.deleteComment(postId, commentId, UUID.randomUUID()))
+            .isInstanceOf(ForbiddenException.class);
+        verify(commentRepo, never()).delete(any());
+    }
+
+    @Test
+    void deleteComment_notFound_throws() {
+        when(commentRepo.findById(any())).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.deleteComment(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID()))
+            .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void deleteComment_wrongPost_throwsNotFound() {
+        UUID commentId = UUID.randomUUID();
+        // le commentaire appartient à un AUTRE post que celui de l'URL → 404 (garde-fou).
+        when(commentRepo.findById(commentId))
+            .thenReturn(Optional.of(comment(commentId, UUID.randomUUID(), UUID.randomUUID())));
+        assertThatThrownBy(() -> service.deleteComment(UUID.randomUUID(), commentId, UUID.randomUUID()))
+            .isInstanceOf(NotFoundException.class);
+        verify(commentRepo, never()).delete(any());
+    }
+
+    // ─── A.2 — mentionRecipients (fonction pure) ─────────────────────────────
+
+    @Test
+    void mentionRecipients_nullOrEmpty_isEmpty() {
+        assertThat(MemberPostService.mentionRecipients(null, UUID.randomUUID(), UUID.randomUUID())).isEmpty();
+        assertThat(MemberPostService.mentionRecipients(List.of(), UUID.randomUUID(), UUID.randomUUID())).isEmpty();
+    }
+
+    @Test
+    void mentionRecipients_excludesSelfAndPostAuthor_dedups_ignoresInvalid() {
+        UUID commenter = UUID.randomUUID(), postAuthor = UUID.randomUUID();
+        UUID a = UUID.randomUUID(), b = UUID.randomUUID();
+        List<UUID> out = MemberPostService.mentionRecipients(
+            List.of(commenter.toString(), postAuthor.toString(), a.toString(), a.toString(),
+                "pas-un-uuid", "", b.toString()),
+            commenter, postAuthor);
+        assertThat(out).containsExactly(a, b); // self + postAuthor exclus, doublon a fusionné, invalides ignorés
     }
 
     @Test

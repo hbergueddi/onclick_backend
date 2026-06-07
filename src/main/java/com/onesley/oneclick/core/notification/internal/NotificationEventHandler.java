@@ -8,6 +8,8 @@ import com.onesley.oneclick.shared.events.FeedbackCreatedEvent;
 import com.onesley.oneclick.shared.events.FeedbackRepliedEvent;
 import com.onesley.oneclick.shared.events.FriendshipRequestedEvent;
 import com.onesley.oneclick.shared.events.FriendshipRespondedEvent;
+import com.onesley.oneclick.shared.events.MemberPostCommentedEvent;
+import com.onesley.oneclick.shared.events.MemberPostLikedEvent;
 import com.onesley.oneclick.shared.events.ReservationCreatedEvent;
 import com.onesley.oneclick.shared.events.ReservationGuestAddedEvent;
 import com.onesley.oneclick.shared.events.ReservationGuestRespondedEvent;
@@ -50,6 +52,7 @@ public class NotificationEventHandler {
 
     private static final String DEEP_LINK = "/pocket/oneclick?tab=suivi";
     private static final String COMMUNITY_LINK = "/pocket/circle";
+    private static final String CIRCLE_POST_LINK_PREFIX = "/pocket/pcc/circle?post=";
     private static final String FAMILY_LINK = "/pocket/pcc/family";
     private static final String FEEDBACK_OWNER_LINK = "/prodesk/pcc-feedbacks";
     private static final String ANNOUNCEMENT_STAFF_LINK = "/prodesk/announcements";
@@ -78,6 +81,39 @@ public class NotificationEventHandler {
             ? "Votre demande d'ami a été acceptée !"
             : "Votre demande d'ami a été refusée.";
         createInApp(event.recipientUserId(), "community", title, body, COMMUNITY_LINK);
+    }
+
+    /**
+     * Commentaire sur un post du mur communautaire (Circle A.2) → notif in-app à l'auteur du post
+     * (si ≠ commentateur) + aux membres mentionnés. Destinataires résolus + filtrés côté
+     * {@code modules.membercircle} et portés sur l'event (frontière Modulith). Type {@code community}
+     * (whitelisté). Port du trigger DB legacy {@code notify_post_commented}.
+     */
+    @ApplicationModuleListener
+    public void onMemberPostCommented(MemberPostCommentedEvent event) {
+        String link = CIRCLE_POST_LINK_PREFIX + event.postId();
+        String preview = event.contentPreview() == null ? "" : event.contentPreview();
+        if (event.postAuthorRecipientId() != null) {
+            createInApp(event.postAuthorRecipientId(), "community",
+                "💬 " + event.commenterName() + " a commenté ton post", preview, link);
+        }
+        if (event.mentionedRecipientIds() != null) {
+            for (UUID recipient : event.mentionedRecipientIds()) {
+                createInApp(recipient, "community",
+                    "👋 " + event.commenterName() + " t'a mentionné", preview, link);
+            }
+        }
+    }
+
+    /**
+     * Like d'un post (Circle A.2) → notif in-app « ❤️ X a aimé ton post » à l'auteur. L'event n'est
+     * publié qu'à la 1re pose du like et jamais en self-like (filtré côté membercircle) → ici on
+     * notifie sans condition. Type {@code community}. Port du trigger DB legacy {@code notify_post_liked}.
+     */
+    @ApplicationModuleListener
+    public void onMemberPostLiked(MemberPostLikedEvent event) {
+        createInApp(event.postAuthorId(), "community",
+            "❤️ " + event.likerName() + " a aimé ton post", "", CIRCLE_POST_LINK_PREFIX + event.postId());
     }
 
     /**

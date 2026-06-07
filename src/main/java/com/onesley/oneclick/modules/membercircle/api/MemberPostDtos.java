@@ -99,9 +99,9 @@ public final class MemberPostDtos {
         Instant createdAt
     ) {}
 
-    /** Création d'un commentaire (≤ 500). */
+    /** Création d'un commentaire (≤ 300, 1:1 legacy {@code post_comments} CHECK). */
     public record CommentCreateDto(
-        @NotBlank @Size(max = 500) String content,
+        @NotBlank @Size(max = 300) String content,
         List<String> mentionedUserIds
     ) {}
 

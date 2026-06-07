@@ -2,7 +2,11 @@ package com.onesley.oneclick.modules.membercircle.internal;
 
 import com.onesley.oneclick.core.identity.api.UserDirectoryApi;
 import com.onesley.oneclick.exception.BadRequestException;
+import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
+import com.onesley.oneclick.shared.events.MemberPostCommentedEvent;
+import com.onesley.oneclick.shared.events.MemberPostLikedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import com.onesley.oneclick.modules.membercircle.api.MemberPostDtos.CommentCreateDto;
 import com.onesley.oneclick.modules.membercircle.api.MemberPostDtos.LikeResultDto;
 import com.onesley.oneclick.modules.membercircle.api.MemberPostDtos.MemberPostCommentDto;
@@ -42,13 +46,16 @@ public class MemberPostService {
     private final MemberPostLikeRepository likeRepo;
     private final MemberPostCommentRepository commentRepo;
     private final UserDirectoryApi userDirectory;
+    private final ApplicationEventPublisher events;
 
     public MemberPostService(MemberPostRepository repo, MemberPostLikeRepository likeRepo,
-                             MemberPostCommentRepository commentRepo, UserDirectoryApi userDirectory) {
+                             MemberPostCommentRepository commentRepo, UserDirectoryApi userDirectory,
+                             ApplicationEventPublisher events) {
         this.repo = repo;
         this.likeRepo = likeRepo;
         this.commentRepo = commentRepo;
         this.userDirectory = userDirectory;
+        this.events = events;
     }
 
     /** Convertit un text[] SQL (PgArray) en List&lt;String&gt; (mentions). */
@@ -146,18 +153,78 @@ public class MemberPostService {
         return rows;
     }
 
-    /** Ajoute un commentaire à un post approuvé (+ mentions). */
+    /** Ajoute un commentaire à un post approuvé (+ mentions) ; émet les notifications server-side. */
     @Transactional
     public MemberPostCommentDto addComment(UUID postId, UUID authorId, CommentCreateDto dto) {
-        requireApprovedPost(postId);
+        MemberPost post = requireApprovedPost(postId);
         MemberPostComment c = commentRepo.save(new MemberPostComment(
             UUID.randomUUID(), postId, authorId, dto.content(), toArray(dto.mentionedUserIds())));
         // Auteur enrichi via le read-view (1 lookup) pour un rendu immédiat côté front.
         var name = userDirectory.nameById(authorId).orElse(null);
+        // Notifs server-side (cloche in-app + STOMP live) : auteur du post (si ≠ commentateur) +
+        // membres mentionnés (≠ commentateur, ≠ auteur du post). Destinataires résolus ICI (frontière
+        // Modulith : core.notification ne dépend pas de core.identity) et portés sur l'event.
+        UUID postAuthorRecipient = authorId.equals(post.getAuthorId()) ? null : post.getAuthorId();
+        List<UUID> mentioned = mentionRecipients(dto.mentionedUserIds(), authorId, post.getAuthorId());
+        events.publishEvent(new MemberPostCommentedEvent(
+            postId, authorId, displayName(name), preview(dto.content()),
+            postAuthorRecipient, mentioned, Instant.now()));
         return new MemberPostCommentDto(c.getId(), authorId,
             name == null ? null : name.firstName(), name == null ? null : name.lastName(),
             name == null ? null : name.avatarUrl(), c.getContent(),
             toStringList(c.getMentionedUserIds()), c.getCreatedAt());
+    }
+
+    /**
+     * Supprime un commentaire — autorisé à l'auteur du commentaire OU à l'auteur du post (ABAC, port
+     * de la policy DELETE legacy « self OR post author »). RBAC {@code DELETE:COMMUNITY} au controller ;
+     * ABAC fin ici. {@code postId} sert de garde-fou (le commentaire doit appartenir au post).
+     *
+     * @throws NotFoundException  commentaire absent, ou n'appartenant pas à {@code postId}
+     * @throws ForbiddenException caller ni auteur du commentaire ni auteur du post
+     */
+    @Transactional
+    public void deleteComment(UUID postId, UUID commentId, UUID callerId) {
+        MemberPostComment c = commentRepo.findById(commentId)
+            .filter(x -> x.getPostId().equals(postId))
+            .orElseThrow(() -> new NotFoundException("MemberPostComment", commentId));
+        UUID postAuthor = repo.findById(postId).map(MemberPost::getAuthorId).orElse(null);
+        if (!callerId.equals(c.getAuthorId()) && !callerId.equals(postAuthor)) {
+            throw new ForbiddenException("Suppression non autorisée");
+        }
+        commentRepo.delete(c);
+    }
+
+    /**
+     * Destinataires « mention » d'un commentaire : UUID valides des membres mentionnés, dédoublonnés,
+     * en excluant le commentateur lui-même et l'auteur du post (déjà notifié par ailleurs). Fonction
+     * pure (testable isolément). Les UUID invalides sont ignorés silencieusement.
+     */
+    static List<UUID> mentionRecipients(List<String> rawIds, UUID commenterId, UUID postAuthorId) {
+        if (rawIds == null || rawIds.isEmpty()) return List.of();
+        java.util.LinkedHashSet<UUID> out = new java.util.LinkedHashSet<>();
+        for (String raw : rawIds) {
+            if (raw == null || raw.isBlank()) continue;
+            UUID id;
+            try { id = UUID.fromString(raw.trim()); } catch (IllegalArgumentException e) { continue; }
+            if (id.equals(commenterId) || id.equals(postAuthorId)) continue;
+            out.add(id);
+        }
+        return List.copyOf(out);
+    }
+
+    /** « Prénom Nom » de l'auteur, ou « Un membre » (port du fallback legacy {@code get_user_display_name}). */
+    private static String displayName(UserDirectoryApi.UserName name) {
+        if (name == null) return "Un membre";
+        String full = ((name.firstName() == null ? "" : name.firstName()) + " "
+            + (name.lastName() == null ? "" : name.lastName())).trim();
+        return full.isEmpty() ? "Un membre" : full;
+    }
+
+    /** Extrait ≤ 100 caractères du contenu (corps de la notif, port de {@code LEFT(content,100)}). */
+    private static String preview(String content) {
+        if (content == null) return "";
+        return content.length() <= 100 ? content : content.substring(0, 100);
     }
 
     /** Membres mentionnables du tenant du viewer (autocomplete @). PII-light, limité. */
@@ -189,14 +256,15 @@ public class MemberPostService {
         return rows;
     }
 
-    /** Garde-fou : le post existe, n'est pas supprimé, et est approuvé (commentaires interdits sinon). */
-    private void requireApprovedPost(UUID postId) {
+    /** Garde-fou : le post existe, n'est pas supprimé, et est approuvé. Renvoie le post (auteur/tenant). */
+    private MemberPost requireApprovedPost(UUID postId) {
         MemberPost post = repo.findById(postId)
             .filter(p -> p.getDeletedAt() == null)
             .orElseThrow(() -> new NotFoundException("MemberPost", postId));
         if (!"approved".equals(post.getStatus())) {
             throw new BadRequestException("Post non approuvé : commentaires indisponibles");
         }
+        return post;
     }
 
     /** Toggle like d'un post (idempotent) ; renvoie l'état + le compteur à jour. */
@@ -213,6 +281,12 @@ public class MemberPostService {
         } else {
             likeRepo.save(new MemberPostLike(UUID.randomUUID(), post.getId(), userId));
             liked = true;
+        }
+        // Notif « ❤️ X a aimé ton post » : uniquement à la 1re pose du like, jamais en self-like.
+        if (liked && !userId.equals(post.getAuthorId())) {
+            var name = userDirectory.nameById(userId).orElse(null);
+            events.publishEvent(new MemberPostLikedEvent(
+                post.getId(), userId, displayName(name), post.getAuthorId(), Instant.now()));
         }
         return new LikeResultDto(liked, likeRepo.countByPostId(post.getId()));
     }

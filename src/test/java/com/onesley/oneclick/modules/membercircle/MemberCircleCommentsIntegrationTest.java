@@ -52,6 +52,22 @@ class MemberCircleCommentsIntegrationTest extends AbstractIntegrationTest {
         return id;
     }
 
+    private UUID createComment(String bearer, UUID postId, String content) throws Exception {
+        ResponseEntity<String> c = restTemplate.exchange(
+            url("/api/member-posts/" + postId + "/comments"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("content", content), bearer), String.class);
+        assertThat(c.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        return UUID.fromString(om.readTree(c.getBody()).get("id").asText());
+    }
+
+    private Member anotherTenantClient(UUID exclude) {
+        String[] p = jdbc.queryForObject(
+            "SELECT u.id::text || ',' || u.tenant_id::text FROM users u JOIN roles r ON r.id = u.role_id "
+            + "WHERE r.code = 'CLIENT' AND u.tenant_id IS NOT NULL AND u.deleted_at IS NULL AND u.id <> ?::uuid LIMIT 1",
+            String.class, exclude).split(",");
+        return new Member(UUID.fromString(p[0]), UUID.fromString(p[1]));
+    }
+
     @Test
     void member_commentsApprovedPost_withMention_listedAndCounted() throws Exception {
         Member m = aTenantClient();
@@ -59,7 +75,8 @@ class MemberCircleCommentsIntegrationTest extends AbstractIntegrationTest {
         UUID postId = null;
         try {
             postId = createApprovedPost(bearer);
-            UUID mentioned = UUID.randomUUID();
+            // Mentionner un VRAI membre du tenant : la notif after-commit (FK recipient) passe proprement.
+            UUID mentioned = anotherTenantClient(m.id()).id();
 
             // POST comment (+ mention) → 201.
             ResponseEntity<String> c = restTemplate.exchange(
@@ -132,6 +149,47 @@ class MemberCircleCommentsIntegrationTest extends AbstractIntegrationTest {
                 jsonJwtEntity(Map.of("content", "commentaire interdit"), bearer), String.class)
                 .getStatusCode().value();
             assertThat(status).isEqualTo(400);
+        } finally {
+            if (postId != null) purge(postId);
+        }
+    }
+
+    @Test
+    void deleteComment_byAuthor_returns204_andUnlisted() throws Exception {
+        Member m = aTenantClient();
+        String bearer = jwtIssuer.issueAccessToken(m.id(), "CLIENT").token();
+        UUID postId = null;
+        try {
+            postId = createApprovedPost(bearer);
+            UUID commentId = createComment(bearer, postId, "à supprimer");
+            int status = restTemplate.exchange(
+                url("/api/member-posts/" + postId + "/comments/" + commentId), HttpMethod.DELETE,
+                jwtEntity(bearer), Void.class).getStatusCode().value();
+            assertThat(status).isEqualTo(204);
+            // Le commentaire n'est plus listé après suppression.
+            ResponseEntity<String> list = restTemplate.exchange(
+                url("/api/member-posts/" + postId + "/comments"), HttpMethod.GET, jwtEntity(bearer), String.class);
+            assertThat(om.readTree(list.getBody())).isEmpty();
+        } finally {
+            if (postId != null) purge(postId);
+        }
+    }
+
+    @Test
+    void deleteComment_byOtherMember_returns403() throws Exception {
+        Member author = aTenantClient();
+        String authorBearer = jwtIssuer.issueAccessToken(author.id(), "CLIENT").token();
+        Member other = anotherTenantClient(author.id());
+        String otherBearer = jwtIssuer.issueAccessToken(other.id(), "CLIENT").token();
+        UUID postId = null;
+        try {
+            postId = createApprovedPost(authorBearer);
+            UUID commentId = createComment(authorBearer, postId, "intouchable");
+            // other n'est ni l'auteur du commentaire ni l'auteur du post → 403 (a pourtant DELETE:COMMUNITY).
+            int status = restTemplate.exchange(
+                url("/api/member-posts/" + postId + "/comments/" + commentId), HttpMethod.DELETE,
+                jwtEntity(otherBearer), Void.class).getStatusCode().value();
+            assertThat(status).isEqualTo(403);
         } finally {
             if (postId != null) purge(postId);
         }

@@ -103,6 +103,14 @@ public class MemberCircleController {
         return service.mentionableMembers(SecurityHelper.currentUserId(), q, limit);
     }
 
+    @DeleteMapping("/{id}/comments/{commentId}")
+    @Operation(summary = "A.2 — supprime un commentaire (auteur du commentaire OU auteur du post)")
+    @PreAuthorize("hasAuthority('DELETE:COMMUNITY')")
+    public ResponseEntity<Void> deleteComment(@PathVariable UUID id, @PathVariable UUID commentId) {
+        service.deleteComment(id, commentId, SecurityHelper.currentUserId());
+        return ResponseEntity.noContent().build();
+    }
+
     @PatchMapping("/{id}/approve")
     @Operation(summary = "Approuve un post membre")
     @PreAuthorize("hasAuthority('UPDATE:TENANTS')")
