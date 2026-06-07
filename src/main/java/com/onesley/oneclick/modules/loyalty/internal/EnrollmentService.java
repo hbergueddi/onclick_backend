@@ -84,8 +84,9 @@ public class EnrollmentService {
             throw new ForbiddenException("Non authentifié");
         }
 
-        // 1. RBAC : SUPERADMIN OU staff actif du restaurant
-        boolean isAdmin = SecurityHelper.hasRole("SUPERADMIN");
+        // 1. RBAC (audit R4, directive #2 : hasAuthority only) : autorité d'enrôlement global
+        //    CREATE:ENROLLMENTS (réservée à l'admin global, ex-SUPERADMIN) OU staff actif du resto.
+        boolean isAdmin = SecurityHelper.hasAuthority("CREATE:ENROLLMENTS");
         if (!isAdmin && !isActiveStaff(callerId, dto.restaurantId())) {
             throw new ForbiddenException(
                 "Accès refusé : vous n'êtes pas staff actif de ce restaurant"
@@ -171,7 +172,7 @@ public class EnrollmentService {
     public List<EnrollmentRecordDto> listRecentEnrollments(UUID restaurantId, int limit) {
         UUID callerId = SecurityHelper.currentUserId();
         if (callerId == null) throw new ForbiddenException("Non authentifié");
-        if (!SecurityHelper.hasRole("SUPERADMIN") && !isActiveStaff(callerId, restaurantId)) {
+        if (!SecurityHelper.hasAuthority("CREATE:ENROLLMENTS") && !isActiveStaff(callerId, restaurantId)) {
             throw new ForbiddenException("Accès refusé");
         }
 

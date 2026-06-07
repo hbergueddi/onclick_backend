@@ -41,32 +41,30 @@ public final class SecurityHelper {
         return null;
     }
 
-    /** Vérifie qu'un rôle est présent dans les authorities du user courant. */
-    public static boolean hasRole(String roleCode) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null) return false;
-        String expected = "ROLE_" + roleCode;
-        return auth.getAuthorities().stream()
-            .anyMatch(a -> a.getAuthority().equals(expected));
-    }
-
-    /** true si user courant est SUPERADMIN ou GROUP_ADMIN (admin global ou tenant). */
+    /**
+     * true si le user courant a une portée ADMINISTRATIVE (global ou tenant).
+     *
+     * <p>Audit R4 (directive #2 : 100 % {@code hasAuthority}, jamais de {@code hasRole}/rôle).
+     * Discriminant exprimé via l'autorité {@code VIEW:USERS} — « voir n'importe quel utilisateur »
+     * est par conception réservé aux admins (SUPERADMIN + GROUP_ADMIN) et à eux seuls (vérifié sur
+     * le catalogue RBAC : aucune autre population ne la détient). Remplace l'ancien
+     * {@code hasRole("SUPERADMIN") || hasRole("GROUP_ADMIN")} sans changement de comportement.</p>
+     */
     public static boolean isAdmin() {
-        return hasRole("SUPERADMIN") || hasRole("GROUP_ADMIN");
+        return hasAuthority("VIEW:USERS");
     }
 
     /**
      * true si le user courant agit côté « gestion » (admin OU staff opérationnel),
      * par opposition à un membre/client.
      *
-     * <p>Discriminant ABAC pour les workflows où le staff agit pour le compte de
-     * l'établissement (ex: confirmer/annuler/marquer une réservation de ressource d'un
-     * membre PCC) tandis que le membre (CLIENT) ne gère que ce qui lui appartient. Couvre
-     * SUPERADMIN/GROUP_ADMIN (via {@link #isAdmin()}) + les rôles opérationnels STAFF et
-     * RESTAURATEUR. Le CLIENT renvoie {@code false} → self-scope forcé.</p>
+     * <p>Audit R4 : exprimé via l'autorité {@code VIEW:STAFF} — « voir l'équipe » est détenue par
+     * toute la population gestion (SUPERADMIN, GROUP_ADMIN, RESTAURATEUR, STAFF) et JAMAIS par le
+     * CLIENT (vérifié sur le catalogue RBAC). Remplace l'ancien {@code isAdmin() || hasRole("STAFF")
+     * || hasRole("RESTAURATEUR")} sans changement de comportement. Le CLIENT → {@code false} (self-scope).</p>
      */
     public static boolean isStaffOrAdmin() {
-        return isAdmin() || hasRole("STAFF") || hasRole("RESTAURATEUR");
+        return hasAuthority("VIEW:STAFF");
     }
 
     /** Vrai si le user courant détient l'autorité {@code ACTION:MENU} donnée (ex: "CREATE:LOYALTY"). */

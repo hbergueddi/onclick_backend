@@ -81,7 +81,7 @@ class EnrollmentServiceTest {
     }
     private MockedStatic<SecurityHelper> adminContext(MockedStatic<SecurityHelper> sec) {
         sec.when(SecurityHelper::currentUserId).thenReturn(caller);
-        sec.when(() -> SecurityHelper.hasRole("SUPERADMIN")).thenReturn(true);
+        sec.when(() -> SecurityHelper.hasAuthority("CREATE:ENROLLMENTS")).thenReturn(true);
         return sec;
     }
 
@@ -99,7 +99,7 @@ class EnrollmentServiceTest {
         when(query.getSingleResult()).thenReturn(0L); // isActiveStaff count = 0
         try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
             sec.when(SecurityHelper::currentUserId).thenReturn(caller);
-            sec.when(() -> SecurityHelper.hasRole("SUPERADMIN")).thenReturn(false);
+            sec.when(() -> SecurityHelper.hasAuthority("CREATE:ENROLLMENTS")).thenReturn(false);
             assertThatThrownBy(() -> service.enrollMember(dto(UUID.randomUUID(), null, null, null, 10)))
                 .isInstanceOf(ForbiddenException.class);
         }
@@ -245,7 +245,7 @@ class EnrollmentServiceTest {
         when(query.getSingleResult()).thenReturn(0L);
         try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
             sec.when(SecurityHelper::currentUserId).thenReturn(caller);
-            sec.when(() -> SecurityHelper.hasRole("SUPERADMIN")).thenReturn(false);
+            sec.when(() -> SecurityHelper.hasAuthority("CREATE:ENROLLMENTS")).thenReturn(false);
             assertThatThrownBy(() -> service.listRecentEnrollments(resto, 10)).isInstanceOf(ForbiddenException.class);
         }
     }
