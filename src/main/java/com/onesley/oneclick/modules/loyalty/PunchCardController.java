@@ -1,5 +1,6 @@
 package com.onesley.oneclick.modules.loyalty;
 
+import com.onesley.oneclick.modules.loyalty.api.PunchCardAdminDto;
 import com.onesley.oneclick.modules.loyalty.api.PunchCardDto;
 import com.onesley.oneclick.modules.loyalty.internal.PunchCardService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -50,5 +51,12 @@ public class PunchCardController {
     @PreAuthorize("hasAuthority('UPDATE:PUNCH_CARDS')")
     public PunchCardDto redeem(@PathVariable UUID id) {
         return service.redeem(id);
+    }
+
+    @GetMapping("/by-tenant/{tenantId}")
+    @Operation(summary = "Toutes les cartes d'un tenant avec identité membre (export STAFF — Gap #3)")
+    @PreAuthorize("hasAuthority('VIEW:STAFF')")
+    public List<PunchCardAdminDto> byTenant(@PathVariable UUID tenantId) {
+        return service.listByTenant(tenantId);
     }
 }

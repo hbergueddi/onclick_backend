@@ -4,6 +4,7 @@ import com.onesley.oneclick.core.identity.api.UserDirectoryApi;
 import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.exception.UnprocessableException;
+import com.onesley.oneclick.modules.loyalty.api.PunchCardAdminDto;
 import com.onesley.oneclick.modules.loyalty.api.PunchCardDto;
 import com.onesley.oneclick.security.SecurityHelper;
 import lombok.RequiredArgsConstructor;
@@ -112,6 +113,30 @@ public class PunchCardService {
         return repo.findByTenantIdAndClientIdOrderByActivityAsc(tenantId, clientId)
             .stream().map(PunchCard::toDto).toList();
     }
+
+    /**
+     * Toutes les cartes d'un tenant avec identité du membre (export STAFF/admin — Gap #3,
+     * port {@code export_punch_cards_csv}). Noms/téléphones résolus en batch via
+     * {@link UserDirectoryApi#namesByIds(List)} (core.identity, pas de JOIN users natif).
+     * Gating {@code VIEW:STAFF} porté par le controller.
+     */
+    public List<PunchCardAdminDto> listByTenant(UUID tenantId) {
+        List<PunchCard> cards = repo.findByTenantIdOrderByActivityAscClientIdAsc(tenantId);
+        if (cards.isEmpty()) return List.of();
+        List<UUID> clientIds = cards.stream().map(PunchCard::getClientId).distinct().toList();
+        Map<UUID, UserDirectoryApi.UserName> names = userDirectory.namesByIds(clientIds).stream()
+            .collect(java.util.stream.Collectors.toMap(UserDirectoryApi.UserName::id, n -> n));
+        return cards.stream().map(c -> {
+            UserDirectoryApi.UserName n = names.get(c.getClientId());
+            String name = n == null ? ""
+                : (safe(n.firstName()) + " " + safe(n.lastName())).trim();
+            String phone = n == null ? "" : safe(n.phone());
+            return new PunchCardAdminDto(c.getClientId(), name, phone, c.getActivity(),
+                c.getCountPunched(), c.getThreshold(), c.getRedeemedCount(), c.getLastPunchedAt());
+        }).toList();
+    }
+
+    private static String safe(String s) { return s == null ? "" : s; }
 
     // ─── Redeem (staff applique une séance gratuite) ────────────────────────────
 

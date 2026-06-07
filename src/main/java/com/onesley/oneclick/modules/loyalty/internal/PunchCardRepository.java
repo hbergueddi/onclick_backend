@@ -21,4 +21,7 @@ public interface PunchCardRepository extends JpaRepository<PunchCard, UUID> {
 
     /** La carte unique (tenant, client, activité) — clé d'upsert du punch. */
     Optional<PunchCard> findByTenantIdAndClientIdAndActivity(UUID tenantId, UUID clientId, String activity);
+
+    /** Toutes les cartes d'un tenant (export staff/admin — Gap #3). */
+    List<PunchCard> findByTenantIdOrderByActivityAscClientIdAsc(UUID tenantId);
 }

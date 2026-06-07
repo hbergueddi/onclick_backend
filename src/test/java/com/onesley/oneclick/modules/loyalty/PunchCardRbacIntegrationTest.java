@@ -149,4 +149,30 @@ class PunchCardRbacIntegrationTest extends AbstractIntegrationTest {
             HttpMethod.POST, jwtEntity(null), String.class).getStatusCode())
             .isEqualTo(HttpStatus.UNAUTHORIZED);
     }
+
+    // ─── E. by-tenant (export STAFF — Gap #3, VIEW:STAFF) ───────────────────────
+
+    @Test
+    void byTenant_staff_returnsCardsWithClientName() throws Exception {
+        seedCard("padel", 4, 0);
+        ResponseEntity<String> resp = restTemplate.exchange(
+            url("/api/punch-cards/by-tenant/" + clientTenantId()),
+            HttpMethod.GET, jwtEntity(adminBearer()), String.class);
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        JsonNode arr = om.readTree(resp.getBody());
+        assertThat(arr.isArray()).isTrue();
+        assertThat(arr).hasSizeGreaterThanOrEqualTo(1);
+        // Vue admin : expose clientName (≠ self-view qui n'a pas l'identité).
+        assertThat(arr.get(0).has("clientName")).isTrue();
+        assertThat(arr.get(0).has("activity")).isTrue();
+    }
+
+    @Test
+    void byTenant_client_forbidden() {
+        // Le CLIENT n'a pas VIEW:STAFF → 403 (pas de fuite cross-membres).
+        int status = restTemplate.exchange(
+            url("/api/punch-cards/by-tenant/" + clientTenantId()),
+            HttpMethod.GET, jwtEntity(clientBearer()), String.class).getStatusCode().value();
+        assertThat(status).isEqualTo(403);
+    }
 }

@@ -250,4 +250,34 @@ class PunchCardServiceTest {
             assertThatThrownBy(svc::listMyCards).isInstanceOf(ForbiddenException.class);
         }
     }
+
+    // ─── listByTenant (export STAFF — Gap #3) ───────────────────────────────────
+
+    @Test
+    void listByTenant_mapsCardsWithResolvedNames() {
+        PunchCardService svc = service();
+        UUID tenant = UUID.randomUUID();
+        UUID c1 = UUID.randomUUID();
+        when(repo.findByTenantIdOrderByActivityAscClientIdAsc(tenant))
+            .thenReturn(List.of(card(tenant, c1, "padel", 7, 0)));
+        when(userDirectory.namesByIds(List.of(c1))).thenReturn(List.of(
+            new UserDirectoryApi.UserName(c1, "Sofia", "Alami", "0600", "s@x.ma", null)));
+
+        var rows = svc.listByTenant(tenant);
+
+        assertThat(rows).hasSize(1);
+        assertThat(rows.get(0).clientName()).isEqualTo("Sofia Alami");
+        assertThat(rows.get(0).phone()).isEqualTo("0600");
+        assertThat(rows.get(0).activity()).isEqualTo("padel");
+        assertThat(rows.get(0).countPunched()).isEqualTo(7);
+    }
+
+    @Test
+    void listByTenant_empty_returnsEmpty_noNameLookup() {
+        PunchCardService svc = service();
+        UUID tenant = UUID.randomUUID();
+        when(repo.findByTenantIdOrderByActivityAscClientIdAsc(tenant)).thenReturn(List.of());
+        assertThat(svc.listByTenant(tenant)).isEmpty();
+        verify(userDirectory, never()).namesByIds(any());
+    }
 }
