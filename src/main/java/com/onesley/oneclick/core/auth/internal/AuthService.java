@@ -1,8 +1,11 @@
 package com.onesley.oneclick.core.auth.internal;
 
+import com.onesley.oneclick.core.identity.api.Role;
 import com.onesley.oneclick.core.identity.api.User;
 import com.onesley.oneclick.core.identity.api.UserRepository;
+import com.onesley.oneclick.core.identity.internal.RoleRepository;
 import com.onesley.oneclick.core.tenant.api.Tenant;
+import com.onesley.oneclick.core.tenant.api.TenantAdminInviteApi;
 import com.onesley.oneclick.core.tenant.internal.TenantRepository;
 import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.ForbiddenException;
@@ -52,6 +55,8 @@ public class AuthService {
     private final OtpRequestRepository otpRepo;
     private final LoginHistoryRepository loginRepo;
     private final TenantRepository tenantRepo;
+    private final RoleRepository roleRepository;
+    private final TenantAdminInviteApi tenantAdminInviteApi;
     private final PasswordEncoder passwordEncoder;
     private final JwtIssuer jwtIssuer;
 
@@ -136,6 +141,57 @@ public class AuthService {
                 log.warn("LoginHistory persist failed (non-blocking) : {}", e.getMessage());
             }
         }
+    }
+
+    // ─── Acceptation invitation tenant-admin (E2 — magic-link, public gardé par token) ──
+    /**
+     * Accepte une invitation tenant-admin : crée (ou relie) le compte, l'assigne admin du
+     * tenant, consomme l'invitation (single-use) et émet une session (access + refresh).
+     *
+     * <p>Sécurité : l'endpoint est PUBLIC (l'invité n'a pas encore de compte) — la
+     * possession du token (haute entropie, single-use, expiry 7j, émis à cet email) tient
+     * lieu de facteur d'authentification (équivalent magic-link). Pour un email DÉJÀ existant,
+     * on N'écrase PAS le mot de passe (anti-takeover) : on assigne l'admin et on ouvre la
+     * session du compte existant.</p>
+     */
+    @Transactional
+    public LoginResult acceptTenantAdminInvite(String rawToken, String rawPassword,
+                                               String firstName, String lastName, String phone) {
+        TenantAdminInviteApi.RedeemableInvite invite = tenantAdminInviteApi.findRedeemable(rawToken)
+            .orElseThrow(() -> new BadRequestException("Invitation invalide, expirée ou déjà utilisée."));
+
+        User user = userRepo.findByEmailIgnoreCase(invite.email()).orElse(null);
+        if (user == null) {
+            Role role = roleRepository.findByCode("GROUP_ADMIN")
+                .orElseThrow(() -> new IllegalStateException("Rôle GROUP_ADMIN introuvable"));
+            user = new User(UUID.randomUUID(), role, invite.email(),
+                passwordEncoder.encode(rawPassword), firstName, lastName);
+            user.setTenant(tenantRepo.getReferenceById(invite.tenantId()));
+            if (phone != null && !phone.isBlank()) user.setPhone(phone.trim());
+            user.setLanguage("fr");
+            user = userRepo.save(user);
+            log.info("[tenant-admin-invite] account created user={} tenant={}", user.getId(), invite.tenantId());
+        }
+
+        // Assigne admin (idempotent) + consomme l'invitation.
+        tenantAdminInviteApi.assignAdmin(invite.tenantId(), user.getId(), invite.tenantRole(), invite.invitedBy());
+        tenantAdminInviteApi.redeem(invite.inviteId(), user.getId());
+
+        // Émet la session (même schéma que login()).
+        String roleCode = user.getRole().getCode();
+        JwtIssuer.IssuedToken access = jwtIssuer.issueAccessToken(user.getId(), roleCode);
+        String refreshOpaque = jwtIssuer.issueOpaqueRefreshToken();
+        Instant refreshExp = Instant.now().plusSeconds(jwtIssuer.getRefreshTtlSeconds());
+        refreshRepo.save(new RefreshToken(UUID.randomUUID(), user, refreshOpaque, refreshExp));
+        user.setLastLoginAt(Instant.now());
+        userRepo.save(user);
+
+        return new LoginResult(
+            access.token(), access.expiresAt(),
+            refreshOpaque, refreshExp,
+            user.getId(), user.getEmail(),
+            user.getFirstName(), user.getLastName(),
+            roleCode);
     }
 
     // ─── Refresh (rotation) ────────────────────────────────────────────────────

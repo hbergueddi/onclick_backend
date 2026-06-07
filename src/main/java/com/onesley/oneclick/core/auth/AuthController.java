@@ -85,6 +85,18 @@ public class AuthController {
         return ResponseEntity.ok(new OtpVerifyResponseDto(true));
     }
 
+    @PostMapping("/accept-tenant-admin-invite")
+    @Operation(
+        summary = "E2 — accepte une invitation tenant-admin (PUBLIC, gardé par token) → crée le mot de passe + session",
+        description = "Lien magique 1ʳᵉ connexion : crée/relie le compte, l'assigne admin du tenant, " +
+                      "consomme l'invitation (single-use) et renvoie access+refresh JWT. Token invalide/expiré → 400."
+    )
+    public ResponseEntity<LoginResponseDto> acceptTenantAdminInvite(@Valid @RequestBody AcceptInviteRequestDto body) {
+        AuthService.LoginResult r = authService.acceptTenantAdminInvite(
+            body.token(), body.password(), body.firstName(), body.lastName(), body.phone());
+        return ResponseEntity.ok(LoginResponseDto.from(r));
+    }
+
     // ─── Helpers ──────────────────────────────────────────────────────────────
     private static String clientIp(HttpServletRequest req) {
         String h = req.getHeader("X-Forwarded-For");
@@ -114,6 +126,15 @@ public class AuthController {
     public record OtpVerifyDto(
         @jakarta.validation.constraints.NotNull UUID otpId,
         @NotBlank @Pattern(regexp = "^[0-9]{6}$", message = "code must be 6 digits") String code
+    ) {}
+
+    /** Acceptation invitation tenant-admin (E2). Le {@code token} clair vient du lien email. */
+    public record AcceptInviteRequestDto(
+        @NotBlank String token,
+        @NotBlank @jakarta.validation.constraints.Size(min = 8, max = 100) String password,
+        @NotBlank @jakarta.validation.constraints.Size(max = 128) String firstName,
+        @NotBlank @jakarta.validation.constraints.Size(max = 128) String lastName,
+        @jakarta.validation.constraints.Size(max = 64) String phone
     ) {}
 
     public record LoginResponseDto(

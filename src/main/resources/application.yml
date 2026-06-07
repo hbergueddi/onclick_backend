@@ -72,6 +72,11 @@ spring:
 # Local dev : MinIO sur localhost:9000 (cf scripts/minio-start.sh)
 # Prod      : override endpoint + access-key + secret-key via env vars (S3 AWS)
 app:
+  # ─── Frontend base URL (liens magiques email : invitation tenant-admin E2) ──
+  # Prod : override via APP_FRONTEND_BASE_URL (ex. https://app-oneclick.net).
+  frontend:
+    base-url: ${APP_FRONTEND_BASE_URL:https://app-oneclick.net}
+
   # ─── Rate limiting (Sprint G.6.1 — Bucket4j in-memory) ─────────────────
   # Active = false par défaut (DX dev). En prod : enabled=true via env var
   # APP_RATE_LIMIT_ENABLED=true. Override par endpoint via la liste endpoints.
@@ -94,6 +99,10 @@ app:
       - path: /api/auth/refresh
         capacity: 30
         refill-period: PT1M
+      # Acceptation invitation tenant-admin (E2) : anti-abus du lien magique — 10 / 15 min par IP
+      - path: /api/auth/accept-tenant-admin-invite
+        capacity: 10
+        refill-period: PT15M
       # Catalogue public restos : 120 / min (browse rapide Login.tsx picker)
       - path: /api/restaurants
         capacity: 120

@@ -24,9 +24,12 @@ import com.onesley.oneclick.core.tenant.api.TenantAdminDtos.TenantFeatureToggleD
 import com.onesley.oneclick.core.tenant.api.TenantAdminDtos.TenantUpdateDto;
 import com.onesley.oneclick.core.tenant.api.TenantAdminDtos.TenantAdminDto;
 import com.onesley.oneclick.core.tenant.api.TenantAdminDtos.AddTenantAdminDto;
+import com.onesley.oneclick.core.tenant.api.TenantAdminInviteDtos.CreateInviteDto;
+import com.onesley.oneclick.core.tenant.api.TenantAdminInviteDtos.InviteDto;
 import com.onesley.oneclick.core.tenant.api.Tenant;
 import com.onesley.oneclick.core.tenant.internal.TenantRepository;
 import com.onesley.oneclick.core.tenant.internal.TenantAdminService;
+import com.onesley.oneclick.core.tenant.internal.TenantAdminInviteService;
 import org.springframework.http.HttpStatus;
 import lombok.RequiredArgsConstructor;
 
@@ -43,6 +46,7 @@ public class TenantController {
 
     private final TenantService service;
     private final TenantAdminService adminService;
+    private final TenantAdminInviteService inviteService;
     private final TenantRepository tenantRepository;
 
     // Bug 32 (Batch B RBAC v2) — RBAC v2 senior strict hasAuthority('VERB:TENANTS')
@@ -140,5 +144,32 @@ public class TenantController {
     @PreAuthorize("hasAuthority('UPDATE:TENANTS')")
     public void removeAdmin(@PathVariable UUID id, @PathVariable UUID userId) {
         adminService.removeAdmin(id, userId);
+    }
+
+    // ─── E2 invitations tenant-admin par email (SUPERADMIN-only) ──────────────────
+    // L'acceptation (POST /api/auth/accept-tenant-admin-invite) est PUBLIQUE et vit
+    // dans core/auth (création de compte + JWT) — gardée par le token, pas une authority.
+
+    @GetMapping("/{id}/admin-invites")
+    @Operation(summary = "Invitations tenant-admin d'un tenant (sans token)")
+    @PreAuthorize("hasAuthority('VIEW:TENANTS')")
+    public List<InviteDto> adminInvites(@PathVariable UUID id) {
+        return inviteService.listInvites(id);
+    }
+
+    @PostMapping("/{id}/admin-invites")
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Invite un administrateur de tenant par email (lien magique ; SUPERADMIN only)")
+    @PreAuthorize("hasAuthority('UPDATE:TENANTS')")
+    public InviteDto createAdminInvite(@PathVariable UUID id, @Valid @RequestBody CreateInviteDto body) {
+        return inviteService.createInvite(id, body);
+    }
+
+    @DeleteMapping("/{id}/admin-invites/{inviteId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Révoque une invitation tenant-admin en attente (SUPERADMIN only)")
+    @PreAuthorize("hasAuthority('UPDATE:TENANTS')")
+    public void revokeAdminInvite(@PathVariable UUID id, @PathVariable UUID inviteId) {
+        inviteService.revokeInvite(id, inviteId);
     }
 }
