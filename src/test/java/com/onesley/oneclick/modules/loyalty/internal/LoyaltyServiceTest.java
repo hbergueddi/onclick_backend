@@ -593,4 +593,25 @@ class LoyaltyServiceTest {
         service.findTransactionsByRestaurants(List.of(r1), 2000);
         verify(transactionRepository).findAllByRestaurantIdInEnriched(eq(List.of(r1)), any());
     }
+
+    // ─── Gap #9 — monthlyFlows mapping (LocalDate + java.sql.Date + Number coercion) ──
+    @Test
+    void monthlyFlows_mapsRows_bothDateTypes() {
+        jakarta.persistence.Query q = mock(jakarta.persistence.Query.class);
+        when(entityManager.createNativeQuery(anyString())).thenReturn(q);
+        java.time.LocalDate june = java.time.LocalDate.of(2026, 6, 1);
+        when(q.getResultList()).thenReturn(List.of(
+            new Object[]{ june, 100L, 30L, 5L },                                // branche LocalDate (Hibernate 6)
+            new Object[]{ java.sql.Date.valueOf("2026-05-01"), 0L, 0L, 0L }     // branche java.sql.Date (fallback)
+        ));
+
+        var out = service.monthlyFlows();
+
+        assertThat(out).hasSize(2);
+        assertThat(out.get(0).monthStart()).isEqualTo(june);
+        assertThat(out.get(0).pointsEarned()).isEqualTo(100L);
+        assertThat(out.get(0).pointsRedeemed()).isEqualTo(30L);
+        assertThat(out.get(0).pointsExpired()).isEqualTo(5L);
+        assertThat(out.get(1).monthStart()).isEqualTo(java.time.LocalDate.of(2026, 5, 1));
+    }
 }

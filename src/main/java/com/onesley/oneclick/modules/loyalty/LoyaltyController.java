@@ -351,6 +351,17 @@ public class LoyaltyController {
         return service.findScannedTickets(limit);
     }
 
+    @GetMapping("/monthly-flows")
+    @Operation(
+        summary = "Flux mensuels de points sur 12 mois (pilotage fidélité) — gagnés/utilisés/expirés.",
+        description = "Port RPC legacy get_loyalty_monthly_flows. Platform-wide, réservé admin (VIEW:ANALYTICS). " +
+                      "Alimente le graphe 12 mois du tableau Pilotage (Gap #9)."
+    )
+    @PreAuthorize("hasAuthority('VIEW:ANALYTICS')")
+    public List<com.onesley.oneclick.modules.loyalty.api.LoyaltyMonthlyFlowDto> monthlyFlows() {
+        return service.monthlyFlows();
+    }
+
     @GetMapping("/tiers")
     @Operation(summary = "Liste tous les paliers de fidélité (toutes tenants confondus).")
     @PreAuthorize("hasAuthority('VIEW:LOYALTY')")

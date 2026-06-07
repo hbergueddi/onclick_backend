@@ -545,6 +545,49 @@ public class LoyaltyService {
         )).toList();
     }
 
+    /**
+     * Flux mensuels de points sur 12 mois (Gap #9 — pilotage fidélité, port RPC legacy
+     * {@code get_loyalty_monthly_flows}). Par mois : points gagnés ({@code earn}),
+     * utilisés ({@code spend}, en valeur absolue) et expirés ({@code expire}, en valeur absolue).
+     *
+     * <p>Native SQL : {@code generate_series} sur 12 mois × agrégats par type sur
+     * {@code loyalty_transactions}. Platform-wide (pilotage exec SUPERADMIN — gate
+     * {@code VIEW:ANALYTICS} au contrôleur). Mois sans mouvement → 0 (COALESCE).
+     */
+    @SuppressWarnings("unchecked")
+    @Transactional(readOnly = true)
+    public List<com.onesley.oneclick.modules.loyalty.api.LoyaltyMonthlyFlowDto> monthlyFlows() {
+        var q = entityManager.createNativeQuery("""
+            WITH months AS (
+                SELECT generate_series(
+                    date_trunc('month', now() - interval '11 months'),
+                    date_trunc('month', now()),
+                    interval '1 month'
+                )::date AS m
+            )
+            SELECT m.m AS month_start,
+                COALESCE((SELECT SUM(lt.points) FROM loyalty_transactions lt
+                          WHERE lt.type = 'earn'
+                            AND lt.created_at >= m.m AND lt.created_at < (m.m + interval '1 month')), 0) AS earned,
+                COALESCE((SELECT SUM(-lt.points) FROM loyalty_transactions lt
+                          WHERE lt.type = 'spend'
+                            AND lt.created_at >= m.m AND lt.created_at < (m.m + interval '1 month')), 0) AS redeemed,
+                COALESCE((SELECT SUM(-lt.points) FROM loyalty_transactions lt
+                          WHERE lt.type = 'expire'
+                            AND lt.created_at >= m.m AND lt.created_at < (m.m + interval '1 month')), 0) AS expired
+            FROM months m
+            ORDER BY m.m
+            """);
+        List<Object[]> rows = q.getResultList();
+        return rows.stream().map(r -> new com.onesley.oneclick.modules.loyalty.api.LoyaltyMonthlyFlowDto(
+            // Hibernate 6 mappe une colonne SQL date → LocalDate ; certains drivers → java.sql.Date.
+            r[0] instanceof java.time.LocalDate ld ? ld : ((java.sql.Date) r[0]).toLocalDate(),
+            ((Number) r[1]).longValue(),
+            ((Number) r[2]).longValue(),
+            ((Number) r[3]).longValue()
+        )).toList();
+    }
+
     /** Résumé des points expirés d'un client (cross-comptes). */
     public ExpiredPointsSummaryDto findExpiredPointsByClient(UUID clientId) {
         SecurityHelper.requireOwnerOrAdmin(clientId);
