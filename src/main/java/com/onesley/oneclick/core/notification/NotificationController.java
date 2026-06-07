@@ -4,6 +4,7 @@ import com.onesley.oneclick.security.SecurityHelper;
 import com.onesley.oneclick.shared.PageResponse;
 import com.onesley.oneclick.core.notification.internal.FcmPushService;
 import com.onesley.oneclick.core.notification.internal.NotificationService;
+import com.onesley.oneclick.core.notification.internal.StaffNotificationPreferenceService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -28,6 +29,7 @@ import com.onesley.oneclick.core.notification.api.NotificationDtos.NotificationD
 import com.onesley.oneclick.core.notification.api.NotificationDtos.PushPromoDto;
 import com.onesley.oneclick.core.notification.api.NotificationDtos.PushReservationDto;
 import com.onesley.oneclick.core.notification.api.NotificationDtos.PushResultDto;
+import com.onesley.oneclick.core.notification.api.NotificationDtos.StaffNotificationPrefsDto;
 import com.onesley.oneclick.core.notification.api.NotificationDtos.UnreadCountDto;
 import lombok.RequiredArgsConstructor;
 
@@ -42,6 +44,7 @@ public class NotificationController {
 
     private final NotificationService service;
     private final FcmPushService pushService;
+    private final StaffNotificationPreferenceService prefService;
 
     // ─── Notifications ───────────────────────────────────────────────────────
 
@@ -99,6 +102,24 @@ public class NotificationController {
     @PreAuthorize("hasAuthority('UPDATE:NOTIFICATIONS')")  // self : tous rôles ont UPDATE:NOTIFICATIONS (V34) ; ownership via service
     public MarkAllReadResultDto markAllReadByUser(@PathVariable UUID userId) {
         return service.markAllReadByUser(userId);
+    }
+
+    // ─── Préférences de notifications staff (Gap #5 — self-service) ───────────
+
+    @GetMapping("/preferences/me")
+    @Operation(summary = "Préférences de notifications du user courant (défauts tous activés si jamais persistées).")
+    // Self-service : tous rôles ont VIEW:NOTIFICATIONS (V34) ; scope intrinsèque via currentUserId().
+    @PreAuthorize("hasAuthority('VIEW:NOTIFICATIONS')")
+    public StaffNotificationPrefsDto myPreferences() {
+        return prefService.getMine();
+    }
+
+    @PutMapping("/preferences/me")
+    @Operation(summary = "Met à jour (upsert) les 5 toggles de préférences notif du user courant.")
+    // Self-service : tous rôles ont UPDATE:NOTIFICATIONS (V34) ; scope intrinsèque via currentUserId().
+    @PreAuthorize("hasAuthority('UPDATE:NOTIFICATIONS')")
+    public StaffNotificationPrefsDto updateMyPreferences(@Valid @RequestBody StaffNotificationPrefsDto dto) {
+        return prefService.updateMine(dto);
     }
 
     // ─── Campaigns ───────────────────────────────────────────────────────────

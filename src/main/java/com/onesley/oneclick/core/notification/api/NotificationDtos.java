@@ -38,6 +38,26 @@ public final class NotificationDtos {
     /** Compteur de notifications non lues pour un user (badge cloche). */
     public record UnreadCountDto(long count) {}
 
+    /**
+     * Préférences de notifications staff (Gap #5 — 5 toggles par catégorie).
+     *
+     * <p>Sert à la fois de corps de requête ({@code PUT}) et de réponse ({@code GET}).
+     * Les 5 champs sont requis (Bean Validation {@code @NotNull}) — pas de PATCH partiel,
+     * le FE envoie toujours l'état complet des 5 toggles (cohérent avec le legacy).
+     */
+    public record StaffNotificationPrefsDto(
+        @NotNull Boolean booking,
+        @NotNull Boolean reservation,
+        @NotNull Boolean feedback,
+        @NotNull Boolean loyalty,
+        @NotNull Boolean system
+    ) {
+        /** Défauts (tous activés) — renvoyés tant qu'aucune row n'a été persistée. */
+        public static StaffNotificationPrefsDto allEnabled() {
+            return new StaffNotificationPrefsDto(true, true, true, true, true);
+        }
+    }
+
     /** Résultat de l'opération bulk "marquer tout comme lu". */
     public record MarkAllReadResultDto(long updated) {}
 
