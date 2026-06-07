@@ -1,10 +1,9 @@
 /**
  * Module {@code modules/membercircle} — « Circle » (réseau social privé membres), C4.8c.
  *
- * <p>Cette tranche ne porte QUE la <b>modération tenant-admin</b> des posts membres : lister par
- * tenant + statut (pending/approved/rejected), approuver, rejeter (motif), supprimer (soft). Le flux
- * membre complet (création, feed, likes, commentaires, mentions, tags) du legacy {@code member_circle}
- * est un lot futur séparé.
+ * <p>Modération tenant-admin (C4.8c) : lister par tenant + statut, approuver, rejeter (motif),
+ * supprimer (soft). <b>Flux membre A.1</b> (2026-06-07) : création (status=pending), feed des posts
+ * approuvés (enrichi auteur + likes), toggle like. Commentaires + mentions = tranche A.2 future.
  *
  * <h3>Modulith CLOSED — discipline architecturale</h3>
  * <ul>
@@ -20,7 +19,7 @@
     type = org.springframework.modulith.ApplicationModule.Type.CLOSED,
     id = "modules.membercircle",
     displayName = "modules/membercircle",
-    allowedDependencies = {"audit", "exception", "shared"}
+    allowedDependencies = {"core.identity", "audit", "exception", "security", "shared"}
 )
 package com.onesley.oneclick.modules.membercircle;
 

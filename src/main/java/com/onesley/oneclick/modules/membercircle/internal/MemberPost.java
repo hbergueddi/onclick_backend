@@ -58,4 +58,19 @@ public class MemberPost extends TimestampedEntity {
 
     @Column(name = "deleted_at")
     @Setter private Instant deletedAt;
+
+    /**
+     * Constructeur de création membre (A.1) : status par défaut {@code pending}
+     * (modération a priori). {@code tenant_id}/{@code author_id} immuables ; id généré par l'appelant.
+     */
+    public MemberPost(UUID id, UUID tenantId, UUID authorId, String content,
+                      String photoUrl, String activityTag) {
+        this.id = id;
+        this.tenantId = tenantId;
+        this.authorId = authorId;
+        this.content = content;
+        this.photoUrl = photoUrl;
+        this.activityTag = activityTag;
+        this.status = "pending";
+    }
 }

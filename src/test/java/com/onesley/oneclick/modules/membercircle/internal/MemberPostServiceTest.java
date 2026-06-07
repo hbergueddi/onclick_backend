@@ -1,23 +1,110 @@
 package com.onesley.oneclick.modules.membercircle.internal;
 
+import com.onesley.oneclick.core.identity.api.UserDirectoryApi;
+import com.onesley.oneclick.exception.BadRequestException;
+import com.onesley.oneclick.exception.NotFoundException;
+import com.onesley.oneclick.modules.membercircle.api.MemberPostDtos.LikeResultDto;
+import com.onesley.oneclick.modules.membercircle.api.MemberPostDtos.MemberPostCreateDto;
 import com.onesley.oneclick.modules.membercircle.api.MemberPostDtos.MemberPostDto;
 import com.onesley.oneclick.modules.membercircle.api.MemberPostDtos.MemberPostsSummaryDto;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.quality.Strictness;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
- * Tests unitaires isolés du résumé de modération (C4.8c) — fonction pure
- * {@link MemberPostService#summarize}. Le flux SQL/modération est couvert par l'intégration.
+ * Tests unitaires isolés (C4.8c summarize + A.1 create/toggleLike). Le flux SQL feed est
+ * couvert par l'intégration.
  */
+@ExtendWith(MockitoExtension.class)
+@org.mockito.junit.jupiter.MockitoSettings(strictness = Strictness.LENIENT)
 class MemberPostServiceTest {
+
+    @Mock MemberPostRepository repo;
+    @Mock MemberPostLikeRepository likeRepo;
+    @Mock UserDirectoryApi userDirectory;
+    @InjectMocks MemberPostService service;
 
     private static MemberPostDto post(String status) {
         return new MemberPostDto(UUID.randomUUID(), UUID.randomUUID(), "A", "B", null,
             "contenu", null, null, status, null, null);
+    }
+
+    // ─── A.1 — create ────────────────────────────────────────────────────────
+
+    @Test
+    void create_resolvesTenant_andPersistsPending() {
+        UUID author = UUID.randomUUID();
+        UUID tenant = UUID.randomUUID();
+        when(userDirectory.tenantIdById(author)).thenReturn(Optional.of(tenant));
+        when(repo.save(any())).thenAnswer(i -> i.getArgument(0));
+        var dto = service.create(author, new MemberPostCreateDto("Bonjour le club", null, "padel"));
+        assertThat(dto.status()).isEqualTo("pending");
+        assertThat(dto.content()).isEqualTo("Bonjour le club");
+        assertThat(dto.authorId()).isEqualTo(author);
+        verify(repo).save(any());
+    }
+
+    @Test
+    void create_noTenant_throwsBadRequest() {
+        UUID author = UUID.randomUUID();
+        when(userDirectory.tenantIdById(author)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.create(author, new MemberPostCreateDto("x", null, null)))
+            .isInstanceOf(BadRequestException.class);
+        verify(repo, never()).save(any());
+    }
+
+    // ─── A.1 — toggleLike ────────────────────────────────────────────────────
+
+    private MemberPost approvedPost(UUID id) {
+        return new MemberPost(id, UUID.randomUUID(), UUID.randomUUID(), "c", null, null);
+    }
+
+    @Test
+    void toggleLike_firstTime_inserts_returnsLiked() {
+        UUID postId = UUID.randomUUID();
+        UUID user = UUID.randomUUID();
+        when(repo.findById(postId)).thenReturn(Optional.of(approvedPost(postId)));
+        when(likeRepo.findByPostIdAndUserId(postId, user)).thenReturn(Optional.empty());
+        when(likeRepo.countByPostId(postId)).thenReturn(1L);
+        LikeResultDto r = service.toggleLike(postId, user);
+        assertThat(r.liked()).isTrue();
+        assertThat(r.likesCount()).isEqualTo(1);
+        verify(likeRepo).save(any());
+    }
+
+    @Test
+    void toggleLike_existing_deletes_returnsUnliked() {
+        UUID postId = UUID.randomUUID();
+        UUID user = UUID.randomUUID();
+        when(repo.findById(postId)).thenReturn(Optional.of(approvedPost(postId)));
+        when(likeRepo.findByPostIdAndUserId(postId, user))
+            .thenReturn(Optional.of(new MemberPostLike(UUID.randomUUID(), postId, user)));
+        when(likeRepo.countByPostId(postId)).thenReturn(0L);
+        LikeResultDto r = service.toggleLike(postId, user);
+        assertThat(r.liked()).isFalse();
+        assertThat(r.likesCount()).isZero();
+        verify(likeRepo).delete(any());
+    }
+
+    @Test
+    void toggleLike_postNotFound_throws() {
+        when(repo.findById(any())).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.toggleLike(UUID.randomUUID(), UUID.randomUUID()))
+            .isInstanceOf(NotFoundException.class);
     }
 
     @Test

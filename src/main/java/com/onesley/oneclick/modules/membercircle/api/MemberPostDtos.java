@@ -1,5 +1,7 @@
 package com.onesley.oneclick.modules.membercircle.api;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 import java.time.Instant;
@@ -50,4 +52,32 @@ public final class MemberPostDtos {
     public record RejectMemberPostDto(
         @Size(max = 512) String reason
     ) {}
+
+    // ─── A.1 — flux membre (création / feed / like) ──────────────────────────
+
+    /** Création membre d'un post (status=pending). tenant_id/author_id résolus serveur. */
+    public record MemberPostCreateDto(
+        @NotBlank @Size(max = 500) String content,
+        @Size(max = 512) String photoUrl,
+        @Pattern(regexp = "^(padel|tennis|foot|basket|spa|golf|coiffeur|palm_gym|restaurant|event|autre)$")
+        String activityTag
+    ) {}
+
+    /** Post du feed membre (approuvé) enrichi auteur + likes (likedByMe pour le viewer). */
+    public record MemberPostFeedDto(
+        UUID id,
+        UUID authorId,
+        String authorFirstName,
+        String authorLastName,
+        String authorAvatarUrl,
+        String content,
+        String photoUrl,
+        String activityTag,
+        long likesCount,
+        boolean likedByMe,
+        Instant createdAt
+    ) {}
+
+    /** Résultat d'un toggle like (état + compteur à jour). */
+    public record LikeResultDto(boolean liked, long likesCount) {}
 }

@@ -1,17 +1,23 @@
 package com.onesley.oneclick.modules.membercircle;
 
+import com.onesley.oneclick.modules.membercircle.api.MemberPostDtos.LikeResultDto;
+import com.onesley.oneclick.modules.membercircle.api.MemberPostDtos.MemberPostCreateDto;
 import com.onesley.oneclick.modules.membercircle.api.MemberPostDtos.MemberPostDto;
+import com.onesley.oneclick.modules.membercircle.api.MemberPostDtos.MemberPostFeedDto;
 import com.onesley.oneclick.modules.membercircle.api.MemberPostDtos.MemberPostsResultDto;
 import com.onesley.oneclick.modules.membercircle.api.MemberPostDtos.RejectMemberPostDto;
 import com.onesley.oneclick.modules.membercircle.internal.MemberPostService;
+import com.onesley.oneclick.security.SecurityHelper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -37,6 +43,34 @@ public class MemberCircleController {
         @RequestParam(required = false) String status
     ) {
         return service.list(tenantId, status);
+    }
+
+    // ─── A.1 — flux MEMBRE (mur communautaire) : RBAC COMMUNITY (le CLIENT possède
+    //     VIEW + CREATE:COMMUNITY, V38). Self par construction (JWT.sub), pas d'ABAC tiers.
+
+    @PostMapping
+    @Operation(summary = "A — le membre publie un post (status=pending, modération a priori)")
+    @PreAuthorize("hasAuthority('CREATE:COMMUNITY')")
+    public ResponseEntity<MemberPostDto> createPost(@Valid @RequestBody MemberPostCreateDto dto) {
+        MemberPostDto created = service.create(SecurityHelper.currentUserId(), dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    @GetMapping("/feed")
+    @Operation(summary = "A — feed du mur communautaire (posts approuvés du tenant du membre, likes inclus)")
+    @PreAuthorize("hasAuthority('VIEW:COMMUNITY')")
+    public List<MemberPostFeedDto> feed(
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "30") int size
+    ) {
+        return service.feed(SecurityHelper.currentUserId(), page, size);
+    }
+
+    @PostMapping("/{id}/like")
+    @Operation(summary = "A — toggle like d'un post (idempotent) ; renvoie l'état + le compteur")
+    @PreAuthorize("hasAuthority('CREATE:COMMUNITY')")
+    public LikeResultDto toggleLike(@PathVariable UUID id) {
+        return service.toggleLike(id, SecurityHelper.currentUserId());
     }
 
     @PatchMapping("/{id}/approve")
