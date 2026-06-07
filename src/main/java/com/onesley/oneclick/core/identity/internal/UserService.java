@@ -160,6 +160,23 @@ public class UserService {
         return repository.save(user).toDto();
     }
 
+    /**
+     * H — met à jour le type de membre PCC d'un user (admin only via le controller).
+     * {@code null} retire le statut ; vocabulaire {@code resident|non_resident} (sinon 400).
+     * Pas d'éviction cache : le type de membre n'entre pas dans les authorities/login.
+     */
+    @Transactional
+    public UserDto updatePccMemberType(UUID id, String memberType) {
+        if (memberType != null && !"resident".equals(memberType) && !"non_resident".equals(memberType)) {
+            throw new BadRequestException("Type de membre PCC invalide : " + memberType);
+        }
+        User user = repository.findById(id)
+            .filter(u -> u.getDeletedAt() == null)
+            .orElseThrow(() -> new NotFoundException("User", id));
+        user.setPccMemberType(memberType);
+        return repository.save(user).toDto();
+    }
+
     @Transactional
     @CacheEvict(value = CacheConfig.CACHE_USERS_BY_EMAIL, allEntries = true)
     public void softDelete(UUID id) {

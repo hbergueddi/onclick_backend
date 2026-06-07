@@ -100,6 +100,14 @@ public class User extends SoftDeletableAuditedEntity {
     @Column(name = "language", nullable = false, length = 64)
     @Setter private String language = "fr";
 
+    /**
+     * Type de membre PCC (axe H — V79) : {@code resident} | {@code non_resident} | null.
+     * Pilote la remise PCC (résidant -20% / non-résidant -15%). Posé par un admin
+     * (PATCH /api/users/{id}/pcc-member-type, UPDATE:USERS) ; NULL = non-membre.
+     */
+    @Column(name = "pcc_member_type", length = 32)
+    @Setter private String pccMemberType;
+
     @Column(name = "status", nullable = false, length = 64)
     @Setter private String status = "active";
 
@@ -146,7 +154,7 @@ public class User extends SoftDeletableAuditedEntity {
             allergens == null ? List.of() : Arrays.asList(allergens),
             language, status,
             accountNonExpired, accountNonLocked, credentialsNonExpired, enabled,
-            lastLoginAt, getCreatedAt(), referralCode
+            lastLoginAt, getCreatedAt(), referralCode, pccMemberType
         );
     }
 

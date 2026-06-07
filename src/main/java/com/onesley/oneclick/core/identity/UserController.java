@@ -21,6 +21,7 @@ import com.onesley.oneclick.core.identity.api.UserCreateDto;
 import com.onesley.oneclick.core.identity.api.UserRegisterDto;
 import com.onesley.oneclick.core.identity.api.UserDto;
 import com.onesley.oneclick.core.identity.api.UserUpdateDto;
+import com.onesley.oneclick.core.identity.api.PccMemberTypeUpdateDto;
 import com.onesley.oneclick.core.identity.api.MeContextDto;
 import com.onesley.oneclick.core.identity.api.User;
 import com.onesley.oneclick.core.identity.api.UserRepository;
@@ -236,6 +237,21 @@ public class UserController {
     public UserDto patch(@PathVariable UUID id, @Valid @RequestBody UserUpdateDto dto) {
         SecurityHelper.requireOwnerOrAdmin(id);
         return service.patch(id, dto);
+    }
+
+    @PatchMapping("/{id}/pcc-member-type")
+    @Operation(
+        summary = "H — définit le type de membre PCC (resident|non_resident|null) — admin",
+        description = "Pilote la remise PCC (résidant -20% / non-résidant -15%). Action ADMIN " +
+                      "(UPDATE:USERS) : PAS owner-scope (un membre ne s'auto-attribue pas une remise). " +
+                      "memberType null retire le statut."
+    )
+    @PreAuthorize("hasAuthority('UPDATE:USERS')")
+    public UserDto updatePccMemberType(
+        @PathVariable UUID id,
+        @Valid @RequestBody PccMemberTypeUpdateDto dto
+    ) {
+        return service.updatePccMemberType(id, dto.memberType());
     }
 
     @PostMapping("/{id}/password")

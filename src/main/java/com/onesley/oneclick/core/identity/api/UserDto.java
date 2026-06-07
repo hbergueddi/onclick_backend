@@ -33,6 +33,8 @@ public record UserDto(
     boolean enabled,
     Instant lastLoginAt,
     Instant createdAt,
-    String referralCode
+    String referralCode,
+    /** H — type de membre PCC (resident|non_resident) ; null = non-membre. */
+    String pccMemberType
 ) {
 }

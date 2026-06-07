@@ -206,6 +206,40 @@ class UserServiceTest {
         assertThat(u.getAllergens()).containsExactly("celery", "mustard"); // inchangé
     }
 
+    // ─── H (V79) — updatePccMemberType ───────────────────────────────────────
+
+    @Test
+    void updatePccMemberType_resident_sets() {
+        User u = user();
+        when(repository.findById(u.getId())).thenReturn(Optional.of(u));
+        var dto = service.updatePccMemberType(u.getId(), "resident");
+        assertThat(u.getPccMemberType()).isEqualTo("resident");
+        assertThat(dto.pccMemberType()).isEqualTo("resident");
+    }
+
+    @Test
+    void updatePccMemberType_null_clears() {
+        User u = user();
+        u.setPccMemberType("non_resident");
+        when(repository.findById(u.getId())).thenReturn(Optional.of(u));
+        service.updatePccMemberType(u.getId(), null);
+        assertThat(u.getPccMemberType()).isNull();
+    }
+
+    @Test
+    void updatePccMemberType_invalid_throwsBadRequest_noLookup() {
+        assertThatThrownBy(() -> service.updatePccMemberType(UUID.randomUUID(), "vip"))
+            .isInstanceOf(BadRequestException.class);
+        verify(repository, org.mockito.Mockito.never()).findById(any());
+    }
+
+    @Test
+    void updatePccMemberType_notFound_throws() {
+        when(repository.findById(any())).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.updatePccMemberType(UUID.randomUUID(), "resident"))
+            .isInstanceOf(NotFoundException.class);
+    }
+
     @Test
     void patch_phoneConflict() {
         User u = user();
