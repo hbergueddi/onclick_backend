@@ -34,14 +34,16 @@ public class ResendClient {
     private String defaultFrom;
 
     private final RestClient restClient;
+    private final EmailBounceService bounceService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * RestClient construit depuis le {@code Builder} Spring auto-configuré (injectable
      * en test), aligné sur le pattern de {@code GooglePlacesEnrichmentService}.
      */
-    public ResendClient(RestClient.Builder restClientBuilder) {
+    public ResendClient(RestClient.Builder restClientBuilder, EmailBounceService bounceService) {
         this.restClient = restClientBuilder.build();
+        this.bounceService = bounceService;
     }
 
     /**
@@ -58,11 +60,21 @@ public class ResendClient {
             return new EmailSendResultDto(false, 0, null, "RESEND_API_KEY not configured (stub)");
         }
 
+        // Gap #4 — suppression list : on retire les adresses en bounce permanent/complaint
+        // (protège le bounce rate / la réputation du domaine). Si plus aucun destinataire → skip.
+        java.util.List<String> recipients = dto.to().stream()
+            .filter(to -> !bounceService.isSuppressed(to))
+            .toList();
+        if (recipients.isEmpty()) {
+            log.warn("[email/resend] tous les destinataires suppressed — envoi sauté. to={}", dto.to());
+            return new EmailSendResultDto(false, 0, null, "all recipients suppressed (bounce list)");
+        }
+
         try {
             String from = resolveFromBrand(dto.tenantSlug());
             Map<String, Object> body = Map.of(
                 "from", from,
-                "to", dto.to(),
+                "to", recipients,
                 "subject", dto.subjectFr(),
                 "html", htmlBody
             );
@@ -78,7 +90,7 @@ public class ResendClient {
             String messageId = resp != null && resp.has("id") ? resp.get("id").asText() : null;
             log.info("[email/resend] sent template={} tenant={} to={} messageId={}",
                 dto.template(), dto.tenantSlug(), dto.to(), messageId);
-            return new EmailSendResultDto(true, dto.to().size(), messageId, null);
+            return new EmailSendResultDto(true, recipients.size(), messageId, null);
 
         } catch (Exception e) {
             log.error("[email/resend] failed template={} tenant={}: {}",

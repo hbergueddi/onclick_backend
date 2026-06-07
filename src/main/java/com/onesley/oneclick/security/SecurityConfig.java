@@ -107,6 +107,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/store/onboarding").permitAll()  // Sprint I.3 — formulaire public soumission resto
                 .requestMatchers(HttpMethod.POST, "/api/users/register").permitAll()  // Signup public — rôle CLIENT forcé serveur-side
                 .requestMatchers(HttpMethod.POST, "/api/audit/telemetry").permitAll()  // Sprint I.3 — ingestion telemetry sans auth
+                .requestMatchers(HttpMethod.POST, "/api/email/webhooks/resend").permitAll()  // Gap #4 — webhook Resend (auth = signature Svix)
                 .requestMatchers(HttpMethod.GET, "/api/restaurants/featured").permitAll()  // Sprint H — curation publique Explore
                 // Preflight CORS
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()

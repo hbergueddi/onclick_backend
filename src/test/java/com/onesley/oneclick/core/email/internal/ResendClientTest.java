@@ -28,7 +28,7 @@ class ResendClientTest {
     private ResendClient newClient() {
         RestClient.Builder builder = mock(RestClient.Builder.class);
         when(builder.build()).thenReturn(mock(RestClient.class));
-        return new ResendClient(builder);
+        return new ResendClient(builder, mock(EmailBounceService.class));
     }
 
     @Test

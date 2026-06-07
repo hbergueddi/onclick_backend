@@ -39,4 +39,14 @@ public final class EmailDtos {
         String providerMessageId,
         String error
     ) {}
+
+    /** Vue admin (monitoring) d'un bounce email (Gap #4). */
+    public record EmailBounceDto(
+        String email,
+        String bounceType,
+        String bounceReason,
+        boolean suppressed,
+        int bounceCount,
+        java.time.Instant lastBouncedAt
+    ) {}
 }
