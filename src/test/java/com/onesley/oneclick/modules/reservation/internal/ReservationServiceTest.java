@@ -328,4 +328,107 @@ class ReservationServiceTest {
         assertThat(out).hasSize(1);
         assertThat(out.get(0).noShowMarkedAt()).isEqualTo(markedAt);
     }
+
+    // ─── Contre-proposition — proposed_reservation_at (V89) ───────────────────
+
+    @Test
+    void changeStatus_counterProposed_persistsProposedSlot_andExposesInDto() {
+        Reservation r = reservation("pending");
+        Instant proposed = Instant.now().plusSeconds(172800); // +2 jours
+        when(repository.findById(any())).thenReturn(Optional.of(r));
+        when(repository.save(any(Reservation.class))).thenAnswer(i -> i.getArgument(0));
+
+        ReservationDto dto = service.changeStatus(
+            UUID.randomUUID(), "counter_proposed", null, "autre créneau svp", false, proposed);
+
+        assertThat(dto.status()).isEqualTo("counter_proposed");
+        assertThat(dto.proposedReservationAt()).isEqualTo(proposed);
+        assertThat(r.getProposedReservationAt()).isEqualTo(proposed);
+        verify(eventPublisher).publishEvent(any(ReservationStatusChangedEvent.class));
+    }
+
+    @Test
+    void changeStatus_counterProposed_nullSlot_throwsBadRequest() {
+        Reservation r = reservation("pending");
+        when(repository.findById(any())).thenReturn(Optional.of(r));
+
+        assertThatThrownBy(() -> service.changeStatus(
+                UUID.randomUUID(), "counter_proposed", null, null, false, null))
+            .isInstanceOf(BadRequestException.class);
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void changeStatus_counterProposed_pastSlot_throwsBadRequest() {
+        Reservation r = reservation("pending");
+        Instant past = Instant.now().minusSeconds(3600);
+        when(repository.findById(any())).thenReturn(Optional.of(r));
+
+        assertThatThrownBy(() -> service.changeStatus(
+                UUID.randomUUID(), "counter_proposed", null, null, false, past))
+            .isInstanceOf(BadRequestException.class);
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void changeStatus_acceptCounterProposal_appliesProposedSlot_andClears() {
+        Reservation r = reservation("counter_proposed");
+        Instant proposed = Instant.now().plusSeconds(432000); // +5 jours
+        r.setProposedReservationAt(proposed);
+        when(repository.findById(any())).thenReturn(Optional.of(r));
+        when(repository.save(any(Reservation.class))).thenAnswer(i -> i.getArgument(0));
+
+        // Le client accepte : counter_proposed → confirmed.
+        ReservationDto dto = service.changeStatus(
+            UUID.randomUUID(), "confirmed", null, "ok pour moi", false, null);
+
+        assertThat(dto.status()).isEqualTo("confirmed");
+        assertThat(r.getReservationAt()).isEqualTo(proposed);       // créneau proposé devient effectif
+        assertThat(r.getProposedReservationAt()).isNull();          // proposition consommée
+        assertThat(dto.proposedReservationAt()).isNull();
+    }
+
+    @Test
+    void changeStatus_declineCounterProposal_clearsProposedSlot() {
+        Reservation r = reservation("counter_proposed");
+        r.setProposedReservationAt(Instant.now().plusSeconds(86400));
+        when(repository.findById(any())).thenReturn(Optional.of(r));
+        when(repository.save(any(Reservation.class))).thenAnswer(i -> i.getArgument(0));
+
+        // Le client refuse la proposition : counter_proposed → cancelled.
+        ReservationDto dto = service.changeStatus(
+            UUID.randomUUID(), "cancelled", null, "ne convient pas", false, null);
+
+        assertThat(dto.status()).isEqualTo("cancelled");
+        assertThat(r.getProposedReservationAt()).isNull();
+    }
+
+    @Test
+    void toDto_exposesProposedReservationAt() {
+        Instant proposed = Instant.parse("2026-07-01T19:00:00Z");
+        Reservation r = reservation("counter_proposed");
+        r.setProposedReservationAt(proposed);
+
+        ReservationDto dto = r.toDto();
+
+        assertThat(dto.status()).isEqualTo("counter_proposed");
+        assertThat(dto.proposedReservationAt()).isEqualTo(proposed);
+    }
+
+    @Test
+    void joinsViewMapper_propagatesProposedReservationAt() {
+        Instant proposed = Instant.parse("2026-07-02T20:30:00Z");
+        UUID rid = UUID.randomUUID();
+        ReservationWithJoinsView v = mock(ReservationWithJoinsView.class);
+        when(v.getId()).thenReturn(UUID.randomUUID());
+        when(v.getRestaurantId()).thenReturn(rid);
+        when(v.getStatus()).thenReturn("counter_proposed");
+        when(v.getProposedReservationAt()).thenReturn(proposed);
+        when(repository.findEnrichedByRestaurantIds(List.of(rid), 500)).thenReturn(List.of(v));
+
+        var out = service.findByRestaurants(List.of(rid), 500);
+
+        assertThat(out).hasSize(1);
+        assertThat(out.get(0).proposedReservationAt()).isEqualTo(proposed);
+    }
 }

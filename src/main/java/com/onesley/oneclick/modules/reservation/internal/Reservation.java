@@ -89,6 +89,14 @@ public class Reservation extends SoftDeletableAuditedEntity {
     @Column(name = "no_show_marked_at")
     @Setter private Instant noShowMarkedAt;
 
+    /**
+     * Contre-proposition — nouveau créneau proposé par le restaurant quand {@code status =
+     * counter_proposed}. Le client accepte (→ {@code reservationAt} prend cette valeur, status
+     * {@code confirmed}) ou refuse (status {@code cancelled}). NULL hors contre-proposition active.
+     */
+    @Column(name = "proposed_reservation_at")
+    @Setter private Instant proposedReservationAt;
+
     public Reservation(UUID id, Tenant tenant, User client, UUID restaurantId,
                        Instant reservationAt, Integer guestCount) {
         this.id = id;
@@ -102,7 +110,8 @@ public class Reservation extends SoftDeletableAuditedEntity {
     /** Mapping vers le DTO public exposé hors du module. */
     public ReservationDto toDto() {
         return new ReservationDto(id, tenantId, clientId, restaurantId, tableId, serviceId,
-            reservationAt, guestCount, status, notes, getCreatedAt(), lateCancellation, noShowMarkedAt);
+            reservationAt, guestCount, status, notes, getCreatedAt(), lateCancellation, noShowMarkedAt,
+            proposedReservationAt);
     }
 
     @Override

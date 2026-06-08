@@ -94,6 +94,7 @@ public class ReservationService {
             v.getCreatedAt(),
             Boolean.TRUE.equals(v.getLateCancellation()),
             v.getNoShowMarkedAt(),
+            v.getProposedReservationAt(),
             v.getClientFirstName(),
             v.getClientLastName(),
             v.getClientPhone(),
@@ -279,6 +280,18 @@ public class ReservationService {
     @Transactional
     public ReservationDto changeStatus(UUID id, String newStatus, UUID changedById, String reason,
                                        boolean lateCancellation) {
+        return changeStatus(id, newStatus, changedById, reason, lateCancellation, null);
+    }
+
+    /**
+     * Variante avec <b>contre-proposition</b> : {@code proposedReservationAt} est requis uniquement
+     * pour le passage en {@code counter_proposed} (nouveau créneau proposé par le restaurant). Quand
+     * le client accepte ({@code counter_proposed → confirmed}), ce créneau devient le créneau
+     * effectif ; tout autre statut terminal nettoie la proposition.
+     */
+    @Transactional
+    public ReservationDto changeStatus(UUID id, String newStatus, UUID changedById, String reason,
+                                       boolean lateCancellation, Instant proposedReservationAt) {
         if (!VALID_STATUSES.contains(newStatus)) {
             throw new BadRequestException("Status invalide : " + newStatus);
         }
@@ -288,6 +301,26 @@ public class ReservationService {
         String oldStatus = r.getStatus();
         if (oldStatus.equals(newStatus)) {
             return r.toDto(); // no-op
+        }
+        // ── Contre-proposition : transitions dédiées ───────────────────────────
+        if ("counter_proposed".equals(newStatus)) {
+            // Le restaurant propose un nouveau créneau : REQUIS et futur.
+            if (proposedReservationAt == null) {
+                throw new BadRequestException("proposedReservationAt requis pour le statut counter_proposed");
+            }
+            if (proposedReservationAt.isBefore(Instant.now())) {
+                throw new BadRequestException("Le créneau proposé doit être dans le futur");
+            }
+            r.setProposedReservationAt(proposedReservationAt);
+        } else if ("counter_proposed".equals(oldStatus) && "confirmed".equals(newStatus)) {
+            // Le client accepte : le créneau proposé devient le créneau effectif.
+            if (r.getProposedReservationAt() != null) {
+                r.setReservationAt(r.getProposedReservationAt());
+            }
+            r.setProposedReservationAt(null);
+        } else if ("cancelled".equals(newStatus) || "refused".equals(newStatus) || "no_show".equals(newStatus)) {
+            // Refus / annulation / no-show : on nettoie une proposition éventuellement obsolète.
+            r.setProposedReservationAt(null);
         }
         r.setStatus(newStatus);
         if ("no_show".equals(newStatus)) {

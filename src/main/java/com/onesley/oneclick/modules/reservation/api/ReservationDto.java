@@ -41,6 +41,8 @@ public record ReservationDto(
     boolean lateCancellation,
     // ─── Feature #3/#4 — horodatage du passage en no_show (null sinon) ────
     Instant noShowMarkedAt,
+    // ─── Contre-proposition — nouveau créneau proposé par le resto (null hors counter_proposed) ──
+    Instant proposedReservationAt,
     // ─── Joins frontend (anti N+1) — null pour les lectures unitaires ──────
     String clientFirstName,
     String clientLastName,
@@ -64,10 +66,11 @@ public record ReservationDto(
     public ReservationDto(
         UUID id, UUID tenantId, UUID clientId, UUID restaurantId, UUID tableId, UUID serviceId,
         Instant reservationAt, Integer guestCount, String status, String notes, Instant createdAt,
-        boolean lateCancellation, Instant noShowMarkedAt
+        boolean lateCancellation, Instant noShowMarkedAt, Instant proposedReservationAt
     ) {
         this(id, tenantId, clientId, restaurantId, tableId, serviceId,
             reservationAt, guestCount, status, notes, createdAt, lateCancellation, noShowMarkedAt,
+            proposedReservationAt,
             // joints (clientFirstName, clientLastName, clientPhone, clientAllergens,
             // restaurantName, restaurantCity, restaurantImage, mealServiceName,
             // zoneName, tableNumber, refusalReason, cancellationReason) → null pour les écritures.

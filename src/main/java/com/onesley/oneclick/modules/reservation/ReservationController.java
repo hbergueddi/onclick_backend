@@ -73,7 +73,8 @@ public class ReservationController {
      * uniquement lorsque {@code status == "no_show"} (annulation tardive → résa NON
      * contestable, pénalité non reversable).
      */
-    public record StatusChangeDto(String status, UUID changedById, String reason, Boolean lateCancellation) {}
+    public record StatusChangeDto(String status, UUID changedById, String reason, Boolean lateCancellation,
+                                  java.time.Instant proposedReservationAt) {}
 
     /**
      * P2 owner-check : accès EN ÉCRITURE à une réservation = client-owner, staff actif
@@ -162,7 +163,8 @@ public class ReservationController {
         // on resserre ensuite en écriture (exclut le simple invité).
         requireReservationWriteAccess(service.findById(id));
         boolean lateCancellation = Boolean.TRUE.equals(body.lateCancellation());
-        return service.changeStatus(id, body.status(), body.changedById(), body.reason(), lateCancellation);
+        return service.changeStatus(id, body.status(), body.changedById(), body.reason(),
+            lateCancellation, body.proposedReservationAt());
     }
 
     @PostMapping("/search")
