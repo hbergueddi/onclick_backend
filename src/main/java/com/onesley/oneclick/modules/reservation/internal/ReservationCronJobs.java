@@ -12,8 +12,10 @@ import lombok.extern.slf4j.Slf4j;
  *
  * <p>Schedules :
  * <ul>
- *   <li>{@code expire-unanswered-reservations} : H-2 avant la résa, passe les
- *     pending → cancelled si pas de réponse staff (toutes les 15 min)</li>
+ *   <li>{@code expire-unanswered-reservations} : H-2 avant la résa, passe à
+ *     cancelled les {@code pending} non répondues par le staff ET les
+ *     {@code counter_proposed} (V89) dont le créneau proposé n'a pas été accepté
+ *     par le client (toutes les 15 min)</li>
  *   <li>{@code send-reservation-reminders-j1} : J-1 à 9h Maroc, notifie les
  *     clients confirmés de la résa du lendemain (1 fois par jour)</li>
  *   <li>{@code send-reservation-reminders-h2} : H-2 avant la résa, dernier
@@ -32,7 +34,16 @@ public class ReservationCronJobs {
     private EntityManager em;
 
     /**
-     * Annule les réservations pending non répondues 2h avant le RDV.
+     * Annule les réservations non répondues 2h avant le RDV, sur deux fronts :
+     * <ul>
+     *   <li>{@code pending} : le <b>staff</b> n'a pas répondu → on compare au
+     *       créneau demandé {@code reservation_at}.</li>
+     *   <li>{@code counter_proposed} : le <b>client</b> n'a pas accepté la
+     *       contre-proposition (V89) → on compare au créneau <b>proposé</b>
+     *       {@code proposed_reservation_at} (le créneau qui deviendrait effectif).
+     *       Garde {@code IS NOT NULL} défensive : un counter_proposed sans
+     *       créneau proposé (anomalie) n'est jamais annulé par erreur ici.</li>
+     * </ul>
      * Toutes les 15 min, à 0/15/30/45 (aligné pg_cron legacy).
      */
     @Scheduled(cron = "0 0/15 * * * *")
@@ -47,9 +58,14 @@ public class ReservationCronJobs {
                 UPDATE reservations
                 SET status = 'cancelled',
                     updated_at = NOW()
-                WHERE status = 'pending'
-                  AND deleted_at IS NULL
-                  AND reservation_at <= NOW() + INTERVAL '2 hours'
+                WHERE deleted_at IS NULL
+                  AND (
+                        (status = 'pending'
+                             AND reservation_at <= NOW() + INTERVAL '2 hours')
+                     OR (status = 'counter_proposed'
+                             AND proposed_reservation_at IS NOT NULL
+                             AND proposed_reservation_at <= NOW() + INTERVAL '2 hours')
+                  )
                 """).executeUpdate();
         log.info("[cron] expireUnansweredReservations done: {} reservations expirées", updated);
     }
