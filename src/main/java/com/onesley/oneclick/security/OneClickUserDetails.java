@@ -14,6 +14,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import lombok.Getter;
 
 /**
@@ -45,13 +46,22 @@ import lombok.Getter;
 public final class OneClickUserDetails implements UserDetails, Serializable {
 
     @Serial
-    private static final long serialVersionUID = 2L;
+    private static final long serialVersionUID = 3L;
 
     /** L'entité {@code User} complète (« comme user »). */
     private final User user;
 
+    /**
+     * Authorities ({@code VERB:RESOURCE}) octroyées par les memberships actives (P1), additionnées
+     * aux authorities du rôle de base dans {@link #getAuthorities()}. Sérialisé <b>par champ</b>
+     * dans le cache Redis (FIELD visibility — cf {@code UserDetailsCacheConfig}) ; vide pour un user
+     * sans membership programme.
+     */
+    private final Set<String> programAuthorities;
+
     @JsonCreator
-    public OneClickUserDetails(@JsonProperty("user") User user) {
+    public OneClickUserDetails(@JsonProperty("user") User user,
+                               @JsonProperty("programAuthorities") Set<String> programAuthorities) {
         if (user == null) {
             throw new IllegalArgumentException("user must not be null");
         }
@@ -60,11 +70,17 @@ public final class OneClickUserDetails implements UserDetails, Serializable {
                 "User " + user.getId() + " has no role — RBAC requires 1 role per user");
         }
         this.user = user;
+        this.programAuthorities = programAuthorities != null ? Set.copyOf(programAuthorities) : Set.of();
     }
 
-    /** Fabrique conservée pour {@code OneClickUserDetailsService} (référence méthode). */
+    /** Fabrique sans authorities de membership (rétro-compat — équivaut à un user sans programme). */
     public static OneClickUserDetails from(User user) {
-        return new OneClickUserDetails(user);
+        return new OneClickUserDetails(user, Set.of());
+    }
+
+    /** Fabrique avec les authorities de membership pliées (P1 — {@code MembershipDirectoryApi}). */
+    public static OneClickUserDetails from(User user, Set<String> programAuthorities) {
+        return new OneClickUserDetails(user, programAuthorities);
     }
 
     // ─── UserDetails ─────────────────────────────────────────────────────────
@@ -83,6 +99,13 @@ public final class OneClickUserDetails implements UserDetails, Serializable {
         for (Permission p : role.getPermissions()) {
             if (p.getAction() != null && p.getMenu() != null) {
                 auths.add(new SimpleGrantedAuthority(p.getAction().getCode() + ":" + p.getMenu().getCode()));
+            }
+        }
+        // P1 — authorities octroyées par les memberships actives (modèle « l'invitation accorde les
+        // permissions ») : un client n'accède au contenu d'un programme que via sa membership.
+        if (programAuthorities != null) {
+            for (String pa : programAuthorities) {
+                auths.add(new SimpleGrantedAuthority(pa));
             }
         }
         return auths;

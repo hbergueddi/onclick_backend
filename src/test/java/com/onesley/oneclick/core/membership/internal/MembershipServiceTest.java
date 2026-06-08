@@ -77,4 +77,17 @@ class MembershipServiceTest {
         assertThat(service.activeTenantIds(null)).isEmpty();
         verify(repository, never()).findAllByUserIdAndStatusAndDeletedAtIsNull(any(), eq("active"));
     }
+
+    @Test
+    void authoritiesFor_returnsRepoAuthoritiesAsSet() {
+        when(repository.findActiveMembershipAuthorities(user))
+                .thenReturn(List.of("VIEW:FAMILY", "CREATE:BOOKINGS", "VIEW:FAMILY"));
+        assertThat(service.authoritiesFor(user)).containsExactlyInAnyOrder("VIEW:FAMILY", "CREATE:BOOKINGS");
+    }
+
+    @Test
+    void authoritiesFor_nullUser_empty_withoutHittingRepo() {
+        assertThat(service.authoritiesFor(null)).isEmpty();
+        verify(repository, never()).findActiveMembershipAuthorities(any());
+    }
 }

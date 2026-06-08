@@ -2,6 +2,7 @@ package com.onesley.oneclick.security;
 
 import com.onesley.oneclick.cache.CacheConfig;
 import com.onesley.oneclick.core.identity.api.UserRepository;
+import com.onesley.oneclick.core.membership.api.MembershipDirectoryApi;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -36,6 +37,7 @@ import lombok.RequiredArgsConstructor;
 public class OneClickUserDetailsService implements UserDetailsService {
 
     private final UserRepository userRepository;
+    private final MembershipDirectoryApi membershipDirectory;
 
     /**
      * Charge un user par son UUID (passé en string pour matcher l'API Spring
@@ -74,7 +76,11 @@ public class OneClickUserDetailsService implements UserDetailsService {
                 if (role != null) {
                     role.getPermissions().forEach(p -> { p.getMenu(); p.getAction(); });
                 }
-                return OneClickUserDetails.from(u);
+                // P1 — plie les authorities octroyées par les memberships actives (hasAuthority strict).
+                // Calculé sur cache-miss puis mis en cache avec le user ; éviction via evictUser(...)
+                // sur changement de membership (P2 : invitation/révocation par l'admin tenant).
+                java.util.Set<String> programAuthorities = membershipDirectory.authoritiesFor(u.getId());
+                return OneClickUserDetails.from(u, programAuthorities);
             })
             .orElseThrow(() -> new UsernameNotFoundException("User not found: " + userId));
     }

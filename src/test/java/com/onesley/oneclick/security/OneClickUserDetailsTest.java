@@ -10,6 +10,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -96,6 +97,24 @@ class OneClickUserDetailsTest {
     void getUser_exposesWrappedEntity() {
         User u = userWith(roleWith("CLIENT"));
         assertThat(OneClickUserDetails.from(u).getUser()).isSameAs(u);
+    }
+
+    @Test
+    void getAuthorities_mergesProgramAuthorities_fromMembership() {
+        // P1 — les authorities octroyées par la membership s'additionnent au rôle de base.
+        OneClickUserDetails ud = OneClickUserDetails.from(
+            userWith(roleWith("CLIENT")), Set.of("VIEW:FAMILY", "CREATE:BOOKINGS"));
+
+        assertThat(authStrings(ud)).contains("ROLE_CLIENT", "CLIENT", "VIEW:FAMILY", "CREATE:BOOKINGS");
+    }
+
+    @Test
+    void getAuthorities_withoutMembership_hasNoProgramAuthority() {
+        // CLIENT seul (sans membership) : pas d'accès programme (modèle hasAuthority strict).
+        List<String> auths = authStrings(OneClickUserDetails.from(userWith(roleWith("CLIENT"))));
+
+        assertThat(auths).contains("ROLE_CLIENT", "CLIENT");
+        assertThat(auths).doesNotContain("VIEW:FAMILY", "CREATE:BOOKINGS");
     }
 
     @Test

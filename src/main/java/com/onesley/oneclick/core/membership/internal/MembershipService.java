@@ -4,15 +4,17 @@ import com.onesley.oneclick.core.membership.api.MembershipDirectoryApi;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
  * Implémentation du port {@link MembershipDirectoryApi} (lecture des appartenances).
  *
- * <p>P0 : lectures seules sur {@code tenant_memberships}. Rien d'autre ne consomme encore ce
- * service (P1 : {@code security} pour le pliage des authorities + modules business pour l'ABAC).
- * « Actif » = {@code status = 'active'} ET {@code deleted_at IS NULL} (garanti par les finders).
+ * <p>P0/P1 : lectures seules sur {@code tenant_memberships}. Consommé par {@code security}
+ * ({@link #authoritiesFor(UUID)} — pliage des authorities) et, à terme, par les modules business
+ * pour l'ABAC. « Actif » = {@code status = 'active'} ET {@code deleted_at IS NULL} (garanti par les finders).
  */
 @Service
 public class MembershipService implements MembershipDirectoryApi {
@@ -55,5 +57,14 @@ public class MembershipService implements MembershipDirectoryApi {
                 .stream()
                 .map(TenantMembership::getTenantId)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Set<String> authoritiesFor(UUID userId) {
+        if (userId == null) {
+            return Set.of();
+        }
+        return new HashSet<>(repository.findActiveMembershipAuthorities(userId));
     }
 }
