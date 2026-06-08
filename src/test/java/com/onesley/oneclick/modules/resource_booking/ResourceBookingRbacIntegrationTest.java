@@ -32,20 +32,32 @@ class ResourceBookingRbacIntegrationTest extends AbstractIntegrationTest {
             "SELECT tenant_id::text FROM restaurants WHERE tenant_id IS NOT NULL LIMIT 1", String.class);
     }
 
-    /** Un CLIENT réel, déterministe (ORDER BY id) — l'id sert AUSSI de sub du JWT {@link #clientBearer()}. */
+    /**
+     * Un CLIENT <b>MEMBRE</b> (palmeraie), déterministe (ORDER BY id) — détient les autorités
+     * programme (CREATE/VIEW:BOOKINGS…) via le pliage de sa membership (P1). Depuis P1.5, RÉSERVER
+     * est membre-only ; le client acteur doit donc être membre. L'id sert AUSSI de sub du JWT.
+     */
     private UUID clientUserId() {
         return UUID.fromString(jdbc.queryForObject(
-            "SELECT u.id::text FROM users u JOIN roles r ON r.id = u.role_id "
-            + "WHERE r.code = 'CLIENT' AND u.deleted_at IS NULL ORDER BY u.id LIMIT 1", String.class));
+            "SELECT u.id::text FROM users u JOIN roles r ON r.id = u.role_id JOIN tenants t ON t.id = u.tenant_id "
+            + "WHERE r.code = 'CLIENT' AND t.slug = 'palmeraie' AND u.deleted_at IS NULL ORDER BY u.id LIMIT 1",
+            String.class));
     }
 
-    /**
-     * Bearer CLIENT dont le {@code sub} == {@link #clientUserId()} EXACTEMENT — on contrôle l'id
-     * (vs {@code bearerForRole} qui fait un LIMIT 1 sans ORDER → potentiellement un autre CLIENT).
-     * Indispensable pour asserter le self-scope (organizer forcé = ce sub précis).
-     */
+    /** Bearer du CLIENT membre dont le {@code sub} == {@link #clientUserId()} (self-scope ABAC). */
     private String clientBearer() {
         return jwtIssuer.issueAccessToken(clientUserId(), "CLIENT").token();
+    }
+
+    /** Un CLIENT NON-MEMBRE (oneclick) — n'a que base + découverte (P1.5), pas les actions programme. */
+    private UUID nonMemberUserId() {
+        return UUID.fromString(jdbc.queryForObject(
+            "SELECT u.id::text FROM users u JOIN roles r ON r.id = u.role_id JOIN tenants t ON t.id = u.tenant_id "
+            + "WHERE r.code = 'CLIENT' AND t.slug = 'oneclick' AND u.deleted_at IS NULL ORDER BY u.id LIMIT 1",
+            String.class));
+    }
+    private String nonMemberBearer() {
+        return jwtIssuer.issueAccessToken(nonMemberUserId(), "CLIENT").token();
     }
 
     /** Crée une ressource (côté parc, admin) et renvoie son id. */
@@ -98,13 +110,26 @@ class ResourceBookingRbacIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void client_canStillListResources_keepsViewResourceBookings() {
-        // GET /resources reste VIEW:RESOURCE_BOOKINGS → le CLIENT le garde (V32) pour lister
-        // les ressources réservables. V66 n'a RIEN retiré.
+    void nonMember_canStillListResources_discoveryStaysOpen() {
+        // GET /resources = VIEW:RESOURCE_BOOKINGS = DÉCOUVERTE : reste ouvert à TOUS les clients
+        // (P1.5 ne l'a PAS retiré du CLIENT) — un client oneclick non-membre peut parcourir le parc.
         ResponseEntity<String> resp = restTemplate.exchange(
             url("/api/resource-bookings/resources?page=0&size=5"),
-            HttpMethod.GET, jwtEntity(clientBearer()), String.class);
+            HttpMethod.GET, jwtEntity(nonMemberBearer()), String.class);
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void nonMember_cannotCreateBooking_returns403() throws Exception {
+        // P1.5 — RÉSERVER (CREATE:BOOKINGS) est désormais membre-only : un client oneclick
+        // non-membre n'a plus l'autorité (retirée du CLIENT, octroyée seulement via membership) → 403.
+        String admin = adminBearer();
+        String resourceId = createResourceAsAdmin(admin);
+        ResponseEntity<String> bPost = restTemplate.exchange(url("/api/resource-bookings/bookings"),
+            HttpMethod.POST, jsonJwtEntity(bookingBody(resourceId, nonMemberUserId()), nonMemberBearer()), String.class);
+        assertThat(bPost.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        restTemplate.exchange(url("/api/resource-bookings/resources/" + resourceId),
+            HttpMethod.DELETE, jwtEntity(admin), String.class);
     }
 
     // ─── B. ABAC self-scope : un membre ne réserve QUE pour lui ───────────────────

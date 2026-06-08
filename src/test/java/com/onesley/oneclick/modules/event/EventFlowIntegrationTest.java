@@ -46,6 +46,14 @@ class EventFlowIntegrationTest extends AbstractIntegrationTest {
         return jwtIssuer.issueAccessToken(UUID.fromString(userId), "CLIENT").token();
     }
 
+    /** Rend un client MEMBRE (palmeraie → rôle MEMBER) — P1.5 : RSVP est membre-only. */
+    private void seedMembership(String userId) {
+        jdbc.update(
+            "INSERT INTO tenant_memberships (id, user_id, tenant_id, role_id, status, joined_at, created_at, updated_at) "
+            + "SELECT gen_random_uuid(), ?::uuid, t.id, '10000000-0000-0000-0000-000000000006', 'active', now(), now(), now() "
+            + "FROM tenants t WHERE t.slug = 'palmeraie' ON CONFLICT DO NOTHING", userId);
+    }
+
     @Test
     void event_fullLifecycle_withRsvp() throws Exception {
         String admin = adminBearer();
@@ -132,11 +140,12 @@ class EventFlowIntegrationTest extends AbstractIntegrationTest {
         assertThat(post.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         String eventId = om.readTree(post.getBody()).get("id").asText();
 
-        String clientBearer = bearerForRole("CLIENT");
-        // même requête que bearerForRole("CLIENT") → même user (sub du JWT)
+        // P1.5 : RSVP (CREATE:EVENT_RSVP) est membre-only → le client acteur doit être MEMBRE (palmeraie).
         String clientId = jdbc.queryForObject(
-            "SELECT u.id::text FROM users u JOIN roles r ON r.id = u.role_id "
-            + "WHERE r.code = 'CLIENT' AND u.deleted_at IS NULL LIMIT 1", String.class);
+            "SELECT u.id::text FROM users u JOIN roles r ON r.id = u.role_id JOIN tenants t ON t.id = u.tenant_id "
+            + "WHERE r.code = 'CLIENT' AND t.slug = 'palmeraie' AND u.deleted_at IS NULL ORDER BY u.id LIMIT 1",
+            String.class);
+        String clientBearer = jwtIssuer.issueAccessToken(UUID.fromString(clientId), "CLIENT").token();
         String otherUserId = jdbc.queryForObject(
             "SELECT u.id::text FROM users u JOIN roles r ON r.id = u.role_id "
             + "WHERE r.code = 'CLIENT' AND u.deleted_at IS NULL AND u.id::text <> ? LIMIT 1",
@@ -180,6 +189,11 @@ class EventFlowIntegrationTest extends AbstractIntegrationTest {
         String admin = adminBearer();
         String clientA = createClient(admin);
         String clientB = createClient(admin);
+        // P1.5 : RSVP membre-only → on rend A et B MEMBRES (palmeraie) pour qu'ils détiennent
+        // CREATE/DELETE:EVENT_RSVP via le pliage de leur membership (sinon 403). Pas encore chargés
+        // en cache (jamais authentifiés avant) → le 1er load reflètera la membership.
+        seedMembership(clientA);
+        seedMembership(clientB);
         String bearerA = bearerCl(clientA);
         String bearerB = bearerCl(clientB);
 
@@ -222,6 +236,7 @@ class EventFlowIntegrationTest extends AbstractIntegrationTest {
         restTemplate.exchange(url("/api/events/" + eventId), HttpMethod.DELETE, jwtEntity(admin), String.class);
         jdbc.update("DELETE FROM event_participations WHERE event_id = ?::uuid", UUID.fromString(eventId));
         for (String u : java.util.List.of(clientA, clientB)) {
+            jdbc.update("DELETE FROM tenant_memberships WHERE user_id = ?::uuid", UUID.fromString(u));
             restTemplate.exchange(url("/api/users/" + u), HttpMethod.DELETE, jwtEntity(admin), String.class);
         }
     }

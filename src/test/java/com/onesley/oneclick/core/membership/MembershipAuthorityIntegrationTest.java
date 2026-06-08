@@ -53,9 +53,21 @@ class MembershipAuthorityIntegrationTest extends AbstractIntegrationTest {
     @Test
     void loader_palmeraieMember_exposesProgramAuthority() {
         UUID uid = clientOfTenant("palmeraie");
-        userDetailsService.evictUser(uid); // déterministe vs cache pré-V91/V92
+        userDetailsService.evictUser(uid); // déterministe vs cache pré-migrations
         Set<String> auth = userDetailsService.loadUserByUsername(uid.toString()).getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority).collect(Collectors.toSet());
         assertThat(auth).contains("VIEW:FAMILY", "CLIENT");
+    }
+
+    @Test
+    void loader_oneclickClient_lacksMemberOnlyAuthority_butKeepsDiscoveryAndBase() {
+        // Gate P1.5 : un client oneclick non-membre n'a PLUS les autorités membre-only (retirées du
+        // CLIENT global par V93), mais GARDE la découverte (VIEW:RESOURCE_BOOKINGS) + son rôle de base.
+        UUID uid = clientOfTenant("oneclick");
+        userDetailsService.evictUser(uid);
+        Set<String> auth = userDetailsService.loadUserByUsername(uid.toString()).getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority).collect(Collectors.toSet());
+        assertThat(auth).doesNotContain("VIEW:FAMILY", "CREATE:BOOKINGS", "VIEW:FEEDBACK");
+        assertThat(auth).contains("VIEW:RESOURCE_BOOKINGS", "CLIENT");
     }
 }
