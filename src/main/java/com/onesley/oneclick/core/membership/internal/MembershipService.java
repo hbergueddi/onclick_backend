@@ -1,6 +1,8 @@
 package com.onesley.oneclick.core.membership.internal;
 
 import com.onesley.oneclick.core.membership.api.MembershipDirectoryApi;
+import com.onesley.oneclick.core.tenant.api.TenantDirectoryApi;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,9 +22,16 @@ import java.util.UUID;
 public class MembershipService implements MembershipDirectoryApi {
 
     private final MembershipRepository repository;
+    private final TenantDirectoryApi tenantDirectory;
+    /** Slug du tenant public « oneclick » (baseline de visibilité) — surchargeable par env. */
+    private final String publicTenantSlug;
 
-    public MembershipService(MembershipRepository repository) {
+    public MembershipService(MembershipRepository repository,
+                             TenantDirectoryApi tenantDirectory,
+                             @Value("${app.tenant.public-slug:oneclick}") String publicTenantSlug) {
         this.repository = repository;
+        this.tenantDirectory = tenantDirectory;
+        this.publicTenantSlug = publicTenantSlug;
     }
 
     @Override
@@ -69,6 +78,19 @@ public class MembershipService implements MembershipDirectoryApi {
                 .stream()
                 .map(TenantMembership::getTenantId)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Set<UUID> visibleTenantIds(UUID userId) {
+        // Baseline = tenant public « oneclick » (toujours visible, y compris non authentifié).
+        Set<UUID> visible = new HashSet<>();
+        tenantDirectory.findIdBySlug(publicTenantSlug).ifPresent(visible::add);
+        // + programmes dont le caller est membre actif (PCC, HOMU, …).
+        if (userId != null) {
+            visible.addAll(activeTenantIds(userId));
+        }
+        return visible;
     }
 
     @Override

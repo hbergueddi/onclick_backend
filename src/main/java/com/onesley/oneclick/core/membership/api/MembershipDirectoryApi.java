@@ -39,6 +39,16 @@ public interface MembershipDirectoryApi {
     List<UUID> activeTenantIds(UUID userId);
 
     /**
+     * Tenants <b>visibles</b> par le caller dans les catalogues client (Explore, Offres, Events…) :
+     * {@code {tenant public "oneclick"}} ∪ {@link #activeTenantIds(UUID)}. Source unique du filtrage
+     * de périmètre tenant des listes client-facing — un client oneclick non-membre ne voit que le
+     * public ; un membre PCC voit en plus son programme. {@code userId} null (catalogue public non
+     * authentifié) ⇒ uniquement le tenant public. <b>Ne pas</b> utiliser pour un acteur cross-tenant
+     * (SUPERADMIN) : l'appelant bypass alors le filtre via {@code hasAuthority("VIEW:TENANTS")}.
+     */
+    Set<UUID> visibleTenantIds(UUID userId);
+
+    /**
      * Authorities ({@code VERB:RESOURCE}) octroyées par les memberships <b>actives</b> de
      * l'utilisateur, via le {@code role} programme de chaque membership. Pliées dans le security
      * context par {@code OneClickUserDetailsService} (modèle « l'invitation accorde les

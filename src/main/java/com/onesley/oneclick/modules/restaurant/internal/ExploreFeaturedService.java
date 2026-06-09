@@ -2,10 +2,12 @@ package com.onesley.oneclick.modules.restaurant.internal;
 
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.modules.restaurant.api.ExploreFeaturedDtos.*;
+import com.onesley.oneclick.security.TenantScope;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 
@@ -15,11 +17,19 @@ import lombok.RequiredArgsConstructor;
 public class ExploreFeaturedService {
 
     private final ExploreFeaturedRepository repo;
+    private final TenantScope tenantScope;
 
-    /** Flux public Explore : uniquement les featured activés, triés par rang. */
+    /**
+     * Flux public Explore : featured activés (triés par rang), <b>scopés au périmètre tenant</b> du
+     * caller ({tenant public} ∪ memberships ; SUPERADMIN → tout). Ferme la fuite de périmètre.
+     */
     @Transactional(readOnly = true)
     public List<ExploreFeaturedDto> findAllEnabled() {
-        return repo.findAllEnabledOrdered().stream().map(ExploreFeaturedDto::from).toList();
+        Set<UUID> visible = tenantScope.visibleTenantIdsOrNull();
+        List<ExploreFeatured> rows = (visible == null)
+                ? repo.findAllEnabledOrdered()
+                : repo.findAllEnabledOrderedForTenants(visible);
+        return rows.stream().map(ExploreFeaturedDto::from).toList();
     }
 
     /** Vue admin (Pilotage Explore) : tous les featured, désactivés inclus. */

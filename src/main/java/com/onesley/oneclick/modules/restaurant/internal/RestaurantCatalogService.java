@@ -3,10 +3,10 @@ package com.onesley.oneclick.modules.restaurant.internal;
 import com.onesley.oneclick.cache.CacheConfig;
 import com.onesley.oneclick.core.tenant.api.Tenant;
 import com.onesley.oneclick.exception.NotFoundException;
+import com.onesley.oneclick.security.TenantScope;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -14,6 +14,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Set;
 import java.util.UUID;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantCreateDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantDto;
@@ -36,6 +37,7 @@ public class RestaurantCatalogService {
 
     private final RestaurantRepository repository;
     private final LifecycleEventService lifecycleEventService;
+    private final TenantScope tenantScope;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -48,14 +50,25 @@ public class RestaurantCatalogService {
         if (tenantId != null) {
             spec = spec.and((root, q, cb) -> cb.equal(root.get("tenantId"), tenantId));
         }
+        // Périmètre tenant (fuite de périmètre) : un client ne voit que {tenant public} ∪ ses
+        // memberships ; SUPERADMIN (null) → aucun filtre. Catalogue PUBLIC : non authentifié → public seul.
+        Set<UUID> visible = tenantScope.visibleTenantIdsOrNull();
+        if (visible != null) {
+            spec = spec.and((root, q, cb) -> root.get("tenantId").in(visible));
+        }
         return repository.findAll(spec, PageRequest.of(page, size, Sort.by("name"))).map(Restaurant::toDto);
     }
 
-    @Cacheable(value = CacheConfig.CACHE_RESTAURANTS, key = "#id")
+    // Pas de @Cacheable : le contrôle de périmètre (canSeeTenant) dépend du caller — un résultat mis
+    // en cache par id serait renvoyé sans re-vérification à un autre caller (contournement de portée).
     public RestaurantDto findById(UUID id) {
         Restaurant r = repository.findById(id)
             .filter(x -> x.getDeletedAt() == null)
             .orElseThrow(() -> new NotFoundException("Restaurant", id));
+        // Hors périmètre : 404 (ne pas divulguer l'existence d'un restaurant d'un programme non accessible).
+        if (!tenantScope.canSeeTenant(r.getTenantId())) {
+            throw new NotFoundException("Restaurant", id);
+        }
         return r.toDto();
     }
 

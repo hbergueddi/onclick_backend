@@ -31,17 +31,32 @@ import static org.mockito.Mockito.when;
 class ExploreFeaturedServiceTest {
 
     @Mock ExploreFeaturedRepository repo;
+    @Mock com.onesley.oneclick.security.TenantScope tenantScope;
     @InjectMocks ExploreFeaturedService service;
 
     @BeforeEach
     void setup() {
         lenient().when(repo.save(any())).thenAnswer(i -> i.getArgument(0));
+        // Défaut tests : aucun filtre tenant (équiv. SUPERADMIN) → chemin legacy non scopé.
+        lenient().when(tenantScope.visibleTenantIdsOrNull()).thenReturn(null);
     }
 
     @Test
     void findAllEnabled_maps() {
         when(repo.findAllEnabledOrdered()).thenReturn(List.of(new ExploreFeatured(), new ExploreFeatured()));
         assertThat(service.findAllEnabled()).hasSize(2);
+    }
+
+    @Test
+    void findAllEnabled_scoped_usesTenantFilteredQuery() {
+        // Fuite de périmètre : caller scopé → requête filtrée par tenant (pas la requête globale).
+        java.util.UUID t = java.util.UUID.randomUUID();
+        when(tenantScope.visibleTenantIdsOrNull()).thenReturn(java.util.Set.of(t));
+        when(repo.findAllEnabledOrderedForTenants(java.util.Set.of(t)))
+                .thenReturn(List.of(new ExploreFeatured()));
+        assertThat(service.findAllEnabled()).hasSize(1);
+        verify(repo).findAllEnabledOrderedForTenants(java.util.Set.of(t));
+        org.mockito.Mockito.verify(repo, org.mockito.Mockito.never()).findAllEnabledOrdered();
     }
 
     @Test

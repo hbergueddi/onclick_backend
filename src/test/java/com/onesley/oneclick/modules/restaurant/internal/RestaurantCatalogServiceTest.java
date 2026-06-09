@@ -43,6 +43,7 @@ class RestaurantCatalogServiceTest {
     @Mock RestaurantRepository repository;
     @Mock EntityManager em;
     @Mock LifecycleEventService lifecycleEventService;
+    @Mock com.onesley.oneclick.security.TenantScope tenantScope;
     @InjectMocks RestaurantCatalogService service;
 
     @BeforeEach
@@ -50,10 +51,23 @@ class RestaurantCatalogServiceTest {
         ReflectionTestUtils.setField(service, "entityManager", em);
         lenient().when(em.getReference(eq(Tenant.class), any())).thenReturn(new Tenant(UUID.randomUUID(), "T", "t"));
         lenient().when(repository.save(any())).thenAnswer(i -> i.getArgument(0));
+        // Défaut tests : aucun filtre tenant (équiv. SUPERADMIN) → comportement legacy non scopé.
+        lenient().when(tenantScope.visibleTenantIdsOrNull()).thenReturn(null);
+        lenient().when(tenantScope.canSeeTenant(any())).thenReturn(true);
     }
 
     private Restaurant restaurant() {
         return new Restaurant(UUID.randomUUID(), new Tenant(UUID.randomUUID(), "T", "t"), "Resto", "Casablanca");
+    }
+
+    @Test
+    void findById_outOfScope_throwsNotFound() {
+        // Fuite de périmètre : un restaurant d'un tenant hors périmètre du caller → 404 (pas de divulgation).
+        when(repository.findById(any())).thenReturn(java.util.Optional.of(restaurant()));
+        when(tenantScope.canSeeTenant(any())).thenReturn(false);
+        org.junit.jupiter.api.Assertions.assertThrows(
+            com.onesley.oneclick.exception.NotFoundException.class,
+            () -> service.findById(UUID.randomUUID()));
     }
 
     @Test
