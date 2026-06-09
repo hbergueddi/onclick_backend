@@ -68,6 +68,24 @@ class UserDirectoryService implements UserDirectoryApi {
         return match.map(this::toName);
     }
 
+    @Override
+    public Optional<UserName> findByIdentifier(String identifier) {
+        if (identifier == null) return Optional.empty();
+        String clean = identifier.trim();
+        if (clean.isEmpty()) return Optional.empty();
+
+        // Même auto-détection que la variante scopée, mais sur les finders GLOBAUX (sans tenant).
+        final Optional<com.onesley.oneclick.core.identity.api.User> match;
+        if (clean.contains("@")) {
+            match = userRepository.findByEmailIgnoreCase(clean);
+        } else if (clean.toUpperCase().startsWith("OC-")) {
+            match = userRepository.findByReferralCodeIgnoreCase(clean);
+        } else {
+            match = userRepository.findByPhone(clean);
+        }
+        return match.filter(u -> u.getDeletedAt() == null).map(this::toName);
+    }
+
     private UserName toName(com.onesley.oneclick.core.identity.api.User u) {
         return new UserName(u.getId(), u.getFirstName(), u.getLastName(), u.getPhone(), u.getEmail(), u.getAvatarUrl());
     }

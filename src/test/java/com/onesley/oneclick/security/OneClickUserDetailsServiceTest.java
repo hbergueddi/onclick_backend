@@ -6,6 +6,7 @@ import com.onesley.oneclick.core.identity.api.Permission;
 import com.onesley.oneclick.core.identity.api.Role;
 import com.onesley.oneclick.core.identity.api.User;
 import com.onesley.oneclick.core.identity.api.UserRepository;
+import com.onesley.oneclick.core.membership.api.MembershipDirectoryApi;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -33,6 +34,7 @@ import static org.mockito.Mockito.when;
 class OneClickUserDetailsServiceTest {
 
     @Mock UserRepository userRepository;
+    @Mock MembershipDirectoryApi membershipDirectory; // P1 : pliage des authorities — wiré via @InjectMocks
     @InjectMocks OneClickUserDetailsService service;
 
     @Test

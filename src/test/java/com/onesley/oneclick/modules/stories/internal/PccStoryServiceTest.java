@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.stories.internal;
 
 import com.onesley.oneclick.core.identity.api.UserDirectoryApi;
+import com.onesley.oneclick.core.membership.api.MembershipDirectoryApi;
 import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
@@ -58,6 +59,7 @@ class PccStoryServiceTest {
     @Mock PccStoryRepository repo;
     @Mock PccStoryViewRepository viewRepo;
     @Mock UserDirectoryApi userDirectory;
+    @Mock MembershipDirectoryApi membershipDirectory;
     @InjectMocks PccStoryService service;
 
     private MockedStatic<SecurityHelper> securityMock;
@@ -73,6 +75,11 @@ class PccStoryServiceTest {
         securityMock.when(SecurityHelper::isStaffOrAdmin).thenReturn(false);
         lenient().when(userDirectory.tenantIdById(caller)).thenReturn(Optional.of(tenant));
         lenient().when(userDirectory.nameById(any())).thenReturn(Optional.empty());
+        // P3 : callerProgramTenant = activeTenantIds(caller).findFirst().orElse(tenantIdById). On laisse
+        // activeTenantIds VIDE → fallback sur tenantIdById (= comportement historique des tests).
+        lenient().when(membershipDirectory.activeTenantIds(caller)).thenReturn(List.of());
+        // markViewed (P3) : appartenance par membership → le caller est membre actif de `tenant`.
+        lenient().when(membershipDirectory.isActiveMember(caller, tenant)).thenReturn(true);
         lenient().when(repo.save(any())).thenAnswer(i -> i.getArgument(0));
         // Gap #7 — défaut : aucune story vue (les tests d'enrichissement la surchargent).
         lenient().when(viewRepo.findViewedStoryIds(any(), any())).thenReturn(List.of());

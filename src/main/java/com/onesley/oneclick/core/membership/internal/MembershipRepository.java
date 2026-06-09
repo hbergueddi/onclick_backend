@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -41,4 +42,43 @@ public interface MembershipRepository extends JpaRepository<TenantMembership, UU
               AND tm.role_id IS NOT NULL
             """, nativeQuery = true)
     List<String> findActiveMembershipAuthorities(@Param("userId") UUID userId);
+
+    /**
+     * Read-view native — memberships ACTIVES enrichies du tenant (slug/nom), pour la révélation
+     * des espaces programme côté front (/api/me/memberships). Join {@code tenant_memberships → tenants}
+     * (lecture cross-module en SQL natif, même pattern que {@link #findActiveMembershipAuthorities}).
+     * Colonnes : tenant_id, slug, name, member_type, status.
+     */
+    @Query(value = """
+            SELECT tm.tenant_id, t.slug, t.name, tm.member_type, tm.status
+            FROM tenant_memberships tm
+            JOIN tenants t ON t.id = tm.tenant_id
+            WHERE tm.user_id = :userId
+              AND tm.status = 'active'
+              AND tm.deleted_at IS NULL
+            ORDER BY t.name
+            """, nativeQuery = true)
+    List<Object[]> findActiveMembershipViews(@Param("userId") UUID userId);
+
+    // ─── Page admin « Membres » + KPIs (P3) ───────────────────────────────────
+
+    /** Membres ACTIFS d'un tenant (liste admin). */
+    List<TenantMembership> findAllByTenantIdAndStatusAndDeletedAtIsNull(UUID tenantId, String status);
+
+    /** KPI : nombre de memberships actives du tenant. */
+    @Query(value = "SELECT count(*) FROM tenant_memberships "
+            + "WHERE tenant_id = :t AND status = 'active' AND deleted_at IS NULL", nativeQuery = true)
+    long countActiveByTenant(@Param("t") UUID tenantId);
+
+    /** KPI : memberships actives rejointes depuis {@code since} (nouveaux membres). */
+    @Query(value = "SELECT count(*) FROM tenant_memberships "
+            + "WHERE tenant_id = :t AND status = 'active' AND deleted_at IS NULL AND joined_at >= :since",
+            nativeQuery = true)
+    long countActiveByTenantSince(@Param("t") UUID tenantId, @Param("since") Instant since);
+
+    /** KPI : répartition active par {@code member_type} (member_type peut être NULL). */
+    @Query(value = "SELECT member_type, count(*) FROM tenant_memberships "
+            + "WHERE tenant_id = :t AND status = 'active' AND deleted_at IS NULL GROUP BY member_type",
+            nativeQuery = true)
+    List<Object[]> countActiveByTenantGroupedByType(@Param("t") UUID tenantId);
 }

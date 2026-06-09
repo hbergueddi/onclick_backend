@@ -143,4 +143,47 @@ class UserDirectoryServiceTest {
         when(repo.findByEmailIgnoreCaseAndTenant("none@x.ma", tenant)).thenReturn(Optional.empty());
         assertThat(service.findByIdentifier("none@x.ma", tenant)).isEmpty();
     }
+
+    // ─── findByIdentifier GLOBAL (P3 — un seul compte OneClick, sans scope tenant) ──
+
+    @Test
+    void findByIdentifierGlobal_nullOrBlank_returnsEmpty_noRepoCall() {
+        assertThat(service.findByIdentifier(null)).isEmpty();
+        assertThat(service.findByIdentifier("   ")).isEmpty();
+        verifyNoInteractions(repo);
+    }
+
+    @Test
+    void findByIdentifierGlobal_email_routesToGlobalEmailLookup() {
+        UUID id = UUID.randomUUID();
+        when(repo.findByEmailIgnoreCase("ali@x.ma"))
+            .thenReturn(Optional.of(user(id, "Ali", "B", null, "ali@x.ma", false)));
+        assertThat(service.findByIdentifier("  ali@x.ma ")).map(UserName::id).contains(id);
+        verify(repo).findByEmailIgnoreCase("ali@x.ma");
+    }
+
+    @Test
+    void findByIdentifierGlobal_referral_routesToGlobalCodeLookup() {
+        UUID id = UUID.randomUUID();
+        when(repo.findByReferralCodeIgnoreCase("oc-abc123"))
+            .thenReturn(Optional.of(user(id, "Sara", "C", null, "s@x.ma", false)));
+        assertThat(service.findByIdentifier("oc-abc123")).map(UserName::id).contains(id);
+        verify(repo).findByReferralCodeIgnoreCase("oc-abc123");
+    }
+
+    @Test
+    void findByIdentifierGlobal_phone_routesToGlobalPhoneLookup() {
+        UUID id = UUID.randomUUID();
+        when(repo.findByPhone("0612345656"))
+            .thenReturn(Optional.of(user(id, "Yan", "D", "0612345656", "y@x.ma", false)));
+        assertThat(service.findByIdentifier("0612345656")).map(UserName::id).contains(id);
+        verify(repo).findByPhone("0612345656");
+    }
+
+    @Test
+    void findByIdentifierGlobal_softDeleted_excluded() {
+        when(repo.findByEmailIgnoreCase("gone@x.ma"))
+            .thenReturn(Optional.of(user(UUID.randomUUID(), "G", "X", null, "gone@x.ma", true)));
+        assertThat(service.findByIdentifier("gone@x.ma")).isEmpty();
+    }
 }

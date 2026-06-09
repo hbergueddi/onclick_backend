@@ -70,9 +70,12 @@ public class TenantAdminService {
             throw new BadRequestException("Rôle invalide (owner|admin|viewer)");
         }
 
-        UserName user = userDirectory.findByIdentifier(identifier, tenantId)
+        // Modèle « un seul compte OneClick » (P3) : on résout le compte GLOBALEMENT par identifiant
+        // (les membres ont désormais le home oneclick après le flip — un lookup scopé tenant ne les
+        // trouverait plus). Endpoint SUPERADMIN-only ; le SUPERADMIN désigne explicitement le compte.
+        UserName user = userDirectory.findByIdentifier(identifier)
             .orElseThrow(() -> new NotFoundException(
-                "Aucun membre de ce tenant pour l'identifiant : " + identifier));
+                "Aucun compte OneClick pour l'identifiant : " + identifier));
 
         if (repo.existsByTenantIdAndUserId(tenantId, user.id())) {
             throw new ConflictException("Cet utilisateur est déjà administrateur de ce tenant.");

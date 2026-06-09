@@ -2,6 +2,7 @@ package com.onesley.oneclick.modules.stories.internal;
 
 import com.onesley.oneclick.core.identity.api.UserDirectoryApi;
 import com.onesley.oneclick.core.identity.api.UserDirectoryApi.UserName;
+import com.onesley.oneclick.core.membership.api.MembershipDirectoryApi;
 import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
@@ -52,10 +53,21 @@ public class PccStoryService {
     private final PccStoryRepository repo;
     private final PccStoryViewRepository viewRepo;
     private final UserDirectoryApi userDirectory;
+    private final MembershipDirectoryApi membershipDirectory;
 
     private static final String DEFAULT_MEDIA_TYPE = "image";
     private static final int DEFAULT_DURATION_S = 15;
     private static final int DEFAULT_SORT_ORDER = 0;
+
+    /**
+     * Tenant « programme » du caller pour le scope des stories : sa 1ʳᵉ membership active (P3 — un
+     * membre a le home oneclick après le flip, mais une membership programme) sinon son tenant home
+     * (staff/admin rattaché à son tenant employeur, non flippé). {@code null} si ni l'un ni l'autre.
+     */
+    private UUID callerProgramTenant(UUID caller) {
+        return membershipDirectory.activeTenantIds(caller).stream().findFirst()
+            .orElseGet(() -> userDirectory.tenantIdById(caller).orElse(null));
+    }
 
     // ─── listForMe (stories visibles du caller) ──────────────────────────────────
 
@@ -66,7 +78,7 @@ public class PccStoryService {
      */
     public List<StoryDto> listForMe() {
         UUID caller = requireCaller();
-        UUID tenantId = userDirectory.tenantIdById(caller).orElse(null);
+        UUID tenantId = callerProgramTenant(caller);
         if (tenantId == null) {
             // Un admin global sans tenant n'a pas de scope de stories (les stories sont par-tenant).
             return List.of();
@@ -100,11 +112,10 @@ public class PccStoryService {
         PccStory s = repo.findById(storyId)
             .filter(x -> x.getDeletedAt() == null)
             .orElseThrow(() -> new NotFoundException("PccStory", storyId));
-        if (!SecurityHelper.isAdmin()) {
-            UUID callerTenant = userDirectory.tenantIdById(caller).orElse(null);
-            if (callerTenant == null || !callerTenant.equals(s.getTenantId())) {
-                throw new ForbiddenException("Story hors de votre établissement");
-            }
+        // P3 : appartenance par MEMBERSHIP (le membre a le home oneclick après le flip ; on vérifie
+        // qu'il est membre actif du tenant de la story), plus par home tenant. Admin global bypass.
+        if (!SecurityHelper.isAdmin() && !membershipDirectory.isActiveMember(caller, s.getTenantId())) {
+            throw new ForbiddenException("Story hors de votre établissement");
         }
         if (!viewRepo.existsByStoryIdAndUserId(storyId, caller)) {
             viewRepo.save(new PccStoryView(storyId, caller, Instant.now()));
@@ -119,7 +130,7 @@ public class PccStoryService {
      */
     public List<StoryViewCountDto> viewCounts() {
         UUID caller = requireCaller();
-        UUID tenantId = userDirectory.tenantIdById(caller).orElse(null);
+        UUID tenantId = callerProgramTenant(caller);
         if (tenantId == null || !canManageInTenant(caller, tenantId)) {
             // Membre (ou admin global sans tenant) → pas de stats par-tenant.
             if (tenantId != null) {

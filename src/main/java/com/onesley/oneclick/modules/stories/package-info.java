@@ -45,7 +45,7 @@
     type = org.springframework.modulith.ApplicationModule.Type.CLOSED,
     id = "modules.stories",
     displayName = "modules/stories",
-    allowedDependencies = {"core.identity", "audit", "exception", "security"}
+    allowedDependencies = {"core.identity", "core.membership", "audit", "exception", "security"}
 )
 package com.onesley.oneclick.modules.stories;
 

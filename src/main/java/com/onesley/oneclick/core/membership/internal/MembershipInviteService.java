@@ -17,10 +17,7 @@ import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -78,13 +75,13 @@ public class MembershipInviteService {
 
     @Transactional
     public MembershipDto invite(UUID tenantId, InviteMemberDto dto) {
-        UUID caller = currentUserId();
+        UUID caller = MembershipSecurityContext.currentUserId();
         if (caller == null) {
             throw new ForbiddenException("Non authentifié");
         }
 
         // ─── ABAC own-tenant (sauf plateforme/SUPERADMIN) ──────────────────────
-        if (!hasAuthority(PLATFORM_ADMIN_AUTHORITY)) {
+        if (!MembershipSecurityContext.hasAuthority(PLATFORM_ADMIN_AUTHORITY)) {
             UUID callerHomeTenant = userDirectory.tenantIdById(caller).orElse(null);
             if (!tenantId.equals(callerHomeTenant)) {
                 throw new ForbiddenException(
@@ -219,25 +216,5 @@ public class MembershipInviteService {
         byte[] bytes = new byte[24];
         new SecureRandom().nextBytes(bytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-    }
-
-    // ─── Contexte de sécurité (API Spring — pas notre SecurityHelper, anti-cycle) ─
-
-    private UUID currentUserId() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth instanceof JwtAuthenticationToken jwt) {
-            try {
-                return UUID.fromString(jwt.getToken().getSubject());
-            } catch (IllegalArgumentException e) {
-                return null;
-            }
-        }
-        return null;
-    }
-
-    private boolean hasAuthority(String authority) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        return auth != null && auth.getAuthorities().stream()
-            .anyMatch(a -> authority.equals(a.getAuthority()));
     }
 }

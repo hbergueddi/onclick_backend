@@ -100,7 +100,7 @@ class TenantAdminServiceTest {
     @Test
     void addAdmin_resolvesAndSaves() {
         UUID userId = UUID.randomUUID();
-        when(userDirectory.findByIdentifier("karim@a.ma", tenantId)).thenReturn(Optional.of(user(userId)));
+        when(userDirectory.findByIdentifier("karim@a.ma")).thenReturn(Optional.of(user(userId)));
         when(repo.existsByTenantIdAndUserId(tenantId, userId)).thenReturn(false);
 
         TenantAdminDto dto = service.addAdmin(tenantId, new AddTenantAdminDto("karim@a.ma", "owner"));
@@ -112,7 +112,7 @@ class TenantAdminServiceTest {
 
     @Test
     void addAdmin_userNotFound_throws404() {
-        when(userDirectory.findByIdentifier("ghost@a.ma", tenantId)).thenReturn(Optional.empty());
+        when(userDirectory.findByIdentifier("ghost@a.ma")).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.addAdmin(tenantId, new AddTenantAdminDto("ghost@a.ma", null)))
             .isInstanceOf(NotFoundException.class);
         verify(repo, never()).save(any());
@@ -121,7 +121,7 @@ class TenantAdminServiceTest {
     @Test
     void addAdmin_duplicate_throws409() {
         UUID userId = UUID.randomUUID();
-        when(userDirectory.findByIdentifier("karim@a.ma", tenantId)).thenReturn(Optional.of(user(userId)));
+        when(userDirectory.findByIdentifier("karim@a.ma")).thenReturn(Optional.of(user(userId)));
         when(repo.existsByTenantIdAndUserId(tenantId, userId)).thenReturn(true);
         assertThatThrownBy(() -> service.addAdmin(tenantId, new AddTenantAdminDto("karim@a.ma", "admin")))
             .isInstanceOf(ConflictException.class);
@@ -131,7 +131,7 @@ class TenantAdminServiceTest {
     @Test
     void addAdmin_defaultsRoleToAdmin() {
         UUID userId = UUID.randomUUID();
-        when(userDirectory.findByIdentifier("karim@a.ma", tenantId)).thenReturn(Optional.of(user(userId)));
+        when(userDirectory.findByIdentifier("karim@a.ma")).thenReturn(Optional.of(user(userId)));
         when(repo.existsByTenantIdAndUserId(tenantId, userId)).thenReturn(false);
         TenantAdminDto dto = service.addAdmin(tenantId, new AddTenantAdminDto("karim@a.ma", null));
         assertThat(dto.role()).isEqualTo("admin");

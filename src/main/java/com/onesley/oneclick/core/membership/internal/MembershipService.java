@@ -49,6 +49,18 @@ public class MembershipService implements MembershipDirectoryApi {
 
     @Override
     @Transactional(readOnly = true)
+    public List<MembershipView> activeMembershipViews(UUID userId) {
+        if (userId == null) {
+            return List.of();
+        }
+        return repository.findActiveMembershipViews(userId).stream()
+                .map(r -> new MembershipView(
+                        (UUID) r[0], (String) r[1], (String) r[2], (String) r[3], (String) r[4]))
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<UUID> activeTenantIds(UUID userId) {
         if (userId == null) {
             return List.of();

@@ -24,17 +24,28 @@ class MembershipBackfillIntegrationTest extends AbstractIntegrationTest {
                 "SELECT id::text FROM tenants WHERE slug = ?", String.class, slug));
     }
 
-    private UUID clientOfTenant(String slug) {
+    /** Un MEMBRE actif du tenant (slug) — via tenant_memberships (post-flip P3 : home oneclick). */
+    private UUID memberOfTenant(String slug) {
         return UUID.fromString(jdbc.queryForObject(
-                "SELECT u.id::text FROM users u JOIN roles r ON r.id = u.role_id JOIN tenants t ON t.id = u.tenant_id "
-                + "WHERE t.slug = ? AND r.code = 'CLIENT' AND u.deleted_at IS NULL LIMIT 1", String.class, slug));
+                "SELECT tm.user_id::text FROM tenant_memberships tm JOIN tenants t ON t.id = tm.tenant_id "
+                + "WHERE t.slug = ? AND tm.status = 'active' AND tm.deleted_at IS NULL "
+                + "ORDER BY tm.user_id LIMIT 1", String.class, slug));
+    }
+
+    /** Un CLIENT oneclick SANS aucune membership (vrai non-membre). */
+    private UUID oneclickNonMember() {
+        return UUID.fromString(jdbc.queryForObject(
+                "SELECT u.id::text FROM users u JOIN roles r ON r.id = u.role_id "
+                + "WHERE r.code = 'CLIENT' AND u.deleted_at IS NULL "
+                + "AND NOT EXISTS (SELECT 1 FROM tenant_memberships tm WHERE tm.user_id = u.id AND tm.deleted_at IS NULL) "
+                + "ORDER BY u.id LIMIT 1", String.class));
     }
 
     @Test
     void backfill_programClient_isActiveMemberOfHisProgram_notOfOneclick() {
         UUID palmeraie = tenantId("palmeraie");
         UUID oneclick = tenantId("oneclick");
-        UUID user = clientOfTenant("palmeraie");
+        UUID user = memberOfTenant("palmeraie");
 
         assertThat(membership.isActiveMember(user, palmeraie))
                 .as("client palmeraie = membre actif du programme palmeraie (backfill)").isTrue();
@@ -47,7 +58,7 @@ class MembershipBackfillIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void backfill_pureOneclickClient_hasNoProgramMembership() {
-        UUID user = clientOfTenant("oneclick");
+        UUID user = oneclickNonMember();
         UUID palmeraie = tenantId("palmeraie");
 
         assertThat(membership.isActiveMember(user, palmeraie)).isFalse();
@@ -55,17 +66,18 @@ class MembershipBackfillIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void backfill_count_coversAllProgramClients() {
-        Integer expected = jdbc.queryForObject(
-                "SELECT count(*) FROM users u JOIN roles r ON r.id = u.role_id "
-                + "WHERE r.code = 'CLIENT' AND u.deleted_at IS NULL AND u.tenant_id IS NOT NULL "
-                + "AND u.tenant_id NOT IN (SELECT id FROM tenants WHERE slug = 'oneclick')", Integer.class);
-        Integer actual = jdbc.queryForObject(
+    void backfill_producedActiveMemberships_towardsProgramsOnly() {
+        // Post-flip P3 : les clients de programme ont désormais le home oneclick, donc on ne peut plus
+        // dériver l'attendu de users.tenant_id. Le backfill V90 reste vérifiable par l'existence de
+        // memberships actives, toutes orientées vers un tenant de PROGRAMME (jamais le socle oneclick).
+        Integer active = jdbc.queryForObject(
                 "SELECT count(*) FROM tenant_memberships WHERE status = 'active' AND deleted_at IS NULL", Integer.class);
+        assertThat(active).as("le backfill V90 a produit des memberships actives").isNotNull().isPositive();
 
-        assertThat(expected).isNotNull().isPositive();
-        // >= : d'éventuelles memberships créées par d'autres tests (P2) n'invalident pas le backfill.
-        assertThat(actual).isGreaterThanOrEqualTo(expected);
+        Integer towardsOneclick = jdbc.queryForObject(
+                "SELECT count(*) FROM tenant_memberships tm JOIN tenants t ON t.id = tm.tenant_id "
+                + "WHERE t.slug = 'oneclick' AND tm.deleted_at IS NULL", Integer.class);
+        assertThat(towardsOneclick).as("aucune membership vers le socle oneclick").isZero();
     }
 
     @Test

@@ -140,11 +140,12 @@ class EventFlowIntegrationTest extends AbstractIntegrationTest {
         assertThat(post.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         String eventId = om.readTree(post.getBody()).get("id").asText();
 
-        // P1.5 : RSVP (CREATE:EVENT_RSVP) est membre-only → le client acteur doit être MEMBRE (palmeraie).
+        // P1.5 : RSVP (CREATE:EVENT_RSVP) est membre-only → le client acteur doit être MEMBRE palmeraie.
+        // Résolu via tenant_memberships (post-flip P3 : home oneclick mais membership palmeraie active).
         String clientId = jdbc.queryForObject(
-            "SELECT u.id::text FROM users u JOIN roles r ON r.id = u.role_id JOIN tenants t ON t.id = u.tenant_id "
-            + "WHERE r.code = 'CLIENT' AND t.slug = 'palmeraie' AND u.deleted_at IS NULL ORDER BY u.id LIMIT 1",
-            String.class);
+            "SELECT tm.user_id::text FROM tenant_memberships tm JOIN tenants t ON t.id = tm.tenant_id "
+            + "WHERE t.slug = 'palmeraie' AND tm.status = 'active' AND tm.deleted_at IS NULL "
+            + "ORDER BY tm.user_id LIMIT 1", String.class);
         String clientBearer = jwtIssuer.issueAccessToken(UUID.fromString(clientId), "CLIENT").token();
         String otherUserId = jdbc.queryForObject(
             "SELECT u.id::text FROM users u JOIN roles r ON r.id = u.role_id "

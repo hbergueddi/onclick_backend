@@ -33,15 +33,15 @@ class ResourceBookingRbacIntegrationTest extends AbstractIntegrationTest {
     }
 
     /**
-     * Un CLIENT <b>MEMBRE</b> (palmeraie), déterministe (ORDER BY id) — détient les autorités
-     * programme (CREATE/VIEW:BOOKINGS…) via le pliage de sa membership (P1). Depuis P1.5, RÉSERVER
-     * est membre-only ; le client acteur doit donc être membre. L'id sert AUSSI de sub du JWT.
+     * Un CLIENT <b>MEMBRE</b> de palmeraie — résolu via {@code tenant_memberships} (indépendant du
+     * home tenant : post-flip P3, les membres palmeraie ont le home oneclick). Détient les autorités
+     * programme (CREATE/VIEW:BOOKINGS…) via le pliage de sa membership (P1). L'id sert de sub du JWT.
      */
     private UUID clientUserId() {
         return UUID.fromString(jdbc.queryForObject(
-            "SELECT u.id::text FROM users u JOIN roles r ON r.id = u.role_id JOIN tenants t ON t.id = u.tenant_id "
-            + "WHERE r.code = 'CLIENT' AND t.slug = 'palmeraie' AND u.deleted_at IS NULL ORDER BY u.id LIMIT 1",
-            String.class));
+            "SELECT tm.user_id::text FROM tenant_memberships tm JOIN tenants t ON t.id = tm.tenant_id "
+            + "WHERE t.slug = 'palmeraie' AND tm.status = 'active' AND tm.deleted_at IS NULL "
+            + "ORDER BY tm.user_id LIMIT 1", String.class));
     }
 
     /** Bearer du CLIENT membre dont le {@code sub} == {@link #clientUserId()} (self-scope ABAC). */
@@ -49,12 +49,17 @@ class ResourceBookingRbacIntegrationTest extends AbstractIntegrationTest {
         return jwtIssuer.issueAccessToken(clientUserId(), "CLIENT").token();
     }
 
-    /** Un CLIENT NON-MEMBRE (oneclick) — n'a que base + découverte (P1.5), pas les actions programme. */
+    /**
+     * Un CLIENT NON-MEMBRE (oneclick SANS aucune membership) — n'a que base + découverte (P1.5),
+     * pas les actions programme. Le {@code NOT EXISTS} exclut les comptes flippés (P3) désormais
+     * home=oneclick MAIS détenteurs d'une membership programme.
+     */
     private UUID nonMemberUserId() {
         return UUID.fromString(jdbc.queryForObject(
             "SELECT u.id::text FROM users u JOIN roles r ON r.id = u.role_id JOIN tenants t ON t.id = u.tenant_id "
-            + "WHERE r.code = 'CLIENT' AND t.slug = 'oneclick' AND u.deleted_at IS NULL ORDER BY u.id LIMIT 1",
-            String.class));
+            + "WHERE r.code = 'CLIENT' AND t.slug = 'oneclick' AND u.deleted_at IS NULL "
+            + "AND NOT EXISTS (SELECT 1 FROM tenant_memberships tm WHERE tm.user_id = u.id AND tm.deleted_at IS NULL) "
+            + "ORDER BY u.id LIMIT 1", String.class));
     }
     private String nonMemberBearer() {
         return jwtIssuer.issueAccessToken(nonMemberUserId(), "CLIENT").token();

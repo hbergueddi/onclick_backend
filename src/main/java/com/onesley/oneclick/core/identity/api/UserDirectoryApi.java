@@ -56,4 +56,12 @@ public interface UserDirectoryApi {
      * à ajouter sans lire la table {@code users} en SQL natif hors module identity.</p>
      */
     Optional<UserName> findByIdentifier(String identifier, UUID tenantId);
+
+    /**
+     * Résolution <b>GLOBALE</b> d'un compte par identifiant humain (email / téléphone / code
+     * parrainage {@code OC-}), <b>sans scope tenant</b> — pour le modèle « un seul compte OneClick »
+     * (P3) : un compte se résout par son identifiant, indépendamment de son tenant home (qui devient
+     * {@code oneclick} pour les membres après le flip). Vide si introuvable / supprimé / blank.
+     */
+    Optional<UserName> findByIdentifier(String identifier);
 }
