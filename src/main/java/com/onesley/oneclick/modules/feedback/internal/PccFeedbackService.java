@@ -2,6 +2,7 @@ package com.onesley.oneclick.modules.feedback.internal;
 
 import com.onesley.oneclick.core.identity.api.UserDirectoryApi;
 import com.onesley.oneclick.core.identity.api.UserDirectoryApi.UserName;
+import com.onesley.oneclick.core.membership.api.MembershipDirectoryApi;
 import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.ConflictException;
 import com.onesley.oneclick.exception.ForbiddenException;
@@ -61,8 +62,20 @@ public class PccFeedbackService {
 
     private final PccFeedbackRepository repo;
     private final UserDirectoryApi userDirectory;
+    private final MembershipDirectoryApi membershipDirectory;
     private final ApplicationEventPublisher eventPublisher;
     private final FeedbackPublisher feedbackPublisher;
+
+    /**
+     * Tenant « programme » du caller (membre) : sa 1ʳᵉ membership active (après le flip V95 un membre
+     * a le home oneclick, mais conserve sa membership programme) sinon son tenant home (fallback
+     * rétro-compatible : un non-membre n'a pas de membership → ancien comportement). {@code null} si
+     * ni l'un ni l'autre.
+     */
+    private UUID callerProgramTenant(UUID caller) {
+        return membershipDirectory.activeTenantIds(caller).stream().findFirst()
+            .orElseGet(() -> userDirectory.tenantIdById(caller).orElse(null));
+    }
 
     // ─── create (membre envoie un avis) ─────────────────────────────────────────
 
@@ -80,9 +93,13 @@ public class PccFeedbackService {
     @Transactional
     public FeedbackDto create(CreateFeedbackDto dto) {
         UUID caller = requireCaller();
-        UUID tenantId = userDirectory.tenantIdById(caller)
-            .orElseThrow(() -> new BadRequestException(
-                "Aucun tenant associé à votre compte — l'envoi d'avis n'est pas disponible"));
+        // P3/V95 : le membre a le home oneclick après le flip → on scope au tenant de SA membership
+        // programme (sinon home, fallback rétro-compatible). 400 si aucun tenant résoluble.
+        UUID tenantId = callerProgramTenant(caller);
+        if (tenantId == null) {
+            throw new BadRequestException(
+                "Aucun tenant associé à votre compte — l'envoi d'avis n'est pas disponible");
+        }
 
         String sentiment = dto.sentiment() == null ? null : dto.sentiment().trim();
         if (!"happy".equals(sentiment) && !"unhappy".equals(sentiment)) {

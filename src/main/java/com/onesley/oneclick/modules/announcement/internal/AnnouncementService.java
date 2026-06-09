@@ -2,6 +2,7 @@ package com.onesley.oneclick.modules.announcement.internal;
 
 import com.onesley.oneclick.core.identity.api.UserDirectoryApi;
 import com.onesley.oneclick.core.identity.api.UserDirectoryApi.UserName;
+import com.onesley.oneclick.core.membership.api.MembershipDirectoryApi;
 import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
@@ -71,10 +72,22 @@ public class AnnouncementService {
     private final AnnouncementRepository repo;
     private final AnnouncementReadRepository readRepo;
     private final UserDirectoryApi userDirectory;
+    private final MembershipDirectoryApi membershipDirectory;
     private final ApplicationEventPublisher eventPublisher;
     private final AnnouncementPublisher announcementPublisher;
 
     private static final String DEFAULT_PRIORITY = "permanent";
+
+    /**
+     * Tenant « programme » du caller (membre) : sa 1ʳᵉ membership active (après le flip V95 un membre
+     * a le home oneclick, mais conserve sa membership programme) sinon son tenant home (fallback
+     * rétro-compatible : un staff/non-membre n'a pas de membership → home tenant, ancien comportement).
+     * {@code null} si ni l'un ni l'autre.
+     */
+    private UUID callerProgramTenant(UUID caller) {
+        return membershipDirectory.activeTenantIds(caller).stream().findFirst()
+            .orElseGet(() -> userDirectory.tenantIdById(caller).orElse(null));
+    }
 
     // ─── listForMe (annonces visibles du caller) ─────────────────────────────────
 
@@ -89,7 +102,9 @@ public class AnnouncementService {
      */
     public List<AnnouncementDto> listForMe() {
         UUID caller = requireCaller();
-        UUID tenantId = userDirectory.tenantIdById(caller).orElse(null);
+        // P3/V95 : un membre a le home oneclick après le flip → on scope au tenant de SA membership
+        // programme (sinon home, fallback rétro-compatible pour staff/admin non flippés).
+        UUID tenantId = callerProgramTenant(caller);
         boolean adminGlobal = SecurityHelper.isAdmin();
         if (tenantId == null) {
             // Un admin global sans tenant n'a pas de scope d'annonces (les annonces sont par-tenant).

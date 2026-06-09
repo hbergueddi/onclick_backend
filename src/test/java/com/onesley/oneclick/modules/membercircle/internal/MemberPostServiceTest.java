@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.membercircle.internal;
 
 import com.onesley.oneclick.core.identity.api.UserDirectoryApi;
+import com.onesley.oneclick.core.membership.api.MembershipDirectoryApi;
 import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
@@ -41,8 +42,17 @@ class MemberPostServiceTest {
     @Mock MemberPostLikeRepository likeRepo;
     @Mock MemberPostCommentRepository commentRepo;
     @Mock UserDirectoryApi userDirectory;
+    @Mock MembershipDirectoryApi membershipDirectory;
     @Mock org.springframework.context.ApplicationEventPublisher events;
     @InjectMocks MemberPostService service;
+
+    @org.junit.jupiter.api.BeforeEach
+    void setup() {
+        // Pas de membership active par défaut → memberProgramTenant retombe sur le home tenant
+        // (comportement rétro-compatible attendu par les assertions existantes).
+        org.mockito.Mockito.lenient()
+            .when(membershipDirectory.activeTenantIds(any())).thenReturn(List.of());
+    }
 
     private static MemberPostDto post(String status) {
         return new MemberPostDto(UUID.randomUUID(), UUID.randomUUID(), "A", "B", null,

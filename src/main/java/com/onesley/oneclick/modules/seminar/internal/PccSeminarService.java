@@ -2,6 +2,7 @@ package com.onesley.oneclick.modules.seminar.internal;
 
 import com.onesley.oneclick.core.identity.api.UserDirectoryApi;
 import com.onesley.oneclick.core.identity.api.UserDirectoryApi.UserName;
+import com.onesley.oneclick.core.membership.api.MembershipDirectoryApi;
 import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
@@ -64,8 +65,20 @@ public class PccSeminarService {
 
     private final SeminarRequestRepository repo;
     private final UserDirectoryApi userDirectory;
+    private final MembershipDirectoryApi membershipDirectory;
     private final ApplicationEventPublisher eventPublisher;
     private final SeminarPublisher seminarPublisher;
+
+    /**
+     * Tenant « programme » du caller (membre) : sa 1ʳᵉ membership active (après le flip V95 un membre
+     * a le home oneclick, mais conserve sa membership programme) sinon son tenant home (fallback
+     * rétro-compatible : un non-membre n'a pas de membership → ancien comportement). {@code null} si
+     * ni l'un ni l'autre.
+     */
+    private UUID callerProgramTenant(UUID caller) {
+        return membershipDirectory.activeTenantIds(caller).stream().findFirst()
+            .orElseGet(() -> userDirectory.tenantIdById(caller).orElse(null));
+    }
 
     // ─── create (membre soumet une demande) ─────────────────────────────────────
 
@@ -78,9 +91,13 @@ public class PccSeminarService {
     @Transactional
     public SeminarRequestDto create(CreateSeminarRequestDto dto) {
         UUID caller = requireCaller();
-        UUID tenantId = userDirectory.tenantIdById(caller)
-            .orElseThrow(() -> new BadRequestException(
-                "Aucun tenant associé à votre compte — les demandes de séminaire ne sont pas disponibles"));
+        // P3/V95 : le membre a le home oneclick après le flip → on scope au tenant de SA membership
+        // programme (sinon home, fallback rétro-compatible). 400 si aucun tenant résoluble.
+        UUID tenantId = callerProgramTenant(caller);
+        if (tenantId == null) {
+            throw new BadRequestException(
+                "Aucun tenant associé à votre compte — les demandes de séminaire ne sont pas disponibles");
+        }
 
         String companyName = requireText(dto.companyName(), "Nom de l'entreprise requis");
         String contactName = requireText(dto.contactName(), "Nom du contact requis");

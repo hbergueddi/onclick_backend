@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.seminar.internal;
 
 import com.onesley.oneclick.core.identity.api.UserDirectoryApi;
+import com.onesley.oneclick.core.membership.api.MembershipDirectoryApi;
 import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
@@ -53,6 +54,7 @@ class PccSeminarServiceTest {
 
     @Mock SeminarRequestRepository repo;
     @Mock UserDirectoryApi userDirectory;
+    @Mock MembershipDirectoryApi membershipDirectory;
     @Mock ApplicationEventPublisher eventPublisher;
     @Mock SeminarPublisher seminarPublisher;
     @InjectMocks PccSeminarService service;
@@ -70,6 +72,9 @@ class PccSeminarServiceTest {
         securityMock.when(SecurityHelper::isAdmin).thenReturn(false);
         lenient().when(userDirectory.tenantIdById(caller)).thenReturn(Optional.of(tenant));
         lenient().when(userDirectory.nameById(any())).thenReturn(Optional.empty());
+        // Pas de membership active par défaut → callerProgramTenant retombe sur le home tenant
+        // (comportement rétro-compatible attendu par les assertions existantes).
+        lenient().when(membershipDirectory.activeTenantIds(any())).thenReturn(List.of());
         lenient().when(repo.save(any())).thenAnswer(i -> i.getArgument(0));
         lenient().when(repo.findSeminarRecipientIds(any(), any())).thenReturn(List.of(UUID.randomUUID()));
     }

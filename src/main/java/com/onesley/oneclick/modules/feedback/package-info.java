@@ -42,7 +42,7 @@
     type = org.springframework.modulith.ApplicationModule.Type.CLOSED,
     id = "modules.feedback",
     displayName = "modules/feedback",
-    allowedDependencies = {"core.identity", "audit", "exception", "shared", "security", "realtime"}
+    allowedDependencies = {"core.identity", "core.membership", "audit", "exception", "shared", "security", "realtime"}
 )
 package com.onesley.oneclick.modules.feedback;
 

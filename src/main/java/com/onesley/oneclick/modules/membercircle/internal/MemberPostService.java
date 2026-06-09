@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.membercircle.internal;
 
 import com.onesley.oneclick.core.identity.api.UserDirectoryApi;
+import com.onesley.oneclick.core.membership.api.MembershipDirectoryApi;
 import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
@@ -46,16 +47,29 @@ public class MemberPostService {
     private final MemberPostLikeRepository likeRepo;
     private final MemberPostCommentRepository commentRepo;
     private final UserDirectoryApi userDirectory;
+    private final MembershipDirectoryApi membershipDirectory;
     private final ApplicationEventPublisher events;
 
     public MemberPostService(MemberPostRepository repo, MemberPostLikeRepository likeRepo,
                              MemberPostCommentRepository commentRepo, UserDirectoryApi userDirectory,
+                             MembershipDirectoryApi membershipDirectory,
                              ApplicationEventPublisher events) {
         this.repo = repo;
         this.likeRepo = likeRepo;
         this.commentRepo = commentRepo;
         this.userDirectory = userDirectory;
+        this.membershipDirectory = membershipDirectory;
         this.events = events;
+    }
+
+    /**
+     * Tenant « programme » du membre : sa 1ʳᵉ membership active (après le flip V95 un membre a le home
+     * oneclick, mais conserve sa membership programme) sinon son tenant home (fallback rétro-compatible :
+     * un non-membre n'a pas de membership → ancien comportement). {@code null} si ni l'un ni l'autre.
+     */
+    private UUID memberProgramTenant(UUID userId) {
+        return membershipDirectory.activeTenantIds(userId).stream().findFirst()
+            .orElseGet(() -> userDirectory.tenantIdById(userId).orElse(null));
     }
 
     /** Convertit un text[] SQL (PgArray) en List&lt;String&gt; (mentions). */
@@ -80,8 +94,12 @@ public class MemberPostService {
     /** Création membre d'un post (status=pending). tenant résolu via l'auteur (read-view core-only). */
     @Transactional
     public MemberPostDto create(UUID authorId, MemberPostCreateDto dto) {
-        UUID tenantId = userDirectory.tenantIdById(authorId)
-            .orElseThrow(() -> new BadRequestException("Tenant introuvable pour l'auteur " + authorId));
+        // P3/V95 : l'auteur membre a le home oneclick après le flip → on scope au tenant de SA
+        // membership programme (sinon home, fallback rétro-compatible).
+        UUID tenantId = memberProgramTenant(authorId);
+        if (tenantId == null) {
+            throw new BadRequestException("Tenant introuvable pour l'auteur " + authorId);
+        }
         MemberPost p = new MemberPost(UUID.randomUUID(), tenantId, authorId,
             dto.content(), dto.photoUrl(), dto.activityTag());
         p.setMentionedUserIds(toArray(dto.mentionedUserIds())); // A.2 — mentions sur le post
@@ -97,7 +115,9 @@ public class MemberPostService {
     @Transactional(readOnly = true)
     @SuppressWarnings("unchecked")
     public List<MemberPostFeedDto> feed(UUID viewerId, int page, int size) {
-        UUID tenantId = userDirectory.tenantIdById(viewerId).orElse(null);
+        // P3/V95 : le viewer membre a le home oneclick après le flip → scope au tenant de SA
+        // membership programme (sinon home, fallback rétro-compatible).
+        UUID tenantId = memberProgramTenant(viewerId);
         if (tenantId == null) {
             return List.of();
         }
@@ -231,7 +251,9 @@ public class MemberPostService {
     @Transactional(readOnly = true)
     @SuppressWarnings("unchecked")
     public List<MentionableMemberDto> mentionableMembers(UUID viewerId, String query, int limit) {
-        UUID tenantId = userDirectory.tenantIdById(viewerId).orElse(null);
+        // P3/V95 : le viewer membre a le home oneclick après le flip → scope au tenant de SA
+        // membership programme (sinon home, fallback rétro-compatible).
+        UUID tenantId = memberProgramTenant(viewerId);
         if (tenantId == null) {
             return List.of();
         }

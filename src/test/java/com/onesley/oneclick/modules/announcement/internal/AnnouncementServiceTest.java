@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.announcement.internal;
 
 import com.onesley.oneclick.core.identity.api.UserDirectoryApi;
+import com.onesley.oneclick.core.membership.api.MembershipDirectoryApi;
 import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
@@ -60,6 +61,7 @@ class AnnouncementServiceTest {
     @Mock AnnouncementRepository repo;
     @Mock AnnouncementReadRepository readRepo;
     @Mock UserDirectoryApi userDirectory;
+    @Mock MembershipDirectoryApi membershipDirectory;
     @Mock ApplicationEventPublisher eventPublisher;
     @Mock AnnouncementPublisher announcementPublisher;
     @InjectMocks AnnouncementService service;
@@ -76,6 +78,9 @@ class AnnouncementServiceTest {
         securityMock.when(SecurityHelper::isAdmin).thenReturn(false);
         lenient().when(userDirectory.tenantIdById(caller)).thenReturn(Optional.of(tenant));
         lenient().when(userDirectory.nameById(any())).thenReturn(Optional.empty());
+        // Pas de membership active par défaut → callerProgramTenant retombe sur le home tenant
+        // (comportement rétro-compatible attendu par les assertions existantes : listForMe scope `tenant`).
+        lenient().when(membershipDirectory.activeTenantIds(any())).thenReturn(List.of());
         lenient().when(repo.save(any())).thenAnswer(i -> i.getArgument(0));
         lenient().when(repo.findStaffRecipientIds(any(), any())).thenReturn(List.of(UUID.randomUUID()));
         lenient().when(readRepo.findReadAnnouncementIdsForUser(any(), any())).thenReturn(List.of());

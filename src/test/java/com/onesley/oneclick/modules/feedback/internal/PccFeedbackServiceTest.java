@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.feedback.internal;
 
 import com.onesley.oneclick.core.identity.api.UserDirectoryApi;
+import com.onesley.oneclick.core.membership.api.MembershipDirectoryApi;
 import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.ConflictException;
 import com.onesley.oneclick.exception.ForbiddenException;
@@ -51,6 +52,7 @@ class PccFeedbackServiceTest {
 
     @Mock PccFeedbackRepository repo;
     @Mock UserDirectoryApi userDirectory;
+    @Mock MembershipDirectoryApi membershipDirectory;
     @Mock ApplicationEventPublisher eventPublisher;
     @Mock FeedbackPublisher feedbackPublisher;
     @InjectMocks PccFeedbackService service;
@@ -69,6 +71,9 @@ class PccFeedbackServiceTest {
         securityMock.when(SecurityHelper::isAdmin).thenReturn(false);
         lenient().when(userDirectory.tenantIdById(caller)).thenReturn(Optional.of(tenant));
         lenient().when(userDirectory.nameById(any())).thenReturn(Optional.empty());
+        // Pas de membership active par défaut → callerProgramTenant retombe sur le home tenant
+        // (comportement rétro-compatible attendu par les assertions existantes).
+        lenient().when(membershipDirectory.activeTenantIds(any())).thenReturn(List.of());
         lenient().when(repo.save(any())).thenAnswer(i -> i.getArgument(0));
         lenient().when(repo.findFeedbackRecipientIds(any(), any(), any())).thenReturn(List.of(UUID.randomUUID()));
     }

@@ -19,7 +19,7 @@
     type = org.springframework.modulith.ApplicationModule.Type.CLOSED,
     id = "modules.membercircle",
     displayName = "modules/membercircle",
-    allowedDependencies = {"core.identity", "audit", "exception", "security", "shared"}
+    allowedDependencies = {"core.identity", "core.membership", "audit", "exception", "security", "shared"}
 )
 package com.onesley.oneclick.modules.membercircle;
 
