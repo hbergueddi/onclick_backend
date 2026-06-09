@@ -7,6 +7,7 @@ import com.onesley.oneclick.exception.ConflictException;
 import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.security.SecurityHelper;
+import com.onesley.oneclick.security.TenantScope;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.data.domain.Page;
@@ -18,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import static com.onesley.oneclick.modules.event.api.EventDtos.*;
@@ -36,6 +38,7 @@ public class EventService {
 
     private final EventRepository eventRepo;
     private final EventParticipationRepository participationRepo;
+    private final TenantScope tenantScope;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -44,7 +47,21 @@ public class EventService {
 
     public Page<EventDto> findAll(UUID tenantId, UUID restaurantId, Boolean upcomingOnly, int page, int size) {
         Specification<Event> spec = (root, q, cb) -> cb.isNull(root.get("deletedAt"));
-        if (tenantId != null)     spec = spec.and((root, q, cb) -> cb.equal(root.get("tenantId"), tenantId));
+        if (tenantId != null) {
+            // Périmètre tenant (fuite de périmètre) : le param tenantId fourni par le client doit être
+            // dans son périmètre visible ({tenant public} ∪ memberships) ; sinon 403 (ne pas exposer un
+            // programme — PCC/HOMU — non accessible). SUPERADMIN (canSeeTenant true) → autorisé.
+            if (!tenantScope.canSeeTenant(tenantId)) {
+                throw new ForbiddenException("Tenant hors périmètre");
+            }
+            spec = spec.and((root, q, cb) -> cb.equal(root.get("tenantId"), tenantId));
+        } else {
+            // Pas de tenantId : scoper par défaut au périmètre visible. SUPERADMIN (null) → aucun filtre.
+            Set<UUID> visible = tenantScope.visibleTenantIdsOrNull();
+            if (visible != null) {
+                spec = spec.and((root, q, cb) -> root.get("tenantId").in(visible));
+            }
+        }
         if (restaurantId != null) spec = spec.and((root, q, cb) -> cb.equal(root.get("restaurantId"), restaurantId));
         if (Boolean.TRUE.equals(upcomingOnly)) {
             spec = spec.and((root, q, cb) -> cb.greaterThanOrEqualTo(root.get("eventAt"), Instant.now()));
@@ -54,10 +71,14 @@ public class EventService {
     }
 
     public EventDto findById(UUID id) {
-        return eventRepo.findById(id)
-            .filter(e -> e.getDeletedAt() == null)
-            .orElseThrow(() -> new NotFoundException("Event", id))
-            .toDto();
+        Event e = eventRepo.findById(id)
+            .filter(x -> x.getDeletedAt() == null)
+            .orElseThrow(() -> new NotFoundException("Event", id));
+        // Hors périmètre : 404 (ne pas divulguer l'existence d'un event d'un programme non accessible).
+        if (!tenantScope.canSeeTenant(e.getTenantId())) {
+            throw new NotFoundException("Event", id);
+        }
+        return e.toDto();
     }
 
     @Transactional
@@ -112,6 +133,14 @@ public class EventService {
     // ─── Participations (RSVP) ───────────────────────────────────────────────
 
     public List<ParticipationDto> findParticipations(UUID eventId) {
+        // Périmètre tenant : la liste des inscrits (PII membres) d'un event d'un programme hors
+        // périmètre ne doit pas fuiter → 404 si l'event n'est pas visible (cohérent avec findById).
+        Event event = eventRepo.findById(eventId)
+            .filter(e -> e.getDeletedAt() == null)
+            .orElseThrow(() -> new NotFoundException("Event", eventId));
+        if (!tenantScope.canSeeTenant(event.getTenantId())) {
+            throw new NotFoundException("Event", eventId);
+        }
         return participationRepo.findAllByEventIdFetchUser(eventId).stream()
             .map(EventParticipation::toDto)
             .toList();
@@ -198,16 +227,20 @@ public class EventService {
 
     // ─── Elite-specific (Sprint D) ──────────────────────────────────────────
 
-    /** Events Elite actifs futurs (Pocket EliteClub). */
+    /** Events Elite actifs futurs (Pocket EliteClub). Scopé au périmètre tenant visible du caller. */
     public List<EventDto> findEliteActiveUpcoming() {
+        Set<UUID> visible = tenantScope.visibleTenantIdsOrNull();
         return eventRepo.findEliteActiveUpcoming().stream()
+            .filter(e -> visible == null || visible.contains(e.getTenantId()))
             .map(Event::toDto)
             .toList();
     }
 
-    /** Tous les events Elite admin (dashboard Forge). */
+    /** Tous les events Elite admin (dashboard Forge). Scopé au périmètre tenant visible du caller. */
     public List<EventDto> findAllElite() {
+        Set<UUID> visible = tenantScope.visibleTenantIdsOrNull();
         return eventRepo.findAllElite().stream()
+            .filter(e -> visible == null || visible.contains(e.getTenantId()))
             .map(Event::toDto)
             .toList();
     }

@@ -1,7 +1,6 @@
 package com.onesley.oneclick.modules.promotion;
 
 import com.onesley.oneclick.search.SearchRequest;
-import com.onesley.oneclick.search.Searchable;
 import com.onesley.oneclick.shared.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,9 +21,7 @@ import com.onesley.oneclick.modules.promotion.api.OfferDto;
 import com.onesley.oneclick.modules.promotion.api.OfferImpressionDto;
 import com.onesley.oneclick.modules.promotion.api.OfferPatchDto;
 import com.onesley.oneclick.modules.promotion.api.OfferReadDto;
-import com.onesley.oneclick.modules.promotion.internal.Offer;
 import com.onesley.oneclick.modules.promotion.internal.OfferReadService;
-import com.onesley.oneclick.modules.promotion.internal.OfferRepository;
 import com.onesley.oneclick.modules.promotion.internal.OfferService;
 import lombok.RequiredArgsConstructor;
 
@@ -34,9 +31,19 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class OfferController {
 
-    /** Whitelist Phase 4 §6.3 — champs filtrables/sortables. */
+    /**
+     * Whitelist Phase 4 §6.3 — champs filtrables/sortables.
+     *
+     * <p>Note : {@code tenantId} a été RETIRÉ (bug latent). La recherche s'exécute via une
+     * {@code Specification} JPA sur l'entité {@link com.onesley.oneclick.modules.promotion.internal.Offer},
+     * qui <b>ne mappe pas</b> de propriété {@code tenantId} (même si la colonne SQL {@code offers.tenant_id}
+     * existe en base) — toute critère/tri sur ce champ résolvait un {@code Path} inexistant dans le
+     * métamodèle → erreur. Le périmètre tenant est désormais imposé côté serveur par
+     * {@code OfferService.search} (contrainte {@code restaurantId IN (restos visibles)}), via le JOIN
+     * {@code offers → restaurants} (source de vérité du tenant : {@code restaurants.tenant_id}).
+     */
     private static final Set<String> SEARCHABLE_FIELDS = Set.of(
-        "tenantId", "restaurantId", "title", "type",
+        "restaurantId", "title", "type",
         "startsAt", "expiresAt", "createdAt", "updatedAt",
         // Boolean toggle "actif/inactif" — utilisé par Pocket (Spotlight,
         // Promos) pour filtrer les offres actives (enabled=true + expiresAt>now).
@@ -44,7 +51,6 @@ public class OfferController {
     );
 
     private final OfferService service;
-    private final OfferRepository offerRepository;
     private final OfferReadService readService;
 
     // Bug 32 (Batch A RBAC v2) — RBAC v2 senior strict hasAuthority('VERB:OFFERS')
@@ -89,12 +95,12 @@ public class OfferController {
     }
 
     @PostMapping("/search")
-    @Operation(summary = "Recherche dynamique (Phase 4 §6.3) — 12 opérateurs + whitelist")
+    @Operation(summary = "Recherche dynamique (Phase 4 §6.3) — 12 opérateurs + whitelist (scopée au périmètre tenant)")
     @PreAuthorize("hasAuthority('VIEW:OFFERS')")
     public PageResponse<OfferDto> search(@RequestBody SearchRequest req) {
-        return PageResponse.from(
-            Searchable.execute(offerRepository, req, SEARCHABLE_FIELDS, Offer::toDto)
-        );
+        // Délégué au service : contraint la recherche au périmètre tenant visible (anti-énumération
+        // cross-tenant), SUPERADMIN non scopé. La whitelist reste appliquée (champs + tri).
+        return PageResponse.from(service.search(req, SEARCHABLE_FIELDS));
     }
 
     // ─── Impressions (tracking vues offres — offer_impressions V21) ──────────

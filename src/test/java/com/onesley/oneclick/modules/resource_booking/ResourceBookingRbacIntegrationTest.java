@@ -27,9 +27,16 @@ class ResourceBookingRbacIntegrationTest extends AbstractIntegrationTest {
 
     private final ObjectMapper om = new ObjectMapper();
 
+    /**
+     * Tenant des ressources créées par ce test = <b>palmeraie</b> (le programme dont {@link #clientUserId()}
+     * est membre actif). Depuis le verrouillage du périmètre tenant (fuite de périmètre), la découverte
+     * rattachée à une ressource (busy-slots) est gatée par le tenant de la ressource : la ressource DOIT
+     * donc appartenir à un programme visible par le CLIENT membre, sinon le service répond 404
+     * (cf {@code TenantScope.canSeeTenant}). L'admin (cross-tenant) crée/supprime sans restriction.
+     */
     private String tenantId() {
         return jdbc.queryForObject(
-            "SELECT tenant_id::text FROM restaurants WHERE tenant_id IS NOT NULL LIMIT 1", String.class);
+            "SELECT id::text FROM tenants WHERE slug = 'palmeraie' AND deleted_at IS NULL", String.class);
     }
 
     /**

@@ -22,11 +22,13 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <p>On passe par la stack HTTP réelle (filter chain OAuth2 → {@code @PreAuthorize} →
  * service → DB) pour prouver que :
  * <ul>
- *   <li>l'admin liste les ressources palmeraie filtrées par {@code resourceType} → 200 ;</li>
+ *   <li>l'admin (cross-tenant, bypass {@code TenantScope}) liste les ressources palmeraie
+ *       filtrées par {@code resourceType} → 200 ;</li>
  *   <li>les 3 nouveaux types {@code indoor_pool}, {@code olympic_pool}, {@code football_field}
  *       sont présents avec les bons libellés ;</li>
- *   <li>le CLIENT (membre PCC) — qui ne détient QUE {@code VIEW:RESOURCE_BOOKINGS} sur la
- *       gestion du parc — peut lister ces ressources (pas d'escalade requise) → 200 ;</li>
+ *   <li>le CLIENT <b>non-membre</b> de palmeraie qui force {@code ?tenantId=palmeraie} est
+ *       refusé → 403 (fuite de périmètre fermée : {@code VIEW:RESOURCE_BOOKINGS} ne suffit
+ *       plus, il faut une membership active — cf {@code TenantScope.canSeeTenant}) ;</li>
  *   <li>sans JWT → 401.</li>
  * </ul>
  *
@@ -92,17 +94,18 @@ class ResourceBookingPccPoolsFootSeedIntegrationTest extends AbstractIntegration
         assertThat(containsResource(foot, "football_field", "Terrain 5")).isTrue();
     }
 
-    // ─── B. Le CLIENT (VIEW:RESOURCE_BOOKINGS) peut lister sans escalade ──────────
+    // ─── B. Périmètre tenant : un CLIENT non-membre forçant tenantId=palmeraie → 403 ──
 
     @Test
-    void client_canListNewPccResources_keepsViewResourceBookings() throws Exception {
-        String client = clientBearer();
-        // Le membre PCC liste les ressources réservables (GET /resources = VIEW:RESOURCE_BOOKINGS).
-        assertThat(containsResource(listByType(client, "indoor_pool"), "indoor_pool", "Piscine intérieure"))
-            .isTrue();
-        assertThat(containsResource(listByType(client, "olympic_pool"), "olympic_pool", "Piscine semi-olympique"))
-            .isTrue();
-        assertThat(listByType(client, "football_field")).isNotEmpty();
+    void client_nonMember_forcingPalmeraieTenant_isForbidden() {
+        // Fuite de périmètre fermée : VIEW:RESOURCE_BOOKINGS ne suffit plus à lister les ressources
+        // d'un programme via ?tenantId=palmeraie. Le CLIENT seedé (home oneclick, sans membership
+        // palmeraie active) n'a pas palmeraie dans son périmètre visible → 403 (TenantScope).
+        ResponseEntity<String> resp = restTemplate.exchange(
+            url("/api/resource-bookings/resources?tenantId=" + palmeraieTenantId()
+                + "&resourceType=indoor_pool&enabledOnly=true&page=0&size=50"),
+            HttpMethod.GET, jwtEntity(clientBearer()), String.class);
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     // ─── C. Sans JWT → 401 (filter chain OAuth2) ─────────────────────────────────

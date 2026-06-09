@@ -25,9 +25,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import com.onesley.oneclick.exception.ForbiddenException;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -51,6 +54,7 @@ class EventServiceTest {
     @Mock EventRepository eventRepo;
     @Mock EventParticipationRepository participationRepo;
     @Mock EntityManager entityManager;
+    @Mock com.onesley.oneclick.security.TenantScope tenantScope;
     @InjectMocks EventService service;
 
     /**
@@ -76,6 +80,9 @@ class EventServiceTest {
         lenient().when(entityManager.getReference(eq(User.class), any())).thenReturn(new User(UUID.randomUUID(), null, "u@x.ma", "h", "U", "U"));
         lenient().when(eventRepo.save(any())).thenAnswer(i -> i.getArgument(0));
         lenient().when(participationRepo.save(any())).thenAnswer(i -> i.getArgument(0));
+        // Défaut tests : aucun filtre tenant (équiv. SUPERADMIN) → comportement legacy non scopé.
+        lenient().when(tenantScope.visibleTenantIdsOrNull()).thenReturn(null);
+        lenient().when(tenantScope.canSeeTenant(any())).thenReturn(true);
     }
 
     @AfterEach
@@ -102,12 +109,56 @@ class EventServiceTest {
         assertThat(service.findAll(UUID.randomUUID(), UUID.randomUUID(), true, 0, 20).getContent()).isEmpty();
     }
 
+    // ─── Périmètre tenant (fuite de périmètre) ───────────────────────────────────
+
+    @Test
+    void findAll_tenantIdOutOfScope_throwsForbidden() {
+        // Le client passe un tenantId d'un programme dont il n'est pas membre → 403 (pas d'exposition).
+        when(tenantScope.canSeeTenant(any())).thenReturn(false);
+        assertThatThrownBy(() -> service.findAll(UUID.randomUUID(), null, null, 0, 20))
+            .isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void findAll_noTenantId_scopedByVisibleSet() {
+        // Sans tenantId : la requête est scopée au périmètre visible (set non-null) → délègue au repo.
+        when(tenantScope.visibleTenantIdsOrNull()).thenReturn(Set.of(UUID.randomUUID()));
+        when(eventRepo.findAll(any(Specification.class), any(Pageable.class))).thenReturn(Page.empty());
+        assertThat(service.findAll(null, null, null, 0, 20).getContent()).isEmpty();
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void findAll_superadminBypass_noTenantFilter() {
+        // SUPERADMIN : visibleTenantIdsOrNull()==null → aucun filtre tenant, délègue.
+        when(tenantScope.visibleTenantIdsOrNull()).thenReturn(null);
+        when(eventRepo.findAll(any(Specification.class), any(Pageable.class))).thenReturn(Page.empty());
+        assertThat(service.findAll(null, null, null, 0, 20).getContent()).isEmpty();
+    }
+
     @Test
     void findById_notFoundAndFound() {
         when(eventRepo.findById(any())).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.findById(UUID.randomUUID())).isInstanceOf(NotFoundException.class);
         when(eventRepo.findById(eventId)).thenReturn(Optional.of(event(null)));
         assertThat(service.findById(eventId)).isNotNull();
+    }
+
+    @Test
+    void findById_outOfScope_throwsNotFound() {
+        // Event d'un tenant hors périmètre → 404 (pas de divulgation d'existence).
+        when(eventRepo.findById(eventId)).thenReturn(Optional.of(event(null)));
+        when(tenantScope.canSeeTenant(any())).thenReturn(false);
+        assertThatThrownBy(() -> service.findById(eventId)).isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void findParticipations_outOfScope_throwsNotFound() {
+        // La liste des inscrits (PII) d'un event hors périmètre ne doit pas fuiter → 404.
+        when(eventRepo.findById(eventId)).thenReturn(Optional.of(event(null)));
+        when(tenantScope.canSeeTenant(any())).thenReturn(false);
+        assertThatThrownBy(() -> service.findParticipations(eventId)).isInstanceOf(NotFoundException.class);
     }
 
     @Test
@@ -144,6 +195,8 @@ class EventServiceTest {
 
     @Test
     void findParticipations_byEvent_andByUser_map() {
+        // findParticipations charge l'event pour le contrôle de périmètre (canSeeTenant) avant la liste.
+        when(eventRepo.findById(eventId)).thenReturn(Optional.of(event(null)));
         when(participationRepo.findAllByEventIdFetchUser(eventId)).thenReturn(List.of(participation("going")));
         when(participationRepo.findAllByUserIdFetchUser(userId)).thenReturn(List.of(participation("maybe")));
         var byEvent = service.findParticipations(eventId);
@@ -222,9 +275,44 @@ class EventServiceTest {
 
     @Test
     void eliteActiveUpcoming_andAllElite_map() {
+        // Défaut SUPERADMIN (visibleTenantIdsOrNull==null) → aucun filtre, tous les events passent.
         when(eventRepo.findEliteActiveUpcoming()).thenReturn(List.of(event(null)));
         when(eventRepo.findAllElite()).thenReturn(List.of(event(null)));
         assertThat(service.findEliteActiveUpcoming()).hasSize(1);
         assertThat(service.findAllElite()).hasSize(1);
+    }
+
+    /** Event de tenant T (tenantId renseigné), pour tester le filtre de périmètre des listes Elite. */
+    private Event eliteEvent(UUID tenantId) {
+        Event e = new Event(UUID.randomUUID(), new Tenant(tenantId, "T", "t"), "Gala", Instant.now().plusSeconds(86400));
+        ReflectionTestUtils.setField(e, "tenantId", tenantId);
+        return e;
+    }
+
+    @Test
+    void eliteLists_filteredByVisibleScope() {
+        // Caller membre d'un seul tenant visible : seuls les events de ce tenant sont retournés ;
+        // ceux d'un programme hors périmètre sont filtrés (fuite de périmètre fermée).
+        UUID visibleTenant = UUID.randomUUID();
+        UUID hiddenTenant = UUID.randomUUID();
+        when(tenantScope.visibleTenantIdsOrNull()).thenReturn(Set.of(visibleTenant));
+        when(eventRepo.findEliteActiveUpcoming())
+            .thenReturn(List.of(eliteEvent(visibleTenant), eliteEvent(hiddenTenant)));
+        when(eventRepo.findAllElite())
+            .thenReturn(List.of(eliteEvent(visibleTenant), eliteEvent(hiddenTenant)));
+        assertThat(service.findEliteActiveUpcoming()).hasSize(1);
+        assertThat(service.findAllElite()).hasSize(1);
+    }
+
+    @Test
+    void eliteLists_superadminBypass_returnsAll() {
+        // SUPERADMIN (visible==null) → aucun filtre, tous les events (multi-tenant) sont retournés.
+        when(tenantScope.visibleTenantIdsOrNull()).thenReturn(null);
+        when(eventRepo.findEliteActiveUpcoming())
+            .thenReturn(List.of(eliteEvent(UUID.randomUUID()), eliteEvent(UUID.randomUUID())));
+        when(eventRepo.findAllElite())
+            .thenReturn(List.of(eliteEvent(UUID.randomUUID()), eliteEvent(UUID.randomUUID())));
+        assertThat(service.findEliteActiveUpcoming()).hasSize(2);
+        assertThat(service.findAllElite()).hasSize(2);
     }
 }

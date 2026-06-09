@@ -108,6 +108,55 @@ class EventFlowIntegrationTest extends AbstractIntegrationTest {
             HttpMethod.GET, jwtEntity(adminBearer()), String.class).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
+    /**
+     * Fuite de périmètre tenant (sécurité) — la liste {@code GET /api/events?tenantId=…} ne doit pas
+     * exposer un programme (palmeraie/HOMU) dont le caller n'est pas membre actif.
+     *
+     * <ul>
+     *   <li>CLIENT oneclick NON-MEMBRE de palmeraie, qui passe {@code tenantId=palmeraie} → 403
+     *       (ForbiddenException : le param tenantId est hors de son périmètre visible).</li>
+     *   <li>Après ajout d'une membership palmeraie active, le même {@code tenantId=palmeraie} → 200.</li>
+     *   <li>SUPERADMIN (admin) → 200 quel que soit le tenantId (bypass cross-tenant).</li>
+     *   <li>Sans tenantId, le CLIENT reçoit 200 (liste scopée à son périmètre visible côté service).</li>
+     * </ul>
+     */
+    @Test
+    void findAll_tenantIdOutOfScope_403_thenMemberOk() throws Exception {
+        String admin = adminBearer();
+        String palmeraieTenant = jdbc.queryForObject(
+            "SELECT id::text FROM tenants WHERE slug = 'palmeraie' LIMIT 1", String.class);
+
+        String client = createClient(admin);            // home oneclick, PAS membre palmeraie
+        String clientBearer = bearerCl(client);
+
+        // NON-MEMBRE → tenantId=palmeraie hors périmètre → 403.
+        assertThat(restTemplate.exchange(url("/api/events?tenantId=" + palmeraieTenant),
+            HttpMethod.GET, jwtEntity(clientBearer), String.class).getStatusCode())
+            .as("CLIENT non-membre palmeraie → tenantId palmeraie → 403").isEqualTo(HttpStatus.FORBIDDEN);
+
+        // SUPERADMIN → bypass cross-tenant → 200.
+        assertThat(restTemplate.exchange(url("/api/events?tenantId=" + palmeraieTenant),
+            HttpMethod.GET, jwtEntity(admin), String.class).getStatusCode())
+            .as("admin bypass cross-tenant → 200").isEqualTo(HttpStatus.OK);
+
+        // Sans tenantId : la liste est scopée au périmètre visible → 200 (pas de 403).
+        assertThat(restTemplate.exchange(url("/api/events?page=0&size=5"),
+            HttpMethod.GET, jwtEntity(clientBearer), String.class).getStatusCode())
+            .as("CLIENT liste sans tenantId → scopée → 200").isEqualTo(HttpStatus.OK);
+
+        // Devient MEMBRE actif palmeraie → le même tenantId=palmeraie est désormais dans son périmètre → 200.
+        // 1er load du cache après seed → reflète la membership (jamais authentifié auparavant pour ce token).
+        seedMembership(client);
+        String clientBearerMember = bearerCl(client);
+        assertThat(restTemplate.exchange(url("/api/events?tenantId=" + palmeraieTenant),
+            HttpMethod.GET, jwtEntity(clientBearerMember), String.class).getStatusCode())
+            .as("CLIENT membre palmeraie → tenantId palmeraie → 200").isEqualTo(HttpStatus.OK);
+
+        // self-clean
+        jdbc.update("DELETE FROM tenant_memberships WHERE user_id = ?::uuid", UUID.fromString(client));
+        restTemplate.exchange(url("/api/users/" + client), HttpMethod.DELETE, jwtEntity(admin), String.class);
+    }
+
     @Test
     void createEvent_invalidBody_400() {
         assertThat(restTemplate.exchange(url("/api/events"), HttpMethod.POST,

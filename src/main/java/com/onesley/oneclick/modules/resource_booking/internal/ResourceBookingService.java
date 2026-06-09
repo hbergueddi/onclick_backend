@@ -7,6 +7,7 @@ import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.exception.UnprocessableException;
 import com.onesley.oneclick.security.SecurityHelper;
+import com.onesley.oneclick.security.TenantScope;
 import com.onesley.oneclick.shared.events.ResourceBookingStatusChangedEvent;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -72,6 +73,16 @@ public class ResourceBookingService {
      */
     private final UserDirectoryApi userDirectory;
 
+    /**
+     * Périmètre tenant <b>visible</b> du caller (module {@code security}, déjà autorisé) — ferme la
+     * fuite de périmètre sur les <b>listes/lectures de découverte</b> client-facing (ressources +
+     * tarifs + créneaux occupés). Un client « oneclick » non-membre d'un programme (PCC/HOMU) ne
+     * doit JAMAIS voir/probe les ressources d'un tenant dont il n'est pas membre actif. Le bypass
+     * SUPERADMIN ({@link TenantScope#visibleTenantIdsOrNull()} == {@code null}) n'applique aucun
+     * filtre. N'IMPACTE PAS l'ABAC self-scope des bookings (un membre ne voit déjà que les siens).
+     */
+    private final TenantScope tenantScope;
+
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -88,21 +99,39 @@ public class ResourceBookingService {
     // ─── Resources ───────────────────────────────────────────────────────────
 
     public Page<ResourceDto> findAllResources(UUID tenantId, String resourceType, Boolean enabledOnly, int page, int size) {
+        // Périmètre tenant (fuite de périmètre) : un tenantId explicite n'est honoré que si le
+        // caller peut le voir ({tenant public} ∪ memberships actives) ; sinon 403 (le client
+        // ne « devine » jamais les ressources d'un programme dont il n'est pas membre).
+        if (tenantId != null && !tenantScope.canSeeTenant(tenantId)) {
+            throw new ForbiddenException(
+                "Accès interdit : ce programme ne fait pas partie de votre périmètre");
+        }
         Specification<Resource> spec = (root, q, cb) -> cb.isNull(root.get("deletedAt"));
         if (tenantId != null)     spec = spec.and((root, q, cb) -> cb.equal(root.get("tenantId"), tenantId));
         if (resourceType != null) spec = spec.and((root, q, cb) -> cb.equal(root.get("resourceType"), resourceType));
         if (Boolean.TRUE.equals(enabledOnly)) {
             spec = spec.and((root, q, cb) -> cb.isTrue(root.get("enabled")));
         }
+        // Sans tenantId explicite : scoper la liste au périmètre visible. SUPERADMIN (null) →
+        // aucun filtre (le set inclut toujours le tenant public, donc jamais vide pour un client).
+        Set<UUID> visible = tenantScope.visibleTenantIdsOrNull();
+        if (visible != null) {
+            final Set<UUID> scoped = visible;
+            spec = spec.and((root, q, cb) -> root.get("tenantId").in(scoped));
+        }
         return resourceRepo.findAll(spec, PageRequest.of(page, size, Sort.by("name").ascending()))
             .map(Resource::toDto);
     }
 
     public ResourceDto findResourceById(UUID id) {
-        return resourceRepo.findById(id)
-            .filter(r -> r.getDeletedAt() == null)
-            .orElseThrow(() -> new NotFoundException("Resource", id))
-            .toDto();
+        Resource r = resourceRepo.findById(id)
+            .filter(x -> x.getDeletedAt() == null)
+            .orElseThrow(() -> new NotFoundException("Resource", id));
+        // Hors périmètre : 404 (ne pas divulguer l'existence d'une ressource d'un programme non accessible).
+        if (!tenantScope.canSeeTenant(r.getTenantId())) {
+            throw new NotFoundException("Resource", id);
+        }
+        return r.toDto();
     }
 
     @Transactional
@@ -126,6 +155,9 @@ public class ResourceBookingService {
     // ─── Pricings ────────────────────────────────────────────────────────────
 
     public List<PricingDto> findPricingsByResource(UUID resourceId) {
+        // Découverte tarifaire d'une ressource : gate par le tenant de la ressource (hors périmètre
+        // → 404, on ne divulgue pas l'existence/les tarifs d'un programme non accessible).
+        requireResourceInScope(resourceId);
         return pricingRepo.findAllByResourceId(resourceId).stream().map(ResourcePricing::toDto).toList();
     }
 
@@ -353,6 +385,10 @@ public class ResourceBookingService {
      * contrôleur) peut consulter la disponibilité, mais ne voit jamais QUI a réservé.</p>
      */
     public List<BusySlotDto> findBusySlots(UUID resourceId, LocalDate date) {
+        // Disponibilité d'une ressource : gate par le tenant de la ressource — un non-membre ne
+        // doit pas pouvoir sonder les créneaux (et donc l'existence/l'usage) d'un programme PCC/HOMU
+        // dont il n'est pas membre. Hors périmètre → 404.
+        requireResourceInScope(resourceId);
         Instant from = date.atStartOfDay(ZoneOffset.UTC).toInstant();
         Instant to = date.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant();
         return bookingRepo.findActiveInRange(resourceId, from, to, OCCUPYING_STATUSES).stream()
@@ -361,6 +397,22 @@ public class ResourceBookingService {
     }
 
     // ─── ABAC helpers ──────────────────────────────────────────────────────────
+
+    /**
+     * Périmètre tenant (fuite de périmètre) pour les lectures de découverte rattachées à une
+     * ressource (tarifs, créneaux occupés) : charge la ressource (non soft-deleted) et vérifie que
+     * son tenant est dans le périmètre visible du caller ({@link TenantScope#canSeeTenant(UUID)}).
+     * Hors périmètre → {@link NotFoundException} (404) : on ne divulgue pas l'existence d'une
+     * ressource d'un programme non accessible. SUPERADMIN (cross-tenant) → aucun filtre.
+     */
+    private void requireResourceInScope(UUID resourceId) {
+        Resource r = resourceRepo.findById(resourceId)
+            .filter(x -> x.getDeletedAt() == null)
+            .orElseThrow(() -> new NotFoundException("Resource", resourceId));
+        if (!tenantScope.canSeeTenant(r.getTenantId())) {
+            throw new NotFoundException("Resource", resourceId);
+        }
+    }
 
     /**
      * Résout l'organisateur d'un booking selon l'appelant : un membre (non staff/admin)

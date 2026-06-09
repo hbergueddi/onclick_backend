@@ -52,6 +52,7 @@ class ResourceBookingServiceTest {
     @Mock ResourceBookingGuestRepository guestRepo;
     @Mock org.springframework.context.ApplicationEventPublisher eventPublisher;
     @Mock com.onesley.oneclick.core.identity.api.UserDirectoryApi userDirectory;
+    @Mock com.onesley.oneclick.security.TenantScope tenantScope;
     @Mock EntityManager em;
     /** Horloge fixe → la fenêtre H-2 est déterministe (les bookings de test démarrent à +1h..+2h). */
     private final java.time.Clock fixedClock = java.time.Clock.fixed(Instant.now(), java.time.ZoneOffset.UTC);
@@ -59,8 +60,12 @@ class ResourceBookingServiceTest {
 
     @BeforeEach
     void setup() {
-        service = new ResourceBookingService(resourceRepo, pricingRepo, bookingRepo, guestRepo, fixedClock, eventPublisher, userDirectory);
+        service = new ResourceBookingService(resourceRepo, pricingRepo, bookingRepo, guestRepo, fixedClock, eventPublisher, userDirectory, tenantScope);
         ReflectionTestUtils.setField(service, "entityManager", em);
+        // Comportement legacy non scopé par défaut (SUPERADMIN-like) : aucun filtre tenant,
+        // toute ressource est visible. Les tests de scoping surchargent ces stubs localement.
+        lenient().when(tenantScope.visibleTenantIdsOrNull()).thenReturn(null);
+        lenient().when(tenantScope.canSeeTenant(any())).thenReturn(true);
         lenient().when(em.getReference(eq(Tenant.class), any())).thenReturn(new Tenant(UUID.randomUUID(), "T", "t"));
         lenient().when(em.getReference(eq(User.class), any())).thenReturn(new User(UUID.randomUUID(), null, "u@x.ma", "h", "U", "U"));
         lenient().when(em.getReference(eq(Resource.class), any())).thenReturn(resource());
@@ -123,6 +128,8 @@ class ResourceBookingServiceTest {
 
     @Test
     void pricings_findAndCreate() {
+        // findPricingsByResource gate désormais la ressource via TenantScope → stub findById.
+        when(resourceRepo.findById(any())).thenReturn(Optional.of(resource()));
         when(pricingRepo.findAllByResourceId(any())).thenReturn(List.of(pricing()));
         assertThat(service.findPricingsByResource(UUID.randomUUID())).hasSize(1);
         assertThat(service.createPricing(new PricingCreateDto(UUID.randomUUID(), "90min", new BigDecimal("200"), 90))).isNotNull();
@@ -397,6 +404,8 @@ class ResourceBookingServiceTest {
     @Test
     void findBusySlots_mapsToStartEndOnly_withOccupyingStatuses() {
         ResourceBooking b = booking();
+        // findBusySlots gate désormais la ressource via TenantScope → stub findById.
+        when(resourceRepo.findById(any())).thenReturn(Optional.of(resource()));
         when(bookingRepo.findActiveInRange(any(), any(), any(), any())).thenReturn(List.of(b));
 
         UUID resourceId = UUID.randomUUID();
@@ -417,5 +426,76 @@ class ResourceBookingServiceTest {
         assertThat(fromC.getValue()).isEqualTo(java.time.LocalDate.of(2026, 6, 1).atStartOfDay(java.time.ZoneOffset.UTC).toInstant());
         assertThat(toC.getValue()).isEqualTo(java.time.LocalDate.of(2026, 6, 2).atStartOfDay(java.time.ZoneOffset.UTC).toInstant());
         assertThat(statusC.getValue()).containsExactlyInAnyOrder("pending", "confirmed");
+    }
+
+    // ─── Périmètre tenant (fuite de périmètre, TenantScope) ──────────────────────
+
+    @Test
+    void findAllResources_tenantIdOutOfScope_throwsForbidden() {
+        // Un tenantId explicite hors du périmètre visible du caller → 403 (le client ne « devine »
+        // jamais les ressources d'un programme PCC/HOMU dont il n'est pas membre).
+        UUID foreignTenant = UUID.randomUUID();
+        when(tenantScope.canSeeTenant(foreignTenant)).thenReturn(false);
+        assertThatThrownBy(() -> service.findAllResources(foreignTenant, null, null, 0, 20))
+            .isInstanceOf(com.onesley.oneclick.exception.ForbiddenException.class);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void findAllResources_noTenantId_scopedToVisibleSet() {
+        // Sans tenantId : la liste est scopée au périmètre visible (Specification tenantId IN (...)).
+        UUID publicTenant = UUID.randomUUID();
+        when(tenantScope.visibleTenantIdsOrNull()).thenReturn(java.util.Set.of(publicTenant));
+        when(resourceRepo.findAll(any(Specification.class), any(Pageable.class))).thenReturn(Page.empty());
+
+        assertThat(service.findAllResources(null, null, null, 0, 20).getContent()).isEmpty();
+        // La requête est bien partie avec un filtre de périmètre (visibleTenantIdsOrNull consulté).
+        verify(tenantScope).visibleTenantIdsOrNull();
+        verify(resourceRepo).findAll(any(Specification.class), any(Pageable.class));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void findAllResources_superadmin_bypassesScope() {
+        // visibleTenantIdsOrNull() == null (acteur cross-tenant) → AUCUN filtre tenant appliqué.
+        when(tenantScope.visibleTenantIdsOrNull()).thenReturn(null);
+        when(resourceRepo.findAll(any(Specification.class), any(Pageable.class))).thenReturn(Page.empty());
+        assertThat(service.findAllResources(null, null, null, 0, 20).getContent()).isEmpty();
+        verify(tenantScope).visibleTenantIdsOrNull();
+    }
+
+    @Test
+    void findResourceById_outOfScope_throwsNotFound() {
+        // Ressource existante mais hors périmètre → 404 (ne pas divulguer l'existence).
+        Resource r = resource();
+        when(resourceRepo.findById(r.getId())).thenReturn(Optional.of(r));
+        when(tenantScope.canSeeTenant(any())).thenReturn(false);
+        assertThatThrownBy(() -> service.findResourceById(r.getId()))
+            .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void findPricingsByResource_outOfScope_throwsNotFound() {
+        // Découverte tarifaire gatée par le tenant de la ressource → hors périmètre = 404.
+        Resource r = resource();
+        when(resourceRepo.findById(r.getId())).thenReturn(Optional.of(r));
+        when(tenantScope.canSeeTenant(any())).thenReturn(false);
+        assertThatThrownBy(() -> service.findPricingsByResource(r.getId()))
+            .isInstanceOf(NotFoundException.class);
+        // La grille tarifaire n'est jamais consultée pour une ressource hors périmètre.
+        org.mockito.Mockito.verify(pricingRepo, org.mockito.Mockito.never()).findAllByResourceId(any());
+    }
+
+    @Test
+    void findBusySlots_outOfScope_throwsNotFound() {
+        // Disponibilité gatée par le tenant de la ressource → un non-membre ne sonde pas les créneaux.
+        Resource r = resource();
+        when(resourceRepo.findById(r.getId())).thenReturn(Optional.of(r));
+        when(tenantScope.canSeeTenant(any())).thenReturn(false);
+        assertThatThrownBy(() -> service.findBusySlots(r.getId(), java.time.LocalDate.of(2026, 6, 1)))
+            .isInstanceOf(NotFoundException.class);
+        // Aucun créneau n'est consulté pour une ressource hors périmètre.
+        org.mockito.Mockito.verify(bookingRepo, org.mockito.Mockito.never())
+            .findActiveInRange(any(), any(), any(), any());
     }
 }

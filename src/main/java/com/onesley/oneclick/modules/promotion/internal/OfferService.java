@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.onesley.oneclick.security.SecurityHelper;
+import com.onesley.oneclick.security.TenantScope;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -36,11 +37,23 @@ public class OfferService {
     private final OfferRepository repository;
     private final OfferImpressionRepository impressionRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final TenantScope tenantScope;
 
     @PersistenceContext
     private EntityManager entityManager;
 
     public Page<OfferDto> findAll(UUID restaurantId, Boolean activeOnly, int page, int size) {
+        // Périmètre tenant (fuite de périmètre) : l'entité Offer ne mappe pas tenantId — le tenant se
+        // déduit via offers.restaurant_id → restaurants.tenant_id (source de vérité). Un client oneclick
+        // non-membre ne voit que les offres des restos de {tenant public} ∪ ses memberships. SUPERADMIN
+        // (null) → aucun filtre (finder Specification legacy non scopé).
+        Set<UUID> visible = tenantScope.visibleTenantIdsOrNull();
+        if (visible != null) {
+            return repository.findAllScoped(
+                    visible, restaurantId, Boolean.TRUE.equals(activeOnly), Instant.now(),
+                    PageRequest.of(page, size))
+                .map(Offer::toDto);
+        }
         Specification<Offer> spec = (root, q, cb) -> cb.isNull(root.get("deletedAt"));
         if (restaurantId != null) spec = spec.and((root, q, cb) -> cb.equal(root.get("restaurantId"), restaurantId));
         if (Boolean.TRUE.equals(activeOnly)) {
@@ -55,10 +68,64 @@ public class OfferService {
     }
 
     public OfferDto findById(UUID id) {
-        return repository.findById(id)
-            .filter(o -> o.getDeletedAt() == null)
-            .orElseThrow(() -> new NotFoundException("Offer", id))
-            .toDto();
+        Offer o = repository.findById(id)
+            .filter(x -> x.getDeletedAt() == null)
+            .orElseThrow(() -> new NotFoundException("Offer", id));
+        // Hors périmètre : 404 (ne pas divulguer l'existence d'une offre d'un programme non accessible).
+        // Le tenant de l'offre se résout via son restaurant (JOIN restaurants — source de vérité). Pas de
+        // requête tenant inutile pour l'acteur cross-tenant (SUPERADMIN, visibleTenantIdsOrNull()==null).
+        if (tenantScope.visibleTenantIdsOrNull() != null
+            && !tenantScope.canSeeTenant(repository.findTenantIdOfOffer(id))) {
+            throw new NotFoundException("Offer", id);
+        }
+        return o.toDto();
+    }
+
+    /**
+     * Recherche dynamique scopée au périmètre tenant — délégué par le controller {@code POST /search}.
+     *
+     * <p>Les offres n'ont pas de {@code tenant_id} filtrable côté Specification JPA : on contraint
+     * d'abord le résultat aux restaurants visibles ({@code restaurantId IN (…)}) puis on exécute la
+     * Specification utilisateur (whitelist controller). SUPERADMIN (null) → aucune contrainte (recherche
+     * globale). Si le caller n'a aucun restaurant visible → page vide (pas d'énumération cross-tenant).
+     */
+    public Page<OfferDto> search(
+        com.onesley.oneclick.search.SearchRequest req,
+        Set<String> allowedFields
+    ) {
+        Set<UUID> visible = tenantScope.visibleTenantIdsOrNull();
+        if (visible == null) {
+            // Acteur cross-tenant (SUPERADMIN) → recherche non scopée (comportement legacy).
+            return com.onesley.oneclick.search.Searchable.execute(repository, req, allowedFields, Offer::toDto);
+        }
+        List<UUID> visibleRestaurantIds = repository.findRestaurantIdsInTenants(visible);
+        if (visibleRestaurantIds.isEmpty()) {
+            return Page.empty(PageRequest.of(req.pageOrZero(), req.sizeOrDefault()));
+        }
+        Specification<Offer> userSpec =
+            com.onesley.oneclick.search.SpecificationBuilder.build(req.criteriaOrEmpty(), allowedFields);
+        Specification<Offer> scoped = (root, q, cb) -> root.get("restaurantId").in(visibleRestaurantIds);
+        Specification<Offer> spec = userSpec == null ? scoped : userSpec.and(scoped);
+        return repository.findAll(spec, buildSearchPageable(req, allowedFields)).map(Offer::toDto);
+    }
+
+    /** Pageable + tri whitelisté pour {@link #search} (calque {@code Searchable.buildPageable}). */
+    private static org.springframework.data.domain.Pageable buildSearchPageable(
+        com.onesley.oneclick.search.SearchRequest req, Set<String> allowedFields
+    ) {
+        Sort sort = Sort.unsorted();
+        String s = req.sort();
+        if (s != null && !s.isBlank()) {
+            String[] parts = s.split(",");
+            String field = parts[0].trim();
+            if (!allowedFields.contains(field)) {
+                throw new BadRequestException("sort field non autorisé : '" + field + "'. Autorisés : " + allowedFields);
+            }
+            Sort.Direction dir = (parts.length > 1 && "desc".equalsIgnoreCase(parts[1].trim()))
+                ? Sort.Direction.DESC : Sort.Direction.ASC;
+            sort = Sort.by(dir, field);
+        }
+        return PageRequest.of(req.pageOrZero(), req.sizeOrDefault(), sort);
     }
 
     @Transactional
@@ -154,6 +221,13 @@ public class OfferService {
     @Transactional
     public void recordImpression(UUID offerId, String type) {
         if (!repository.existsById(offerId)) {
+            throw new NotFoundException("Offer", offerId);
+        }
+        // Périmètre tenant : ne pas tracer (ni divulguer l'existence d') une impression sur une offre
+        // d'un programme non accessible au caller → 404. SUPERADMIN (visibleTenantIdsOrNull()==null) non
+        // restreint — et on évite la requête tenant inutile dans ce cas.
+        if (tenantScope.visibleTenantIdsOrNull() != null
+            && !tenantScope.canSeeTenant(repository.findTenantIdOfOffer(offerId))) {
             throw new NotFoundException("Offer", offerId);
         }
         String t = (type == null || type.isBlank()) ? "view" : type;
