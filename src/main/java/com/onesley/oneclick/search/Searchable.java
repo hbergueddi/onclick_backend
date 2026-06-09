@@ -43,10 +43,31 @@ public final class Searchable {
         Set<String> allowedFields,
         Function<E, D> mapper
     ) {
+        return execute(repo, req, allowedFields, mapper, null);
+    }
+
+    /**
+     * Variante avec une {@link Specification} de base <b>toujours</b> appliquée (ANDée à la spec
+     * construite depuis les critères du client) — non contournable par le {@code SearchRequest}.
+     *
+     * <p>Usage : injecter un filtre de <b>périmètre tenant</b> (les tenants visibles du caller) pour
+     * empêcher l'énumération cross-tenant via {@code POST /…/search} (fuite de périmètre). Passer
+     * {@code baseSpec == null} équivaut à la variante sans base (acteur cross-tenant / SUPERADMIN).
+     */
+    public static <E, D> Page<D> execute(
+        JpaSpecificationExecutor<E> repo,
+        SearchRequest req,
+        Set<String> allowedFields,
+        Function<E, D> mapper,
+        Specification<E> baseSpec
+    ) {
         Specification<E> spec = SpecificationBuilder.build(req.criteriaOrEmpty(), allowedFields);
         if (spec == null) {
             // Spec "always true" — JpaSpecificationExecutor n'a pas findAll(Pageable)
             spec = (root, query, cb) -> cb.conjunction();
+        }
+        if (baseSpec != null) {
+            spec = baseSpec.and(spec);
         }
         Pageable pageable = buildPageable(req, allowedFields);
         return repo.findAll(spec, pageable).map(mapper);

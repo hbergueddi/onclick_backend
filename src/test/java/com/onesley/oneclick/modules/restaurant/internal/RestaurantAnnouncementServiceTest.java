@@ -34,6 +34,8 @@ class RestaurantAnnouncementServiceTest {
 
     @Mock RestaurantAnnouncementRepository repository;
     @Mock RestaurantAccessGuard accessGuard;
+    @Mock RestaurantRepository restaurantRepository;
+    @Mock com.onesley.oneclick.security.TenantScope tenantScope;
 
     private static final Instant NOW = Instant.parse("2026-06-07T10:00:00Z");
     private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
@@ -41,11 +43,21 @@ class RestaurantAnnouncementServiceTest {
     private final UUID authorId = UUID.randomUUID();
 
     private RestaurantAnnouncementService service() {
-        return new RestaurantAnnouncementService(repository, accessGuard, clock);
+        return new RestaurantAnnouncementService(repository, accessGuard, clock, restaurantRepository, tenantScope);
+    }
+
+    /** Stub : le resto existe, son tenant est visible par le caller → getActive atteint le repo d'annonces. */
+    private void stubVisibleRestaurant() {
+        Restaurant r = new Restaurant(UUID.randomUUID(),
+            new com.onesley.oneclick.core.tenant.api.Tenant(UUID.randomUUID(), "T", "t"), "R", "C");
+        org.springframework.test.util.ReflectionTestUtils.setField(r, "tenantId", UUID.randomUUID());
+        when(restaurantRepository.findById(restaurantId)).thenReturn(Optional.of(r));
+        when(tenantScope.canSeeTenant(any())).thenReturn(true);
     }
 
     @Test
     void getActive_none_returnsNull() {
+        stubVisibleRestaurant();
         when(repository.findFirstByRestaurantIdAndExpiresAtAfterOrderByCreatedAtDesc(restaurantId, NOW))
             .thenReturn(Optional.empty());
         assertThat(service().getActive(restaurantId)).isNull();
@@ -53,6 +65,7 @@ class RestaurantAnnouncementServiceTest {
 
     @Test
     void getActive_present_returnsDto() {
+        stubVisibleRestaurant();
         RestaurantAnnouncement a = new RestaurantAnnouncement(
             UUID.randomUUID(), restaurantId, "Fermé dimanche", authorId, NOW, NOW.plus(Duration.ofHours(24)));
         when(repository.findFirstByRestaurantIdAndExpiresAtAfterOrderByCreatedAtDesc(restaurantId, NOW))

@@ -45,6 +45,8 @@ import com.onesley.oneclick.modules.restaurant.internal.Restaurant;
 import com.onesley.oneclick.modules.restaurant.internal.RestaurantCatalogService;
 import com.onesley.oneclick.modules.restaurant.internal.RestaurantRepository;
 import com.onesley.oneclick.modules.restaurant.internal.RestaurantSubResourceService;
+import com.onesley.oneclick.security.TenantScope;
+import org.springframework.data.jpa.domain.Specification;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -66,6 +68,7 @@ public class RestaurantController {
     private final UserRepository userRepository;
     private final RestaurantAccessGuard restaurantAccessGuard;
     private final RestaurantAnnouncementService announcementService;
+    private final TenantScope tenantScope;
 
     @GetMapping
     @Operation(summary = "Liste paginée des restaurants — filtres city + tenantId optionnels (PUBLIC catalogue)")
@@ -141,8 +144,15 @@ public class RestaurantController {
     @Operation(summary = "Recherche dynamique (Phase 4 §6.3) — 12 opérateurs + whitelist")
     @PreAuthorize("hasAuthority('VIEW:RESTAURANTS')")
     public PageResponse<RestaurantDto> search(@RequestBody SearchRequest req) {
+        // Périmètre tenant (fuite de périmètre) : base spec non contournable par les critères du client
+        // → un client ne peut pas énumérer les restaurants d'un programme (PCC/HOMU) hors de son
+        // périmètre via /search. SUPERADMIN (visibleTenantIdsOrNull()==null) → recherche globale.
+        java.util.Set<UUID> visible = tenantScope.visibleTenantIdsOrNull();
+        Specification<Restaurant> tenantSpec = (visible == null)
+            ? null
+            : (root, q, cb) -> root.get("tenantId").in(visible);
         return PageResponse.from(
-            Searchable.execute(restaurantRepository, req, SEARCHABLE_FIELDS, Restaurant::toDto)
+            Searchable.execute(restaurantRepository, req, SEARCHABLE_FIELDS, Restaurant::toDto, tenantSpec)
         );
     }
 

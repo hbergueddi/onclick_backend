@@ -4,6 +4,7 @@ import com.onesley.oneclick.exception.BadRequestException;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.security.RestaurantAccessGuard;
 import com.onesley.oneclick.security.SecurityHelper;
+import com.onesley.oneclick.security.TenantScope;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,9 +38,18 @@ public class RestaurantAnnouncementService {
     private final RestaurantAnnouncementRepository repository;
     private final RestaurantAccessGuard accessGuard;
     private final Clock clock;
+    private final RestaurantRepository restaurantRepository;
+    private final TenantScope tenantScope;
 
     /** Annonce active d'un resto, ou {@code null} si aucune (lecture publique). */
     public RestaurantAnnouncementDto getActive(UUID restaurantId) {
+        // Périmètre tenant (fuite de périmètre) : ne pas exposer la bannière d'un resto hors du
+        // périmètre visible du caller. SUPERADMIN → canSeeTenant renvoie true (aucune restriction).
+        UUID tenantId = restaurantRepository.findById(restaurantId)
+            .map(Restaurant::getTenantId).orElse(null);
+        if (tenantId == null || !tenantScope.canSeeTenant(tenantId)) {
+            return null;
+        }
         return repository
             .findFirstByRestaurantIdAndExpiresAtAfterOrderByCreatedAtDesc(restaurantId, clock.instant())
             .map(RestaurantAnnouncement::toDto)
