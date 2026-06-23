@@ -32,6 +32,13 @@ public interface UserDirectoryApi {
     List<UserName> namesByIds(List<UUID> userIds);
 
     /**
+     * Ids des admins plateforme actifs ({@code SUPERADMIN}) — destinataires des alertes globales
+     * (ex: contrats partenaires arrivant à expiration). Contrat typé pour les modules qui doivent
+     * notifier « les admins » sans lire les tables {@code users}/{@code roles} en SQL natif.
+     */
+    List<UUID> adminUserIds();
+
+    /**
      * Tenant d'un utilisateur actif (soft-delete exclus). Vide si introuvable/supprimé
      * OU si l'utilisateur est global (admin plateforme sans tenant).
      *

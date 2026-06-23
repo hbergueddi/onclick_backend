@@ -33,4 +33,15 @@ public class TenantDirectoryService implements TenantDirectoryApi {
                 .filter(t -> t.getDeletedAt() == null)
                 .map(Tenant::getId);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<String> slugById(UUID tenantId) {
+        if (tenantId == null) {
+            return Optional.empty();
+        }
+        return repository.findById(tenantId)
+                .filter(t -> t.getDeletedAt() == null)
+                .map(Tenant::getSlug);
+    }
 }

@@ -51,6 +51,17 @@ class StoreOnboardingFlowIntegrationTest extends AbstractIntegrationTest {
         ResponseEntity<String> decision = restTemplate.exchange(url("/api/store/onboarding/" + id + "/decision"), HttpMethod.PATCH,
             jsonJwtEntity(Map.of("status", "approved", "reviewedBy", userId()), admin), String.class);
         assertThat(decision.getStatusCode()).isEqualTo(HttpStatus.OK);
+        // BE-2 — l'approbation provisionne resto + compte gérant : self-clean par soft-delete (FK-safe).
+        var decNode = om.readTree(decision.getBody());
+        String provisionedUser = decNode.get("provisionedUserId").asText(null);
+        String provisionedResto = decNode.get("provisionedRestaurantId").asText(null);
+        if (provisionedResto != null && !"null".equals(provisionedResto)) {
+            jdbc.update("UPDATE restaurant_staffs SET deleted_at = now() WHERE restaurant_id = ?::uuid", UUID.fromString(provisionedResto));
+            jdbc.update("UPDATE restaurants SET deleted_at = now() WHERE id = ?::uuid", UUID.fromString(provisionedResto));
+        }
+        if (provisionedUser != null && !"null".equals(provisionedUser)) {
+            jdbc.update("UPDATE users SET deleted_at = now() WHERE id = ?::uuid", UUID.fromString(provisionedUser));
+        }
         jdbc.update("DELETE FROM store_onboarding_requests WHERE id = ?::uuid", UUID.fromString(id)); // self-clean
     }
 

@@ -44,13 +44,20 @@ public class OfferService {
 
     public Page<OfferDto> findAll(UUID restaurantId, Boolean activeOnly, int page, int size) {
         // Périmètre tenant (fuite de périmètre) : l'entité Offer ne mappe pas tenantId — le tenant se
-        // déduit via offers.restaurant_id → restaurants.tenant_id (source de vérité). Un client oneclick
-        // non-membre ne voit que les offres des restos de {tenant public} ∪ ses memberships. SUPERADMIN
-        // (null) → aucun filtre (finder Specification legacy non scopé).
-        Set<UUID> visible = tenantScope.visibleTenantIdsOrNull();
-        if (visible != null) {
+        // déduit via offers.restaurant_id → restaurants.tenant_id (source de vérité).
+        //  • SANS restaurantId = flux Promos GÉNÉRIQUE → tenant public « oneclick » UNIQUEMENT : les
+        //    offres d'un programme (PCC/HOMU) ne remontent jamais dans le flux promos grand public,
+        //    même pour un membre (son contenu de club passe par le reveal / un resto précis).
+        //  • AVEC restaurantId = offres d'UN resto précis (Spotlight / reveal) → périmètre VISIBLE
+        //    (oneclick ∪ memberships) : un membre voit les offres de son resto programme ; un
+        //    non-membre n'obtient rien (resto programme hors de son périmètre).
+        //  • SUPERADMIN (scope null) → aucun filtre. Même règle que le catalogue restaurants.
+        Set<UUID> scope = (restaurantId != null)
+                ? tenantScope.visibleTenantIdsOrNull()
+                : tenantScope.publicCatalogScopeOrNull();
+        if (scope != null) {
             return repository.findAllScoped(
-                    visible, restaurantId, Boolean.TRUE.equals(activeOnly), Instant.now(),
+                    scope, restaurantId, Boolean.TRUE.equals(activeOnly), Instant.now(),
                     PageRequest.of(page, size))
                 .map(Offer::toDto);
         }
@@ -155,11 +162,24 @@ public class OfferService {
             "SELECT tenant_id FROM restaurants WHERE id = ?")
             .setParameter(1, dto.restaurantId())
             .getSingleResult();
+        // CH-1 — si l'offre est poussée (push_notify), résoudre les clients qui ont mis ce resto en
+        // favori → notif + push « nouvelle offre ». Résolution côté module promotion (SQL natif sur
+        // user_favorites), portée sur l'event (frontière Modulith). Liste vide si push_notify=false.
+        java.util.List<UUID> favoriteRecipientIds = java.util.List.of();
+        if (saved.isPushNotify()) {
+            @SuppressWarnings("unchecked")
+            java.util.List<UUID> favs = entityManager.createNativeQuery(
+                    "SELECT user_id FROM user_favorites WHERE restaurant_id = ?")
+                .setParameter(1, dto.restaurantId())
+                .getResultList();
+            favoriteRecipientIds = favs;
+        }
         eventPublisher.publishEvent(new OfferCreatedEvent(
             saved.getId(), dto.restaurantId(), tenantId,
             dto.title(), dto.description(),
             dto.startsAt(), dto.expiresAt(),
-            dto.discountPct(), dto.discountAmount()
+            dto.discountPct(), dto.discountAmount(),
+            favoriteRecipientIds
         ));
 
         return saved.toDto();

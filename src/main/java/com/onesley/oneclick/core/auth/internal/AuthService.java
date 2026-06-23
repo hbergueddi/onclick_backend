@@ -4,13 +4,17 @@ import com.onesley.oneclick.core.identity.api.Role;
 import com.onesley.oneclick.core.identity.api.User;
 import com.onesley.oneclick.core.identity.api.UserRepository;
 import com.onesley.oneclick.core.identity.internal.RoleRepository;
+import com.onesley.oneclick.core.identity.internal.UserService;
 import com.onesley.oneclick.core.tenant.api.Tenant;
 import com.onesley.oneclick.core.tenant.api.TenantAdminInviteApi;
 import com.onesley.oneclick.core.tenant.internal.TenantRepository;
 import com.onesley.oneclick.exception.BadRequestException;
+import com.onesley.oneclick.exception.EmailNotVerifiedException;
 import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.security.JwtIssuer;
+import com.onesley.oneclick.shared.events.OtpRequestedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -58,8 +62,10 @@ public class AuthService {
     private final RoleRepository roleRepository;
     private final TenantAdminInviteApi tenantAdminInviteApi;
     private final AccountActivationService accountActivationService;
+    private final UserService userService;
     private final PasswordEncoder passwordEncoder;
     private final JwtIssuer jwtIssuer;
+    private final ApplicationEventPublisher eventPublisher;
 
     // ─── Login (email + password) ──────────────────────────────────────────────
     @Transactional
@@ -88,6 +94,15 @@ public class AuthService {
             }
             if (!passwordEncoder.matches(rawPassword, user.getPasswordHash())) {
                 throw new BadRequestException("Email ou mot de passe invalide");
+            }
+
+            // Vérification email (P1 enrollment) — APRÈS le contrôle mot de passe pour
+            // ne pas révéler l'état d'un compte à un attaquant qui ignore le mot de passe
+            // (anti-énumération). 403 slug=email-not-verified → le client route vers l'OTP.
+            if (User.STATUS_PENDING_EMAIL_VERIFICATION.equals(user.getStatus())) {
+                throw new EmailNotVerifiedException(
+                    "Votre adresse email n'est pas encore vérifiée. Saisissez le code reçu par email."
+                );
             }
 
             // Tenant isolation — si le frontend transmet le slug de son app,
@@ -129,7 +144,7 @@ public class AuthService {
                 refreshOpaque, refreshExp,
                 user.getId(), user.getEmail(),
                 user.getFirstName(), user.getLastName(),
-                roleCode
+                roleCode, user.isPasswordMustChange()
             );
         } finally {
             // Audit anti-brute-force (toujours, même sur échec)
@@ -192,7 +207,7 @@ public class AuthService {
             refreshOpaque, refreshExp,
             user.getId(), user.getEmail(),
             user.getFirstName(), user.getLastName(),
-            roleCode);
+            roleCode, user.isPasswordMustChange());
     }
 
     /**
@@ -237,7 +252,7 @@ public class AuthService {
             refreshOpaque, refreshExp,
             user.getId(), user.getEmail(),
             user.getFirstName(), user.getLastName(),
-            roleCode);
+            roleCode, user.isPasswordMustChange());
     }
 
     // ─── Refresh (rotation) ────────────────────────────────────────────────────
@@ -267,7 +282,8 @@ public class AuthService {
         return new LoginResult(
             access.token(), access.expiresAt(),
             newRefresh, newExp,
-            user.getId(), user.getEmail(), user.getFirstName(), user.getLastName(), roleCode
+            user.getId(), user.getEmail(), user.getFirstName(), user.getLastName(), roleCode,
+            user.isPasswordMustChange()
         );
     }
 
@@ -304,8 +320,22 @@ public class AuthService {
         Instant expiresAt = Instant.now().plusSeconds(600);
         OtpRequest otp = new OtpRequest(UUID.randomUUID(), user, purpose, code, expiresAt);
         otpRepo.save(otp);
-        log.info("OTP issued for {} (purpose={}) : code={} (DEV ONLY — TODO send via SMS/email)", email, purpose, code);
-        // Note : en prod, brancher un OtpDelivery service (SMS Twilio / email Resend)
+
+        // Livraison du code par email (P1 enrollment). Frontière Modulith : core.auth ne peut
+        // pas dépendre de core.email → on publie un event APRÈS commit, consommé par
+        // OtpEmailListener (Resend). Le tenant porte le branding ; null pour un user global.
+        String tenantSlug = "default";
+        String tenantName = "OneClick";
+        Tenant t = user.getTenant();
+        if (t != null) {
+            if (t.getSlug() != null && !t.getSlug().isBlank()) tenantSlug = t.getSlug();
+            if (t.getName() != null && !t.getName().isBlank()) tenantName = t.getName();
+        }
+        eventPublisher.publishEvent(new OtpRequestedEvent(
+            otp.getId(), user.getId(), user.getEmail(), user.getFirstName(),
+            purpose, code, tenantSlug, tenantName, expiresAt, Instant.now()));
+
+        log.info("OTP issued for {} (purpose={}) — delivery via OtpRequestedEvent (email/SMS par canal)", email, purpose);
         return new OtpResult(otp.getId(), expiresAt);
     }
 
@@ -324,14 +354,80 @@ public class AuthService {
         }
         otp.markVerified();
         otpRepo.save(otp);
+
+        // Activation du compte au signup (P1 enrollment) : un OTP signup/verify_email validé
+        // lève le gate email du compte (pending_email_verification → active) pour autoriser le
+        // login. Pas d'éviction de cache nécessaire : un compte pending n'a jamais été authentifié
+        // (login gaté), donc jamais chargé dans le cache userDetails ; il le sera frais au 1er login.
+        if ((OtpRequest.PURPOSE_SIGNUP.equals(otp.getPurpose())
+                || OtpRequest.PURPOSE_VERIFY_EMAIL.equals(otp.getPurpose()))) {
+            User u = otp.getUser();
+            if (u != null && User.STATUS_PENDING_EMAIL_VERIFICATION.equals(u.getStatus())) {
+                u.setStatus(User.STATUS_ACTIVE);
+                userRepo.save(u);
+                log.info("[otp/verify] account activated user={} (email verified)", u.getId());
+            }
+        }
         return true;
+    }
+
+    // ─── Mot de passe oublié (Phase A — OTP code par email, reconnexion forcée) ──
+    /**
+     * Étape 1 : l'utilisateur demande un code de réinitialisation pour son email.
+     *
+     * <p><b>Anti-énumération</b> : ne révèle JAMAIS si l'email correspond à un compte.
+     * Si le compte existe → génère un OTP {@code reset_password} (envoyé par email via
+     * {@link OtpRequestedEvent} → OtpEmailListener/Resend). Sinon → no-op silencieux.
+     * Le contrôleur renvoie un 202 générique dans tous les cas.</p>
+     */
+    @Transactional
+    public void requestPasswordReset(String email) {
+        if (userRepo.findByEmailIgnoreCase(email).isEmpty()) {
+            log.info("[forgot-password] aucun compte pour cet email — no-op (anti-énumération)");
+            return;
+        }
+        // Réutilise la génération OTP existante (persistance + publication de l'event email).
+        requestOtp(email, OtpRequest.PURPOSE_RESET_PASSWORD);
+    }
+
+    /**
+     * Étape 2 : vérifie le code reçu par email et réinitialise le mot de passe.
+     *
+     * <p>Le client ne connaît pas l'{@code otpId} (l'étape 1 ne le renvoie pas — anti-énum) :
+     * on retrouve le dernier OTP {@code reset_password} non vérifié du user (via email) et on
+     * compare le code. <b>Anti-énumération</b> : compte inexistant / aucun OTP / expiré / code
+     * faux → même erreur générique {@code "Code invalide ou expiré"} (BadRequest 400).</p>
+     *
+     * <p>Sécurité : OTP usage-unique ({@code verifiedAt}), atomique ({@code @Transactional} —
+     * un échec en aval rollback le {@code markVerified}, donc le code reste utilisable) ; refus
+     * de réutiliser l'ancien mot de passe ({@link UserService#resetPassword}) ; <b>reconnexion
+     * forcée</b> : toutes les sessions (refresh tokens) sont révoquées, aucun token renvoyé.</p>
+     */
+    @Transactional
+    public void resetPassword(String email, String code, String newPassword) {
+        User user = userRepo.findByEmailIgnoreCase(email).orElse(null);
+        OtpRequest otp = (user == null) ? null
+            : otpRepo.findTopByUserIdAndPurposeAndVerifiedAtIsNullOrderByCreatedAtDesc(
+                  user.getId(), OtpRequest.PURPOSE_RESET_PASSWORD).orElse(null);
+
+        if (user == null || otp == null || otp.isExpired() || !otp.getCode().equals(code)) {
+            throw new BadRequestException("Code invalide ou expiré");
+        }
+
+        otp.markVerified();           // usage unique (rollback automatique si la suite échoue)
+        otpRepo.save(otp);
+        userService.resetPassword(user.getId(), newPassword); // set hash + evict cache + refuse réutilisation
+        int revoked = revokeAllForUser(user.getId());         // reconnexion forcée : tue toutes les sessions
+        log.info("[reset-password] mot de passe réinitialisé user={} ({} sessions révoquées)", user.getId(), revoked);
     }
 
     // ─── DTOs ──────────────────────────────────────────────────────────────────
     public record LoginResult(
         String accessToken, Instant accessExpiresAt,
         String refreshToken, Instant refreshExpiresAt,
-        UUID userId, String email, String firstName, String lastName, String role
+        UUID userId, String email, String firstName, String lastName, String role,
+        // BE-3 — true si le compte doit définir un nouveau mot de passe au 1er login (mdp temporaire).
+        boolean passwordMustChange
     ) {}
 
     public record OtpResult(UUID otpId, Instant expiresAt) {}

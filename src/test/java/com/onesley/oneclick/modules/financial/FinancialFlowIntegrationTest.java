@@ -240,6 +240,75 @@ class FinancialFlowIntegrationTest extends AbstractIntegrationTest {
         jdbc.update("DELETE FROM invoices WHERE id = ?::uuid", UUID.fromString(invoiceId));
     }
 
+    /**
+     * P1.8 — le filtre {@code reason} isole les lignes wallet d'un motif (ex. commissions de
+     * parrainage). 200 pour le propriétaire du resto ; ne renvoie QUE les lignes 'referral_commission' ;
+     * 403 cross-resto et 403 sans VIEW:FINANCIAL (CLIENT).
+     */
+    @Test
+    void walletTx_reasonFilter_isolatesAndScopes() throws Exception {
+        String admin = adminBearer();
+        // Propriétaire réel d'un resto (RESTAURATEUR staffé) → VIEW:FINANCIAL + ABAC sur SON resto.
+        Map<String, Object> row = jdbc.queryForMap(
+            "SELECT u.id::text AS uid, rs.restaurant_id::text AS rid "
+            + "FROM users u JOIN roles r ON r.id = u.role_id "
+            + "JOIN restaurant_staffs rs ON rs.user_id = u.id "
+            + "WHERE r.code = 'RESTAURATEUR' AND rs.deleted_at IS NULL AND u.deleted_at IS NULL "
+            + "ORDER BY u.id LIMIT 1");
+        String ownerId = (String) row.get("uid");
+        String rid = (String) row.get("rid");
+        String ownerBearer = jwtIssuer.issueAccessToken(UUID.fromString(ownerId), "RESTAURATEUR").token();
+
+        // 2 lignes referral_commission + 1 ligne d'un autre motif sur le même resto (créées via admin).
+        String id1 = createWalletTx(admin, rid, "commission", "referral_commission");
+        String id2 = createWalletTx(admin, rid, "commission", "referral_commission");
+        String id3 = createWalletTx(admin, rid, "credit", "monthly_settlement");
+        try {
+            // Filtré sur reason=referral_commission → exactement les 2 lignes referral.
+            ResponseEntity<String> filtered = restTemplate.exchange(
+                url("/api/financial/wallet-tx?restaurantId=" + rid + "&reason=referral_commission&page=0&size=50"),
+                HttpMethod.GET, jwtEntity(ownerBearer), String.class);
+            assertThat(filtered.getStatusCode()).isEqualTo(HttpStatus.OK);
+            var content = om.readTree(filtered.getBody()).get("content");
+            boolean sawId1 = false, sawId2 = false;
+            for (var n : content) {
+                // toutes les lignes renvoyées portent bien le motif referral_commission
+                assertThat(n.get("reason").asText()).isEqualTo("referral_commission");
+                String tid = n.get("id").asText();
+                if (tid.equals(id1)) sawId1 = true;
+                if (tid.equals(id2)) sawId2 = true;
+                assertThat(tid).as("la ligne d'un autre motif ne doit pas apparaître").isNotEqualTo(id3);
+            }
+            assertThat(sawId1 && sawId2).as("les 2 lignes referral présentes").isTrue();
+
+            // 403 cross-resto : un resto étranger au owner.
+            String foreignRid = jdbc.queryForObject(
+                "SELECT id::text FROM restaurants WHERE deleted_at IS NULL "
+                + "AND id NOT IN (SELECT restaurant_id FROM restaurant_staffs WHERE user_id = ?::uuid AND deleted_at IS NULL) "
+                + "LIMIT 1", String.class, ownerId);
+            assertThat(restTemplate.exchange(
+                url("/api/financial/wallet-tx?restaurantId=" + foreignRid + "&reason=referral_commission"),
+                HttpMethod.GET, jwtEntity(ownerBearer), String.class).getStatusCode())
+                .isEqualTo(HttpStatus.FORBIDDEN);
+
+            // 403 sans VIEW:FINANCIAL (CLIENT).
+            assertThat(restTemplate.exchange(
+                url("/api/financial/wallet-tx?restaurantId=" + rid + "&reason=referral_commission"),
+                HttpMethod.GET, jwtEntity(bearerForRole("CLIENT")), String.class).getStatusCode())
+                .isEqualTo(HttpStatus.FORBIDDEN);
+        } finally {
+            jdbc.update("DELETE FROM wallet_transactions WHERE id IN (?::uuid, ?::uuid, ?::uuid)",
+                UUID.fromString(id1), UUID.fromString(id2), UUID.fromString(id3));
+        }
+    }
+
+    private String createWalletTx(String admin, String rid, String type, String reason) throws Exception {
+        ResponseEntity<String> post = restTemplate.exchange(url("/api/financial/wallet-tx"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("restaurantId", rid, "type", type, "amount", 42.0, "reason", reason), admin), String.class);
+        assertThat(post.getStatusCode().is2xxSuccessful()).isTrue();
+        return om.readTree(post.getBody()).get("id").asText();
+    }
+
     @Test
     void walletTx_create() throws Exception {
         String admin = adminBearer();

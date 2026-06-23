@@ -20,6 +20,13 @@ public record OfferCreatedEvent(
     Instant startsAt,
     Instant expiresAt,
     BigDecimal discountPct,
-    BigDecimal discountAmount
+    BigDecimal discountAmount,
+    /**
+     * Destinataires « clients ayant mis ce resto en favori » (CH-1) — résolus côté
+     * {@code OfferService} (requête native sur {@code user_favorites}) et portés sur l'event,
+     * UNIQUEMENT si l'offre a {@code push_notify=true} (sinon liste vide). Frontière Modulith :
+     * {@code core.notification} n'a qu'à itérer.
+     */
+    java.util.List<UUID> favoriteRecipientIds
 ) {
 }

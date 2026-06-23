@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 393 852" width="393" height="852">
+  <defs>
+    <filter id="shFloat" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="4" stdDeviation="10" flood-color="#8A959E" flood-opacity="0.40"/></filter>
+    <filter id="shCard" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#101828" flood-opacity="0.40"/></filter>
+    <filter id="shCta" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="8" stdDeviation="7.5" flood-color="#303030" flood-opacity="0.30"/></filter>
+    <filter id="shNav" x="-50%" y="-100%" width="200%" height="300%"><feDropShadow dx="0" dy="-2" stdDeviation="12.5" flood-color="#000000" flood-opacity="0.05"/></filter>
+  </defs>
+
+  <!-- Écran + fond -->
+  <rect width="393" height="852" rx="16" fill="#F9F6F4"/>
+
+  <!-- Status bar -->
+  <text x="28" y="38" font-family="'Nunito Sans',sans-serif" font-size="15" font-weight="700" fill="#242424">9:41</text>
+  <g stroke="#242424" stroke-width="1.4" stroke-linecap="round"><path d="M333 36 v-7 M338 36 v-10 M343 36 v-13"/></g>
+  <rect x="350" y="27" width="20" height="11" rx="2.5" stroke="#242424" stroke-width="1.2" opacity="0.6"/><rect x="352" y="29" width="14" height="7" rx="1.2" fill="#242424" opacity="0.9"/>
+
+  <!-- Header titre planche -->
+  <text x="20" y="92" font-family="'Poltawski Nowy',Georgia,serif" font-size="24" font-weight="600" fill="#3B2338">Tokens sémantiques</text>
+  <text x="20" y="120" font-family="'Poltawski Nowy',Georgia,serif" font-size="24" font-weight="600" fill="#3B2338">&amp; Dark mode</text>
+  <text x="20" y="142" font-family="'Nunito Sans',sans-serif" font-size="13" fill="#808080">OneClick — Système de design</text>
+
+  <!-- ============ SECTION A : SÉMANTIQUE ============ -->
+  <text x="20" y="178" font-family="'Poltawski Nowy',Georgia,serif" font-size="16" font-weight="600" fill="#3B2338">A — Sémantique</text>
+
+  <g filter="url(#shCard)">
+    <rect x="20" y="190" width="353" height="170" rx="12" fill="#FFFFFF"/>
+  </g>
+
+  <!-- Success -->
+  <rect x="40" y="210" width="16" height="16" rx="8" fill="#00881E"/>
+  <text x="68" y="218" font-family="'Nunito Sans',sans-serif" font-size="13" font-weight="700" fill="#242424">Success</text>
+  <text x="68" y="234" font-family="'Nunito Sans',sans-serif" font-size="11" fill="#999999">Réservation confirmée</text>
+  <text x="353" y="224" text-anchor="end" font-family="'Nunito Sans',sans-serif" font-size="12" font-weight="700" fill="#666666">#00881E</text>
+  <line x1="40" y1="248" x2="353" y2="248" stroke="#EDEDED" stroke-width="1"/>
+
+  <!-- Danger -->
+  <rect x="40" y="262" width="16" height="16" rx="8" fill="#DB4545"/>
+  <text x="68" y="270" font-family="'Nunito Sans',sans-serif" font-size="13" font-weight="700" fill="#242424">Danger</text>
+  <text x="68" y="286" font-family="'Nunito Sans',sans-serif" font-size="11" fill="#999999">Erreur / annulation</text>
+  <text x="353" y="276" text-anchor="end" font-family="'Nunito Sans',sans-serif" font-size="12" font-weight="700" fill="#666666">#DB4545</text>
+  <line x1="40" y1="300" x2="353" y2="300" stroke="#EDEDED" stroke-width="1"/>
+
+  <!-- Warning -->
+  <rect x="40" y="314" width="16" height="16" rx="8" fill="#E8A33D"/>
+  <text x="68" y="322" font-family="'Nunito Sans',sans-serif" font-size="13" font-weight="700" fill="#242424">Warning</text>
+  <text x="68" y="338" font-family="'Nunito Sans',sans-serif" font-size="11" fill="#999999">En attente d'action</text>
+  <text x="353" y="328" text-anchor="end" font-family="'Nunito Sans',sans-serif" font-size="12" font-weight="700" fill="#666666">#E8A33D</text>
+
+  <!-- Info + Star (rangée compacte sous la carte) -->
+  <g filter="url(#shCard)">
+    <rect x="20" y="372" width="172" height="64" rx="12" fill="#FFFFFF"/>
+  </g>
+  <rect x="36" y="392" width="16" height="16" rx="8" fill="#8A959E"/>
+  <text x="62" y="398" font-family="'Nunito Sans',sans-serif" font-size="13" font-weight="700" fill="#242424">Info</text>
+  <text x="62" y="414" font-family="'Nunito Sans',sans-serif" font-size="11" font-weight="700" fill="#666666">#8A959E</text>
+
+  <g filter="url(#shCard)">
+    <rect x="201" y="372" width="172" height="64" rx="12" fill="#FFFFFF"/>
+  </g>
+  <path d="M229 390 l2.4 4.9 l5.4 0.8 l-3.9 3.8 l0.9 5.4 l-4.8 -2.5 l-4.8 2.5 l0.9 -5.4 l-3.9 -3.8 l5.4 -0.8 Z" fill="#FFC107"/>
+  <text x="245" y="398" font-family="'Nunito Sans',sans-serif" font-size="13" font-weight="700" fill="#242424">Star</text>
+  <text x="245" y="414" font-family="'Nunito Sans',sans-serif" font-size="11" font-weight="700" fill="#666666">#FFC107</text>
+
+  <!-- ============ SECTION B : DARK MODE ============ -->
+  <text x="20" y="472" font-family="'Poltawski Nowy',Georgia,serif" font-size="16" font-weight="600" fill="#3B2338">B — Dark mode</text>
+
+  <!-- Encart sombre -->
+  <g filter="url(#shCard)">
+    <rect x="20" y="484" width="353" height="226" rx="16" fill="#1E1119"/>
+  </g>
+
+  <!-- Ligne 1 -->
+  <rect x="40" y="504" width="22" height="22" rx="6" fill="#1E1119" stroke="#3A2A34" stroke-width="1.5"/>
+  <text x="72" y="513" font-family="'Nunito Sans',sans-serif" font-size="12" font-weight="700" fill="#F4ECEF">bg</text>
+  <text x="72" y="527" font-family="'Nunito Sans',sans-serif" font-size="11" fill="#B9A9B3">#1E1119</text>
+
+  <rect x="210" y="504" width="22" height="22" rx="6" fill="#2A1B25"/>
+  <text x="242" y="513" font-family="'Nunito Sans',sans-serif" font-size="12" font-weight="700" fill="#F4ECEF">surface</text>
+  <text x="242" y="527" font-family="'Nunito Sans',sans-serif" font-size="11" fill="#B9A9B3">#2A1B25</text>
+
+  <!-- Ligne 2 -->
+  <rect x="40" y="544" width="22" height="22" rx="6" fill="#241620"/>
+  <text x="72" y="553" font-family="'Nunito Sans',sans-serif" font-size="12" font-weight="700" fill="#F4ECEF">surfaceMuted</text>
+  <text x="72" y="567" font-family="'Nunito Sans',sans-serif" font-size="11" fill="#B9A9B3">#241620</text>
+
+  <rect x="210" y="544" width="22" height="22" rx="6" fill="#3A2A34"/>
+  <text x="242" y="553" font-family="'Nunito Sans',sans-serif" font-size="12" font-weight="700" fill="#F4ECEF">hairline</text>
+  <text x="242" y="567" font-family="'Nunito Sans',sans-serif" font-size="11" fill="#B9A9B3">#3A2A34</text>
+
+  <!-- Ligne 3 -->
+  <rect x="40" y="584" width="22" height="22" rx="6" fill="#F4ECEF"/>
+  <text x="72" y="593" font-family="'Nunito Sans',sans-serif" font-size="12" font-weight="700" fill="#F4ECEF">text.primary</text>
+  <text x="72" y="607" font-family="'Nunito Sans',sans-serif" font-size="11" fill="#B9A9B3">#F4ECEF</text>
+
+  <rect x="210" y="584" width="22" height="22" rx="6" fill="#B9A9B3"/>
+  <text x="242" y="593" font-family="'Nunito Sans',sans-serif" font-size="12" font-weight="700" fill="#F4ECEF">text.secondary</text>
+  <text x="242" y="607" font-family="'Nunito Sans',sans-serif" font-size="11" fill="#B9A9B3">#B9A9B3</text>
+
+  <!-- Ligne 4 -->
+  <rect x="40" y="624" width="22" height="22" rx="6" fill="#8E2A50"/>
+  <text x="72" y="633" font-family="'Nunito Sans',sans-serif" font-size="12" font-weight="700" fill="#F4ECEF">primary (éclairci)</text>
+  <text x="72" y="647" font-family="'Nunito Sans',sans-serif" font-size="11" fill="#B9A9B3">#8E2A50</text>
+
+  <rect x="210" y="624" width="22" height="22" rx="6" fill="#E0AF7C"/>
+  <text x="242" y="633" font-family="'Nunito Sans',sans-serif" font-size="12" font-weight="700" fill="#F4ECEF">gold</text>
+  <text x="242" y="647" font-family="'Nunito Sans',sans-serif" font-size="11" fill="#B9A9B3">#E0AF7C</text>
+
+  <!-- Aperçu carte dark mode -->
+  <rect x="40" y="668" width="313" height="26" rx="8" fill="#2A1B25"/>
+  <circle cx="56" cy="681" r="6" fill="#E0AF7C"/>
+  <text x="70" y="685" font-family="'Poltawski Nowy',Georgia,serif" font-size="12" font-weight="600" fill="#F4ECEF">Aperçu surface sombre</text>
+  <rect x="290" y="674" width="48" height="14" rx="7" fill="#8E2A50"/>
+  <text x="314" y="684" text-anchor="middle" font-family="'Nunito Sans',sans-serif" font-size="9" font-weight="700" fill="#F4ECEF">CTA</text>
+
+  <!-- ============ SECTION C : RAPPEL MARQUE ============ -->
+  <text x="20" y="730" font-family="'Poltawski Nowy',Georgia,serif" font-size="16" font-weight="600" fill="#3B2338">C — Rappel marque</text>
+
+  <!-- Bordeaux -->
+  <g filter="url(#shCard)"><rect x="20" y="740" width="113" height="86" rx="12" fill="#FFFFFF"/></g>
+  <rect x="33" y="752" width="87" height="40" rx="8" fill="#681237"/>
+  <text x="33" y="810" font-family="'Nunito Sans',sans-serif" font-size="12" font-weight="700" fill="#242424">Bordeaux</text>
+  <text x="33" y="823" font-family="'Nunito Sans',sans-serif" font-size="10" fill="#999999">#681237</text>
+
+  <!-- Champagne -->
+  <g filter="url(#shCard)"><rect x="140" y="740" width="113" height="86" rx="12" fill="#FFFFFF"/></g>
+  <rect x="153" y="752" width="87" height="40" rx="8" fill="#E0AF7C"/>
+  <text x="153" y="810" font-family="'Nunito Sans',sans-serif" font-size="12" font-weight="700" fill="#242424">Champagne</text>
+  <text x="153" y="823" font-family="'Nunito Sans',sans-serif" font-size="10" fill="#999999">#E0AF7C</text>
+
+  <!-- Crème -->
+  <g filter="url(#shCard)"><rect x="260" y="740" width="113" height="86" rx="12" fill="#FFFFFF"/></g>
+  <rect x="273" y="752" width="87" height="40" rx="8" fill="#F9F6F4" stroke="#E8DFE5" stroke-width="1"/>
+  <text x="273" y="810" font-family="'Nunito Sans',sans-serif" font-size="12" font-weight="700" fill="#242424">Crème</text>
+  <text x="273" y="823" font-family="'Nunito Sans',sans-serif" font-size="10" fill="#999999">#F9F6F4</text>
+</svg>

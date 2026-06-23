@@ -104,6 +104,11 @@ app:
       enabled: ${APP_SECURITY_OAUTH2_ENABLED:true}
     jwt-secret: ${APP_SECURITY_JWT_SECRET}
 
+  # ─── FCM : envoi réel activé en prod (override du défaut safe-by-default=false) ──
+  # Surchargeable par FCM_DISPATCH_ENABLED si besoin de couper l'envoi en incident.
+  fcm:
+    dispatch-enabled: ${FCM_DISPATCH_ENABLED:true}
+
   # ─── Rate limiting prod (Sprint G.6.1 — anti-bruteforce activé) ────────
   rate-limit:
     enabled: ${APP_RATE_LIMIT_ENABLED:true}

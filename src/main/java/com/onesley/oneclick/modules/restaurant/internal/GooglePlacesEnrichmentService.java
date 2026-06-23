@@ -160,6 +160,98 @@ public class GooglePlacesEnrichmentService {
     }
 
     /**
+     * BE-4 — autocomplétion publique pour le formulaire d'inscription resto.
+     *
+     * <p>Recherche Google Places (searchText, langue FR) et renvoie une liste <b>sanitizée</b> de
+     * {@link com.onesley.oneclick.modules.restaurant.api.PlaceSuggestionDto} (nom, adresse, tél, ville,
+     * cuisine déduite). Stub-safe : liste vide si {@code api-key} absent ou erreur HTTP (jamais
+     * d'exception propagée — l'autocomplétion est un confort, pas un bloquant du formulaire).
+     *
+     * @param query   texte saisi (nom resto / début d'adresse)
+     * @param country pays optionnel ajouté à la requête (ex. {@code Maroc}) pour cibler les résultats
+     * @param limit   nombre max de suggestions (borné 1..10)
+     */
+    public java.util.List<com.onesley.oneclick.modules.restaurant.api.PlaceSuggestionDto> searchSuggestions(
+            String query, String country, int limit) {
+        if (query == null || query.isBlank()) return List.of();
+        int max = Math.min(Math.max(limit, 1), 10);
+        if (apiKey == null || apiKey.isBlank()) {
+            log.warn("[places/search] api-key absent — stub mode, 0 suggestion");
+            return List.of();
+        }
+        try {
+            String textQuery = (country == null || country.isBlank())
+                ? query.trim() : query.trim() + " " + country.trim();
+            String body = restClient.post()
+                .uri(PLACES_TEXT_SEARCH)
+                .header("X-Goog-Api-Key", apiKey)
+                .header("X-Goog-FieldMask",
+                    "places.displayName,places.formattedAddress,places.nationalPhoneNumber," +
+                    "places.types,places.addressComponents")
+                .header("Content-Type", "application/json")
+                .body(objectMapper.writeValueAsString(Map.of(
+                    "textQuery", textQuery, "languageCode", "fr", "maxResultCount", max)))
+                .retrieve()
+                .body(String.class);
+            JsonNode resp = body == null ? null : objectMapper.readTree(body);
+            if (resp == null || !resp.has("places") || !resp.get("places").isArray()) return List.of();
+            List<com.onesley.oneclick.modules.restaurant.api.PlaceSuggestionDto> out = new ArrayList<>();
+            for (JsonNode p : resp.get("places")) {
+                out.add(toSuggestion(p));
+                if (out.size() >= max) break;
+            }
+            return out;
+        } catch (Exception e) {
+            log.warn("[places/search] échec recherche '{}' : {}", query, e.toString());
+            return List.of();
+        }
+    }
+
+    private com.onesley.oneclick.modules.restaurant.api.PlaceSuggestionDto toSuggestion(JsonNode p) {
+        String displayName = blankToNull(p.path("displayName").path("text").asText(null));
+        String address = blankToNull(p.path("formattedAddress").asText(null));
+        String phone = blankToNull(p.path("nationalPhoneNumber").asText(null));
+        return new com.onesley.oneclick.modules.restaurant.api.PlaceSuggestionDto(
+            displayName, address, phone, extractCity(p), extractCuisineFromTypes(p));
+    }
+
+    /** Ville = composant {@code locality} (sinon {@code administrative_area_level_2} en repli). */
+    static String extractCity(JsonNode p) {
+        JsonNode comps = p.path("addressComponents");
+        if (!comps.isArray()) return null;
+        String fallback = null;
+        for (JsonNode c : comps) {
+            JsonNode types = c.path("types");
+            boolean locality = false, admin2 = false;
+            if (types.isArray()) for (JsonNode t : types) {
+                String ts = t.asText();
+                if ("locality".equals(ts)) locality = true;
+                if ("administrative_area_level_2".equals(ts)) admin2 = true;
+            }
+            String text = blankToNull(c.path("longText").asText(null));
+            if (locality && text != null) return text;
+            if (admin2 && fallback == null) fallback = text;
+        }
+        return fallback;
+    }
+
+    /** Cuisine FR déduite du 1er {@code types[]} reconnu (réutilise le référentiel TYPE_TO_CUISINE). */
+    static String extractCuisineFromTypes(JsonNode p) {
+        JsonNode types = p.path("types");
+        if (!types.isArray()) return null;
+        java.util.Set<String> set = new java.util.HashSet<>();
+        for (JsonNode t : types) set.add(t.asText());
+        for (Map.Entry<String, String> e : TYPE_TO_CUISINE.entrySet()) {
+            if (set.contains(e.getKey())) return e.getValue();
+        }
+        return null;
+    }
+
+    private static String blankToNull(String s) {
+        return (s == null || s.isBlank()) ? null : s;
+    }
+
+    /**
      * Enrichit un restaurant à partir de Google Places.
      *
      * @param restaurantId UUID du resto
@@ -251,7 +343,7 @@ public class GooglePlacesEnrichmentService {
             Double lat = details.has("location") ? details.get("location").get("latitude").asDouble() : null;
             Double lng = details.has("location") ? details.get("location").get("longitude").asDouble() : null;
             String openingHoursJson = details.has("regularOpeningHours")
-                ? details.get("regularOpeningHours").toString()
+                ? toCanonicalOpeningHours(objectMapper, details.get("regularOpeningHours"))
                 : null;
 
             // Cuisine + tags depuis `types[]`, budget depuis `priceLevel`. COALESCE en SQL
@@ -311,5 +403,40 @@ public class GooglePlacesEnrichmentService {
                 "error", e.getMessage()
             );
         }
+    }
+
+    /**
+     * Convertit le bloc Google {@code regularOpeningHours} (objet brut : {@code periods} +
+     * {@code weekdayDescriptions}) vers le format canonique attendu par TOUS les clients
+     * (iOS / Android / web) : un tableau {@code [{"day":0..6,"open":"HH:MM","close":"HH:MM"}]}
+     * (day 0 = dimanche, convention Google). Sans cette conversion, le JSON Google brut n'est
+     * parsé par aucun client → horaires d'ouverture vides dans Spotlight.
+     *
+     * @return le tableau JSON canonique, ou {@code null} si aucune période exploitable.
+     */
+    static String toCanonicalOpeningHours(ObjectMapper mapper, JsonNode regular) {
+        if (regular == null || !regular.has("periods") || !regular.get("periods").isArray()) {
+            return null;
+        }
+        var arr = mapper.createArrayNode();
+        for (JsonNode p : regular.get("periods")) {
+            JsonNode open = p.get("open");
+            if (open == null || !open.has("day")) {
+                continue;
+            }
+            var node = mapper.createObjectNode();
+            node.put("day", open.get("day").asInt());
+            node.put("open", formatHourMinute(open));
+            // Période Google sans `close` ⇒ ouverture continue (24h) : on borne à la fin de journée.
+            node.put("close", p.has("close") ? formatHourMinute(p.get("close")) : "23:59");
+            arr.add(node);
+        }
+        return arr.isEmpty() ? null : arr.toString();
+    }
+
+    private static String formatHourMinute(JsonNode timeNode) {
+        int hour = timeNode.has("hour") ? timeNode.get("hour").asInt() : 0;
+        int minute = timeNode.has("minute") ? timeNode.get("minute").asInt() : 0;
+        return String.format("%02d:%02d", hour, minute);
     }
 }

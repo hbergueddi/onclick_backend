@@ -1,5 +1,6 @@
 package com.onesley.oneclick.core.notification;
 
+import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.security.SecurityHelper;
 import com.onesley.oneclick.shared.PageResponse;
 import com.onesley.oneclick.core.notification.internal.FcmPushService;
@@ -70,6 +71,9 @@ public class NotificationController {
     @PreAuthorize("hasAuthority('CREATE:NOTIFICATIONS')")
     public ResponseEntity<NotificationDto> create(@Valid @RequestBody NotificationCreateDto dto) {
         NotificationDto n = service.create(dto);
+        // create() renvoie null si le destinataire n'existe pas/plus (garde-fou FK) → 404 propre
+        // (au lieu d'une 500 sur violation de FK différée au commit).
+        if (n == null) throw new NotFoundException("User", dto.recipientUserId());
         return ResponseEntity.created(URI.create("/api/notifications/" + n.id())).body(n);
     }
 

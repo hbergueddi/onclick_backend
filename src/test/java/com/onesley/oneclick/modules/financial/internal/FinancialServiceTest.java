@@ -346,7 +346,71 @@ class FinancialServiceTest {
 
         assertThat(service.findAllContracts(UUID.randomUUID(), "active", 0, 20).getContent()).isEmpty();
         assertThat(service.findAllInvoices(UUID.randomUUID(), "paid", 0, 20).getContent()).isEmpty();
-        assertThat(service.findAllWalletTx(UUID.randomUUID(), "credit", 0, 20).getContent()).isEmpty();
+        assertThat(service.findAllWalletTx(UUID.randomUUID(), "credit", null, 0, 20).getContent()).isEmpty();
         assertThat(service.findAllContractTemplates(UUID.randomUUID(), "fr", true)).isEmpty();
+    }
+
+    // ─── P1.8 — filtre reason sur wallet-tx ──────────────────────────────────────
+
+    /**
+     * Quand {@code reason} est fourni, la Specification appliquée ajoute bien un prédicat
+     * d'égalité {@code reason = <valeur>} (filtre, ex. 'referral_commission'). On capture la
+     * Specification puis on l'exécute contre une API Criteria mockée pour observer l'appel.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void findAllWalletTx_withReason_addsReasonEqualityPredicate() {
+        ArgumentCaptor<Specification<WalletTransaction>> specCap = ArgumentCaptor.forClass(Specification.class);
+        when(walletRepo.findAll(specCap.capture(), any(Pageable.class))).thenReturn(Page.empty());
+
+        // restaurantId/type null → seule la clause reason est ajoutée (isolation du prédicat testé).
+        service.findAllWalletTx(null, null, "referral_commission", 0, 20);
+
+        // Exécution de la Specification capturée contre des mocks Criteria (stubs LENIENT car la
+        // composition de Specifications peut court-circuiter certains appels).
+        jakarta.persistence.criteria.Root<WalletTransaction> root =
+            org.mockito.Mockito.mock(jakarta.persistence.criteria.Root.class);
+        jakarta.persistence.criteria.CriteriaQuery<?> query =
+            org.mockito.Mockito.mock(jakarta.persistence.criteria.CriteriaQuery.class);
+        jakarta.persistence.criteria.CriteriaBuilder cb =
+            org.mockito.Mockito.mock(jakarta.persistence.criteria.CriteriaBuilder.class);
+        jakarta.persistence.criteria.Path<Object> reasonPath =
+            org.mockito.Mockito.mock(jakarta.persistence.criteria.Path.class);
+        org.mockito.Mockito.lenient().when(root.get(any(String.class))).thenReturn(reasonPath);
+        org.mockito.Mockito.lenient().when(cb.conjunction())
+            .thenReturn(org.mockito.Mockito.mock(jakarta.persistence.criteria.Predicate.class));
+        org.mockito.Mockito.lenient().when(cb.equal(any(), any()))
+            .thenReturn(org.mockito.Mockito.mock(jakarta.persistence.criteria.Predicate.class));
+        org.mockito.Mockito.lenient().when(cb.and(any(jakarta.persistence.criteria.Predicate[].class)))
+            .thenReturn(org.mockito.Mockito.mock(jakarta.persistence.criteria.Predicate.class));
+
+        specCap.getValue().toPredicate(root, query, cb);
+
+        // Le prédicat d'égalité sur 'reason' a bien été demandé avec la valeur fournie.
+        verify(root, atLeastOnce()).get("reason");
+        verify(cb).equal(reasonPath, "referral_commission");
+    }
+
+    /** {@code reason} null ou blank → AUCUN prédicat sur 'reason' (filtre inerte). */
+    @Test
+    @SuppressWarnings("unchecked")
+    void findAllWalletTx_withBlankReason_doesNotFilterOnReason() {
+        ArgumentCaptor<Specification<WalletTransaction>> specCap = ArgumentCaptor.forClass(Specification.class);
+        when(walletRepo.findAll(specCap.capture(), any(Pageable.class))).thenReturn(Page.empty());
+
+        service.findAllWalletTx(null, null, "   ", 0, 20);
+
+        jakarta.persistence.criteria.Root<WalletTransaction> root =
+            org.mockito.Mockito.mock(jakarta.persistence.criteria.Root.class);
+        jakarta.persistence.criteria.CriteriaQuery<?> query =
+            org.mockito.Mockito.mock(jakarta.persistence.criteria.CriteriaQuery.class);
+        jakarta.persistence.criteria.CriteriaBuilder cb =
+            org.mockito.Mockito.mock(jakarta.persistence.criteria.CriteriaBuilder.class);
+        org.mockito.Mockito.lenient().when(cb.conjunction())
+            .thenReturn(org.mockito.Mockito.mock(jakarta.persistence.criteria.Predicate.class));
+
+        specCap.getValue().toPredicate(root, query, cb);
+
+        verify(root, never()).get("reason");
     }
 }

@@ -109,18 +109,67 @@ public class GainRule extends SoftDeletableAuditedEntity {
     @Column(name = "otp_required_above_ratio_pct", nullable = false, precision = 5, scale = 2)
     @Setter private BigDecimal otpRequiredAboveRatioPct = new BigDecimal("50.00");
 
+    // ─── Lot 4b — champs « RuleBuilder » legacy (V107, additifs nullable) ────────
+    /** Override de la valeur du point (MAD) configuré dans la règle ; NULL → valeur résolue loyalty_rules. */
+    @Column(name = "point_value_mad", precision = 10, scale = 4)
+    @Setter private BigDecimal pointValueMad;
+
+    /** Type de période d'évaluation RuleBuilder : {@code week} | {@code month} (nullable). */
+    @Column(name = "eval_period_type")
+    @Setter private String evalPeriodType;
+
+    /** Nombre de périodes d'évaluation (nullable). */
+    @Column(name = "eval_period_value")
+    @Setter private Integer evalPeriodValue;
+
+    /** Durée du bénéfice en jours (nullable). */
+    @Column(name = "benefit_duration_days")
+    @Setter private Integer benefitDurationDays;
+
+    /** Seuil de dépense mensuel d'activation (MAD, nullable). */
+    @Column(name = "min_spend_monthly", precision = 12, scale = 2)
+    @Setter private BigDecimal minSpendMonthly;
+
+    /**
+     * Valeur par défaut d'un point (1 pt = 1 MAD) quand aucune {@code loyalty_rules}
+     * n'est configurée pour le restaurant — reflète la réalité actuelle.
+     * Source de vérité réelle = {@code loyalty_rules.point_value} (DEFAULT 1.0000).
+     */
+    public static final BigDecimal DEFAULT_POINT_VALUE_MAD = new BigDecimal("1.0000");
+
     public GainRule(UUID id, UUID restaurantId, BigDecimal conversionRate) {
         this.id = id;
         this.restaurantId = restaurantId;
         this.conversionRate = conversionRate;
     }
 
-    /** Mapping vers le DTO public exposé hors du module. */
+    /**
+     * Mapping vers le DTO public, avec {@code pointValueMad} par défaut
+     * ({@link #DEFAULT_POINT_VALUE_MAD}). Utilisé sur les chemins d'écriture
+     * (create/patch/assign) où la valeur du point n'est pas résolue : elle reste
+     * 1 pt = 1 MAD tant qu'aucune {@code loyalty_rules} n'est configurée.
+     */
     public GainRuleDto toDto() {
+        return toDto(DEFAULT_POINT_VALUE_MAD);
+    }
+
+    /**
+     * Mapping vers le DTO public en injectant la valeur du point résolue depuis
+     * {@code loyalty_rules} (source de vérité, hors table {@code gain_rules}).
+     *
+     * @param pointValueMad valeur monétaire d'un point ; {@code null} → défaut 1.0
+     */
+    public GainRuleDto toDto(BigDecimal resolvedPointValueMad) {
+        // L'override de la règle (V107) prime sur la valeur résolue depuis loyalty_rules ; sinon défaut.
+        BigDecimal effectivePointValue = this.pointValueMad != null
+            ? this.pointValueMad
+            : (resolvedPointValueMad != null ? resolvedPointValueMad : DEFAULT_POINT_VALUE_MAD);
         return new GainRuleDto(
             id, restaurantId, conversionRate,
             capPerVisit, capPerMonth, minAmount,
-            isActive, welcomePointsDefault, welcomePointsMax, getCreatedAt()
+            isActive, welcomePointsDefault, welcomePointsMax, getCreatedAt(),
+            effectivePointValue,
+            evalPeriodType, evalPeriodValue, benefitDurationDays, minSpendMonthly
         );
     }
 

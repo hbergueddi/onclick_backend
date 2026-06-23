@@ -37,8 +37,10 @@ class ExploreFeaturedServiceTest {
     @BeforeEach
     void setup() {
         lenient().when(repo.save(any())).thenAnswer(i -> i.getArgument(0));
-        // Défaut tests : aucun filtre tenant (équiv. SUPERADMIN) → chemin legacy non scopé.
-        lenient().when(tenantScope.visibleTenantIdsOrNull()).thenReturn(null);
+        // Défaut tests : aucun scope catalogue public (équiv. SUPERADMIN) → chemin legacy non scopé.
+        // findAllEnabled() lit publicCatalogScopeOrNull() (découverte grand public = oneclick seul),
+        // PAS visibleTenantIdsOrNull() — cf fix fuite de périmètre Explore générique.
+        lenient().when(tenantScope.publicCatalogScopeOrNull()).thenReturn(null);
     }
 
     @Test
@@ -49,9 +51,10 @@ class ExploreFeaturedServiceTest {
 
     @Test
     void findAllEnabled_scoped_usesTenantFilteredQuery() {
-        // Fuite de périmètre : caller scopé → requête filtrée par tenant (pas la requête globale).
+        // Fuite de périmètre : catalogue public scopé (« oneclick ») → requête filtrée par tenant
+        // (pas la requête globale). findAllEnabled() lit publicCatalogScopeOrNull().
         java.util.UUID t = java.util.UUID.randomUUID();
-        when(tenantScope.visibleTenantIdsOrNull()).thenReturn(java.util.Set.of(t));
+        when(tenantScope.publicCatalogScopeOrNull()).thenReturn(java.util.Set.of(t));
         when(repo.findAllEnabledOrderedForTenants(java.util.Set.of(t)))
                 .thenReturn(List.of(new ExploreFeatured()));
         assertThat(service.findAllEnabled()).hasSize(1);

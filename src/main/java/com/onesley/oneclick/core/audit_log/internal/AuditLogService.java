@@ -1,6 +1,8 @@
 package com.onesley.oneclick.core.audit_log.internal;
 
 import com.onesley.oneclick.core.identity.api.User;
+import com.onesley.oneclick.core.identity.api.UserDirectoryApi;
+import com.onesley.oneclick.core.identity.api.UserDirectoryApi.UserName;
 import com.onesley.oneclick.core.tenant.api.Tenant;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -11,8 +13,10 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static com.onesley.oneclick.core.audit_log.api.AuditLogDtos.*;
 import com.onesley.oneclick.core.audit_log.api.AuditLogDtos;
@@ -43,12 +47,21 @@ public class AuditLogService {
     private final SystemEventRepository eventRepo;
     private final ErrorLogRepository errorRepo;
     private final JobExecutionRepository jobRepo;
+    private final UserDirectoryApi userDirectory;
 
     @PersistenceContext
     private EntityManager entityManager;
 
     // ─── AuditLog ────────────────────────────────────────────────────────────
 
+    /**
+     * Page d'audit filtrée, <b>enrichie du nom de l'auteur</b> ({@code userName}) en batch
+     * via {@link UserDirectoryApi#namesByIds} (anti-N+1 : 1 seule requête annuaire pour toute
+     * la page, quel que soit le nombre de lignes). Le « Journal des actions » ProDesk affiche
+     * ainsi « Prénom Nom » plutôt qu'un UUID. L'enrichissement n'introduit aucune autorité
+     * (la lecture reste {@code VIEW:AUDIT} au controller) ; un userId système (null) ou un
+     * utilisateur supprimé reste avec {@code userName = null}.
+     */
     public Page<AuditLogDto> findAuditLogs(UUID userId, UUID tenantId, String entityType, UUID entityId,
                                             int page, int size) {
         Specification<AuditLog> spec = (root, q, cb) -> cb.conjunction();
@@ -56,8 +69,37 @@ public class AuditLogService {
         if (tenantId != null)   spec = spec.and((root, q, cb) -> cb.equal(root.get("tenantId"), tenantId));
         if (entityType != null) spec = spec.and((root, q, cb) -> cb.equal(root.get("entityType"), entityType));
         if (entityId != null)   spec = spec.and((root, q, cb) -> cb.equal(root.get("entityId"), entityId));
-        return auditRepo.findAll(spec, PageRequest.of(page, size, Sort.by("createdAt").descending()))
+        Page<AuditLogDto> page0 = auditRepo
+            .findAll(spec, PageRequest.of(page, size, Sort.by("createdAt").descending()))
             .map(AuditLog::toDto);
+        Map<UUID, String> nameById = resolveNames(page0);
+        return page0.map(enrichName(nameById));
+    }
+
+    /** Résout en 1 requête les noms des auteurs présents dans la page (déduplis, null exclus). */
+    private Map<UUID, String> resolveNames(Page<AuditLogDto> page) {
+        List<UUID> ids = page.getContent().stream()
+            .map(AuditLogDto::userId)
+            .filter(java.util.Objects::nonNull)
+            .distinct()
+            .toList();
+        if (ids.isEmpty()) return Map.of();
+        return userDirectory.namesByIds(ids).stream()
+            .collect(Collectors.toMap(UserName::id, AuditLogService::fullName, (a, b) -> a));
+    }
+
+    /** Fonction de mapping {@code dto → dto.withUserName(nom)} à partir d'un index id→nom. */
+    private java.util.function.Function<AuditLogDto, AuditLogDto> enrichName(Map<UUID, String> nameById) {
+        return dto -> dto.userId() == null ? dto : dto.withUserName(nameById.get(dto.userId()));
+    }
+
+    /** "Prénom Nom" depuis la projection annuaire (gère composantes nulles/vides → null). */
+    private static String fullName(UserName u) {
+        if (u == null) return null;
+        String first = u.firstName() == null ? "" : u.firstName().trim();
+        String last = u.lastName() == null ? "" : u.lastName().trim();
+        String full = (first + " " + last).trim();
+        return full.isEmpty() ? null : full;
     }
 
     @Transactional

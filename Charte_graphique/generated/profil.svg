@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 393 852" width="393" height="852">
+<defs>
+<filter id="shFloat" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="4" stdDeviation="10" flood-color="#8A959E" flood-opacity="0.40"/></filter>
+<filter id="shCard" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#101828" flood-opacity="0.40"/></filter>
+<filter id="shCta" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="8" stdDeviation="7.5" flood-color="#303030" flood-opacity="0.30"/></filter>
+<filter id="shNav" x="-50%" y="-100%" width="200%" height="300%"><feDropShadow dx="0" dy="-2" stdDeviation="12.5" flood-color="#000000" flood-opacity="0.05"/></filter>
+<linearGradient id="avatarGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#681237"/><stop offset="1" stop-color="#3B2338"/></linearGradient>
+</defs>
+
+<rect width="393" height="852" rx="16" fill="#F9F6F4"/>
+<text x="28" y="38" font-family="'Nunito Sans',sans-serif" font-size="15" font-weight="700" fill="#242424">9:41</text>
+<g stroke="#242424" stroke-width="1.4" stroke-linecap="round"><path d="M333 36 v-7 M338 36 v-10 M343 36 v-13"/></g>
+<rect x="350" y="27" width="20" height="11" rx="2.5" stroke="#242424" stroke-width="1.2" opacity="0.6"/><rect x="352" y="29" width="14" height="7" rx="1.2" fill="#242424" opacity="0.9"/>
+
+<!-- Header -->
+<text x="196.5" y="101" text-anchor="middle" font-family="'Poltawski Nowy',Georgia,serif" font-size="22" font-weight="600" fill="#3B2338">Profil</text>
+<g filter="url(#shFloat)"><rect x="333" y="74" width="40" height="40" rx="12" fill="#FFFFFF"/></g>
+<g transform="translate(345,86)" stroke="#242424" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M3 11 a5 5 0 0 1 10 0 c0 2 0.6 3 1.4 3.6 a0.6 0.6 0 0 1 -0.4 1.1 H2 a0.6 0.6 0 0 1 -0.4 -1.1 C2.4 14 3 13 3 11 Z"/><path d="M6.4 16.6 a1.6 1.6 0 0 0 3.2 0"/></g>
+<circle cx="362.5" cy="84" r="3" fill="#DB4545"/>
+
+<!-- Profile header card -->
+<g filter="url(#shCard)"><rect x="20" y="130" width="353" height="108" rx="12" fill="#FFFFFF"/></g>
+<circle cx="64" cy="184" r="36" fill="url(#avatarGrad)"/>
+<text x="64" y="193" text-anchor="middle" font-family="'Poltawski Nowy',Georgia,serif" font-size="26" font-weight="600" fill="#FFFFFF">HZ</text>
+<text x="116" y="170" font-family="'Poltawski Nowy',Georgia,serif" font-size="22" font-weight="600" fill="#3B2338">Hicham Z.</text>
+<text x="116" y="190" font-family="'Nunito Sans',sans-serif" font-size="13" fill="#999999">membre depuis 2024</text>
+<g filter="url(#shCard)"><rect x="116" y="200" width="124" height="26" rx="13" fill="#F9ECE1"/></g>
+<g transform="translate(126,206)" stroke="#9A6A2B" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M2 11 l1.5 -7 l3 4 l2.5 -5 l2.5 5 l3 -4 l1.5 7 z"/><path d="M2 13 h13.5"/></g>
+<text x="148" y="217" font-family="'Poltawski Nowy',Georgia,serif" font-size="13" font-weight="600" fill="#9A6A2B">Grand Cru</text>
+
+<!-- Module grid 2 cols x 3 rows -->
+<!-- Row 1 -->
+<g filter="url(#shCard)"><rect x="20" y="252" width="171" height="92" rx="12" fill="#FFFFFF"/></g>
+<rect x="36" y="268" width="36" height="36" rx="9" fill="#F9ECE1"/>
+<g transform="translate(44,276)" stroke="#9A6A2B" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M10 1.5 l2.6 5.3 l5.9 0.9 l-4.2 4.2 l1 5.9 l-5.3 -2.8 l-5.3 2.8 l1 -5.9 l-4.2 -4.2 l5.9 -0.9 z"/></g>
+<text x="36" y="328" font-family="'Poltawski Nowy',Georgia,serif" font-size="15" font-weight="600" fill="#3B2338">Mes Points</text>
+
+<g filter="url(#shCard)"><rect x="202" y="252" width="171" height="92" rx="12" fill="#FFFFFF"/></g>
+<rect x="218" y="268" width="36" height="36" rx="9" fill="#F4E6EC"/>
+<g transform="translate(226,276)" stroke="#681237" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><rect x="2" y="4" width="16" height="15" rx="2.5"/><path d="M2 8.5 h16"/><path d="M6.5 1.5 v4 M13.5 1.5 v4"/><path d="M6 13 l2 2 l4 -4"/></g>
+<text x="218" y="328" font-family="'Poltawski Nowy',Georgia,serif" font-size="15" font-weight="600" fill="#3B2338">Réservations</text>
+
+<!-- Row 2 -->
+<g filter="url(#shCard)"><rect x="20" y="356" width="171" height="92" rx="12" fill="#FFFFFF"/></g>
+<rect x="36" y="372" width="36" height="36" rx="9" fill="#EFEAF0"/>
+<g transform="translate(44,380)" stroke="#3B2338" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M10 1.5 l2.4 4.9 l5.4 0.8 l-3.9 3.8 l0.9 5.4 l-4.8 -2.5 l-4.8 2.5 l0.9 -5.4 l-3.9 -3.8 l5.4 -0.8 z"/></g>
+<text x="36" y="432" font-family="'Poltawski Nowy',Georgia,serif" font-size="15" font-weight="600" fill="#3B2338">Elite Club</text>
+
+<g filter="url(#shCard)"><rect x="202" y="356" width="171" height="92" rx="12" fill="#FFFFFF"/></g>
+<rect x="218" y="372" width="36" height="36" rx="9" fill="#EEF7F1"/>
+<g transform="translate(226,380)" stroke="#00881E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><circle cx="7" cy="6" r="3"/><path d="M1.5 18 a5.5 5.5 0 0 1 11 0"/><circle cx="14.5" cy="5" r="2.2"/><path d="M14 11 a4.6 4.6 0 0 1 4.5 4.4"/><path d="M16.5 1 v3 M18 2.5 h-3" stroke-width="1.3"/></g>
+<text x="218" y="432" font-family="'Poltawski Nowy',Georgia,serif" font-size="15" font-weight="600" fill="#3B2338">Parrainage</text>
+
+<!-- Row 3 -->
+<g filter="url(#shCard)"><rect x="20" y="460" width="171" height="92" rx="12" fill="#FFFFFF"/></g>
+<rect x="36" y="476" width="36" height="36" rx="9" fill="#F4E6EC"/>
+<g transform="translate(44,484)" stroke="#681237" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M1.5 18 h17"/><path d="M3 18 a7 7 0 0 1 14 0"/><path d="M10 5.5 v3.2"/><circle cx="10" cy="4" r="1.2" fill="#681237" stroke="none"/></g>
+<text x="36" y="536" font-family="'Poltawski Nowy',Georgia,serif" font-size="15" font-weight="600" fill="#3B2338">Majordome</text>
+
+<g filter="url(#shCard)"><rect x="202" y="460" width="171" height="92" rx="12" fill="#FFFFFF"/></g>
+<rect x="218" y="476" width="36" height="36" rx="9" fill="#F0EEF0"/>
+<g transform="translate(226,484)" stroke="#9B8598" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M5 1.5 h7 l4 4 v13 a1.5 1.5 0 0 1 -1.5 1.5 h-9.5 a1.5 1.5 0 0 1 -1.5 -1.5 v-15.5 a1.5 1.5 0 0 1 1.5 -1.5 z"/><path d="M11.5 1.5 v4 h4"/><path d="M6.5 12 h7 M6.5 15 h5"/></g>
+<text x="218" y="536" font-family="'Poltawski Nowy',Georgia,serif" font-size="15" font-weight="600" fill="#3B2338">Mentions légales</text>
+
+<!-- Settings list -->
+<g filter="url(#shCard)"><rect x="20" y="568" width="353" height="172" rx="12" fill="#FFFFFF"/></g>
+
+<!-- Informations personnelles -->
+<g transform="translate(36,584)" stroke="#3B2338" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><circle cx="9" cy="6" r="3.2"/><path d="M3 18 a6 6 0 0 1 12 0"/></g>
+<text x="68" y="601" font-family="'Nunito Sans',sans-serif" font-size="14" font-weight="600" fill="#242424">Informations personnelles</text>
+<path d="M353 595 l5 5 l-5 5" stroke="#CCCCCC" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+<rect x="36" y="611" width="321" height="1" fill="#EDEDED"/>
+
+<!-- Langue -->
+<g transform="translate(36,626)" stroke="#3B2338" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><circle cx="9" cy="9" r="8"/><path d="M1 9 h16 M9 1 c3 3 3 13 0 16 M9 1 c-3 3 -3 13 0 16"/></g>
+<text x="68" y="643" font-family="'Nunito Sans',sans-serif" font-size="14" font-weight="600" fill="#242424">Langue</text>
+<text x="318" y="643" text-anchor="end" font-family="'Nunito Sans',sans-serif" font-size="13" fill="#999999">Français</text>
+<path d="M353 637 l5 5 l-5 5" stroke="#CCCCCC" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+<rect x="36" y="653" width="321" height="1" fill="#EDEDED"/>
+
+<!-- Mode sombre + toggle -->
+<g transform="translate(36,668)" stroke="#3B2338" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M16 10.5 a7 7 0 1 1 -8.5 -8.5 a5.5 5.5 0 0 0 8.5 8.5 z"/></g>
+<text x="68" y="685" font-family="'Nunito Sans',sans-serif" font-size="14" font-weight="600" fill="#242424">Mode sombre</text>
+<rect x="319" y="674" width="38" height="22" rx="11" fill="#CCCCCC"/>
+<circle cx="330" cy="685" r="8" fill="#FFFFFF"/>
+<rect x="36" y="711" width="321" height="1" fill="#EDEDED"/>
+
+<!-- Se déconnecter -->
+<g transform="translate(36,710)" stroke="#DB4545" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M7 2 H3.5 A1.5 1.5 0 0 0 2 3.5 v13 A1.5 1.5 0 0 0 3.5 18 H7"/><path d="M12 5 l5 5 l-5 5 M17 10 H7"/></g>
+<text x="68" y="727" font-family="'Nunito Sans',sans-serif" font-size="14" font-weight="700" fill="#DB4545">Se déconnecter</text>
+
+<!-- Bottom nav -->
+<g filter="url(#shNav)"><rect x="0" y="754" width="393" height="98" fill="#FFFFFF"/></g>
+<!-- Enseignes (toque) cx47 --> <rect x="25" y="766" width="44" height="44" rx="12" fill="#F5F5F5"/><g transform="translate(35,776)" stroke="#3B2338" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M7 13 a5 5 0 0 1 -2.2 -9.2 a3.8 3.8 0 0 1 6.7 -1.1 a3.8 3.8 0 0 1 6.7 1.1 a5 5 0 0 1 -2.2 9.2"/><path d="M7 13 h10 v4 a1.2 1.2 0 0 1 -1.2 1.2 h-7.6 a1.2 1.2 0 0 1 -1.2 -1.2 z"/></g><text x="47" y="826" text-anchor="middle" font-family="'Nunito Sans',sans-serif" font-size="11" fill="#999999">Enseignes</text>
+<!-- Réservations (calendrier) cx121.75 --> <rect x="99.75" y="766" width="44" height="44" rx="12" fill="#F5F5F5"/><g transform="translate(109.75,776)" stroke="#3B2338" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"><rect x="4" y="6" width="16" height="15" rx="2.5"/><path d="M4 10 h16"/><path d="M9 4 v3 M15 4 v3"/><circle cx="9" cy="14.5" r="0.7" fill="#3B2338" stroke="none"/><circle cx="12" cy="14.5" r="0.7" fill="#3B2338" stroke="none"/><circle cx="15" cy="14.5" r="0.7" fill="#3B2338" stroke="none"/></g><text x="121.75" y="826" text-anchor="middle" font-family="'Nunito Sans',sans-serif" font-size="11" fill="#999999">Réservations</text>
+<!-- Majordome (cloche service) cx196.5 --> <rect x="174.5" y="766" width="44" height="44" rx="12" fill="#F5F5F5"/><g transform="translate(184.5,776)" stroke="#3B2338" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M3.5 18 h17"/><path d="M5 18 a7 7 0 0 1 14 0"/><path d="M12 7.5 v3.2"/><circle cx="12" cy="6" r="1.2" fill="#3B2338" stroke="none"/></g><text x="196.5" y="826" text-anchor="middle" font-family="'Nunito Sans',sans-serif" font-size="11" fill="#999999">Majordome</text>
+<!-- Cercle (users) cx271.25 --> <rect x="249.25" y="766" width="44" height="44" rx="12" fill="#F5F5F5"/><g transform="translate(259.25,776)" stroke="#3B2338" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"><circle cx="9" cy="9" r="3"/><path d="M3.5 19 a5.5 5.5 0 0 1 11 0"/><circle cx="16.5" cy="8" r="2.2"/><path d="M16 13.2 a4.6 4.6 0 0 1 4.5 4.4"/></g><text x="271.25" y="826" text-anchor="middle" font-family="'Nunito Sans',sans-serif" font-size="11" fill="#999999">Cercle</text>
+<!-- Profil (id card) cx346 ACTIF --> <rect x="324" y="766" width="44" height="44" rx="12" fill="#681237"/><g transform="translate(334,776)" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"><rect x="3.5" y="5.5" width="17" height="13" rx="2.5"/><circle cx="9" cy="11" r="2.2"/><path d="M5.8 16.2 a3.4 3.4 0 0 1 6.4 0"/><path d="M14.5 10 h3.2 M14.5 13 h3.2"/></g><text x="346" y="826" text-anchor="middle" font-family="'Nunito Sans',sans-serif" font-size="11" font-weight="700" fill="#3B2338">Profil</text>
+</svg>

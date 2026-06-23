@@ -102,4 +102,19 @@ public interface OfferRepository extends JpaRepository<Offer, UUID>, JpaSpecific
         WHERE r.tenant_id IN (:tenantIds)
         """, nativeQuery = true)
     List<UUID> findRestaurantIdsInTenants(@Param("tenantIds") Collection<UUID> tenantIds);
+
+    /**
+     * Lot B11 — IDs des staff ACTIFS d'un restaurant (destinataires de la notif « offre expirée »).
+     * Staff actif = {@code restaurant_staffs.deleted_at IS NULL} (pas de colonne status). SQL natif
+     * (noms de tables) : la résolution reste côté module {@code promotion} et les UUID sont portés sur
+     * {@code OfferExpiredEvent} (frontière Modulith). Calque
+     * {@code ResourceBookingRepository.findStaffRecipientIdsForTenant}.
+     */
+    @Query(value = """
+        SELECT rs.user_id
+        FROM restaurant_staffs rs
+        WHERE rs.restaurant_id = :restaurantId
+          AND rs.deleted_at IS NULL
+        """, nativeQuery = true)
+    List<UUID> findStaffRecipientIdsForRestaurant(@Param("restaurantId") UUID restaurantId);
 }

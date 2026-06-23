@@ -44,7 +44,7 @@ class ReservationRatingListenerTest {
 
     @BeforeEach
     void setup() {
-        // Config singleton par défaut : penaliteNoShow=0.1, gainParPalier=0.1.
+        // Config singleton par défaut : penaliteNoShow=0.5 (parité legacy, V102), gainParPalier=0.1.
         when(scoreConfigRepo.findFirstByOrderByCreatedAtAsc()).thenReturn(Optional.of(new ClientScoreConfig()));
     }
 
@@ -59,7 +59,7 @@ class ReservationRatingListenerTest {
 
         ArgumentCaptor<BigDecimal> delta = ArgumentCaptor.forClass(BigDecimal.class);
         verify(loyaltyExtensionService).recordRating(eq(CLIENT), eq(RESERVATION), delta.capture(), eq("no_show"));
-        assertThat(delta.getValue()).isEqualByComparingTo(new BigDecimal("-0.1"));
+        assertThat(delta.getValue()).isEqualByComparingTo(new BigDecimal("-0.5"));
     }
 
     @Test
@@ -92,7 +92,7 @@ class ReservationRatingListenerTest {
 
         ArgumentCaptor<BigDecimal> delta = ArgumentCaptor.forClass(BigDecimal.class);
         verify(loyaltyExtensionService).recordRating(eq(CLIENT), eq(RESERVATION), delta.capture(), eq("dispute_accepted"));
-        assertThat(delta.getValue()).isEqualByComparingTo(new BigDecimal("0.1"));
+        assertThat(delta.getValue()).isEqualByComparingTo(new BigDecimal("0.5"));
     }
 
     @Test

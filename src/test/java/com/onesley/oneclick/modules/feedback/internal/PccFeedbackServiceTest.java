@@ -76,6 +76,8 @@ class PccFeedbackServiceTest {
         lenient().when(membershipDirectory.activeTenantIds(any())).thenReturn(List.of());
         lenient().when(repo.save(any())).thenAnswer(i -> i.getArgument(0));
         lenient().when(repo.findFeedbackRecipientIds(any(), any(), any())).thenReturn(List.of(UUID.randomUUID()));
+        // Par défaut, le resto ciblé appartient au tenant du caller (garde-fou anti-spoof passant).
+        lenient().when(repo.restaurantBelongsToTenant(any(), any())).thenReturn(true);
     }
 
     @AfterEach
@@ -121,6 +123,29 @@ class PccFeedbackServiceTest {
         verify(repo, never()).save(any());
     }
 
+    /**
+     * FUITE DE PÉRIMÈTRE (fix 17/06) : un avis CIBLÉ dont le resto n'appartient PAS au tenant du
+     * membre est rejeté (403) AVANT persistance — sinon l'owner d'un autre tenant recevrait la notif
+     * « nouvel avis » (in-app + push). Anti-spoof à la création.
+     */
+    @Test
+    void create_targetRestaurantOtherTenant_forbidden() {
+        when(repo.restaurantBelongsToTenant(restaurant, tenant)).thenReturn(false);
+        assertThatThrownBy(() -> service.create(new CreateFeedbackDto("unhappy", "Padel", "Souci", restaurant)))
+            .isInstanceOf(ForbiddenException.class);
+        verify(repo, never()).save(any());
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    /** Avis GÉNÉRAL (target null) : pas de validation resto/tenant, persistance OK. */
+    @Test
+    void create_generalFeedback_noTargetValidation() {
+        FeedbackDto out = service.create(new CreateFeedbackDto("happy", "Accueil", "Top", null));
+        assertThat(out.targetRestaurantId()).isNull();
+        verify(repo, never()).restaurantBelongsToTenant(any(), any());
+        verify(repo).save(any(PccFeedback.class));
+    }
+
     // ─── reply ─────────────────────────────────────────────────────────────────
 
     @Test
@@ -157,6 +182,25 @@ class PccFeedbackServiceTest {
 
         assertThatThrownBy(() -> service.reply(id, "Réponse"))
             .isInstanceOf(ForbiddenException.class);
+        verify(repo, never()).save(any());
+    }
+
+    /**
+     * AMPLIFICATION DE FUITE (fix 17/06) : un owner non-admin ne peut pas répondre à un avis d'un
+     * AUTRE tenant que le sien — neutralise le vecteur cross-tenant (un avis qui aurait fuité vers
+     * son resto). 403 avant même le check owner-scope.
+     */
+    @Test
+    void reply_ownerCrossTenant_forbidden() {
+        securityMock.when(SecurityHelper::isStaffOrAdmin).thenReturn(true);
+        securityMock.when(SecurityHelper::isAdmin).thenReturn(false); // owner « pur »
+        UUID id = UUID.randomUUID();
+        when(repo.findById(id)).thenReturn(Optional.of(feedback(UUID.randomUUID(), restaurant))); // fb.tenant = tenant
+        when(userDirectory.tenantIdById(caller)).thenReturn(Optional.of(UUID.randomUUID())); // caller d'un AUTRE tenant
+
+        assertThatThrownBy(() -> service.reply(id, "Réponse cross-tenant"))
+            .isInstanceOf(ForbiddenException.class);
+        verify(repo, never()).isActiveOwnerOf(any(), any());
         verify(repo, never()).save(any());
     }
 

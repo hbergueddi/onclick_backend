@@ -111,6 +111,7 @@ public class TenantAdminService {
             u != null ? u.firstName() : null,
             u != null ? u.lastName() : null,
             u != null ? u.email() : null,
+            u != null ? u.avatarUrl() : null,
             a.getRole(),
             a.getInvitedBy(),
             a.getCreatedAt());

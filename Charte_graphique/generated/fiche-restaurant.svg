@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 393 852" width="393" height="852">
+  <defs>
+    <clipPath id="screenClip"><rect width="393" height="852" rx="16"/></clipPath>
+    <filter id="shFloat" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="4" stdDeviation="10" flood-color="#8A959E" flood-opacity="0.40"/></filter>
+    <filter id="shCard" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#101828" flood-opacity="0.40"/></filter>
+    <filter id="shCta" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="8" stdDeviation="7.5" flood-color="#303030" flood-opacity="0.30"/></filter>
+    <filter id="shNav" x="-50%" y="-100%" width="200%" height="300%"><feDropShadow dx="0" dy="-2" stdDeviation="12.5" flood-color="#000000" flood-opacity="0.05"/></filter>
+    <linearGradient id="heroFade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="0.55" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.55"/>
+    </linearGradient>
+  </defs>
+
+  <g clip-path="url(#screenClip)">
+    <!-- App background -->
+    <rect width="393" height="852" fill="#F9F6F4"/>
+
+    <!-- ===== HERO PHOTO ===== -->
+    <rect x="0" y="0" width="393" height="230" fill="#C9A98F"/>
+    <text x="196.5" y="120" text-anchor="middle" font-family="'Nunito Sans',sans-serif" font-size="13" font-weight="600" fill="#FFFFFF" opacity="0.55">photo</text>
+    <rect x="0" y="0" width="393" height="230" fill="url(#heroFade)"/>
+
+    <!-- Status bar (white over hero) -->
+    <text x="28" y="38" font-family="'Nunito Sans',sans-serif" font-size="15" font-weight="700" fill="#FFFFFF">9:41</text>
+    <g stroke="#FFFFFF" stroke-width="1.4" stroke-linecap="round"><path d="M333 36 v-7 M338 36 v-10 M343 36 v-13"/></g>
+    <rect x="350" y="27" width="20" height="11" rx="2.5" stroke="#FFFFFF" stroke-width="1.2" opacity="0.7"/><rect x="352" y="29" width="14" height="7" rx="1.2" fill="#FFFFFF" opacity="0.95"/>
+
+    <!-- Back button floating -->
+    <g filter="url(#shFloat)"><rect x="20" y="146" width="40" height="40" rx="12" fill="#FFFFFF"/></g>
+    <path d="M44 160 l-6 6 l6 6" stroke="#242424" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+    <!-- Favorite (heart) floating -->
+    <g filter="url(#shFloat)"><rect x="289" y="146" width="40" height="40" rx="12" fill="#FFFFFF"/></g>
+    <path d="M309 174 c-5-3.4-8-6-8-9.4 a3.4 3.4 0 0 1 6.4-1.7 a0.7 0.7 0 0 0 1.2 0 a3.4 3.4 0 0 1 6.4 1.7 c0 3.4-3 6-8 9.4 z" fill="none" stroke="#681237" stroke-width="1.6" stroke-linejoin="round"/>
+
+    <!-- Share floating -->
+    <g filter="url(#shFloat)"><rect x="333" y="146" width="40" height="40" rx="12" fill="#FFFFFF"/></g>
+    <g transform="translate(345,158)" stroke="#242424" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"><circle cx="14" cy="3.5" r="2.4"/><circle cx="3.5" cy="9" r="2.4"/><circle cx="14" cy="14.5" r="2.4"/><path d="M5.7 7.8 l6.2-3.2 M5.7 10.2 l6.2 3.2"/></g>
+
+    <!-- Restaurant name + subline -->
+    <text x="20" y="206" font-family="'Poltawski Nowy',Georgia,serif" font-size="30" font-weight="600" fill="#FFFFFF">La Sqala</text>
+    <text x="21" y="224" font-family="'Nunito Sans',sans-serif" font-size="13" font-weight="600" fill="#FFFFFF" opacity="0.8">Marocaine raffinée · Casablanca</text>
+
+    <!-- ===== RATING ROW ===== -->
+    <path d="M28 256 l2.1 4.3 4.8 0.7 -3.5 3.4 0.8 4.8 -4.2-2.2 -4.2 2.2 0.8-4.8 -3.5-3.4 4.8-0.7 z" fill="#FFC107"/>
+    <text x="44" y="268" font-family="'Nunito Sans',sans-serif" font-size="16" font-weight="800" fill="#242424">4.8</text>
+    <text x="66" y="268" font-family="'Nunito Sans',sans-serif" font-size="13" fill="#999999">(327 avis Google)</text>
+    <!-- Open pill -->
+    <rect x="299" y="250" width="74" height="26" rx="13" fill="#EEF7F1" stroke="#B8DFC8" stroke-width="1"/>
+    <circle cx="316" cy="263" r="3.4" fill="#00881E"/>
+    <text x="324" y="267" font-family="'Nunito Sans',sans-serif" font-size="12.5" font-weight="700" fill="#00881E">Ouvert</text>
+
+    <!-- ===== HOURS CARD ===== -->
+    <g filter="url(#shCard)"><rect x="20" y="288" width="353" height="58" rx="12" fill="#FFFFFF"/></g>
+    <g transform="translate(34,304)" stroke="#3B2338" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><circle cx="12" cy="13" r="11"/><path d="M12 7 v6 l4 2.5"/></g>
+    <text x="72" y="313" font-family="'Poltawski Nowy',Georgia,serif" font-size="15" font-weight="600" fill="#3B2338">Horaires</text>
+    <text x="72" y="331" font-family="'Nunito Sans',sans-serif" font-size="12.5" fill="#666666">Lun–Dim · 12:00–15:00, 19:00–23:30</text>
+    <path d="M352 313 l5 5 l5-5" stroke="#A6A6A6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+    <!-- ===== ADDRESS CARD ===== -->
+    <g filter="url(#shCard)"><rect x="20" y="358" width="353" height="92" rx="12" fill="#FFFFFF"/></g>
+    <g transform="translate(34,374)" stroke="#681237" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M12 23 c5-5.5 8-9.4 8-13 a8 8 0 0 0-16 0 c0 3.6 3 7.5 8 13 z"/><circle cx="12" cy="10" r="3"/></g>
+    <text x="72" y="384" font-family="'Poltawski Nowy',Georgia,serif" font-size="15" font-weight="600" fill="#3B2338">Adresse</text>
+    <text x="72" y="402" font-family="'Nunito Sans',sans-serif" font-size="12.5" fill="#666666">Bd Sour Jdid, Casablanca</text>
+    <!-- Mini map preview -->
+    <rect x="34" y="414" width="325" height="24" rx="8" fill="#F5F5F5"/>
+    <path d="M34 432 q40-14 80-4 q50 12 95-2 q55-16 116 2" stroke="#E8DFE5" stroke-width="2" fill="none"/>
+    <path d="M34 426 h120 M180 426 h70" stroke="#E0E0E0" stroke-width="1.5"/>
+    <circle cx="200" cy="426" r="3.5" fill="#681237"/>
+
+    <!-- ===== OFFERS SECTION ===== -->
+    <text x="20" y="478" font-family="'Poltawski Nowy',Georgia,serif" font-size="18" font-weight="600" fill="#3B2338">Offres du moment</text>
+
+    <!-- Offer card 1 -->
+    <g filter="url(#shCard)"><rect x="20" y="490" width="353" height="62" rx="12" fill="#FFFFFF"/></g>
+    <rect x="32" y="502" width="56" height="38" rx="8" fill="#E0AF7C"/>
+    <text x="60" y="526" text-anchor="middle" font-family="'Poltawski Nowy',Georgia,serif" font-size="17" font-weight="600" fill="#FFFFFF">-20%</text>
+    <text x="100" y="515" font-family="'Nunito Sans',sans-serif" font-size="14" font-weight="700" fill="#242424">Menu découverte du midi</text>
+    <text x="100" y="533" font-family="'Nunito Sans',sans-serif" font-size="12" fill="#999999">Valable jusqu'au 30 juin</text>
+
+    <!-- Offer card 2 -->
+    <g filter="url(#shCard)"><rect x="20" y="560" width="353" height="62" rx="12" fill="#FFFFFF"/></g>
+    <rect x="32" y="572" width="56" height="38" rx="8" fill="#E0AF7C"/>
+    <text x="60" y="596" text-anchor="middle" font-family="'Poltawski Nowy',Georgia,serif" font-size="17" font-weight="600" fill="#FFFFFF">-15%</text>
+    <text x="100" y="585" font-family="'Nunito Sans',sans-serif" font-size="14" font-weight="700" fill="#242424">Pastilla pour 2 offerte</text>
+    <text x="100" y="603" font-family="'Nunito Sans',sans-serif" font-size="12" fill="#999999">Dîner · du dimanche au jeudi</text>
+
+    <!-- ===== ABOUT SECTION ===== -->
+    <text x="20" y="650" font-family="'Poltawski Nowy',Georgia,serif" font-size="18" font-weight="600" fill="#3B2338">À propos</text>
+    <text x="20" y="671" font-family="'Nunito Sans',sans-serif" font-size="12.5" fill="#808080">Niché dans un bastion du XVIIIᵉ siècle, La Sqala propose une cuisine</text>
+    <text x="20" y="688" font-family="'Nunito Sans',sans-serif" font-size="12.5" fill="#808080">marocaine raffinée dans un patio andalou planté d'orangers. Tajines,</text>
+    <text x="20" y="705" font-family="'Nunito Sans',sans-serif" font-size="12.5" fill="#808080">pastillas et msemen maison servis face aux remparts de la médina.</text>
+
+    <!-- ===== CTA ===== -->
+    <g filter="url(#shCta)"><rect x="20" y="688" width="353" height="52" rx="12" fill="#E0AF7C"/></g>
+    <text x="196.5" y="720" text-anchor="middle" font-family="'Poltawski Nowy',Georgia,serif" font-size="16" font-weight="600" fill="#FFFFFF">Réserver une table</text>
+
+    <!-- ===== BOTTOM NAV ===== -->
+    <g filter="url(#shNav)"><rect x="0" y="754" width="393" height="98" fill="#FFFFFF"/></g>
+    <!-- Enseignes (toque) ACTIVE cx47 -->
+    <rect x="25" y="766" width="44" height="44" rx="12" fill="#681237"/><g transform="translate(35,776)" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M7 13 a5 5 0 0 1 -2.2 -9.2 a3.8 3.8 0 0 1 6.7 -1.1 a3.8 3.8 0 0 1 6.7 1.1 a5 5 0 0 1 -2.2 9.2"/><path d="M7 13 h10 v4 a1.2 1.2 0 0 1 -1.2 1.2 h-7.6 a1.2 1.2 0 0 1 -1.2 -1.2 z"/></g><text x="47" y="826" text-anchor="middle" font-family="'Nunito Sans',sans-serif" font-size="11" font-weight="700" fill="#3B2338">Enseignes</text>
+    <!-- Réservations (calendrier) cx121.75 -->
+    <rect x="99.75" y="766" width="44" height="44" rx="12" fill="#F5F5F5"/><g transform="translate(109.75,776)" stroke="#3B2338" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"><rect x="4" y="6" width="16" height="15" rx="2.5"/><path d="M4 10 h16"/><path d="M9 4 v3 M15 4 v3"/><circle cx="9" cy="14.5" r="0.7" fill="#3B2338" stroke="none"/><circle cx="12" cy="14.5" r="0.7" fill="#3B2338" stroke="none"/><circle cx="15" cy="14.5" r="0.7" fill="#3B2338" stroke="none"/></g><text x="121.75" y="826" text-anchor="middle" font-family="'Nunito Sans',sans-serif" font-size="11" fill="#999999">Réservations</text>
+    <!-- Majordome (cloche service) cx196.5 -->
+    <rect x="174.5" y="766" width="44" height="44" rx="12" fill="#F5F5F5"/><g transform="translate(184.5,776)" stroke="#3B2338" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M3.5 18 h17"/><path d="M5 18 a7 7 0 0 1 14 0"/><path d="M12 7.5 v3.2"/><circle cx="12" cy="6" r="1.2" fill="#3B2338" stroke="none"/></g><text x="196.5" y="826" text-anchor="middle" font-family="'Nunito Sans',sans-serif" font-size="11" fill="#999999">Majordome</text>
+    <!-- Cercle (users) cx271.25 -->
+    <rect x="249.25" y="766" width="44" height="44" rx="12" fill="#F5F5F5"/><g transform="translate(259.25,776)" stroke="#3B2338" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"><circle cx="9" cy="9" r="3"/><path d="M3.5 19 a5.5 5.5 0 0 1 11 0"/><circle cx="16.5" cy="8" r="2.2"/><path d="M16 13.2 a4.6 4.6 0 0 1 4.5 4.4"/></g><text x="271.25" y="826" text-anchor="middle" font-family="'Nunito Sans',sans-serif" font-size="11" fill="#999999">Cercle</text>
+    <!-- Profil (id card) cx346 -->
+    <rect x="324" y="766" width="44" height="44" rx="12" fill="#F5F5F5"/><g transform="translate(334,776)" stroke="#3B2338" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"><rect x="3.5" y="5.5" width="17" height="13" rx="2.5"/><circle cx="9" cy="11" r="2.2"/><path d="M5.8 16.2 a3.4 3.4 0 0 1 6.4 0"/><path d="M14.5 10 h3.2 M14.5 13 h3.2"/></g><text x="346" y="826" text-anchor="middle" font-family="'Nunito Sans',sans-serif" font-size="11" fill="#999999">Profil</text>
+  </g>
+</svg>

@@ -2,11 +2,14 @@ package com.onesley.oneclick.modules.loyalty;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.onesley.oneclick.AbstractIntegrationTest;
+import com.onesley.oneclick.modules.loyalty.internal.LoyaltyExtensionService;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import java.math.BigDecimal;
 import java.util.Map;
 import java.util.UUID;
 
@@ -16,8 +19,22 @@ import static org.assertj.core.api.Assertions.assertThat;
 class LoyaltyExtensionFlowIntegrationTest extends AbstractIntegrationTest {
 
     private final ObjectMapper om = new ObjectMapper();
+    @Autowired LoyaltyExtensionService loyaltyExtensionService;
     private String userId() { return jdbc.queryForObject("SELECT id::text FROM users WHERE deleted_at IS NULL LIMIT 1", String.class); }
     private String restaurantId() { return jdbc.queryForObject("SELECT id::text FROM restaurants WHERE deleted_at IS NULL LIMIT 1", String.class); }
+
+    @Test
+    void recordRating_ghostReservation_skipsWithoutFkViolation() {
+        // Garde-fou FK (client_ratings.reservation_id → reservations) : réservation absente
+        // (ex: event Modulith rejoué après suppression) → rating ignoré, pas de violation FK, retour null.
+        UUID ghostReservation = UUID.randomUUID();
+        var dto = loyaltyExtensionService.recordRating(
+            UUID.fromString(userId()), ghostReservation, new BigDecimal("-0.5"), "no_show");
+        assertThat(dto).as("résa absente → rating ignoré").isNull();
+        Long rows = jdbc.queryForObject(
+            "SELECT count(*) FROM client_ratings WHERE reservation_id = ?::uuid", Long.class, ghostReservation.toString());
+        assertThat(rows).isZero();
+    }
 
     @Test
     void restitutionsByRestaurants_admin200_restaurateurScoped() {

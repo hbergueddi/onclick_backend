@@ -34,6 +34,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -127,7 +128,9 @@ class AnnouncementServiceTest {
         assertThat(out.authorId()).isEqualTo(caller);
         assertThat(out.priority()).isEqualTo("urgent");
         assertThat(out.pinned()).isTrue();
-        verify(repo).save(any(Announcement.class));
+        // create + publication immédiate → 1 insert + 1 update du stamp push_sent_at
+        // (chemin unifié publishNotificationAndStomp, partagé avec le cron B13).
+        verify(repo, times(2)).save(any(Announcement.class));
         // pinned → désépinglage des autres de la même priorité/tenant.
         verify(repo).unpinOthers(eq(tenant), eq("urgent"), any(UUID.class));
         // publiée → event notif staff + push STOMP.
@@ -161,6 +164,83 @@ class AnnouncementServiceTest {
         assertThatThrownBy(() -> service.create(new CreateAnnouncementDto(
             "T", "B", null, "weird", true, null)))
             .isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void create_publishedNow_stampsPushSentAt_forCronIdempotence() {
+        // B13 — une annonce publiée immédiatement est stampée push_sent_at pour que le cron
+        // de publication différée ne la re-notifie jamais.
+        when(repo.isTenantAdmin(caller, tenant)).thenReturn(true);
+        org.mockito.ArgumentCaptor<Announcement> saved =
+            org.mockito.ArgumentCaptor.forClass(Announcement.class);
+
+        service.create(new CreateAnnouncementDto("Now", "Corps", null, "permanent", false, null));
+
+        // repo.save appelé 2x (création + re-save après stamp) ; le dernier état a push_sent_at posé.
+        verify(repo, org.mockito.Mockito.atLeast(2)).save(saved.capture());
+        assertThat(saved.getAllValues().get(saved.getAllValues().size() - 1).getPushSentAt()).isNotNull();
+    }
+
+    // ─── adminCreate (Lot 4b — cross-tenant super-admin) ─────────────────────────
+
+    @Test
+    void adminCreate_usesTargetTenant_notCallerTenant() {
+        UUID targetTenant = UUID.randomUUID(); // tenant CIBLE ≠ tenant home du caller
+        AnnouncementDto out = service.adminCreate(targetTenant, new CreateAnnouncementDto(
+            "Cross-tenant", "Depuis le super-admin", null, "permanent", false, null));
+        assertThat(out.tenantId()).isEqualTo(targetTenant);
+        assertThat(out.authorId()).isEqualTo(caller);
+        // Aucune garde tenant-admin ici (gardé au controller par UPDATE:TENANTS) → insert direct.
+        verify(repo, never()).isTenantAdmin(any(), any());
+        verify(repo, org.mockito.Mockito.atLeastOnce()).save(any(Announcement.class));
+        // Publiée (publishAt null → now) → push STOMP sur le tenant CIBLE.
+        verify(announcementPublisher).publish(eq(targetTenant), any(AnnouncementDto.class));
+    }
+
+    @Test
+    void adminCreate_nullTenant_throws400() {
+        assertThatThrownBy(() -> service.adminCreate(null, new CreateAnnouncementDto(
+            "T", "B", null, "permanent", false, null)))
+            .isInstanceOf(BadRequestException.class);
+        verify(repo, never()).save(any());
+    }
+
+    // ─── B13 : publication différée (cron) ───────────────────────────────────────
+
+    @Test
+    void publishDueScheduled_noneDue_returnsZero_noPublish() {
+        when(repo.findDueForScheduledPublish(any())).thenReturn(List.of());
+        assertThat(service.publishDueScheduled()).isZero();
+        verify(eventPublisher, never()).publishEvent(any());
+        verify(announcementPublisher, never()).publish(any(), any());
+    }
+
+    @Test
+    void publishDueScheduled_dueAnnouncement_notifiesStampsAndCounts() {
+        // une annonce programmée arrivée à échéance (publish_at passé), jamais notifiée.
+        Announcement due = announcement(false, Instant.now().minus(1, ChronoUnit.MINUTES));
+        when(repo.findDueForScheduledPublish(any())).thenReturn(List.of(due));
+        when(repo.findStaffRecipientIds(any(), any())).thenReturn(List.of(UUID.randomUUID()));
+
+        int published = service.publishDueScheduled();
+
+        assertThat(published).isEqualTo(1);
+        // réutilise EXACTEMENT le chemin de publication immédiate : event + STOMP + stamp.
+        verify(eventPublisher).publishEvent(any(AnnouncementPublishedEvent.class));
+        verify(announcementPublisher).publish(eq(tenant), any(AnnouncementDto.class));
+        assertThat(due.getPushSentAt()).as("B13 : push_sent_at stampé → cron idempotent").isNotNull();
+    }
+
+    @Test
+    void publishDueScheduled_multipleDue_publishesEachAndCounts() {
+        Announcement a1 = announcement(false, Instant.now().minus(5, ChronoUnit.MINUTES));
+        Announcement a2 = announcement(false, Instant.now().minus(2, ChronoUnit.MINUTES));
+        when(repo.findDueForScheduledPublish(any())).thenReturn(List.of(a1, a2));
+
+        assertThat(service.publishDueScheduled()).isEqualTo(2);
+        verify(eventPublisher, org.mockito.Mockito.times(2)).publishEvent(any(AnnouncementPublishedEvent.class));
+        assertThat(a1.getPushSentAt()).isNotNull();
+        assertThat(a2.getPushSentAt()).isNotNull();
     }
 
     // ─── update : body_version bump + reset reads ────────────────────────────────
@@ -236,6 +316,22 @@ class AnnouncementServiceTest {
     }
 
     @Test
+    void markRead_byActiveMember_upserts() {
+        // V97 : un membre actif du programme peut acquitter une annonce de son tenant.
+        UUID id = UUID.randomUUID();
+        Announcement a = announcement(false, Instant.now().minus(1, ChronoUnit.HOURS));
+        when(repo.findById(id)).thenReturn(Optional.of(a));
+        when(repo.isTenantAdmin(caller, tenant)).thenReturn(false);
+        when(repo.isActiveStaffOfTenant(caller, tenant)).thenReturn(false);
+        when(membershipDirectory.isActiveMember(caller, tenant)).thenReturn(true);
+        when(readRepo.findByAnnouncementIdAndUserId(id, caller)).thenReturn(Optional.empty());
+
+        service.markRead(id, 1);
+
+        verify(readRepo).save(any(AnnouncementRead.class));
+    }
+
+    @Test
     void markRead_byUserOutsideTenant_forbidden() {
         UUID id = UUID.randomUUID();
         when(repo.findById(id)).thenReturn(Optional.of(announcement(false, Instant.now())));
@@ -280,6 +376,37 @@ class AnnouncementServiceTest {
 
         assertThat(out).hasSize(1);
         verify(repo).findActiveForTenant(eq(tenant), any());
+        verify(repo, never()).findAllForAdmin(any());
+    }
+
+    @Test
+    void listForMe_activeMember_returnsActiveForTenant() {
+        // V97 : un membre actif du programme (membership) — ni admin ni staff — voit les annonces
+        // PUBLIÉES VIVANTES de son tenant (PAS la vue admin scheduled/archived).
+        when(membershipDirectory.activeTenantIds(caller)).thenReturn(List.of(tenant)); // → callerProgramTenant=tenant
+        when(membershipDirectory.isActiveMember(caller, tenant)).thenReturn(true);
+        when(repo.isTenantAdmin(caller, tenant)).thenReturn(false);
+        when(repo.isActiveStaffOfTenant(caller, tenant)).thenReturn(false);
+        when(repo.findActiveForTenant(eq(tenant), any())).thenReturn(List.of(
+            announcement(true, Instant.now().minus(1, ChronoUnit.HOURS))));
+
+        List<AnnouncementDto> out = service.listForMe();
+
+        assertThat(out).hasSize(1);
+        verify(repo).findActiveForTenant(eq(tenant), any());
+        verify(repo, never()).findAllForAdmin(any()); // un membre n'a PAS la vue admin
+    }
+
+    @Test
+    void listForMe_clientWithoutMembership_returnsEmpty_noLeak() {
+        // CLIENT sans membership : activeTenantIds vide (défaut) → tenantId = home tenant, mais
+        // isActiveMember(home)=false → branche else → liste vide (aucune fuite des annonces B2B du home).
+        when(repo.isTenantAdmin(caller, tenant)).thenReturn(false);
+        when(repo.isActiveStaffOfTenant(caller, tenant)).thenReturn(false);
+        when(membershipDirectory.isActiveMember(caller, tenant)).thenReturn(false);
+
+        assertThat(service.listForMe()).isEmpty();
+        verify(repo, never()).findActiveForTenant(any(), any());
         verify(repo, never()).findAllForAdmin(any());
     }
 

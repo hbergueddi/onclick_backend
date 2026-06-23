@@ -3,6 +3,7 @@ package com.onesley.oneclick.modules.loyalty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.onesley.oneclick.AbstractIntegrationTest;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -21,12 +22,40 @@ import static org.assertj.core.api.Assertions.assertThat;
 class LoyaltyFlowIntegrationTest extends AbstractIntegrationTest {
 
     private final ObjectMapper om = new ObjectMapper();
+    /** Resto du tenant <b>public</b> (oneclick) : aucun gate d'adhésion (CL-3) → earn libre pour tout client. */
     private String[] restoTenant() {
         return jdbc.queryForObject(
-            "SELECT r.id::text || ',' || r.tenant_id::text FROM restaurants r WHERE r.tenant_id IS NOT NULL AND r.deleted_at IS NULL LIMIT 1",
+            "SELECT r.id::text || ',' || r.tenant_id::text FROM restaurants r " +
+            "JOIN tenants t ON t.id = r.tenant_id " +
+            "WHERE r.deleted_at IS NULL AND t.slug = 'oneclick' LIMIT 1",
             String.class).split(",");
     }
     private String userId() { return jdbc.queryForObject("SELECT id::text FROM users WHERE deleted_at IS NULL LIMIT 1", String.class); }
+
+    /** CL-3 — resto d'un tenant À ADHÉSION (slug ≠ oneclick), ou {@code null} si aucun seedé. */
+    private String[] gatedRestoTenant() {
+        var rows = jdbc.queryForList(
+            "SELECT r.id::text AS rid, r.tenant_id::text AS tid FROM restaurants r " +
+            "JOIN tenants t ON t.id = r.tenant_id " +
+            "WHERE r.deleted_at IS NULL AND t.slug <> 'oneclick' LIMIT 1");
+        return rows.isEmpty() ? null
+            : new String[]{ String.valueOf(rows.get(0).get("rid")), String.valueOf(rows.get(0).get("tid")) };
+    }
+    /** Un user qui n'est PAS membre actif du tenant (déterministe), ou {@code null}. */
+    private String nonMemberOf(String tenantId) {
+        var rows = jdbc.queryForList(
+            "SELECT u.id::text AS id FROM users u WHERE u.deleted_at IS NULL " +
+            "AND NOT EXISTS (SELECT 1 FROM tenant_memberships tm WHERE tm.user_id = u.id " +
+            "  AND tm.tenant_id = ?::uuid AND tm.status = 'active' AND tm.deleted_at IS NULL) LIMIT 1", tenantId);
+        return rows.isEmpty() ? null : String.valueOf(rows.get(0).get("id"));
+    }
+    /** Un membre actif du tenant, ou {@code null}. */
+    private String memberOf(String tenantId) {
+        var rows = jdbc.queryForList(
+            "SELECT tm.user_id::text AS id FROM tenant_memberships tm WHERE tm.tenant_id = ?::uuid " +
+            "AND tm.status = 'active' AND tm.deleted_at IS NULL LIMIT 1", tenantId);
+        return rows.isEmpty() ? null : String.valueOf(rows.get(0).get("id"));
+    }
 
     @Test
     void earn_thenAccountsAndTransactions() throws Exception {
@@ -81,6 +110,32 @@ class LoyaltyFlowIntegrationTest extends AbstractIntegrationTest {
         var node = om.readTree(patch.getBody());
         assertThat(node.get("minPoints").asInt()).isEqualTo(1234);
         assertThat(node.get("bonusPercent").asDouble()).isEqualTo(7.5);
+    }
+
+    @Test
+    void earn_gatedTenant_nonMemberForbidden_memberAllowed() {
+        // CL-3 — gate enrollment end-to-end : sur un tenant à adhésion, un non-membre ne peut pas
+        // accumuler de la fidélité (403), un membre actif oui (2xx). Le caller est admin ; le gate
+        // porte sur le clientId du payload.
+        String admin = adminBearer();
+        String[] gated = gatedRestoTenant();
+        Assumptions.assumeTrue(gated != null, "aucun resto de tenant à adhésion seedé");
+        String restaurantId = gated[0], tenantId = gated[1];
+
+        String nonMember = nonMemberOf(tenantId);
+        Assumptions.assumeTrue(nonMember != null, "aucun non-membre disponible");
+        ResponseEntity<String> denied = restTemplate.exchange(url("/api/loyalty/earn"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("clientId", nonMember, "restaurantId", restaurantId, "points", 10, "reason", "CL-3 gate"), admin),
+            String.class);
+        assertThat(denied.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        String member = memberOf(tenantId);
+        if (member != null) {
+            ResponseEntity<String> allowed = restTemplate.exchange(url("/api/loyalty/earn"), HttpMethod.POST,
+                jsonJwtEntity(Map.of("clientId", member, "restaurantId", restaurantId, "points", 10, "reason", "CL-3 member"), admin),
+                String.class);
+            assertThat(allowed.getStatusCode().is2xxSuccessful()).isTrue();
+        }
     }
 
     @Test
@@ -156,6 +211,35 @@ class LoyaltyFlowIntegrationTest extends AbstractIntegrationTest {
         assertThat(restTemplate.exchange(url("/api/loyalty/gain-rule-requests/" + id), HttpMethod.GET, jwtEntity(admin), String.class)
             .getStatusCode()).isEqualTo(HttpStatus.OK);
         jdbc.update("DELETE FROM gain_rule_requests WHERE id = ?::uuid", UUID.fromString(id)); // self-clean
+    }
+
+    /**
+     * Finance Snap2Earn — {@code GET /api/loyalty/gain-rules/by-restaurant/{id}}
+     * expose {@code pointValueMad} depuis la source de vérité {@code loyalty_rules.point_value}
+     * (table distincte de {@code gain_rules}). Le resto a une gain_rule (seed V27)
+     * mais pas forcément de loyalty_rule → on en seede une à 2.5000 puis on l'assert.
+     */
+    @Test
+    void gainRule_byRestaurant_exposesPointValueMad() throws Exception {
+        String admin = adminBearer();
+        String resto = restoTenant()[0];
+        UUID ruleId = UUID.randomUUID();
+        // 1 pt = 2.5 MAD pour ce resto, règle active
+        jdbc.update(
+            "INSERT INTO loyalty_rules (id, restaurant_id, point_value, enabled) VALUES (?::uuid, ?::uuid, 2.5000, true)",
+            ruleId, UUID.fromString(resto));
+        try {
+            ResponseEntity<String> resp = restTemplate.exchange(
+                url("/api/loyalty/gain-rules/by-restaurant/" + resto),
+                HttpMethod.GET, jwtEntity(admin), String.class);
+            assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
+            JsonNode body = om.readTree(resp.getBody());
+            assertThat(body.has("pointValueMad")).as("champ pointValueMad présent").isTrue();
+            assertThat(body.get("pointValueMad").decimalValue())
+                .isEqualByComparingTo(new java.math.BigDecimal("2.5000"));
+        } finally {
+            jdbc.update("DELETE FROM loyalty_rules WHERE id = ?::uuid", ruleId); // self-clean
+        }
     }
 
     @Test

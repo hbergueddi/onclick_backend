@@ -26,6 +26,7 @@ import com.onesley.oneclick.core.notification.api.NotificationDtos.NotificationC
 import com.onesley.oneclick.core.notification.api.NotificationDtos.NotificationDto;
 import com.onesley.oneclick.core.notification.api.NotificationDtos.UnreadCountDto;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Service du microservice notification (Phase 2 §21 spec senior).
@@ -37,12 +38,14 @@ import lombok.RequiredArgsConstructor;
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
+@Slf4j
 public class NotificationService {
 
     private final NotificationRepository notifRepo;
     private final NotificationCampaignRepository campaignRepo;
     private final DeviceTokenRepository tokenRepo;
     private final ApplicationEventPublisher events;
+    private final NotificationRecipientGuard recipientGuard; // garde-fou FK recipient_user_id → users
 
     // ─── Notifications ───────────────────────────────────────────────────────
 
@@ -60,6 +63,15 @@ public class NotificationService {
 
     @Transactional
     public NotificationDto create(NotificationCreateDto dto) {
+        // Garde-fou FK : si le destinataire n'existe pas/plus dans users (ex: event Modulith dormant
+        // rejoué après suppression du compte), on saute l'insert au lieu de violer la FK au COMMIT
+        // (ce qui ferait échouer le listener async + laisserait la publication d'event incomplète →
+        // rejouée en boucle à chaque restart). Retour null = notif non créée (cf appelants).
+        if (!recipientGuard.exists(dto.recipientUserId())) {
+            log.warn("[notification] destinataire {} absent de users — notification ignorée (type={})",
+                dto.recipientUserId(), dto.type());
+            return null;
+        }
         String channel = dto.channel() != null ? dto.channel() : "inapp";
         Notification n = new Notification(UUID.randomUUID(), dto.recipientUserId(), dto.type(), channel,
             dto.title(), dto.body());
@@ -70,6 +82,121 @@ public class NotificationService {
         events.publishEvent(new NotificationCreatedEvent(
             saved.recipientUserId(), saved.id(), saved.type(), Instant.now()));
         return saved;
+    }
+
+    /**
+     * Notif rappel de réservation (J-1 / H-2) — Sprint R1 (parité push legacy).
+     *
+     * <p>Écrit {@code metadata = {reservationId, slot}} : c'est exactement ce que le cron H-2
+     * inspecte pour l'anti-doublon ({@code NOT EXISTS ... metadata->>'slot' = 'h2'}). Le
+     * {@code channel='push'} reflète que ce rappel déclenche aussi un push (envoyé séparément
+     * par {@code NotificationEventHandler}, frontière Modulith).
+     *
+     * <p>Package-private : appelé uniquement par l'event handler du même module.
+     */
+    @Transactional
+    void createReservationReminder(UUID recipientUserId, String title, String body, String link,
+                                   UUID reservationId, String slot) {
+        if (!recipientGuard.exists(recipientUserId)) { log.warn("[notification] rappel résa ignoré — destinataire {} absent", recipientUserId); return; }
+        Notification n = new Notification(UUID.randomUUID(), recipientUserId, "reservation", "push", title, body);
+        if (link != null) n.setLink(link);
+        n.getMetadata().put("reservationId", reservationId.toString());
+        n.getMetadata().put("slot", slot);
+        notifRepo.save(n);
+        events.publishEvent(new NotificationCreatedEvent(
+            recipientUserId, n.getId(), "reservation", Instant.now()));
+    }
+
+    /**
+     * Rappel d'une réservation de RESSOURCE PCC (J-1 / H-2) — gap #4 (calque
+     * {@link #createReservationReminder}). {@code metadata = {bookingId, slot}} : inspecté par
+     * {@code ResourceBookingCronJobs} pour l'anti-doublon H-2 ({@code NOT EXISTS ... metadata->>'slot'='h2'}).
+     * Type {@code reservation} (les bookings PCC partagent la cloche « réservations » côté client),
+     * {@code channel='push'} (le push est envoyé séparément par {@code NotificationEventHandler}).
+     * Package-private.
+     */
+    @Transactional
+    void createResourceBookingReminder(UUID recipientUserId, String title, String body, String link,
+                                       UUID bookingId, String slot) {
+        if (!recipientGuard.exists(recipientUserId)) { log.warn("[notification] rappel booking ignoré — destinataire {} absent", recipientUserId); return; }
+        Notification n = new Notification(UUID.randomUUID(), recipientUserId, "reservation", "push", title, body);
+        if (link != null) n.setLink(link);
+        n.getMetadata().put("bookingId", bookingId.toString());
+        n.getMetadata().put("slot", slot);
+        notifRepo.save(n);
+        events.publishEvent(new NotificationCreatedEvent(
+            recipientUserId, n.getId(), "reservation", Instant.now()));
+    }
+
+    /**
+     * Alerte « points fidélité bientôt expirés » (J-30/J-15/J-7) — Feature A (parité legacy
+     * {@code notify-expiring-points}, enrichie du push réel).
+     *
+     * <p>Écrit {@code metadata = {kind:'points_expiring', accountId, milestone}} : c'est exactement
+     * ce que le cron {@code LoyaltyCronJobs.alertExpiringPoints} inspecte pour l'anti-doublon
+     * ({@code NOT EXISTS ... metadata->>'milestone' = :milestone}). {@code channel='push'} reflète
+     * que cette alerte déclenche aussi un push (envoyé séparément par {@code NotificationEventHandler}).
+     *
+     * <p>Package-private : appelé uniquement par l'event handler du même module.
+     */
+    @Transactional
+    void createPointsExpiringAlert(UUID recipientUserId, String title, String body, String link,
+                                   UUID accountId, String milestone) {
+        if (!recipientGuard.exists(recipientUserId)) { log.warn("[notification] alerte points ignorée — destinataire {} absent", recipientUserId); return; }
+        Notification n = new Notification(UUID.randomUUID(), recipientUserId, "loyalty", "push", title, body);
+        if (link != null) n.setLink(link);
+        n.getMetadata().put("kind", "points_expiring");
+        n.getMetadata().put("accountId", accountId.toString());
+        n.getMetadata().put("milestone", milestone);
+        notifRepo.save(n);
+        events.publishEvent(new NotificationCreatedEvent(
+            recipientUserId, n.getId(), "loyalty", Instant.now()));
+    }
+
+    /**
+     * Alerte « contrat partenaire bientôt expiré » (J-30/J-15/J-7) — Feature B (parité legacy
+     * {@code notify-expiring-contracts}). Une notif par admin destinataire.
+     *
+     * <p>{@code metadata = {kind:'contract_expiring', contractId, milestone}} : anti-doublon du cron
+     * {@code FinancialCronJobs.alertExpiringContracts} (1 alerte par contrat × jalon, quel que soit
+     * le nombre d'admins). Type {@code system} (whitelisté). Package-private.
+     */
+    @Transactional
+    void createContractExpiringAlert(UUID recipientUserId, String title, String body, String link,
+                                     UUID contractId, String milestone) {
+        if (!recipientGuard.exists(recipientUserId)) { log.warn("[notification] alerte contrat ignorée — destinataire {} absent", recipientUserId); return; }
+        Notification n = new Notification(UUID.randomUUID(), recipientUserId, "system", "push", title, body);
+        if (link != null) n.setLink(link);
+        n.getMetadata().put("kind", "contract_expiring");
+        n.getMetadata().put("contractId", contractId.toString());
+        n.getMetadata().put("milestone", milestone);
+        notifRepo.save(n);
+        events.publishEvent(new NotificationCreatedEvent(
+            recipientUserId, n.getId(), "system", Instant.now()));
+    }
+
+    /**
+     * Alerte de TRANSPARENCE « pénalité no-show devenue définitive » (48h sans contestation) —
+     * Lot B10. La pénalité de réputation a déjà été appliquée au marquage du no_show ; cette notif
+     * informe seulement le client que le délai de contestation est expiré.
+     *
+     * <p>{@code metadata = {kind:'noshow_penalty_final', reservationId}} : c'est exactement ce que le
+     * cron {@code ReservationCronJobs.finalizeNoShowPenalties} inspecte pour l'anti-doublon
+     * ({@code NOT EXISTS ... metadata->>'kind' = 'noshow_penalty_final' AND metadata->>'reservationId' = ...}).
+     * Type {@code reservation} (whitelisté). {@code channel='inapp'} (transparence, pas de push).
+     * Package-private : appelé uniquement par l'event handler du même module.
+     */
+    @Transactional
+    void createNoShowPenaltyFinalAlert(UUID recipientUserId, String title, String body, String link,
+                                       UUID reservationId) {
+        if (!recipientGuard.exists(recipientUserId)) { log.warn("[notification] alerte pénalité no-show ignorée — destinataire {} absent", recipientUserId); return; }
+        Notification n = new Notification(UUID.randomUUID(), recipientUserId, "reservation", "inapp", title, body);
+        if (link != null) n.setLink(link);
+        n.getMetadata().put("kind", "noshow_penalty_final");
+        n.getMetadata().put("reservationId", reservationId.toString());
+        notifRepo.save(n);
+        events.publishEvent(new NotificationCreatedEvent(
+            recipientUserId, n.getId(), "reservation", Instant.now()));
     }
 
     @Transactional

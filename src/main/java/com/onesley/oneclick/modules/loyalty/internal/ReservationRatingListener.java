@@ -23,7 +23,7 @@ import java.math.BigDecimal;
  * <ul>
  *   <li>{@code status → no_show} : {@code recordRating(-penaliteNoShow, "no_show")} —
  *       le client est pénalisé. {@code penaliteNoShow} vient de la config singleton
- *       {@link ClientScoreConfig} (V52, défaut 0.1).</li>
+ *       {@link ClientScoreConfig} (V52, défaut 0.5 depuis V102 — parité legacy).</li>
  *   <li>{@code status → honored} : {@code recordRating(+gainParPalier, "honored")} —
  *       le client remonte sa note. {@code gainParPalier} (défaut 0.1).</li>
  *   <li>Contestation {@code accepted} ({@link NoShowDisputeResolvedEvent}) :

@@ -20,15 +20,17 @@ public class ExploreFeaturedService {
     private final TenantScope tenantScope;
 
     /**
-     * Flux public Explore : featured activés (triés par rang), <b>scopés au périmètre tenant</b> du
-     * caller ({tenant public} ∪ memberships ; SUPERADMIN → tout). Ferme la fuite de périmètre.
+     * Flux <b>public Explore générique</b> : featured activés (triés par rang), scopés au tenant
+     * public « oneclick » UNIQUEMENT (un programme PCC/HOMU ne remonte jamais dans la découverte
+     * grand public, même pour un membre — cf {@link TenantScope#publicCatalogScopeOrNull()}) ;
+     * SUPERADMIN → tout. Ferme la fuite de périmètre dans l'Explore générique.
      */
     @Transactional(readOnly = true)
     public List<ExploreFeaturedDto> findAllEnabled() {
-        Set<UUID> visible = tenantScope.visibleTenantIdsOrNull();
-        List<ExploreFeatured> rows = (visible == null)
+        Set<UUID> publicScope = tenantScope.publicCatalogScopeOrNull();
+        List<ExploreFeatured> rows = (publicScope == null)
                 ? repo.findAllEnabledOrdered()
-                : repo.findAllEnabledOrderedForTenants(visible);
+                : repo.findAllEnabledOrderedForTenants(publicScope);
         return rows.stream().map(ExploreFeaturedDto::from).toList();
     }
 

@@ -1,0 +1,2970 @@
+{
+  "summary": "Audit exhaustif charte (Phase 4 polish) des ecrans OneClick iOS natif + reverif adverse",
+  "agentCount": 12,
+  "logs": [
+    "Audit Phase 4 termine: 6 zones verifiees"
+  ],
+  "result": [
+    {
+      "area": "Cercle / Communauté (social) — OneClick iOS native Win (Features/social)",
+      "confirmed": [
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/CircleHubView.swift",
+          "element": "ligne d'erreur réseau (hub)",
+          "line": 73,
+          "issue": "Message d'erreur du hub.",
+          "fix": "Déjà charte : ligne 73 = Text(e.userMessage).font(OneClickFont.body(13)). Aucune action.",
+          "severity": "minor",
+          "isReal": false,
+          "note": "FAUX POSITIF — le fichier a été refondu depuis l'audit. La ligne 73 actuelle utilise déjà OneClickFont.body(13), pas .font(.system(size:13))."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/CircleHubView.swift",
+          "element": "hero placeholder (dégradé)",
+          "line": 100,
+          "issue": "Dégradé hero [OneClickColors.primary, Color(argb: \"#9B6B8C\")] : le second stop #9B6B8C est un mauve hors-palette (ni primary #681237 ni primaryGlow #8E2A50).",
+          "fix": "Color(argb: \"#9B6B8C\") -> OneClickColors.primaryGlow (dégradé primary -> primaryGlow, registre marque).",
+          "severity": "major",
+          "isReal": true,
+          "note": "CONFIRMÉ tel quel à la ligne 100. #9B6B8C est hors palette charte. Fix correct."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/CircleHubView.swift",
+          "element": "titre carte nav (Mes amis / Mes groupes / Invitations envoyées)",
+          "line": 124,
+          "issue": "Titre de carte nav.",
+          "fix": "Déjà charte : ligne 124 = Text(title).font(OneClickFont.display(15, .semibold)). Aucune action.",
+          "severity": "major",
+          "isReal": false,
+          "note": "FAUX POSITIF — déjà migré. La ligne 124 actuelle utilise OneClickFont.display(15, .semibold), registre serif correct (l'audit proposait display(14) mais display(15) est tout aussi conforme)."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/CircleHubView.swift",
+          "element": "sous-titre carte nav",
+          "line": 125,
+          "issue": "Sous-titre (compteurs) de la carte.",
+          "fix": "Déjà charte : ligne 125 = Text(subtitle).font(OneClickFont.body(11)). Aucune action.",
+          "severity": "minor",
+          "isReal": false,
+          "note": "FAUX POSITIF — déjà OneClickFont.body(11)."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/AddFriendView.swift",
+          "element": "consigne de recherche",
+          "line": 96,
+          "issue": "Text d'instruction.",
+          "fix": "Déjà charte : ligne 96 = OneClickFont.body(13). Aucune action.",
+          "severity": "minor",
+          "isReal": false,
+          "note": "FAUX POSITIF — déjà migré."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/AddFriendView.swift",
+          "element": "champ Numéro de téléphone (TextField)",
+          "line": 98,
+          "issue": "TextField sans police charte : hérite du body système. Le texte saisi doit être en Nunito Sans.",
+          "fix": "Ajouter .font(OneClickFont.body(16)) sur le TextField (16pt pour éviter le zoom iOS).",
+          "severity": "minor",
+          "isReal": true,
+          "note": "CONFIRMÉ — ligne 98, le TextField n'a pas de .font(...). Le texte saisi hérite donc de la police système. Fix valide."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/AddFriendView.swift",
+          "element": "nom de l'ami trouvé (carte)",
+          "line": 134,
+          "issue": "Nom de l'ami trouvé.",
+          "fix": "Déjà charte : ligne 134 = OneClickFont.display(15, .semibold). Aucune action.",
+          "severity": "major",
+          "isReal": false,
+          "note": "FAUX POSITIF — déjà migré en serif display(15, .semibold)."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/AddFriendView.swift",
+          "element": "badge « Envoyé »",
+          "line": 136,
+          "issue": "Label de badge « Envoyé ».",
+          "fix": "Déjà charte : ligne 136 = OneClickFont.body(11). Aucune action (acceptable ; OneClickStatusBadgeView serait un + mais non requis pour un pseudo-badge inline neutre).",
+          "severity": "minor",
+          "isReal": false,
+          "note": "FAUX POSITIF — déjà OneClickFont.body(11)."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/AddFriendView.swift",
+          "element": "label bouton « Ajouter »",
+          "line": 140,
+          "issue": "HStack { Image(systemName:\"person.badge.plus\"); Text(\"Ajouter\") }.font(.system(size: 12, weight: .semibold)) — le .font système s'applique au HStack, donc le Text « Ajouter » (label de bouton) hérite de la police système.",
+          "fix": ".font(.system(size: 12, weight: .semibold)) -> .font(OneClickFont.body(12, .semibold)) (label de bouton inline/ghost en Nunito Sans).",
+          "severity": "minor",
+          "isReal": true,
+          "note": "CONFIRMÉ à la ligne 140. Le .font(.system(...)) sur le HStack affecte bien le Text « Ajouter ». Vrai (même si l'effet visuel est partiellement masqué car .oneClickText peut re-poser une police au niveau du label — mais ici aucune police charte n'est appliquée au-dessus). Fix correct."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/AddFriendView.swift",
+          "element": "carte non-inscrit — ligne d'info",
+          "line": 152,
+          "issue": "Text d'info non-inscrit.",
+          "fix": "Déjà charte : ligne 152 = OneClickFont.body(12). Aucune action.",
+          "severity": "minor",
+          "isReal": false,
+          "note": "FAUX POSITIF — déjà migré."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/AddFriendView.swift",
+          "element": "titre carte « Parrainez cet ami »",
+          "line": 158,
+          "issue": "Titre de carte parrainage.",
+          "fix": "Déjà charte : ligne 158 = OneClickFont.display(15, .semibold). Aucune action.",
+          "severity": "major",
+          "isReal": false,
+          "note": "FAUX POSITIF — déjà migré en serif display(15)."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/AddFriendView.swift",
+          "element": "sous-titre carte parrainage",
+          "line": 159,
+          "issue": "Sous-titre parrainage.",
+          "fix": "Déjà charte : ligne 159 = OneClickFont.body(12). Aucune action.",
+          "severity": "minor",
+          "isReal": false,
+          "note": "FAUX POSITIF — déjà migré."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/AddFriendView.swift",
+          "element": "toast",
+          "line": 172,
+          "issue": "Texte du toast.",
+          "fix": "Déjà charte : ligne 172 = OneClickFont.body(13). Aucune action.",
+          "severity": "minor",
+          "isReal": false,
+          "note": "FAUX POSITIF — déjà migré."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/FriendsView.swift",
+          "element": "empty-state « Aucun ami » — titre",
+          "line": 123,
+          "issue": "Titre d'empty-state.",
+          "fix": "Déjà charte : ligne 123 = OneClickFont.display(16, .semibold). Aucune action de police. (La couleur reste mutedForeground, choix de l'auteur ; acceptable pour un empty-state discret.)",
+          "severity": "major",
+          "isReal": false,
+          "note": "FAUX POSITIF sur la police — le titre est déjà en serif OneClickFont.display(16, .semibold), conforme §8.5. L'audit demandait display(18) + foreground mais display(16, semibold) sur mutedForeground reste un titre serif valide ; non-conformité structurelle non avérée."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/FriendsView.swift",
+          "element": "empty-state « Aucun ami » — hint",
+          "line": 124,
+          "issue": "Sous-titre d'empty-state.",
+          "fix": "Déjà charte : ligne 124 = OneClickFont.body(12). Aucune action.",
+          "severity": "minor",
+          "isReal": false,
+          "note": "FAUX POSITIF — déjà migré."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/FriendsView.swift",
+          "element": "overline de section (DEMANDES REÇUES / MES AMIS)",
+          "line": 129,
+          "issue": "Overline de section.",
+          "fix": "Déjà charte : ligne 129 = OneClickFont.body(12, .semibold).kerning(0.6) = recette overline charte. Aucune action.",
+          "severity": "minor",
+          "isReal": false,
+          "note": "FAUX POSITIF — déjà overline charte (body 12 semibold + kerning)."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/FriendsView.swift",
+          "element": "toast",
+          "line": 135,
+          "issue": "Texte du toast.",
+          "fix": "Déjà charte : ligne 135 = OneClickFont.body(13). Aucune action.",
+          "severity": "minor",
+          "isReal": false,
+          "note": "FAUX POSITIF — déjà migré."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/FriendsView.swift",
+          "element": "nom d'ami (FriendRow)",
+          "line": 157,
+          "issue": "Nom de l'ami (FriendRow).",
+          "fix": "Déjà charte : ligne 157 = OneClickFont.display(15, .semibold). Aucune action.",
+          "severity": "major",
+          "isReal": false,
+          "note": "FAUX POSITIF — déjà serif display(15)."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/FriendsView.swift",
+          "element": "sous-titre ligne ami (Ami · il y a…)",
+          "line": 158,
+          "issue": "Méta ligne ami.",
+          "fix": "Déjà charte : ligne 158 = OneClickFont.body(11). Aucune action.",
+          "severity": "minor",
+          "isReal": false,
+          "note": "FAUX POSITIF — déjà migré."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/FriendsView.swift",
+          "element": "label bouton « Accepter »",
+          "line": 163,
+          "issue": "Label bouton « Accepter ».",
+          "fix": "Déjà charte : ligne 163 = Text(\"Accepter\").font(OneClickFont.display(13, .semibold)). Aucune action.",
+          "severity": "minor",
+          "isReal": false,
+          "note": "FAUX POSITIF — déjà migré (en display, ce qui est conforme pour un libellé de bouton selon la charte qui place les boutons en Poltawski)."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/GroupsView.swift",
+          "element": "message d'erreur liste groupes",
+          "line": 112,
+          "issue": "Text d'erreur liste groupes.",
+          "fix": "Déjà charte : ligne 112 = OneClickFont.body(13). Aucune action.",
+          "severity": "minor",
+          "isReal": false,
+          "note": "FAUX POSITIF — déjà migré."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/GroupsView.swift",
+          "element": "empty-state « Aucun groupe » — titre",
+          "line": 139,
+          "issue": "Titre d'empty-state.",
+          "fix": "Déjà charte : ligne 139 = OneClickFont.display(16, .semibold). Aucune action de police.",
+          "severity": "major",
+          "isReal": false,
+          "note": "FAUX POSITIF — titre déjà serif OneClickFont.display(16, .semibold), conforme §8.5."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/GroupsView.swift",
+          "element": "empty-state « Aucun groupe » — hint",
+          "line": 140,
+          "issue": "Sous-titre d'empty-state.",
+          "fix": "Déjà charte : ligne 140 = OneClickFont.body(12). Aucune action.",
+          "severity": "minor",
+          "isReal": false,
+          "note": "FAUX POSITIF — déjà migré."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/GroupsView.swift",
+          "element": "icône de groupe (couleur)",
+          "line": 151,
+          "issue": "Image teintée GroupIcons.color(group.iconKey) : la majorité des clés renvoient des couleurs Tailwind arc-en-ciel hors-palette (rose #F43F5E, ambre #D97706, pink #EC4899, emerald #10B981, orange #F97316, amber #FBBF24, violet #8B5CF6, slate #64748B, red #EF4444, teal #14B8A6, blue #3B82F6, indigo #6366F1, cyan #06B6D4). Hors charte dual-accent.",
+          "fix": "Restreindre GroupIcons.color (SocialFormat.swift) à la palette charte (primary / accent / ink + tokens statut), ou à défaut teinter toutes les icônes de groupe en OneClickColors.primary.",
+          "severity": "major",
+          "isReal": true,
+          "note": "CONFIRMÉ — la couleur provient de GroupIcons.color (SocialFormat.swift L54-72) qui retourne 13 hex Tailwind hors palette. C'est le même problème de fond que le finding SocialFormat L84 ; les deux pointent la même source. Fix correct (corriger à la source dans SocialFormat)."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/GroupsView.swift",
+          "element": "nom de groupe (carte)",
+          "line": 154,
+          "issue": "Nom de groupe (carte).",
+          "fix": "Déjà charte : ligne 154 = OneClickFont.display(15, .semibold). Aucune action.",
+          "severity": "major",
+          "isReal": false,
+          "note": "FAUX POSITIF — déjà serif display(15)."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/GroupsView.swift",
+          "element": "compteur de membres (carte groupe)",
+          "line": 155,
+          "issue": "Méta compteur de membres.",
+          "fix": "Déjà charte : ligne 155 = OneClickFont.body(10). Aucune action.",
+          "severity": "minor",
+          "isReal": false,
+          "note": "FAUX POSITIF — déjà migré."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/GroupsView.swift",
+          "element": "zone dépliée — « Aucun membre »",
+          "line": 176,
+          "issue": "Text d'état vide local.",
+          "fix": "Déjà charte : ligne 176 = OneClickFont.body(12). Aucune action.",
+          "severity": "minor",
+          "isReal": false,
+          "note": "FAUX POSITIF — déjà migré."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/GroupsView.swift",
+          "element": "nom de membre (zone dépliée)",
+          "line": 181,
+          "issue": "Nom de membre.",
+          "fix": "Déjà charte : ligne 181 = OneClickFont.display(13, .medium). Aucune action.",
+          "severity": "major",
+          "isReal": false,
+          "note": "FAUX POSITIF — déjà serif display(13, .medium)."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/GroupsView.swift",
+          "element": "label bouton « Ajouter un ami » (zone dépliée)",
+          "line": 189,
+          "issue": "HStack { Image(systemName:\"person.badge.plus\").font(.system(size:14)); Text(\"Ajouter un ami\").font(.system(size: 12, weight: .semibold)) } — le Text « Ajouter un ami » est en police système.",
+          "fix": ".font(.system(size: 12, weight: .semibold)) (sur le Text) -> .font(OneClickFont.body(12, .semibold)).",
+          "severity": "minor",
+          "isReal": true,
+          "note": "CONFIRMÉ à la ligne 189 : le Text porte explicitement .font(.system(size: 12, weight: .semibold)). Vraie violation (label de bouton inline en police système). Fix correct."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/GroupsView.swift",
+          "element": "toast",
+          "line": 204,
+          "issue": "Texte du toast.",
+          "fix": "Déjà charte : ligne 204 = OneClickFont.body(13). Aucune action.",
+          "severity": "minor",
+          "isReal": false,
+          "note": "FAUX POSITIF — déjà migré."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/GroupsView.swift",
+          "element": "titre sheet « Nouveau groupe »",
+          "line": 224,
+          "issue": "HStack { Image(systemName:\"folder.badge.plus\"); Text(\"Nouveau groupe\").font(.system(size: 16, weight: .bold)) } — titre de la sheet de création en police système (devrait être serif).",
+          "fix": ".font(.system(size: 16, weight: .bold)) -> .font(OneClickFont.display(16, .semibold)).",
+          "severity": "major",
+          "isReal": true,
+          "note": "CONFIRMÉ à la ligne 224 : le Text « Nouveau groupe » porte .font(.system(size: 16, weight: .bold)). Vrai (titre de sheet = registre serif). Fix correct."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/GroupsView.swift",
+          "element": "sous-titre sheet création",
+          "line": 225,
+          "issue": "Sous-titre sheet création.",
+          "fix": "Déjà charte : ligne 225 = OneClickFont.body(12). Aucune action.",
+          "severity": "minor",
+          "isReal": false,
+          "note": "FAUX POSITIF — déjà migré."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/GroupsView.swift",
+          "element": "label champ « NOM DU GROUPE »",
+          "line": 227,
+          "issue": "Overline/label de champ.",
+          "fix": "Déjà charte : ligne 227 = OneClickFont.body(12, .semibold).kerning(0.5) = overline charte. Aucune action.",
+          "severity": "minor",
+          "isReal": false,
+          "note": "FAUX POSITIF — déjà overline charte."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/GroupsView.swift",
+          "element": "champ nom de groupe (TextField)",
+          "line": 228,
+          "issue": "TextField « Ex: Foodies… » sans police charte (hérite du système).",
+          "fix": "Ajouter .font(OneClickFont.body(16)) sur le TextField.",
+          "severity": "minor",
+          "isReal": true,
+          "note": "CONFIRMÉ à la ligne 228 : le TextField n'a pas de .font(...). Texte saisi en police système. Fix valide."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/GroupsView.swift",
+          "element": "label champ « ICÔNE »",
+          "line": 232,
+          "issue": "Overline/label de champ.",
+          "fix": "Déjà charte : ligne 232 = OneClickFont.body(12, .semibold).kerning(0.5). Aucune action.",
+          "severity": "minor",
+          "isReal": false,
+          "note": "FAUX POSITIF — déjà overline charte."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/GroupsView.swift",
+          "element": "grille d'icônes — sélection",
+          "line": 241,
+          "issue": "État sélectionné de la grille d'icônes : le fond @10% et la teinte d'icône utilisent GroupIcons.color(key) (Tailwind hors-charte). La bordure de sélection utilise déjà OneClickColors.primary.",
+          "fix": "Remplacer GroupIcons.color(key) (L238 teinte icône + L240 fill @10%) par OneClickColors.primary pour rester charte ; ou corriger GroupIcons.color à la source.",
+          "severity": "minor",
+          "isReal": true,
+          "note": "CONFIRMÉ — lignes 238 (foregroundStyle: GroupIcons.color(key) si sélectionné) et 240 (background GroupIcons.color(key).opacity(0.10)). Même source hors-charte. L'audit cite L241 (la bordure, qui elle est correcte en primary) mais le vrai problème est aux L238/L240 ; finding réel, line corrigée."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/SentInvitesView.swift",
+          "element": "onglet pill « Amitié »",
+          "line": 72,
+          "issue": "Couleurs hors-charte hardcodées : active #FDF2F8 / bordure #FBCFE8 / fg #BE185D (palette pink Tailwind). Les onglets/segments charte = pill bordeaux actif (OneClickChip).",
+          "fix": "Remplacer le segment custom par OneClickChip (actif = OneClickColors.primary + label blanc ; inactif = surface + mutedForeground). Supprimer les hex #FDF2F8/#FBCFE8/#BE185D.",
+          "severity": "major",
+          "isReal": true,
+          "note": "CONFIRMÉ à la ligne 72. Palette pink Tailwind hors-charte. Fix correct (migrer vers OneClickChip)."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/SentInvitesView.swift",
+          "element": "onglet pill « Parrainage »",
+          "line": 73,
+          "issue": "Couleurs hors-charte hardcodées : active #F5F3FF / bordure #DDD6FE / fg #6D28D9 (palette violet Tailwind). Hors dual-accent.",
+          "fix": "Remplacer par OneClickChip (même recette charte que l'onglet Amitié). Supprimer les hex #F5F3FF/#DDD6FE/#6D28D9.",
+          "severity": "major",
+          "isReal": true,
+          "note": "CONFIRMÉ à la ligne 73. Palette violet Tailwind hors-charte. Fix correct."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/SentInvitesView.swift",
+          "element": "label onglet (Amitié/Parrainage)",
+          "line": 81,
+          "issue": "Label d'onglet.",
+          "fix": "Déjà charte (police) : ligne 81 = OneClickFont.display(13, .semibold). La vraie non-conformité résiduelle est la couleur fg passée (#BE185D/#6D28D9, cf L72/73), pas la police.",
+          "severity": "minor",
+          "isReal": false,
+          "note": "FAUX POSITIF sur la police — la ligne 81 utilise déjà OneClickFont.display(13, .semibold). Le problème de couleur du label est déjà couvert par les findings L72/L73 (foregroundStyle(isActive ? fg : ...) L87)."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/SentInvitesView.swift",
+          "element": "compteur pastille onglet",
+          "line": 83,
+          "issue": "Compteur pastille onglet.",
+          "fix": "Déjà charte : ligne 83 = OneClickFont.body(9, .bold). Aucune action.",
+          "severity": "minor",
+          "isReal": false,
+          "note": "FAUX POSITIF — déjà migré."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/SentInvitesView.swift",
+          "element": "section « EN ATTENTE » (couleur)",
+          "line": 102,
+          "issue": "color: Color(argb: \"#D97706\") (amber-600 Tailwind) — duplique sémantiquement OneClickColors.warning sans utiliser le token.",
+          "fix": "Color(argb: \"#D97706\") -> OneClickColors.warning",
+          "severity": "minor",
+          "isReal": true,
+          "note": "CONFIRMÉ à la ligne 102. #D97706 duplique warning. Fix correct (note : la valeur token warning est #E8A33D, légèrement différente, mais c'est l'intention sémantique attendue)."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/SentInvitesView.swift",
+          "element": "section « INSCRITS » (couleur)",
+          "line": 115,
+          "issue": "color: Color(argb: \"#059669\") (emerald-600) — duplique sémantiquement OneClickColors.success.",
+          "fix": "Color(argb: \"#059669\") -> OneClickColors.success",
+          "severity": "minor",
+          "isReal": true,
+          "note": "CONFIRMÉ à la ligne 115 (l'audit citait L114 = section EN ATTENTE du referralTab #D97706, qui est aussi réelle ; L115 = INSCRITS #059669). Fix correct."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/SentInvitesView.swift",
+          "element": "titre de section (overline)",
+          "line": 122,
+          "issue": "Overline de section.",
+          "fix": "Déjà charte : ligne 122 = OneClickFont.body(12, .semibold).kerning(0.8). Aucune action de police (la couleur est passée en paramètre depuis L102/114/115, couverte par ces findings).",
+          "severity": "minor",
+          "isReal": false,
+          "note": "FAUX POSITIF sur la police — déjà overline charte. La couleur hors-charte est déjà couverte par les findings de couleur de section."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/SentInvitesView.swift",
+          "element": "compteur de section",
+          "line": 123,
+          "issue": "Compteur de section.",
+          "fix": "Déjà charte : ligne 123 = OneClickFont.body(10, .bold). Aucune action.",
+          "severity": "minor",
+          "isReal": false,
+          "note": "FAUX POSITIF — déjà migré."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/SentInvitesView.swift",
+          "element": "avatar carte amitié (dégradé)",
+          "line": 133,
+          "issue": "Dégradé avatar inline [#F472B6, #FB7185] (pink/rose Tailwind) hors-charte, et duplication du système AvatarCircle au lieu de le réutiliser.",
+          "fix": "Remplacer le ZStack dégradé par AvatarCircle(name: f.displayName, initials: f.initials) (composant partagé). NB : AvatarCircle utilise lui-même AvatarGradient arc-en-ciel (cf finding SocialFormat L84) — la vraie correction charte passe par corriger AvatarGradient à la source.",
+          "severity": "major",
+          "isReal": true,
+          "note": "CONFIRMÉ à la ligne 133. Dégradé pink/rose hors-charte + duplication. Fix correct, avec la réserve que AvatarCircle hérite du même problème de palette (à traiter à la source)."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/SentInvitesView.swift",
+          "element": "initiales avatar amitié",
+          "line": 134,
+          "issue": "Initiales avatar.",
+          "fix": "Déjà charte : ligne 134 = OneClickFont.display(14, .semibold). Aucune action.",
+          "severity": "minor",
+          "isReal": false,
+          "note": "FAUX POSITIF — déjà serif display(14)."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/SentInvitesView.swift",
+          "element": "nom (carte amitié)",
+          "line": 137,
+          "issue": "Nom (carte amitié).",
+          "fix": "Déjà charte : ligne 137 = OneClickFont.display(15, .semibold). Aucune action.",
+          "severity": "major",
+          "isReal": false,
+          "note": "FAUX POSITIF — déjà serif display(15)."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/SentInvitesView.swift",
+          "element": "méta date (carte amitié)",
+          "line": 138,
+          "issue": "Méta date.",
+          "fix": "Déjà charte : ligne 138 = OneClickFont.body(10). Aucune action.",
+          "severity": "minor",
+          "isReal": false,
+          "note": "FAUX POSITIF — déjà migré."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/SentInvitesView.swift",
+          "element": "avatar carte parrainage (dégradé)",
+          "line": 150,
+          "issue": "Dégradé avatar inline [#A78BFA, #A855F7] (violet/purple Tailwind) hors-charte.",
+          "fix": "Remplacer le dégradé par un fond charte (OneClickColors.primary, ou primary->primaryGlow) pour la pastille cadeau.",
+          "severity": "major",
+          "isReal": true,
+          "note": "CONFIRMÉ à la ligne 150. Dégradé violet Tailwind hors-charte. Fix correct."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/SentInvitesView.swift",
+          "element": "code de parrainage (carte)",
+          "line": 154,
+          "issue": "Code de parrainage.",
+          "fix": "Déjà charte : ligne 154 = OneClickFont.display(15, .semibold). Aucune action.",
+          "severity": "major",
+          "isReal": false,
+          "note": "FAUX POSITIF — déjà serif display(15) (code = registre serif, conforme)."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/SentInvitesView.swift",
+          "element": "méta date (carte parrainage)",
+          "line": 155,
+          "issue": "Méta date.",
+          "fix": "Déjà charte : ligne 155 = OneClickFont.body(10). Aucune action.",
+          "severity": "minor",
+          "isReal": false,
+          "note": "FAUX POSITIF — déjà migré."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/SentInvitesView.swift",
+          "element": "badge statut « Acceptée »",
+          "line": 167,
+          "issue": "color: Color(argb: \"#059669\") (emerald) hardcodé, badge ad-hoc au lieu de OneClickStatusBadgeView ; duplique success.",
+          "fix": "Color(argb: \"#059669\") -> OneClickColors.success (ou remplacer le badge ad-hoc par OneClickStatusBadgeView).",
+          "severity": "minor",
+          "isReal": true,
+          "note": "CONFIRMÉ à la ligne 167. #059669 hardcodé. Fix correct."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/SentInvitesView.swift",
+          "element": "badge statut « En attente »",
+          "line": 169,
+          "issue": "color: Color(argb: \"#D97706\") (amber) hardcodé ; duplique warning.",
+          "fix": "Color(argb: \"#D97706\") -> OneClickColors.warning",
+          "severity": "minor",
+          "isReal": true,
+          "note": "CONFIRMÉ à la ligne 169. #D97706 hardcodé. Fix correct."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/SentInvitesView.swift",
+          "element": "badge référent « Inscrit »",
+          "line": 174,
+          "issue": "color: Color(argb: \"#059669\") (emerald) hardcodé ; duplique success.",
+          "fix": "Color(argb: \"#059669\") -> OneClickColors.success",
+          "severity": "minor",
+          "isReal": true,
+          "note": "CONFIRMÉ à la ligne 174. Fix correct."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/SentInvitesView.swift",
+          "element": "badge référent « En attente »",
+          "line": 175,
+          "issue": "color: Color(argb: \"#D97706\") (amber) hardcodé ; duplique warning.",
+          "fix": "Color(argb: \"#D97706\") -> OneClickColors.warning",
+          "severity": "minor",
+          "isReal": true,
+          "note": "CONFIRMÉ à la ligne 175. Fix correct."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/SentInvitesView.swift",
+          "element": "label de badge (statut)",
+          "line": 179,
+          "issue": "Label de badge statut.",
+          "fix": "Déjà charte : ligne 179 = OneClickFont.body(10, .semibold). Aucune action de police (la couleur du badge est déjà couverte par les findings L167-175).",
+          "severity": "minor",
+          "isReal": false,
+          "note": "FAUX POSITIF sur la police — déjà OneClickFont.body(10, .semibold)."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/SentInvitesView.swift",
+          "element": "empty-state (Amitié/Parrainage) — texte",
+          "line": 188,
+          "issue": "Empty-state réduit à une icône + un Text en OneClickFont.body(14) : §8.5 impose titre serif + sous-titre muted + (CTA). Manque le titre serif et le hint distinct ; le texte unique est en body (Nunito Sans), pas en serif display.",
+          "fix": "Restructurer en empty-state charte : titre OneClickFont.display(16-18, .semibold) + hint OneClickFont.body(13) muted (CTA optionnel). Au minimum, passer le Text en OneClickFont.display(16, .semibold).",
+          "severity": "major",
+          "isReal": true,
+          "note": "CONFIRMÉ — ligne 188 : Text(text).font(OneClickFont.body(14)). L'empty-state est mono-ligne en BODY (Nunito Sans), donc PAS de titre serif → non-conformité §8.5 réelle. (Différence avec FriendsView/GroupsView qui ont, eux, un titre serif display(16) + un hint body — d'où mon classement de ces deux-là en faux positifs.) Fix correct, mais ce n'est PAS un problème de police .system : le finding original parlait de .system(size:14, .medium), or le code actuel est OneClickFont.body(14) — la non-conformité est structurelle (registre body au lieu de display + absence de hint), pas un system-font."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/FriendPickerSheet.swift",
+          "element": "titre de la sheet (picker)",
+          "line": 20,
+          "issue": "Titre de la BottomSheet.",
+          "fix": "Déjà charte : ligne 20 = OneClickFont.display(17, .semibold). Aucune action.",
+          "severity": "major",
+          "isReal": false,
+          "note": "FAUX POSITIF — déjà serif display(17)."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/FriendPickerSheet.swift",
+          "element": "état vide « Aucun ami disponible »",
+          "line": 25,
+          "issue": "Text d'état vide.",
+          "fix": "Déjà charte : ligne 25 = OneClickFont.body(13). Aucune action.",
+          "severity": "minor",
+          "isReal": false,
+          "note": "FAUX POSITIF — déjà migré."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/FriendPickerSheet.swift",
+          "element": "nom d'ami (ligne picker)",
+          "line": 48,
+          "issue": "Nom d'ami (ligne picker).",
+          "fix": "Déjà charte : ligne 48 = OneClickFont.display(15, .medium). Aucune action.",
+          "severity": "major",
+          "isReal": false,
+          "note": "FAUX POSITIF — déjà serif display(15, .medium)."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/FriendPickerSheet.swift",
+          "element": "badge « Ajouté »",
+          "line": 51,
+          "issue": "Label de badge « Ajouté ».",
+          "fix": "Déjà charte : ligne 51 = OneClickFont.body(11). Aucune action.",
+          "severity": "minor",
+          "isReal": false,
+          "note": "FAUX POSITIF — déjà migré."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/FriendPickerSheet.swift",
+          "element": "label bouton « Ajouter »",
+          "line": 59,
+          "issue": "Label bouton « Ajouter ».",
+          "fix": "Déjà charte : ligne 59 = OneClickFont.display(12, .semibold). Aucune action.",
+          "severity": "minor",
+          "isReal": false,
+          "note": "FAUX POSITIF — déjà migré (display, conforme pour un libellé de bouton)."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/domain/SocialFormat.swift",
+          "element": "AvatarGradient (palette dégradés avatar)",
+          "line": 84,
+          "issue": "8 paires de dégradés arc-en-ciel Tailwind (violet/blue/emerald/teal/amber/orange/pink/rose/cyan/fuchsia/lime/green) hardcodées hors palette charte. Utilisé par AvatarCircle (FriendRow, foundCard, membres). Documenté comme port legacy 1:1 mais reste hors dual-accent.",
+          "fix": "Remplacer par une famille de dégradés dérivés de la charte (variations primary #681237 -> primaryGlow #8E2A50 / accent #E0AF7C / ink #3B2338) déterministes par nom, pour rester dans le registre marque.",
+          "severity": "major",
+          "isReal": true,
+          "note": "CONFIRMÉ — lignes 84-93 : les 8 paires sont bien des dégradés Tailwind arc-en-ciel hors charte. C'est la source du problème d'avatars dans tout le module. Fix correct."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/domain/SocialFormat.swift",
+          "element": "initiales AvatarCircle",
+          "line": 118,
+          "issue": ".font(.system(size: fontSize, weight: .bold)) sur les initiales (sigle/gros caractère = serif display charte).",
+          "fix": ".font(.system(size: fontSize, weight: .bold)) -> OneClickFont.display(fontSize, .bold).",
+          "severity": "minor",
+          "isReal": true,
+          "note": "CONFIRMÉ à la ligne 118 : Text(initials).font(.system(size: fontSize, weight: .bold)). Vraie violation (initiales = texte en police système). Fix correct."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/domain/SocialFormat.swift",
+          "element": "initiales AvatarCircleFlat",
+          "line": 136,
+          "issue": ".font(.system(size: fontSize, weight: .bold)) sur les initiales (sigle = serif display).",
+          "fix": ".font(.system(size: fontSize, weight: .bold)) -> OneClickFont.display(fontSize, .bold).",
+          "severity": "minor",
+          "isReal": true,
+          "note": "CONFIRMÉ à la ligne 136 : Text(initials).font(.system(size: fontSize, weight: .bold)). Vraie violation. Fix correct."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/ReferralView.swift",
+          "element": "code de parrainage gravé (ombre)",
+          "line": 128,
+          "issue": ".shadow(color: .black.opacity(0.35), radius: 0, x: 0, y: 1) ombre brute noire (effet relief « gravé »). La charte §4.4 impose des ombres teintées.",
+          "fix": "Remplacer .black.opacity(0.35) par OneClickColors.shadowInk.opacity(0.35) (ombre prune teintée).",
+          "severity": "minor",
+          "isReal": true,
+          "note": "CONFIRMÉ à la ligne 128 : .shadow(color: .black.opacity(0.35), radius: 0, x: 0, y: 1). Ombre noire brute hors charte §4.4. Fix correct (note : NB la carte parrainage utilise aussi Color.black.opacity(0.18) en fill L136 et un dégradé primary->#4A0D26 L158, mais ce sont des assombrissements internes acceptables, pas des ombres)."
+        }
+      ],
+      "missed": [
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/GroupsView.swift",
+          "element": "accordéon groupe (expand/collapse + rotation chevron)",
+          "line": 164,
+          "issue": "Le dépliage/repliage d'un groupe (insertion/suppression de expandedZone L164 + rotation 180° du chevron L160) est un changement d'état majeur déclenché sans animation : vm.toggleExpand (L49-52) mute expandedGroupId sans withAnimation, et aucun .animation()/transition n'est posé sur la carte ni le chevron. La hauteur de la carte saute brutalement. Non-conformité §9 (transitions douces sur changements d'état majeurs).",
+          "fix": "Envelopper le toggle dans withAnimation(.easeInOut(duration: 0.2)) (dans toggleExpand ou au callback du Button L147) et ajouter .animation(.easeInOut, value: expanded) sur la rotation du chevron L160, voire une .transition sur expandedZone.",
+          "severity": "minor"
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/SentInvitesView.swift",
+          "element": "bascule d'onglet Amitié/Parrainage (tab)",
+          "line": 59,
+          "issue": "Le switch d'onglet (tab == 0 ? friendshipTab : referralTab, L59) remplace tout le contenu sans transition ni withAnimation (le Button pill L79 fait tab = index nu). Changement de contenu majeur sans motion §9.",
+          "fix": "Animer la bascule : withAnimation(.easeInOut) { tab = index } dans le Button pill (L79), ou poser une .transition(.opacity) + .id(tab) sur le contenu d'onglet.",
+          "severity": "minor"
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/SentInvitesView.swift",
+          "element": "badge ad-hoc statut (badge(icon:label:color:))",
+          "line": 177,
+          "issue": "La fonction badge(...) (L177-182) construit un badge de statut ad-hoc (HStack + Capsule().stroke(color.opacity(0.4))) au lieu d'utiliser le composant charte OneClickStatusBadgeView. Au-delà des couleurs hardcodées déjà signalées (L167-175), la RECETTE diffère de la charte §5.6/§8.2 (la charte = triplet texte/fond pâle/bordure, ici fond transparent + bordure seule). Incohérence de composant non relevée explicitement par le 1er auditeur.",
+          "fix": "Remplacer le badge ad-hoc par OneClickStatusBadgeView(badge: OneClickReservationStatus.from(status).badge) — ou a minima aligner la recette (fond pâle + bordure) sur OneClickStatusBadge. Les libellés Acceptée/Refusée/En attente/Inscrit mappent sur les statuts charte.",
+          "severity": "minor"
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/social/ui/SentInvitesView.swift",
+          "element": "onglet pill — incohérence composant vs OneClickChip",
+          "line": 77,
+          "issue": "La fonction pill(...) (L77-93) réimplémente un segment d'onglet à la main (fond pastel + bordure + couleur fg par onglet) alors que la charte fournit OneClickChip (pill bordeaux actif/label blanc). Au-delà des hex hors-palette déjà cités (L72/73), c'est une DUPLICATION de composant charte — l'onglet actif devrait être bordeaux plein, pas un fond pastel teinté par catégorie. Le 1er auditeur cible les hex mais ne pointe pas que les 2 onglets ne devraient pas avoir des identités couleur DISTINCTES (rose vs violet) — la charte impose un seul accent de sélection (primary).",
+          "fix": "Remplacer pill(...) par OneClickChip(label:selected:action:) : onglet actif = OneClickColors.primary uniforme pour les deux ; supprimer les paramètres active/border/fg distincts par onglet.",
+          "severity": "minor"
+        }
+      ]
+    },
+    {
+      "area": "Vault + Snap2Earn (loyalty) — OneClick Win iOS native",
+      "confirmed": [
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultView.swift",
+          "line": 83,
+          "element": "sectionLabel « Mes cartes »",
+          "issue": ".font(.system(size:15,weight:.bold)) sur titre de section (doit être Poltawski/display)",
+          "fix": ".font(.system(size:15,weight:.bold)) -> OneClickFont.display(15,.semibold)",
+          "severity": "major",
+          "isReal": true,
+          "note": "Vérifié L83 : titre de section en system. Réel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultView.swift",
+          "line": 91,
+          "element": "label palier courant (progressBlock)",
+          "issue": ".font(.system(size:12)) sur Text meta (doit être Nunito/body)",
+          "fix": ".font(.system(size:12)) -> OneClickFont.body(12,.regular)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultView.swift",
+          "line": 93,
+          "element": "label palier suivant (progressBlock)",
+          "issue": ".font(.system(size:12)) sur Text meta (doit être Nunito/body)",
+          "fix": ".font(.system(size:12)) -> OneClickFont.body(12,.regular)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultView.swift",
+          "line": 98,
+          "element": "hint progression « X pts pour atteindre … »",
+          "issue": ".font(.system(size:11)) sur Text caption (continuation ligne, doit être Nunito/body)",
+          "fix": ".font(.system(size:11)) -> OneClickFont.body(11,.regular)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Le .font est sur la ligne 98 (continuation du Text L97). Réel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultView.swift",
+          "line": 117,
+          "element": "titre bloc « Points expirés »",
+          "issue": ".font(.system(size:14,weight:.bold)) sur titre de bloc (doit être Poltawski/display)",
+          "fix": ".font(.system(size:14,weight:.bold)) -> OneClickFont.display(15,.semibold)",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultView.swift",
+          "line": 119,
+          "element": "sous-titre « N lots expirés · X pts »",
+          "issue": ".font(.system(size:12)) sur Text meta (continuation L118, doit être Nunito/body)",
+          "fix": ".font(.system(size:12)) -> OneClickFont.body(12,.regular)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultView.swift",
+          "line": 125,
+          "element": "ligne expiré (raison/nom resto)",
+          "issue": ".font(.system(size:11)) sur Text meta (continuation L124, doit être Nunito/body)",
+          "fix": ".font(.system(size:11)) -> OneClickFont.body(11,.regular)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultView.swift",
+          "line": 127,
+          "element": "ligne expiré (suffixe points/date)",
+          "issue": ".font(.system(size:11,weight:.bold)) sur Text meta (doit être Nunito/body)",
+          "fix": ".font(.system(size:11,weight:.bold)) -> OneClickFont.body(11,.bold)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultView.swift",
+          "line": 131,
+          "element": "compteur « +N de plus »",
+          "issue": ".font(.system(size:10)) sur Text caption (doit être Nunito/body)",
+          "fix": ".font(.system(size:10)) -> OneClickFont.body(10,.regular)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultView.swift",
+          "line": 148,
+          "element": "errorState (message d'erreur Vault)",
+          "issue": ".font(.system(size:14)) sur Text d'erreur : police hors charte ET non conforme §8.5 (manque icône semantic.danger + bouton « Réessayer »). Le .refreshable existe mais §8.5 exige un bouton explicite.",
+          "fix": ".font(.system(size:14)) -> OneClickFont.body(14,.regular) ; structurer §8.5 : Image(systemName:\"exclamationmark.triangle\").foregroundStyle(OneClickColors.destructive) + message body + Button(\"Réessayer\"){ Task{await vm.refresh()} }.buttonStyle(.oneClickSecondary)",
+          "severity": "major",
+          "isReal": true,
+          "note": "L148 = func errorState. Confirmé : c'est l'état error du switch (case .error appelle errorState). Réel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultView.swift",
+          "line": 169,
+          "element": "nom de restaurant (AccountRow)",
+          "issue": ".font(.system(size:14,weight:.bold)) sur nom de resto (doit être Poltawski/display)",
+          "fix": ".font(.system(size:14,weight:.bold)) -> OneClickFont.display(15,.medium)",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultView.swift",
+          "line": 171,
+          "element": "cuisine resto (AccountRow)",
+          "issue": ".font(.system(size:11)) sur Text meta (doit être Nunito/body)",
+          "fix": ".font(.system(size:11)) -> OneClickFont.body(11,.regular)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultView.swift",
+          "line": 176,
+          "element": "gros chiffre points (AccountRow « X pts »)",
+          "issue": ".font(.system(size:18,weight:.bold)) sur gros chiffre de points (doit être Poltawski/display)",
+          "fix": ".font(.system(size:18,weight:.bold)) -> OneClickFont.display(18,.bold)",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultView.swift",
+          "line": 199,
+          "element": "titre carte nav (NavCard)",
+          "issue": ".font(.system(size:14,weight:.bold)) sur titre de carte (doit être Poltawski/display)",
+          "fix": ".font(.system(size:14,weight:.bold)) -> OneClickFont.display(15,.medium)",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultView.swift",
+          "line": 200,
+          "element": "description carte nav (NavCard)",
+          "issue": ".font(.system(size:11)) sur Text meta (doit être Nunito/body)",
+          "fix": ".font(.system(size:11)) -> OneClickFont.body(11,.regular)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultFideliteView.swift",
+          "line": 117,
+          "element": "description palier (tierPreview)",
+          "issue": ".font(.system(size:12)) sur Text descriptif (continuation L116, doit être Nunito/body)",
+          "fix": ".font(.system(size:12)) -> OneClickFont.body(12,.regular)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultFideliteView.swift",
+          "line": 139,
+          "element": "overline section (« COMMENT ÇA MARCHE » / « LES N PALIERS »)",
+          "issue": ".font(.system(size:13,weight:.bold)) sur Text overline ; charte overline = Nunito Sans 600 capitales espacées (OneClickType.overline)",
+          "fix": ".font(.system(size:13,weight:.bold)) -> OneClickFont.body(13,.semibold) (idéalement .oneClickStyle(OneClickType.overline) qui porte déjà le kerning/muted)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "kerning(0.65) déjà présent → overline. Réel : police system au lieu de Nunito."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultFideliteView.swift",
+          "line": 150,
+          "element": "titre étape (stepCard « Scannez/Cumulez/… »)",
+          "issue": ".font(.system(size:12,weight:.bold)) sur titre de carte (doit être Poltawski/display)",
+          "fix": ".font(.system(size:12,weight:.bold)) -> OneClickFont.display(13,.medium)",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultFideliteView.swift",
+          "line": 151,
+          "element": "description étape (stepCard)",
+          "issue": ".font(.system(size:10)) sur Text caption (doit être Nunito/body)",
+          "fix": ".font(.system(size:10)) -> OneClickFont.body(10,.regular)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultHistoriqueView.swift",
+          "line": 140,
+          "element": "état vide global (« Aucun mouvement pour le moment »)",
+          "issue": ".font(.system(size:14)) sur Text d'état vide (case .empty) : police hors charte ET non conforme §8.5 (manque illustration/icône + titre serif + sous-titre muted + CTA)",
+          "fix": ".font(.system(size:14)) -> état §8.5 : VStack { Image(systemName:\"clock\").foregroundStyle(OneClickColors.mutedForeground) ; Text(\"Aucun mouvement\").oneClickStyle(OneClickType.displayS) ; Text(\"…\").font(OneClickFont.body(13,.regular)).foregroundStyle(OneClickColors.mutedForeground) }",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultHistoriqueView.swift",
+          "line": 142,
+          "element": "état erreur global (message)",
+          "issue": ".font(.system(size:14)) sur Text d'erreur (case .error) : police hors charte ET non conforme §8.5 (manque icône semantic.danger + bouton « Réessayer »)",
+          "fix": ".font(.system(size:14)) -> OneClickFont.body(14,.regular) + Image semantic.danger (OneClickColors.destructive) + Button(\"Réessayer\"){Task{await vm.refresh()}}.buttonStyle(.oneClickSecondary)",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultHistoriqueView.swift",
+          "line": 151,
+          "element": "état vide inline section Récent",
+          "issue": ".font(.system(size:14)) sur Text « Aucun mouvement pour le moment » (doit être Nunito/body)",
+          "fix": ".font(.system(size:14)) -> OneClickFont.body(14,.regular)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultHistoriqueView.swift",
+          "line": 167,
+          "element": "bouton « Afficher plus »",
+          "issue": ".font(.system(size:13,weight:.semibold)) sur label de Button (les boutons doivent être Poltawski/display)",
+          "fix": ".font(.system(size:13,weight:.semibold)) -> OneClickFont.display(14,.semibold) (idéalement Button(...).buttonStyle(.oneClickSecondary))",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultHistoriqueView.swift",
+          "line": 172,
+          "element": "bouton « Réduire »",
+          "issue": ".font(.system(size:12,weight:.bold)) sur label de Button (doit être Poltawski/display)",
+          "fix": ".font(.system(size:12,weight:.bold)) -> OneClickFont.display(13,.semibold)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultHistoriqueView.swift",
+          "line": 189,
+          "element": "nom de restaurant (recentRow)",
+          "issue": ".font(.system(size:14,weight:.bold)) sur nom de resto (doit être Poltawski/display)",
+          "fix": ".font(.system(size:14,weight:.bold)) -> OneClickFont.display(15,.medium)",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultHistoriqueView.swift",
+          "line": 191,
+          "element": "meta ligne (raison · date)",
+          "issue": ".font(.system(size:11)) sur Text meta (doit être Nunito/body)",
+          "fix": ".font(.system(size:11)) -> OneClickFont.body(11,.regular)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultHistoriqueView.swift",
+          "line": 194,
+          "element": "valeur points signée (recentRow)",
+          "issue": ".font(.system(size:14,weight:.bold,design:.monospaced)) sur chiffre de points (doit être Poltawski/display ; le monospaced n'existe pas dans la charte)",
+          "fix": ".font(.system(size:14,weight:.bold,design:.monospaced)) -> OneClickFont.display(15,.bold)",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultHistoriqueView.swift",
+          "line": 209,
+          "element": "emoji icône resto « 🍽️ »",
+          "issue": "Text(\"🍽️\").font(.system(size:18)) : Text emoji (pas SF Symbol). La charte utilise des glyphes/icônes, pas un emoji clavier. La police system sur un emoji est sans effet visuel, mais l'emoji lui-même est hors charte.",
+          "fix": "Remplacer par Image(systemName:\"fork.knife\").font(.system(size:18)).foregroundStyle(OneClickColors.primary)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Réel mais l'enjeu est l'emoji (cohérence icônes), pas la police — la police system sur emoji n'a aucun rendu. Garder en minor."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultHistoriqueView.swift",
+          "line": 212,
+          "element": "nom de restaurant (byRestaurant row)",
+          "issue": ".font(.system(size:14,weight:.bold)) sur nom de resto (doit être Poltawski/display)",
+          "fix": ".font(.system(size:14,weight:.bold)) -> OneClickFont.display(15,.medium)",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultHistoriqueView.swift",
+          "line": 213,
+          "element": "meta ligne (cuisine · visites)",
+          "issue": ".font(.system(size:11)) sur Text meta (doit être Nunito/body)",
+          "fix": ".font(.system(size:11)) -> OneClickFont.body(11,.regular)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultHistoriqueView.swift",
+          "line": 217,
+          "element": "gros chiffre points (byRestaurant « X pts »)",
+          "issue": ".font(.system(size:18,weight:.bold)) sur gros chiffre de points (doit être Poltawski/display)",
+          "fix": ".font(.system(size:18,weight:.bold)) -> OneClickFont.display(18,.bold)",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultHistoriqueView.swift",
+          "line": 238,
+          "element": "overline section (« RÉCENT » / « PAR RESTAURANT »)",
+          "issue": ".font(.system(size:13,weight:.bold)) sur Text overline (charte overline = Nunito Sans 600)",
+          "fix": ".font(.system(size:13,weight:.bold)) -> OneClickFont.body(13,.semibold)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultQrView.swift",
+          "line": 52,
+          "element": "label/overline « CODE ONECLICK »",
+          "issue": ".font(.system(size:11,weight:.regular)) sur Text label uppercase kerné (doit être Nunito/body — overline)",
+          "fix": ".font(.system(size:11,weight:.regular)) -> OneClickFont.body(11,.semibold)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultQrView.swift",
+          "line": 54,
+          "element": "code OneClick affiché (gros texte)",
+          "issue": ".font(.system(size:28,weight:.bold,design:.monospaced)) sur le code : la charte §8.1 (bloc Parrainage) affiche le code en serif gravé (Poltawski kerné), pas en monospaced system",
+          "fix": ".font(.system(size:28,weight:.bold,design:.monospaced)) -> OneClickFont.display(28,.bold) (conserver .kerning(1.4))",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultQrView.swift",
+          "line": 76,
+          "element": "ombre carte QR (qrBox)",
+          "issue": ".shadow(color:.black.opacity(0.06),radius:6,y:2) : ombre noire brute sur une carte, interdite par la charte §4.4 (ombres toujours teintées)",
+          "fix": ".shadow(color:.black.opacity(0.06),radius:6,y:2) -> .oneClickShadow(.card)",
+          "severity": "major",
+          "isReal": true,
+          "note": "Confirmé L76 : .black brut. Réel. Note : la carte QR conteneur (L74) utilise aussi Color.white brut au lieu de OneClickColors.surface — voir missed."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultQrView.swift",
+          "line": 90,
+          "element": "texte explicatif (explainer)",
+          "issue": ".font(.system(size:12)) sur Text descriptif (doit être Nunito/body)",
+          "fix": ".font(.system(size:12)) -> OneClickFont.body(12,.regular)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultRestaurantDetailView.swift",
+          "line": 92,
+          "element": "bouton « Offrir des points à un ami »",
+          "issue": "Button ad-hoc : label Text sans police charte (hérite system) + outline bordeaux manuel. La charte impose un style de bouton défini ; le label doit être Poltawski/display.",
+          "fix": "Encapsuler en Button(...).buttonStyle(.oneClickInline) (action bordeaux) OU appliquer .font(OneClickFont.display(13,.bold)) au label + outline via .oneClickSecondary",
+          "severity": "major",
+          "isReal": true,
+          "note": "L92 = Text(\"Offrir des points à un ami\") dans un Button sans .font → hérite la police système. Réel (violation par défaut)."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultRestaurantDetailView.swift",
+          "line": 103,
+          "element": "état vide (« Aucun mouvement pour ce restaurant »)",
+          "issue": ".font(.system(size:14)) sur Text d'état vide (continuation L102) : police hors charte ET non conforme §8.5 (manque titre serif + icône)",
+          "fix": ".font(.system(size:14)) -> OneClickFont.body(14,.regular) + structurer §8.5 (icône + titre OneClickType.displayS + hint body muted)",
+          "severity": "major",
+          "isReal": true,
+          "note": "Le .font est L103 (continuation du Text L102). Réel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultRestaurantDetailView.swift",
+          "line": 134,
+          "element": "libellé raison (VaultDetailTxRow)",
+          "issue": ".font(.system(size:14,weight:.bold)) sur titre de ligne (libellé de mouvement, registre titre → Poltawski/display)",
+          "fix": ".font(.system(size:14,weight:.bold)) -> OneClickFont.display(15,.medium)",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultRestaurantDetailView.swift",
+          "line": 136,
+          "element": "meta date · heure (VaultDetailTxRow)",
+          "issue": ".font(.system(size:11)) sur Text meta (continuation L135, doit être Nunito/body)",
+          "fix": ".font(.system(size:11)) -> OneClickFont.body(11,.regular)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultRestaurantDetailView.swift",
+          "line": 139,
+          "element": "valeur points signée (VaultDetailTxRow)",
+          "issue": ".font(.system(size:14,weight:.bold,design:.monospaced)) sur chiffre de points (doit être Poltawski/display ; monospaced hors charte)",
+          "fix": ".font(.system(size:14,weight:.bold,design:.monospaced)) -> OneClickFont.display(15,.bold)",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultRoutes.swift",
+          "line": 177,
+          "element": "titre carte « Mon programme » (pccRevealCard)",
+          "issue": ".font(.system(size:15,weight:.bold)) sur titre de carte (doit être Poltawski/display). Couleurs pccGreen/pccGold intentionnelles (reveal Palmeraie) — non flaggées, seule la police l'est.",
+          "fix": ".font(.system(size:15,weight:.bold)) -> OneClickFont.display(15,.medium)",
+          "severity": "major",
+          "isReal": true,
+          "note": "Confirmé : couleurs PCC intentionnelles par charte (MEMORY membership reveal). Bon call de ne flagger que la police."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultRoutes.swift",
+          "line": 178,
+          "element": "sous-titre carte « Mon programme »",
+          "issue": ".font(.system(size:12)) sur Text meta (doit être Nunito/body)",
+          "fix": ".font(.system(size:12)) -> OneClickFont.body(12,.regular)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultRoutes.swift",
+          "line": 202,
+          "element": "nom complet du membre (identityHeader)",
+          "issue": ".font(.system(size:20,weight:.bold)) sur le nom de l'utilisateur (titre d'en-tête → Poltawski/display)",
+          "fix": ".font(.system(size:20,weight:.bold)) -> OneClickFont.display(22,.semibold) (ou .oneClickStyle(OneClickType.displayM))",
+          "severity": "major",
+          "isReal": true,
+          "note": "Le .font est L202 (continuation du Text L201 displayName). Réel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultRoutes.swift",
+          "line": 204,
+          "element": "e-mail membre (identityHeader)",
+          "issue": ".font(.system(size:13)) sur Text meta (doit être Nunito/body)",
+          "fix": ".font(.system(size:13)) -> OneClickFont.body(13,.regular)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultRoutes.swift",
+          "line": 209,
+          "element": "« Membre depuis … » (identityHeader)",
+          "issue": ".font(.system(size:12,weight:.medium)) sur Text meta (doit être Nunito/body)",
+          "fix": ".font(.system(size:12,weight:.medium)) -> OneClickFont.body(12,.medium)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultRoutes.swift",
+          "line": 261,
+          "element": "titre carte menu (navCard Profil)",
+          "issue": ".font(.system(size:14,weight:.bold)) sur titre de carte de navigation (doit être Poltawski/display)",
+          "fix": ".font(.system(size:14,weight:.bold)) -> OneClickFont.display(15,.medium)",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultRoutes.swift",
+          "line": 262,
+          "element": "sous-titre carte menu (navCard Profil)",
+          "issue": ".font(.system(size:11)) sur Text meta (doit être Nunito/body)",
+          "fix": ".font(.system(size:11)) -> OneClickFont.body(11,.regular)",
+          "severity": "minor",
+          "isReal": true
+        }
+      ],
+      "missed": [
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultView.swift",
+          "line": 35,
+          "element": "état loading hub Vault (ProgressView brut)",
+          "issue": "case .loading : Spacer(); ProgressView().tint(...); Spacer() — la charte §8.5 interdit explicitement le spinner brut (« Loading/skeleton : blocs #F1ECEF en shimmer doux ; pas de spinner brut »). Oublié par le 1er auditeur (qui n'a couvert que les états vide/erreur, jamais loading).",
+          "fix": "Remplacer le ProgressView par un skeleton shimmer §8.5 (placeholders crème désaturé reproduisant carte statut + cartes resto). La teinte primary est correcte mais la forme spinner est non conforme.",
+          "severity": "minor"
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultHistoriqueView.swift",
+          "line": 128,
+          "element": "état loading Historique (ProgressView brut)",
+          "issue": "case .loading : ProgressView() brut, non conforme §8.5 (pas de spinner brut → skeleton shimmer attendu). Non relevé.",
+          "fix": "Skeleton shimmer §8.5 à la place du ProgressView (lignes/cartes placeholder).",
+          "severity": "minor"
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultFideliteView.swift",
+          "line": 93,
+          "element": "état loading Programme de fidélité (ProgressView brut)",
+          "issue": "tiersContent case .loading : ProgressView() brut, non conforme §8.5. Non relevé.",
+          "fix": "Skeleton shimmer §8.5 (cartes palier placeholder).",
+          "severity": "minor"
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultQrView.swift",
+          "line": 74,
+          "element": "fond carte QR (Color.white brut)",
+          "issue": "RoundedRectangle(...).fill(Color.white) : couleur littérale qui duplique le token OneClickColors.surface (#FFFFFF). La charte exige d'utiliser les tokens (hex/littéral hardcodé dupliquant un token = violation). Le 1er auditeur a flaggé l'ombre L76 mais pas le fond blanc juste au-dessus. (NB : la zone QR a légitimement besoin de blanc pour le contraste de scan — utiliser le token surface qui EST blanc résout la conformité sans casser la scannabilité.)",
+          "fix": ".fill(Color.white) -> .fill(OneClickColors.surface)",
+          "severity": "minor"
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/loyalty/ui/VaultHistoriqueView.swift",
+          "line": 166,
+          "element": "toggle « Afficher plus » / « Réduire » sans animation (§9 motion)",
+          "issue": "Le bouton bascule showAll=true/false (L166/L171) ce qui ajoute/retire abruptement des lignes de la liste sans aucun withAnimation/.transition. La charte §9 exige des transitions douces/cohérentes sur les changements d'état majeurs ; expansion/réduction de liste = changement majeur. Aucune animation dans tout le module loyalty (grep withAnimation/.animation/.transition = 0). Axe motion non audité par le 1er auditeur.",
+          "fix": "Envelopper le toggle dans withAnimation(.easeInOut(duration:0.2)) { showAll.toggle() } et appliquer une transition (ex .opacity/.move) sur les lignes révélées.",
+          "severity": "minor"
+        }
+      ]
+    },
+    {
+      "area": "Profile + PersonalInfo + Settings + Allergens + Care + Favorites (OneClick Win iOS natif)",
+      "confirmed": [
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/care/ui/CareView.swift",
+          "line": 79,
+          "element": "empty-state titre (Comment puis-je vous aider ?)",
+          "issue": "Titre d'empty-state en police systeme — charte §8.5 = titre serif display",
+          "fix": ".font(.system(size: 18, weight: .bold)) -> OneClickFont.display(18, .semibold)",
+          "severity": "major",
+          "isReal": true,
+          "note": "Verifie L79 : Text en .font(.system) sous l'icone sparkles d'un empty-state chat. Titre d'etat vide => serif. Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/care/ui/CareView.swift",
+          "line": 82,
+          "element": "empty-state sous-titre",
+          "issue": "Corps en police systeme au lieu de Nunito Sans",
+          "fix": ".font(.system(size: 14)) -> OneClickFont.body(14)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/care/ui/CareView.swift",
+          "line": 88,
+          "element": "label action rapide (quick action)",
+          "issue": "Label de carte action en police systeme",
+          "fix": ".font(.system(size: 14, weight: .medium)) -> OneClickFont.body(14, .medium)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/care/ui/CareView.swift",
+          "line": 94,
+          "element": "carte action rapide (welcome)",
+          "issue": "Carte r12 avec overlay border seul, sans ombre teintee",
+          "fix": "ajouter .oneClickShadow(.cardSoft) sur le RoundedRectangle de fond (L93)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/care/ui/CareView.swift",
+          "line": 126,
+          "element": "bulle de message chat",
+          "issue": "Texte de bulle en police systeme",
+          "fix": ".font(.system(size: 14)) -> OneClickFont.body(14)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/care/ui/CareView.swift",
+          "line": 143,
+          "element": "indicateur de frappe (L'assistant ecrit)",
+          "issue": "Meta en police systeme",
+          "fix": ".font(.system(size: 12)) -> OneClickFont.body(12)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/care/ui/CareView.swift",
+          "line": 155,
+          "element": "titre banniere suggestion (Creer un ticket support ?)",
+          "issue": "Titre de carte en police systeme au lieu de serif display",
+          "fix": ".font(.system(size: 14, weight: .bold)) -> OneClickFont.display(14, .semibold)",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/care/ui/CareView.swift",
+          "line": 157,
+          "element": "sujet suggestion ticket",
+          "issue": "Corps en police systeme",
+          "fix": ".font(.system(size: 13)) -> OneClickFont.body(13)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/care/ui/CareView.swift",
+          "line": 160,
+          "element": "CTA Confirmer (suggestion ticket)",
+          "issue": "CTA ad-hoc (fond bordeaux + Text police systeme) au lieu du ButtonStyle charte ; action repetee par carte => inline bordeaux",
+          "fix": "Button { vm.confirmTicketSuggestion() } label: { Text(\"Confirmer\") }.buttonStyle(.oneClickInline) ; supprimer .font(.system)/.background/.foregroundStyle ad-hoc",
+          "severity": "major",
+          "isReal": true,
+          "note": "InlineButtonStyle existe et utilise OneClickFont.body(13,.bold) + fond primary => match exact de l'intention."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/care/ui/CareView.swift",
+          "line": 165,
+          "element": "bouton Ignorer (suggestion ticket)",
+          "issue": "Bouton outline ad-hoc en police systeme",
+          "fix": ".font(.system(size: 13, weight: .semibold)) -> OneClickFont.body(13, .semibold) (ou .buttonStyle(.oneClickText))",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/care/ui/CareView.swift",
+          "line": 181,
+          "element": "action Nouvelle conversation",
+          "issue": "Label en police systeme",
+          "fix": ".font(.system(size: 12, weight: .medium)) -> OneClickFont.body(12, .medium)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/care/ui/CareView.swift",
+          "line": 188,
+          "element": "action Creer un ticket support",
+          "issue": "Label en police systeme",
+          "fix": ".font(.system(size: 12, weight: .semibold)) -> OneClickFont.body(12, .semibold)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/care/ui/CareView.swift",
+          "line": 199,
+          "element": "champ texte input chat (TextField)",
+          "issue": "Champ de saisie en police systeme au lieu de Nunito Sans",
+          "fix": ".font(.system(size: 14)) -> OneClickFont.body(14)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/care/ui/CareView.swift",
+          "line": 245,
+          "element": "error-state message (onglet Tickets)",
+          "issue": "Texte d'erreur en police systeme (§8.5)",
+          "fix": ".font(.system(size: 14)) -> OneClickFont.body(14)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Le CTA Reessayer L246 est deja .oneClickPrimary (conforme). Seul le message texte est en police systeme."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/care/ui/CareView.swift",
+          "line": 256,
+          "element": "titre ticket (sujet)",
+          "issue": "Titre de carte en police systeme au lieu de serif display",
+          "fix": ".font(.system(size: 15, weight: .bold)) -> OneClickFont.display(15, .semibold)",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/care/ui/CareView.swift",
+          "line": 261,
+          "element": "message ticket",
+          "issue": "Corps en police systeme",
+          "fix": ".font(.system(size: 13)) -> OneClickFont.body(13)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/care/ui/CareView.swift",
+          "line": 266,
+          "element": "derniere reponse ticket",
+          "issue": "Corps en police systeme",
+          "fix": ".font(.system(size: 12)) -> OneClickFont.body(12)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/care/ui/CareView.swift",
+          "line": 274,
+          "element": "categorie ticket (meta)",
+          "issue": "Meta en police systeme",
+          "fix": ".font(.system(size: 11, weight: .medium)) -> OneClickFont.body(11, .medium)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/care/ui/CareView.swift",
+          "line": 279,
+          "element": "badge Traite par l'IA",
+          "issue": "Meta en police systeme",
+          "fix": ".font(.system(size: 11, weight: .medium)) -> OneClickFont.body(11, .medium)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/care/ui/CareView.swift",
+          "line": 284,
+          "element": "horodatage ticket (timeAgo)",
+          "issue": "Meta en police systeme",
+          "fix": ".font(.system(size: 11)) -> OneClickFont.body(11)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/care/ui/CareView.swift",
+          "line": 291,
+          "element": "carte ticket",
+          "issue": "Carte r12 avec overlay border seul, sans ombre teintee",
+          "fix": "ajouter .oneClickShadow(.card) sur le RoundedRectangle fill surface (L291)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/care/ui/CareView.swift",
+          "line": 297,
+          "element": "statusChip ticket",
+          "issue": "Badge de statut ad-hoc (Text police systeme + Capsule fill 12% opacite) au lieu du composant charte OneClickStatusBadgeView (triplet texte/fond pale/bordure)",
+          "fix": "remplacer statusChip(...) par OneClickStatusBadgeView(badge: ...) ; le triplet est defini dans OneClickStatusColors. A minima .font(.system(size: 11, weight: .bold)) -> OneClickFont.body(11, .semibold)",
+          "severity": "major",
+          "isReal": true,
+          "note": "OneClickStatusBadgeView + OneClickStatusBadge existent. NB: ce sont des statuts de TICKET (open/inProgress/resolved/closed), pas de reservation — OneClickReservationStatus ne les couvre pas tel quel, il faudrait construire les OneClickStatusBadge ad-hoc OU au minimum aligner la typo. Finding reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/care/ui/CareView.swift",
+          "line": 316,
+          "element": "empty-state titre (Aucun ticket)",
+          "issue": "Titre d'empty-state en police systeme au lieu de serif display (§8.5)",
+          "fix": ".font(.system(size: 18, weight: .bold)) -> OneClickFont.display(18, .semibold)",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/care/ui/CareView.swift",
+          "line": 318,
+          "element": "empty-state sous-titre (Aucun ticket)",
+          "issue": "Sous-titre en police systeme",
+          "fix": ".font(.system(size: 14)) -> OneClickFont.body(14)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/care/ui/CareView.swift",
+          "line": 350,
+          "element": "toast",
+          "issue": "Texte de toast en police systeme + couleur .white brute",
+          "fix": ".font(.system(size: 13)) -> OneClickFont.body(13) ; .foregroundStyle(.white) -> OneClickColors.onPrimary",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/favorites/FavoritesView.swift",
+          "line": 81,
+          "element": "compteur favoris",
+          "issue": "Meta en police systeme",
+          "fix": ".font(.system(size: 12)) -> OneClickFont.body(12)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/favorites/FavoritesView.swift",
+          "line": 92,
+          "element": "error-state message",
+          "issue": "Texte d'erreur en police systeme (§8.5)",
+          "fix": ".font(.system(size: 14)) -> OneClickFont.body(14)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/favorites/FavoritesView.swift",
+          "line": 107,
+          "element": "nom de restaurant (carte favori)",
+          "issue": "Nom de resto en police systeme — la charte §3 impose Poltawski Nowy (display) sur les noms de resto",
+          "fix": ".font(.system(size: 15, weight: .bold)) -> OneClickFont.display(15, .medium)",
+          "severity": "major",
+          "isReal": true,
+          "note": "Charte §3 : noms de resto = Poltawski Nowy. Reel et important pour l'identite."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/favorites/FavoritesView.swift",
+          "line": 114,
+          "element": "ligne cuisine·budget",
+          "issue": "Meta en police systeme",
+          "fix": ".font(.system(size: 12)) -> OneClickFont.body(12)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/favorites/FavoritesView.swift",
+          "line": 119,
+          "element": "note Google (rating)",
+          "issue": "Meta en police systeme",
+          "fix": ".font(.system(size: 11, weight: .semibold)) -> OneClickFont.body(11, .semibold)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/favorites/FavoritesView.swift",
+          "line": 123,
+          "element": "ville (carte favori)",
+          "issue": "Meta en police systeme",
+          "fix": ".font(.system(size: 11)) -> OneClickFont.body(11)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/favorites/FavoritesView.swift",
+          "line": 131,
+          "element": "carte favori",
+          "issue": "Carte r12 avec overlay border seul, sans ombre teintee",
+          "fix": "ajouter .oneClickShadow(.card) sur le RoundedRectangle fill surface (L131)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/favorites/FavoritesView.swift",
+          "line": 145,
+          "element": "empty-state titre (Aucun favori)",
+          "issue": "Titre d'empty-state en police systeme au lieu de serif display (§8.5)",
+          "fix": ".font(.system(size: 18, weight: .bold)) -> OneClickFont.display(18, .semibold)",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/favorites/FavoritesView.swift",
+          "line": 147,
+          "element": "empty-state sous-titre (Aucun favori)",
+          "issue": "Sous-titre en police systeme",
+          "fix": ".font(.system(size: 14)) -> OneClickFont.body(14)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/favorites/FavoritesView.swift",
+          "line": 149,
+          "element": "CTA empty-state Explorer",
+          "issue": "CTA focal ad-hoc (fond bordeaux primary + Text police systeme) au lieu du PrimaryButtonStyle ; le CTA focal d'un ecran doit etre champagne (.oneClickPrimary), pas bordeaux",
+          "fix": "Button(action: onExplore) { Label(\"Explorer\", systemImage: \"fork.knife\") }.buttonStyle(.oneClickPrimary) ; supprimer le fond primary + .font(.system) ad-hoc",
+          "severity": "major",
+          "isReal": true,
+          "note": "Charte §8.5 empty Favoris cite explicitement 'Aucun favori -> Explorer' comme CTA. PrimaryButtonStyle = champagne + Poltawski Bold + ombre .cta. Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/PersonalInfoView.swift",
+          "line": 191,
+          "element": "message erreur telephone",
+          "issue": "Texte d'erreur en police systeme",
+          "fix": ".font(.system(size: 12)) -> OneClickFont.body(12)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/PersonalInfoView.swift",
+          "line": 196,
+          "element": "CTA Enregistrer (carte infos)",
+          "issue": "CTA focal ad-hoc (fond bordeaux primary + Text police systeme) au lieu de PrimaryButtonStyle champagne",
+          "fix": "Button { Task { await vm.saveInfo() } } label: { Text(\"Enregistrer\") }.buttonStyle(.oneClickPrimary).disabled(vm.saving) ; gerer le spinner via overlay ProgressView ; supprimer fond bordeaux + .font(.system)",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/PersonalInfoView.swift",
+          "line": 214,
+          "element": "titre carte Mot de passe",
+          "issue": "Titre de carte en police systeme au lieu de serif display",
+          "fix": ".font(.system(size: 14, weight: .bold)) -> OneClickFont.display(14, .semibold)",
+          "severity": "major",
+          "isReal": true,
+          "note": "Titre de carte (pas overline) => serif correct."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/PersonalInfoView.swift",
+          "line": 215,
+          "element": "sous-titre carte Mot de passe",
+          "issue": "Sous-titre en police systeme",
+          "fix": ".font(.system(size: 11)) -> OneClickFont.body(11)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/PersonalInfoView.swift",
+          "line": 229,
+          "element": "titre carte Allergenes",
+          "issue": "Titre de carte en police systeme au lieu de serif display",
+          "fix": ".font(.system(size: 14, weight: .bold)) -> OneClickFont.display(14, .semibold)",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/PersonalInfoView.swift",
+          "line": 230,
+          "element": "sous-titre carte Allergenes",
+          "issue": "Sous-titre en police systeme",
+          "fix": ".font(.system(size: 11)) -> OneClickFont.body(11)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/PersonalInfoView.swift",
+          "line": 248,
+          "element": "valeur cityPicker (Menu label)",
+          "issue": "Texte de selection/champ en police systeme",
+          "fix": ".font(.system(size: 16)) -> OneClickFont.body(16)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/PersonalInfoView.swift",
+          "line": 241,
+          "element": "label Ville (overline cityPicker)",
+          "issue": "Label overline (caps) en police systeme",
+          "fix": ".font(.system(size: 11, weight: .semibold)) -> OneClickFont.body(11, .semibold)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Overline caps = Nunito Sans SemiBold per charte §3 (overline). Fix body propose par l'auditeur est CORRECT (pas serif)."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/PersonalInfoView.swift",
+          "line": 261,
+          "element": "titre de carte (cardTitle, ex Mes informations)",
+          "issue": "Titre de carte en police systeme au lieu de serif display",
+          "fix": ".font(.system(size: 13, weight: .bold)) -> OneClickFont.display(14, .semibold)",
+          "severity": "major",
+          "isReal": true,
+          "note": "cardTitle('Mes informations') = title.card non-caps => serif correct."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/PersonalInfoView.swift",
+          "line": 266,
+          "element": "label de champ (helper field, overline caps)",
+          "issue": "Label de champ en police systeme",
+          "fix": ".font(.system(size: 11, weight: .semibold)) -> OneClickFont.body(11, .semibold)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/PersonalInfoView.swift",
+          "line": 268,
+          "element": "TextField (helper field)",
+          "issue": "Champ de saisie en police systeme au lieu de Nunito Sans",
+          "fix": ".font(.system(size: 16)) -> OneClickFont.body(16)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/PersonalInfoView.swift",
+          "line": 277,
+          "element": "label readOnlyField (overline caps)",
+          "issue": "Label de champ en police systeme",
+          "fix": ".font(.system(size: 11, weight: .semibold)) -> OneClickFont.body(11, .semibold)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/PersonalInfoView.swift",
+          "line": 278,
+          "element": "valeur readOnlyField",
+          "issue": "Valeur de champ en police systeme",
+          "fix": ".font(.system(size: 16)) -> OneClickFont.body(16)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/PersonalInfoView.swift",
+          "line": 283,
+          "element": "cartes (cardBg)",
+          "issue": "Cartes infos/mot de passe/allergenes r12 avec overlay border seul, sans ombre teintee",
+          "fix": "ajouter .oneClickShadow(.card) au RoundedRectangle fill surface dans cardBg (L284)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/PersonalInfoView.swift",
+          "line": 289,
+          "element": "toast",
+          "issue": "Texte de toast en police systeme + .white brute",
+          "fix": ".font(.system(size: 13)) -> OneClickFont.body(13) ; .foregroundStyle(.white) -> OneClickColors.onPrimary",
+          "severity": "minor",
+          "isReal": true,
+          "note": "L'auditeur n'avait flagge .white que sur Care ; ici aussi present. Ajoute au fix."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/PersonalInfoView.swift",
+          "line": 314,
+          "element": "titre sheet Mot de passe",
+          "issue": "Titre de sheet en police systeme au lieu de serif display",
+          "fix": ".font(.system(size: 16, weight: .bold)) -> OneClickFont.display(16, .semibold)",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/PersonalInfoView.swift",
+          "line": 321,
+          "element": "message erreur sheet mot de passe",
+          "issue": "Texte d'erreur en police systeme",
+          "fix": ".font(.system(size: 12)) -> OneClickFont.body(12)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/PersonalInfoView.swift",
+          "line": 324,
+          "element": "CTA Changer le mot de passe",
+          "issue": "CTA focal ad-hoc (fond bordeaux primary + Text police systeme) au lieu de PrimaryButtonStyle champagne",
+          "fix": "Button { Task { await submit() } } label: { Text(\"Changer le mot de passe\") }.buttonStyle(.oneClickPrimary).disabled(saving) ; spinner via overlay ; supprimer fond bordeaux + .font(.system)",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/PersonalInfoView.swift",
+          "line": 349,
+          "element": "SecureField (helper secure)",
+          "issue": "Champ de saisie en police systeme au lieu de Nunito Sans",
+          "fix": ".font(.system(size: 16)) -> OneClickFont.body(16)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/PersonalInfoView.swift",
+          "line": 378,
+          "element": "titre sheet Verification telephone",
+          "issue": "Titre de sheet en police systeme au lieu de serif display",
+          "fix": ".font(.system(size: 16, weight: .bold)) -> OneClickFont.display(16, .semibold)",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/PersonalInfoView.swift",
+          "line": 385,
+          "element": "instruction sheet OTP",
+          "issue": "Corps en police systeme",
+          "fix": ".font(.system(size: 14)) -> OneClickFont.body(14)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/PersonalInfoView.swift",
+          "line": 388,
+          "element": "TextField code OTP",
+          "issue": "Champ de saisie en police systeme au lieu de Nunito Sans",
+          "fix": ".font(.system(size: 18, weight: .semibold)) -> OneClickFont.body(18, .semibold)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/PersonalInfoView.swift",
+          "line": 395,
+          "element": "message erreur/info sheet OTP",
+          "issue": "Texte erreur/info en police systeme (2 Text L395-396)",
+          "fix": ".font(.system(size: 12)) -> OneClickFont.body(12) sur les 2 lignes",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/PersonalInfoView.swift",
+          "line": 400,
+          "element": "CTA Verifier (sheet OTP)",
+          "issue": "CTA focal ad-hoc (fond bordeaux primary + Text police systeme) au lieu de PrimaryButtonStyle champagne",
+          "fix": "Button { Task { await verify() } } label: { Text(\"Verifier\") }.buttonStyle(.oneClickPrimary).disabled(!canVerify) ; PrimaryButtonStyle gere deja l'etat disabled (opacite 0.5) ; supprimer fond bordeaux + .font(.system)",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/PersonalInfoView.swift",
+          "line": 409,
+          "element": "bouton Renvoyer le code",
+          "issue": "Label en police systeme",
+          "fix": ".font(.system(size: 13, weight: .medium)) -> OneClickFont.body(13, .medium) (ou .buttonStyle(.oneClickText))",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/SettingsView.swift",
+          "line": 89,
+          "element": "titre de section (Langue / Mode d'affichage)",
+          "issue": "Titre de section en police systeme. NB: ces titres sont en .textCase(.uppercase) => ce sont des OVERLINE/eyebrow, donc Nunito Sans SemiBold per charte §3 (overline), PAS serif display.",
+          "fix": ".font(.system(size: 11, weight: .bold)) -> OneClickFont.body(11, .semibold)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "CORRECTION du fix: l'auditeur proposait display(13,.semibold)/'major' avec hedge. Per charte §3, overline caps = Nunito Sans SemiBold (PAS serif). Le fix serif est charte-INCORRECT. Severite ramenee a minor (overline body)."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/SettingsView.swift",
+          "line": 98,
+          "element": "label ligne radio (langue/mode)",
+          "issue": "Label de ligne en police systeme",
+          "fix": ".font(.system(size: 15, weight: .medium)) -> OneClickFont.body(15, .medium)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/SettingsView.swift",
+          "line": 104,
+          "element": "ligne radio (carte)",
+          "issue": "Ligne-carte r12 avec overlay border seul, sans ombre teintee",
+          "fix": "ajouter .oneClickShadow(.cardSoft) sur le RoundedRectangle fill surface (L104)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/SettingsView.swift",
+          "line": 112,
+          "element": "toast",
+          "issue": "Texte de toast en police systeme + .white brute",
+          "fix": ".font(.system(size: 13)) -> OneClickFont.body(13) ; .foregroundStyle(.white) -> OneClickColors.onPrimary",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/AllergensView.swift",
+          "line": 102,
+          "element": "titre hero (Vos allergenes)",
+          "issue": "Titre du hero en police systeme au lieu de serif display",
+          "fix": ".font(.system(size: 14, weight: .bold)) -> OneClickFont.display(14, .semibold)",
+          "severity": "major",
+          "isReal": true,
+          "note": "Titre de hero non-caps => serif correct."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/AllergensView.swift",
+          "line": 104,
+          "element": "sous-titre hero",
+          "issue": "Corps en police systeme",
+          "fix": ".font(.system(size: 12)) -> OneClickFont.body(12)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/AllergensView.swift",
+          "line": 117,
+          "element": "compteur allergenes selectionnes",
+          "issue": "Meta en police systeme",
+          "fix": ".font(.system(size: 12)) -> OneClickFont.body(12)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/AllergensView.swift",
+          "line": 123,
+          "element": "bouton Tout effacer",
+          "issue": "Label en police systeme",
+          "fix": ".font(.system(size: 12, weight: .semibold)) -> OneClickFont.body(12, .semibold)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/AllergensView.swift",
+          "line": 130,
+          "element": "label de section (categorie allergene, caps)",
+          "issue": "Titre de section en police systeme. NB: .textCase(.uppercase) => OVERLINE/eyebrow donc Nunito Sans SemiBold per charte §3, PAS serif display.",
+          "fix": ".font(.system(size: 11, weight: .bold)) -> OneClickFont.body(11, .semibold)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "CORRECTION du fix: serif est charte-incorrect pour un overline caps. Severite ramenee a minor."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/AllergensView.swift",
+          "line": 144,
+          "element": "label allergene (chip)",
+          "issue": "Label de chip/carte selectionnable en police systeme — label chip = Nunito Sans 600 (charte)",
+          "fix": ".font(.system(size: 14, weight: .semibold)) -> OneClickFont.body(14, .semibold)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "C'est une carte selectionnable custom (tuile emoji + coche), pas une pill filtre, donc OneClickChip n'est pas un drop-in 1:1 — le fix typo body est le bon."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/AllergensView.swift",
+          "line": 146,
+          "element": "indice allergene (hint)",
+          "issue": "Meta en police systeme",
+          "fix": ".font(.system(size: 11)) -> OneClickFont.body(11)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/AllergensView.swift",
+          "line": 155,
+          "element": "chip allergene (carte selectionnable)",
+          "issue": "Carte/chip r12 avec overlay border seul, sans ombre teintee",
+          "fix": "ajouter .oneClickShadow(.cardSoft) sur le RoundedRectangle de fond (L155)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/AllergensView.swift",
+          "line": 165,
+          "element": "toast",
+          "issue": "Texte de toast en police systeme + .white brute",
+          "fix": ".font(.system(size: 13)) -> OneClickFont.body(13) ; .foregroundStyle(.white) -> OneClickColors.onPrimary",
+          "severity": "minor",
+          "isReal": true
+        }
+      ],
+      "missed": [
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/profile/ui/SettingsView.swift",
+          "line": 70,
+          "element": "Section 'Mode d'affichage' + option 'Sombre' (dark mode toggle)",
+          "issue": "VIOLATION CHARTE MAJEURE OUBLIEE par le 1er auditeur. La charte §8.4 (L279 du REBRANDING-CHARTE-GRAPHIQUE.md) est explicite : 'Pas de dark mode dans les applications OneClick... Le toggle Mode sombre est a retirer du Profil.' Or SettingsView expose toute une section 'Mode d'affichage' (L52-53, L70-74) avec une option 'Sombre' (moon.fill) + 'Systeme'. C'est un element d'UI charte-interdit, pas une simple question de typo. Le SettingsViewModel garde aussi displayMode/selectDisplayMode (L37-40).",
+          "fix": "Retirer la section 'Mode d'affichage' de la vue (L70-74) ainsi que le tableau modes (L52-53) ; conserver uniquement la section Langue. Nettoyer displayMode + selectDisplayMode du SettingsViewModel (L11,37-40) et UserPrefs.displayMode si plus utilise.",
+          "severity": "major"
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/care/ui/CareView.swift",
+          "line": 244,
+          "element": "error-state onglet Tickets — pas d'icone",
+          "issue": "§8.5 etat error : la charte attend un visuel (icone/illustration) + titre serif + message. L'error-state Tickets (L244-249) n'affiche qu'un message texte + bouton Reessayer, sans icone ni titre serif. Incoherent avec l'empty-state du meme ecran (qui a icone+titre). Completude oubliee.",
+          "fix": "Ajouter une icone d'erteur (ex exclamationmark.triangle, foregroundStyle OneClickColors.destructive ou mutedForeground) et un titre serif court (OneClickFont.display) au-dessus du message, sur le modele de l'empty-state.",
+          "severity": "minor"
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/favorites/FavoritesView.swift",
+          "line": 91,
+          "element": "error-state Favoris — pas d'icone ni titre",
+          "issue": "§8.5 etat error : l'error-state (L91-93) n'affiche qu'un message texte muted, sans icone ni titre serif, alors que l'empty-state du meme ecran est complet (icone+titre+sous-titre+CTA). Incoherence d'etats oubliee.",
+          "fix": "Aligner l'error-state sur le pattern empty-state : icone + titre serif (OneClickFont.display) + message body, eventuellement un bouton Reessayer (.oneClickPrimary).",
+          "severity": "minor"
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/care/ui/CareView.swift",
+          "line": 300,
+          "element": "statusChip — couleur fond derivee par opacite au lieu du triplet charte",
+          "issue": "Au-dela de la typo (deja flaggee L297), le statusChip construit son fond via statusColor.opacity(0.12) sans bordure — ce n'est pas la recette charte §8.2 (triplet texte fonce / fond pale dedie / bordure 1px). Meme si on garde un composant ad-hoc (statuts ticket non couverts par OneClickReservationStatus), il manque la bordure et le fond pale dedie. Aspect couleur/recette oublie par le 1er auditeur (qui n'a vise que la police).",
+          "fix": "Definir un triplet (text/background pale/border) par statut ticket sur le modele OneClickStatusBadge, ou alimenter OneClickStatusBadgeView avec des badges construits a la main ; ajouter la bordure 1px.",
+          "severity": "minor"
+        }
+      ]
+    },
+    {
+      "area": "Moments + Promos (OneClick Win iOS native)",
+      "confirmed": [
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/moments/ui/MomentsView.swift",
+          "element": "chip filtre (label)",
+          "line": 74,
+          "issue": ".font(.system(size:13)) sur le label de chip + chip ad-hoc (RoundedRectangle muted + bordure border dure) au lieu de OneClickChip (pill plein bordeaux actif + cardSoft inactif, sans bordure dure). Hors recette §5.5.",
+          "fix": "Remplacer par OneClickChip(label: label, selected: selected, action: { vm.setFilter(type) }). Le composant gère pill/label Nunito 600/ombre. NB: OneClickChip n'a pas de variante 'foreground actif' — il met onPrimary sur fond bordeaux, ce qui EST la recette charte (le code actuel garde un fond muted+texte foreground = faux). A minima police: OneClickFont.body(13,.semibold).",
+          "severity": "major",
+          "isReal": true,
+          "note": "Confirmé ligne 74. Chip ad-hoc complet (fond muted, bordure border, hauteur 32) hors §5.5."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/moments/ui/MomentsView.swift",
+          "element": "bandeau nouveautés (texte)",
+          "line": 89,
+          "issue": ".font(.system(size:12,weight:.bold)) sur le Text du bandeau (corps/meta).",
+          "fix": ".font(.system(size:12,weight:.bold)) -> OneClickFont.body(12,.bold)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/moments/ui/MomentsView.swift",
+          "element": "compteur offres actives (caption)",
+          "line": 100,
+          "issue": ".font(.system(size:12)) sur le Text du compteur (meta).",
+          "fix": ".font(.system(size:12)) -> OneClickFont.body(12,.regular)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/moments/ui/MomentsView.swift",
+          "element": "empty/disabled-state (titre)",
+          "line": 167,
+          "issue": "Titre d'état vide en .font(.system(size:18,weight:.bold)) — titre §8.5 doit être serif display.",
+          "fix": ".font(.system(size:18,weight:.bold)) -> OneClickFont.display(18,.semibold)",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/moments/ui/MomentsView.swift",
+          "element": "empty/disabled-state (message)",
+          "line": 169,
+          "issue": ".font(.system(size:14)) sur le hint d'état vide (corps).",
+          "fix": ".font(.system(size:14)) -> OneClickFont.body(14,.regular)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/moments/ui/MomentsView.swift",
+          "element": "CTA focal état vide/désactivé",
+          "line": 175,
+          "issue": "CTA focal (centeredState) = bouton ad-hoc à fond bordeaux OneClickColors.primary (ligne 179) + label .font(.system(size:15,weight:.semibold)) (ligne 175). Charte: CTA focal = champagne (PrimaryButtonStyle), bordeaux réservé aux actions inline répétées.",
+          "fix": "Remplacer le bouton ad-hoc par Button(action:action){ Label(...) }.buttonStyle(.oneClickPrimary). Fond bordeaux -> champagne (accent) ; label .font(.system) géré par le style (display 16 bold).",
+          "severity": "major",
+          "isReal": true,
+          "note": "Confirmé: bouton ad-hoc lignes 172-180 avec fill primary + label system. Le mappe via PrimaryButtonStyle qui passe le fond en champagne onAccent."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/moments/ui/MomentsView.swift",
+          "element": "error-state (message)",
+          "line": 191,
+          "issue": ".font(.system(size:14)) sur le message d'erreur (corps).",
+          "fix": ".font(.system(size:14)) -> OneClickFont.body(14,.regular)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/moments/ui/MomentsView.swift",
+          "element": "carte moment — titre",
+          "line": 229,
+          "issue": "Titre de carte en .font(.system(size:14,weight:.bold)) — titre de carte doit être serif display.",
+          "fix": ".font(.system(size:14,weight:.bold)) -> OneClickFont.display(15,.medium)",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/moments/ui/MomentsView.swift",
+          "element": "carte moment — description",
+          "line": 235,
+          "issue": ".font(.system(size:11)) sur la description (corps).",
+          "fix": ".font(.system(size:11)) -> OneClickFont.body(11,.regular)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/moments/ui/MomentsView.swift",
+          "element": "carte moment — badge type/fraîcheur",
+          "line": 261,
+          "issue": "Badge ad-hoc (RoundedRectangle radiusSm fill muted, texte coloré) + .font(.system(size:9,weight:.bold)) au lieu de OneClickStatusBadgeView (triplet texte/fond pâle/bordure, pilule h/2). Le rayon radiusSm (8) au lieu de pill est aussi hors §5.6.",
+          "fix": "Migrer vers OneClickStatusBadgeView (pilule, fond pâle + bordure) pour les statuts ; a minima police: OneClickFont.body(11,.semibold).",
+          "severity": "major",
+          "isReal": true,
+          "note": "Confirmé fonction badge() lignes 260-264. Rectangle muted + size 9, pas de bordure, rayon 8 = double écart §5.6 (police + forme)."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/moments/ui/MomentsView.swift",
+          "element": "carte moment — méta (ville/points/échéance)",
+          "line": 285,
+          "issue": ".font(.system(size:size,weight:...)) sur le Text des items méta (corps/meta).",
+          "fix": ".font(.system(size:size,weight:bold ? .bold : .regular)) -> OneClickFont.body(size, bold ? .bold : .regular)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/moments/ui/MomentsView.swift",
+          "element": "carte moment — footer CTA « Voir la promo »",
+          "line": 292,
+          "issue": ".font(.system(size:12,weight:.bold)) sur le libellé d'action inline « Voir la promo ».",
+          "fix": ".font(.system(size:12,weight:.bold)) -> OneClickFont.body(13,.bold) (cohérent InlineButtonStyle)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/moments/ui/MomentDetailSheet.swift",
+          "element": "sheet détail — titre du moment",
+          "line": 21,
+          "issue": "Titre principal du sheet en .font(.system(size:18,weight:.bold)) — doit être serif display.",
+          "fix": ".font(.system(size:18,weight:.bold)) -> OneClickFont.display(20,.semibold)",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/moments/ui/MomentDetailSheet.swift",
+          "element": "sheet détail — overline « MOMENT »",
+          "line": 47,
+          "issue": ".font(.system(size:11,weight:.bold)) sur l'overline (capitales espacées = registre Nunito Sans overline §3).",
+          "fix": ".font(.system(size:11,weight:.bold)) -> OneClickFont.body(12,.semibold)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/moments/ui/MomentDetailSheet.swift",
+          "element": "sheet détail — badge type/échéance",
+          "line": 85,
+          "issue": "Badge ad-hoc (.font(.system(size:10,weight:.bold)), fond muted, rayon radiusSm) au lieu de OneClickStatusBadgeView.",
+          "fix": "Migrer vers OneClickStatusBadgeView (pilule) ; a minima OneClickFont.body(11,.semibold).",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/moments/ui/MomentDetailSheet.swift",
+          "element": "sheet détail — ligne restaurant (nom)",
+          "line": 94,
+          "issue": "Nom de restaurant en .font(.system(size:13,weight:.bold)) — un nom de resto doit être serif display.",
+          "fix": ".font(.system(size:13,weight:.bold)) -> OneClickFont.display(14,.medium)",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/moments/ui/MomentDetailSheet.swift",
+          "element": "sheet détail — label « Conditions »",
+          "line": 102,
+          "issue": ".font(.system(size:11,weight:.bold)) sur le label de section (overline corps).",
+          "fix": ".font(.system(size:11,weight:.bold)) -> OneClickFont.body(12,.semibold)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/moments/ui/MomentDetailSheet.swift",
+          "element": "sheet détail — texte conditions",
+          "line": 103,
+          "issue": ".font(.system(size:14)) sur le corps des conditions.",
+          "fix": ".font(.system(size:14)) -> OneClickFont.body(14,.regular)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/moments/ui/MomentDetailSheet.swift",
+          "element": "sheet détail — points à gagner",
+          "line": 113,
+          "issue": ".font(.system(size:14,weight:.bold)) sur le Text points (valeur récompense = meta forte).",
+          "fix": ".font(.system(size:14,weight:.bold)) -> OneClickFont.body(14,.bold)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/moments/ui/MomentDetailSheet.swift",
+          "element": "sheet détail — validité",
+          "line": 122,
+          "issue": ".font(.system(size:11)) sur le Text de validité (meta).",
+          "fix": ".font(.system(size:11)) -> OneClickFont.body(11,.regular)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/moments/ui/MomentDetailSheet.swift",
+          "element": "CTA focal « Voir le restaurant »",
+          "line": 131,
+          "issue": "CTA focal = bouton ad-hoc à fond bordeaux OneClickColors.primary (ligne 136) + label .font(.system(size:15,weight:.semibold)) (ligne 131). Charte: CTA focal = champagne (PrimaryButtonStyle).",
+          "fix": "Remplacer par Button{...}.buttonStyle(.oneClickPrimary) (fond champagne, label display géré par le style).",
+          "severity": "major",
+          "isReal": true,
+          "note": "Confirmé seeRestaurant() lignes 128-140, fill primary + label system. CTA focal unique du sheet => champagne."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/promos/PromosView.swift",
+          "element": "error-state (message)",
+          "line": 138,
+          "issue": ".font(.system(size:14)) sur le message d'erreur (corps).",
+          "fix": ".font(.system(size:14)) -> OneClickFont.body(14,.regular)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/promos/PromosView.swift",
+          "element": "en-tête « En ce moment »",
+          "line": 147,
+          "issue": "Titre de section/écran en .font(.system(size:18,weight:.bold)) — doit être serif display.",
+          "fix": ".font(.system(size:18,weight:.bold)) -> OneClickFont.display(20,.semibold)",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/promos/PromosView.swift",
+          "element": "en-tête — compteur offres",
+          "line": 149,
+          "issue": ".font(.system(size:12)) sur le compteur (meta).",
+          "fix": ".font(.system(size:12)) -> OneClickFont.body(12,.regular)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/promos/PromosView.swift",
+          "element": "libellé de section (Épinglées / Toutes les promos)",
+          "line": 154,
+          "issue": "Titre de section en .font(.system(size:11,weight:.bold)) textCase(.uppercase) — overline capitales = registre Nunito Sans (§3 overline body), pas serif. Violation = police system, pas le choix display/body.",
+          "fix": ".font(.system(size:11,weight:.bold)) -> OneClickFont.body(12,.semibold) (overline §3). Si on veut un vrai titre de section serif: OneClickFont.display(13,.semibold) — mais l'usage textCase uppercase ici = overline, donc body 600 est plus fidèle.",
+          "severity": "major",
+          "isReal": true,
+          "note": "isReal sur la violation police. NB: la sévérité 'major' est défendable mais c'est un overline uppercase (registre body) — la cible correcte est OneClickFont.body(12,.semibold), pas display. Le fix du 1er auditeur listait display en 1er, je corrige l'ordre."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/promos/PromosView.swift",
+          "element": "carte offre — titre",
+          "line": 176,
+          "issue": "Titre de carte en .font(.system(size:15,weight:.bold)) — doit être serif display.",
+          "fix": ".font(.system(size:15,weight:.bold)) -> OneClickFont.display(16,.medium)",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/promos/PromosView.swift",
+          "element": "carte offre — resto · ville",
+          "line": 179,
+          "issue": "Nom de restaurant en .font(.system(size:12)) — un nom de resto doit être serif display.",
+          "fix": ".font(.system(size:12)) -> OneClickFont.display(13,.medium)",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/promos/PromosView.swift",
+          "element": "carte offre — description",
+          "line": 182,
+          "issue": ".font(.system(size:12)) sur la description (corps).",
+          "fix": ".font(.system(size:12)) -> OneClickFont.body(12,.regular)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/promos/PromosView.swift",
+          "element": "carte offre — points",
+          "line": 185,
+          "issue": ".font(.system(size:11,weight:.bold)) sur le Text points (meta forte).",
+          "fix": ".font(.system(size:11,weight:.bold)) -> OneClickFont.body(11,.bold)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/promos/PromosView.swift",
+          "element": "carte offre — badge type/échéance (sur image) + couleur",
+          "line": 198,
+          "issue": "Helper badge() : .font(.system(size:10,weight:.bold)) au lieu de OneClickStatusBadgeView. PLUS au site d'appel ligne 169 le badge type est un fond PLEIN bordeaux (bg: primary) — pas la recette charte (triplet texte/fond PÂLE/bordure). Et l'échéance ligne 171 passe fg: .white littéral (= OneClickColors.onDestructive).",
+          "fix": "Migrer vers OneClickStatusBadgeView (fond pâle + bordure, jamais fond plein primary). A minima police OneClickFont.body(11,.semibold) ; remplacer .white par OneClickColors.onDestructive.",
+          "severity": "major",
+          "isReal": true,
+          "note": "Le helper est ligne 197-200 ; le vrai écart 'fond plein bordeaux' est au site d'appel ligne 169. Voir aussi missed pour le .white littéral ligne 171."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/promos/PromosView.swift",
+          "element": "empty-state — titre",
+          "line": 206,
+          "issue": "Titre d'état vide en .font(.system(size:18,weight:.bold)) — doit être serif display.",
+          "fix": ".font(.system(size:18,weight:.bold)) -> OneClickFont.display(18,.semibold)",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/promos/PromosView.swift",
+          "element": "empty-state — message",
+          "line": 209,
+          "issue": ".font(.system(size:14)) sur le hint d'état vide (corps).",
+          "fix": ".font(.system(size:14)) -> OneClickFont.body(14,.regular)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/promos/PromosView.swift",
+          "element": "CTA focal état vide « Explorer les restaurants »",
+          "line": 212,
+          "issue": "CTA focal = bouton ad-hoc à fond bordeaux OneClickColors.primary (ligne 214) + label .font(.system(size:15,weight:.semibold)) (ligne 212). Charte: CTA focal = champagne (PrimaryButtonStyle).",
+          "fix": "Remplacer par Button(action:onExplore){...}.buttonStyle(.oneClickPrimary).",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/promos/PromosView.swift",
+          "element": "sheet détail — overline « Promotion »",
+          "line": 259,
+          "issue": ".font(.system(size:11,weight:.bold)) textCase(.uppercase) sur l'overline.",
+          "fix": ".font(.system(size:11,weight:.bold)) -> OneClickFont.body(12,.semibold)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/promos/PromosView.swift",
+          "element": "sheet détail — badge type",
+          "line": 270,
+          "issue": "Badge ad-hoc Capsule fill primary (fond PLEIN bordeaux) + .font(.system(size:10,weight:.bold)) au lieu de OneClickStatusBadgeView (fond pâle + bordure).",
+          "fix": "Migrer vers OneClickStatusBadgeView ; a minima OneClickFont.body(11,.semibold) et abandonner le fond plein primary.",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/promos/PromosView.swift",
+          "element": "sheet détail — badge échéance",
+          "line": 273,
+          "issue": "Badge ad-hoc avec .font(.system(size:10,weight:.bold)), fond destructive.opacity(0.9) et fg .white littéral.",
+          "fix": ".font(.system(size:10,weight:.bold)) -> OneClickFont.body(11,.semibold) ; fg .white -> OneClickColors.onDestructive (idéalement OneClickStatusBadgeView).",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/promos/PromosView.swift",
+          "element": "sheet détail — titre offre",
+          "line": 277,
+          "issue": "Titre principal du sheet en .font(.system(size:20,weight:.bold)) — doit être serif display.",
+          "fix": ".font(.system(size:20,weight:.bold)) -> OneClickFont.display(24,.semibold)",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/promos/PromosView.swift",
+          "element": "sheet détail — resto · ville",
+          "line": 280,
+          "issue": "Nom de restaurant en .font(.system(size:13)) — doit être serif display.",
+          "fix": ".font(.system(size:13)) -> OneClickFont.display(14,.medium)",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/promos/PromosView.swift",
+          "element": "sheet détail — description",
+          "line": 283,
+          "issue": ".font(.system(size:14)) sur le corps de description.",
+          "fix": ".font(.system(size:14)) -> OneClickFont.body(14,.regular)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/promos/PromosView.swift",
+          "element": "sheet détail — points à gagner",
+          "line": 286,
+          "issue": ".font(.system(size:13,weight:.semibold)) sur le Text points (meta forte).",
+          "fix": ".font(.system(size:13,weight:.semibold)) -> OneClickFont.body(13,.semibold)",
+          "severity": "minor",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/promos/PromosView.swift",
+          "element": "CTA focal sheet « Voir le restaurant »",
+          "line": 290,
+          "issue": "CTA focal = bouton ad-hoc à fond bordeaux OneClickColors.primary (ligne 292) + label .font(.system(size:15,weight:.semibold)) (ligne 290). Charte: CTA focal = champagne (PrimaryButtonStyle).",
+          "fix": "Remplacer par Button{...}.buttonStyle(.oneClickPrimary).",
+          "severity": "major",
+          "isReal": true
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/moments/ui/MomentTypeVisuals.swift",
+          "element": "couleur type reco (commentaire trompeur)",
+          "line": 15,
+          "issue": "reco -> OneClickColors.chart3 ; le commentaire prétend #9B59C4 alors que chart3 vaut réellement #9B8598 (mauve atténué = token palette valide). Pas une violation de couleur (token existant) mais commentaire faux/héritage pré-rebrand.",
+          "fix": "Corriger le commentaire (chart3 = #9B8598, pas #9B59C4). Couleur conservée (token palette valide). Voir aussi missed pour les commentaires hex faux lignes 13 (.promo) et 14 (.bonus).",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Couleur OK (token réel). Seul le commentaire hex est faux. Note: la mention 'plum Odoo #714B67' du 1er auditeur concerne en réalité le commentaire ligne 14 (.bonus), pas ligne 15."
+        }
+      ],
+      "missed": [
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/moments/ui/MomentsView.swift",
+          "element": "carte moment — conteneur (MomentCardView)",
+          "line": 213,
+          "issue": "Carte blanche (fill surface) avec seulement un stroke border/primary mais AUCUNE ombre teintée. Charte §4.4/§5 : les cartes blanches portent shadow.card (halo serré bleu-nuit). Le 1er auditeur a vérifié l'absence d'ombre noire brute mais a manqué l'absence TOTALE d'ombre charte sur la carte.",
+          "fix": "Ajouter .oneClickShadow(.card) sur le RoundedRectangle de fond de la carte (ligne 213), comme prévu par la recette carte blanche.",
+          "severity": "minor"
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/promos/PromosView.swift",
+          "element": "carte offre — conteneur (card)",
+          "line": 190,
+          "issue": "Carte blanche (fill surface) avec stroke seul, AUCUNE ombre teintée charte (shadow.card). Même omission que la carte moment.",
+          "fix": "Ajouter .oneClickShadow(.card) sur le RoundedRectangle de fond (ligne 190).",
+          "severity": "minor"
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/promos/PromosView.swift",
+          "element": "carte offre — badge échéance (fg .white littéral au site d'appel)",
+          "line": 171,
+          "issue": "Le badge échéance passe fg: .white (couleur littérale) au lieu d'un token. Le 1er auditeur a flaggé le helper ligne 198 et le sheet ligne 273 mais a manqué CE site d'appel (ligne 171) qui injecte aussi .white.",
+          "fix": "fg: .white -> fg: OneClickColors.onDestructive (idéalement migrer vers OneClickStatusBadgeView qui gère le triplet).",
+          "severity": "minor"
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/promos/PromosView.swift",
+          "element": "carte offre — badge type (fond plein bordeaux)",
+          "line": 169,
+          "issue": "Le badge 'type' utilise bg: OneClickColors.primary (fond PLEIN bordeaux) + fg onPrimary — ce n'est PAS la recette badge charte §5.6/§8.2 (texte coloré sur fond PÂLE + bordure). Un fond plein bordeaux sur le badge entre en plus en concurrence visuelle avec le liseré de marque. Le 1er auditeur a flaggé la police (ligne 198) mais pas l'écart de recette couleur (fond plein) à ce site d'appel.",
+          "fix": "Remplacer le badge à fond plein par OneClickStatusBadgeView (triplet pâle) ou, si pas de statut sémantique, par un chip pâle ; ne jamais utiliser fond plein primary pour un badge informatif.",
+          "severity": "minor"
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/moments/ui/MomentTypeVisuals.swift",
+          "element": "couleur type promo/bonus (commentaires hex faux)",
+          "line": 13,
+          "issue": "Commentaires hex pré-rebrand erronés non flaggés par le 1er auditeur : ligne 13 '.promo -> success // vert #28A745' (success vaut #00881E) ; ligne 14 '.bonus -> primary // plum #714B67' (primary vaut #681237 bordeaux, #714B67 = plum Odoo hors charte). Couleurs (tokens) OK ; seuls les commentaires sont trompeurs/héritage pré-rebrand.",
+          "fix": "Corriger les commentaires : .promo = success #00881E ; .bonus = primary #681237 (supprimer la référence plum Odoo #714B67). Aucune couleur à changer.",
+          "severity": "minor"
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/moments/ui/MomentsView.swift",
+          "element": "motion — filtre chips + transitions d'état (§9)",
+          "line": 72,
+          "issue": "Aucun withAnimation/.animation dans tout MomentsView : le changement de filtre (vm.setFilter, ligne 72) et les transitions d'état (loading->content->empty/error) sont instantanés, sans easeInOut. Charte §9/§8.5 (motion Phase 4) attend des transitions douces sur changements d'état majeurs. Non relevé par le 1er auditeur.",
+          "fix": "Envelopper setFilter dans withAnimation(.easeInOut(duration:0.2)) et appliquer une .transition(.opacity) sur le switch d'états (statesBody).",
+          "severity": "minor"
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/promos/PromosView.swift",
+          "element": "motion — transitions d'état (§9)",
+          "line": 116,
+          "issue": "Aucun withAnimation/.animation dans PromosView : transitions loading->content->empty/error instantanées. §9 attend des transitions douces. Non relevé par le 1er auditeur.",
+          "fix": "Appliquer une .animation(.easeInOut, value:) / .transition(.opacity) sur le switch d'états (content).",
+          "severity": "minor"
+        }
+      ]
+    },
+    {
+      "area": "Notifications + Assistant + Welcome + Legal (OneClick Win iOS native)",
+      "confirmed": [
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/notifications/domain/NotificationModels.swift",
+          "line": 47,
+          "element": "pastille notification type=reservation",
+          "issue": "Couleur d'accent hardcodee hors palette (bleu #2563EB), port verbatim legacy Android notification_colors.xml. Charte = dual-accent bordeaux/champagne, pas de rainbow par type (cf §11 : ces ecrans portent encore le theme generique).",
+          "fix": "Color(argb: \"#2563EB\") -> OneClickColors.primary (reservation = bordeaux marque)",
+          "severity": "major",
+          "isReal": true,
+          "note": "Verifie : line 47 = case reservation, hex exact. Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/notifications/domain/NotificationModels.swift",
+          "line": 49,
+          "element": "pastille notification type=loyalty/points",
+          "issue": "Couleur hardcodee hors palette (emerald #059669). Vert generique interdit hors semantique success.",
+          "fix": "Color(argb: \"#059669\") -> OneClickColors.accent (recompense/points = champagne #E0AF7C)",
+          "severity": "major",
+          "isReal": true,
+          "note": "Verifie line 49. Fix accent (champagne reward) bien aligne charte §4."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/notifications/domain/NotificationModels.swift",
+          "line": 51,
+          "element": "pastille notification type=promotion/promo",
+          "issue": "Couleur hardcodee hors palette (orange #F97316).",
+          "fix": "Color(argb: \"#F97316\") -> OneClickColors.accent (offre = champagne) ou OneClickColors.primary",
+          "severity": "major",
+          "isReal": true,
+          "note": "Verifie line 51. Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/notifications/domain/NotificationModels.swift",
+          "line": 53,
+          "element": "pastille notification type=referral",
+          "issue": "Couleur hardcodee hors palette (violet #7C3AED).",
+          "fix": "Color(argb: \"#7C3AED\") -> OneClickColors.accent (recompense parrainage) ou OneClickColors.primary",
+          "severity": "major",
+          "isReal": true,
+          "note": "Verifie line 53. Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/notifications/domain/NotificationModels.swift",
+          "line": 55,
+          "element": "pastille notification type=community/friend_request",
+          "issue": "Couleur hardcodee hors palette (rose #F43F5E).",
+          "fix": "Color(argb: \"#F43F5E\") -> OneClickColors.primary",
+          "severity": "major",
+          "isReal": true,
+          "note": "Verifie line 55. Reel (note: #F43F5E coincide avec tierRuby legacy mais reste hors palette charte courante)."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/notifications/domain/NotificationModels.swift",
+          "line": 57,
+          "element": "pastille notification type=support",
+          "issue": "Couleur hardcodee plum Odoo #714B67 — explicitement hors charte rebrand (ancienne palette).",
+          "fix": "Color(argb: \"#714B67\") -> OneClickColors.primary (#681237)",
+          "severity": "major",
+          "isReal": true,
+          "note": "Verifie line 57. Plum Odoo = ancienne palette, violation nette. Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/notifications/domain/NotificationModels.swift",
+          "line": 59,
+          "element": "pastille notification type=announcement",
+          "issue": "Couleur hardcodee hors palette (amber #D97706).",
+          "fix": "Color(argb: \"#D97706\") -> OneClickColors.accent ou OneClickColors.primary",
+          "severity": "major",
+          "isReal": true,
+          "note": "Verifie line 59. Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/notifications/domain/NotificationModels.swift",
+          "line": 61,
+          "element": "pastille notification type=system/inconnu",
+          "issue": "Couleur hardcodee hors palette (slate #475569).",
+          "fix": "Color(argb: \"#475569\") -> OneClickColors.info (#8A959E, registre neutre charte) ou OneClickColors.mutedForeground",
+          "severity": "major",
+          "isReal": true,
+          "note": "Verifie line 61. info=#8A959E confirme dans tokens. Fix correct."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/notifications/ui/NotificationsView.swift",
+          "line": 67,
+          "element": "bouton « Tout lire » (label Text)",
+          "issue": ".font(.system(size:13,weight:.semibold)) applique sur le HStack contenant Text(\"Tout lire\").",
+          "fix": ".font(.system(size: 13, weight: .semibold)) -> OneClickFont.body(13, .semibold)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Verifie : le .font(.system) est pose sur le HStack (icone SF + Text). L'icone ligne 64 ignore la police custom (SF Symbol), le Text \"Tout lire\" la subit. Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/notifications/ui/NotificationsView.swift",
+          "line": 81,
+          "element": "empty-state titre « Tout est a jour »",
+          "issue": "Titre d'empty-state en .font(.system(size:16,weight:.bold)) — §8.5 impose titre serif display.",
+          "fix": ".font(.system(size: 16, weight: .bold)) -> OneClickFont.display(18, .medium) (= OneClickType.title)",
+          "severity": "major",
+          "isReal": true,
+          "note": "§8.5 confirme : empty = titre serif. Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/notifications/ui/NotificationsView.swift",
+          "line": 85,
+          "element": "empty-state hint « Aucune notification… »",
+          "issue": ".font(.system(size:13)) sur le hint body.",
+          "fix": ".font(.system(size: 13)) -> OneClickFont.body(13)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/notifications/ui/NotificationsView.swift",
+          "line": 95,
+          "element": "error-state message",
+          "issue": ".font(.system(size:14)) sur le message d'erreur.",
+          "fix": ".font(.system(size: 14)) -> OneClickFont.body(14)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/notifications/ui/NotificationsView.swift",
+          "line": 127,
+          "element": "titre ligne notification",
+          "issue": ".font(.system(size:14,weight:.bold)) sur le titre de la notification.",
+          "fix": ".font(.system(size: 14, weight: .bold)) -> OneClickFont.display(15, .semibold)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Titre de carte/ligne = serif charte. Reel (severity minor coherente : ligne de liste, pas titre d'ecran)."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/notifications/ui/NotificationsView.swift",
+          "line": 132,
+          "element": "time-ago notification (meta)",
+          "issue": ".font(.system(size:10)) sur le timestamp.",
+          "fix": ".font(.system(size: 10)) -> OneClickFont.body(10) (= OneClickType.caption)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/notifications/ui/NotificationsView.swift",
+          "line": 138,
+          "element": "corps ligne notification",
+          "issue": ".font(.system(size:12)) sur le body de la notification.",
+          "fix": ".font(.system(size: 12)) -> OneClickFont.body(12)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/assistant/ui/AssistantSheetView.swift",
+          "line": 40,
+          "element": "titre header « OneClick AI »",
+          "issue": ".font(.system(size:14,weight:.bold)) sur le titre de header (doit etre serif display).",
+          "fix": ".font(.system(size: 14, weight: .bold)) -> OneClickFont.display(15, .semibold)",
+          "severity": "major",
+          "isReal": true,
+          "note": "Titre de bandeau de la sheet = serif. Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/assistant/ui/AssistantSheetView.swift",
+          "line": 41,
+          "element": "sous-titre header « Votre assistant intelligent »",
+          "issue": ".font(.system(size:10)) sur le sous-titre meta.",
+          "fix": ".font(.system(size: 10)) -> OneClickFont.body(10)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/assistant/ui/AssistantSheetView.swift",
+          "line": 86,
+          "element": "empty-state titre « Comment puis-je vous aider ? »",
+          "issue": "Titre d'empty-state en .font(.system(size:14,weight:.bold)) — §8.5 impose serif display.",
+          "fix": ".font(.system(size: 14, weight: .bold)) -> OneClickFont.display(18, .medium)",
+          "severity": "major",
+          "isReal": true,
+          "note": "§8.5. Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/assistant/ui/AssistantSheetView.swift",
+          "line": 89,
+          "element": "empty-state hint « Posez une question… »",
+          "issue": ".font(.system(size:11)) sur le hint body.",
+          "fix": ".font(.system(size: 11)) -> OneClickFont.body(12)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/assistant/ui/AssistantSheetView.swift",
+          "line": 107,
+          "element": "chip d'action rapide (quickChip)",
+          "issue": "Chip reconstruit ad-hoc (Text + overlay stroke border) avec .font(.system(size:13)) au lieu d'utiliser OneClickChip.",
+          "fix": "Remplacer par OneClickChip(label:label, selected:false){vm.send(prompt)} ; a minima .font(.system(size: 13)) -> OneClickFont.body(13, .semibold)",
+          "severity": "major",
+          "isReal": true,
+          "note": "Chip ad-hoc avec bordure dure : OneClickChip (charte §5.5) n'a pas de bordure dure (relief par ombre cardSoft). Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/assistant/ui/AssistantSheetView.swift",
+          "line": 120,
+          "element": "indicateur de frappe « L'assistant ecrit… »",
+          "issue": ".font(.system(size:11)) sur le label meta.",
+          "fix": ".font(.system(size: 11)) -> OneClickFont.body(11)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/assistant/ui/AssistantSheetView.swift",
+          "line": 129,
+          "element": "carte confirmation — titre",
+          "issue": ".font(.system(size:13,weight:.bold)) sur le titre de la carte.",
+          "fix": ".font(.system(size: 13, weight: .bold)) -> OneClickFont.display(14, .semibold)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/assistant/ui/AssistantSheetView.swift",
+          "line": 130,
+          "element": "carte confirmation — resume",
+          "issue": ".font(.system(size:12)) sur le resume body.",
+          "fix": ".font(.system(size: 12)) -> OneClickFont.body(12)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/assistant/ui/AssistantSheetView.swift",
+          "line": 134,
+          "element": "carte confirmation — bouton « Annuler »",
+          "issue": ".font(.system(size:13,weight:.semibold)) sur le label du bouton secondaire ghost.",
+          "fix": "Button(\"Annuler\"){...}.buttonStyle(.oneClickText) ; sinon .font(.system(size: 13, weight: .semibold)) -> OneClickFont.body(13, .semibold)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Reel. .oneClickText (lien bordeaux ghost) est le style charte adapte ici."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/assistant/ui/AssistantSheetView.swift",
+          "line": 137,
+          "element": "carte confirmation — CTA « Confirmer »",
+          "issue": "CTA reconstruit ad-hoc (fond bordeaux #681237 via .fill + .font(.system(size:13,weight:.semibold))) au lieu de passer par le style charte.",
+          "fix": "Remplacer par Button(\"Confirmer\"){vm.confirmPendingAction()}.buttonStyle(.oneClickInline) (action repetee par carte = bordeaux inline). Le label charte = OneClickFont.body(13,.bold).",
+          "severity": "major",
+          "isReal": true,
+          "note": "Reel. .oneClickInline (bordeaux compact) est le bon registre pour un CTA inline de carte, fix correct."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/assistant/ui/AssistantSheetView.swift",
+          "line": 153,
+          "element": "champ de saisie message (TextField)",
+          "issue": ".font(.system(size:16)) sur le TextField de saisie.",
+          "fix": ".font(.system(size: 16)) -> OneClickFont.body(16)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/assistant/ui/AssistantSheetView.swift",
+          "line": 181,
+          "element": "toast overlay (texte)",
+          "issue": ".font(.system(size:13)) sur le texte du toast.",
+          "fix": ".font(.system(size: 13)) -> OneClickFont.body(13)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/assistant/ui/AssistantSheetView.swift",
+          "line": 203,
+          "element": "bulle message utilisateur (texte)",
+          "issue": ".font(.system(size:14)) sur le contenu de la bulle user.",
+          "fix": ".font(.system(size: 14)) -> OneClickFont.body(14)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/assistant/ui/AssistantSheetView.swift",
+          "line": 217,
+          "element": "bulle message assistant (texte)",
+          "issue": ".font(.system(size:14)) sur le contenu de la bulle assistant.",
+          "fix": ".font(.system(size: 14)) -> OneClickFont.body(14)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/welcome/WelcomeGuideView.swift",
+          "line": 96,
+          "element": "langCard — label langue",
+          "issue": ".font(.system(size:16,weight:.medium)) sur le label de la carte de selection langue.",
+          "fix": ".font(.system(size: 16, weight: .medium)) -> OneClickFont.body(16, .medium)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Reel. (NB: l'auditeur a justement cite line 96 = font, pas line 84/85/86 = call-sites.)"
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/welcome/WelcomeGuideView.swift",
+          "line": 125,
+          "element": "champ OTP (TextField)",
+          "issue": ".font(.system(size:28,weight:.bold)) sur le gros champ OTP — gros chiffres = serif display.",
+          "fix": ".font(.system(size: 28, weight: .bold)) -> OneClickFont.display(28, .bold) (= OneClickType.displayL)",
+          "severity": "major",
+          "isReal": true,
+          "note": "Gros chiffres focaux = serif charte. Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/welcome/WelcomeGuideView.swift",
+          "line": 134,
+          "element": "bouton « Renvoyer le code »",
+          "issue": ".font(.system(size:13,weight:.medium)) sur le label du lien (le Text est ligne 133, le .font ligne 134).",
+          "fix": ".font(.system(size: 13, weight: .medium)) -> OneClickFont.body(13, .medium)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Reel. L'auditeur a cite line 133 (le Text) ; le modifier .font est en realite ligne 134. Element correct, numero de ligne a 1 pres."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/welcome/WelcomeGuideView.swift",
+          "line": 162,
+          "element": "consentRow — titre consentement",
+          "issue": ".font(.system(size:14,weight:.semibold)) sur le titre de la ligne de consentement.",
+          "fix": ".font(.system(size: 14, weight: .semibold)) -> OneClickFont.body(14, .semibold)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/welcome/WelcomeGuideView.swift",
+          "line": 163,
+          "element": "consentRow — description",
+          "issue": ".font(.system(size:12)) sur la description body.",
+          "fix": ".font(.system(size: 12)) -> OneClickFont.body(12)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/welcome/WelcomeGuideView.swift",
+          "line": 185,
+          "element": "menu Ville — valeur selectionnee/placeholder",
+          "issue": ".font(.system(size:16)) sur le label du menu deroulant.",
+          "fix": ".font(.system(size: 16)) -> OneClickFont.body(16)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/welcome/WelcomeGuideView.swift",
+          "line": 195,
+          "element": "hint parrainage (texte)",
+          "issue": ".font(.system(size:11)) sur le hint body.",
+          "fix": ".font(.system(size: 11)) -> OneClickFont.body(11)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/welcome/WelcomeGuideView.swift",
+          "line": 212,
+          "element": "doneStep — titre « Bienvenue … »",
+          "issue": "Titre d'ecran final en .font(.system(size:22,weight:.bold)) au lieu de serif display.",
+          "fix": ".font(.system(size: 22, weight: .bold)) -> OneClickFont.display(24, .semibold) (= OneClickType.displayM)",
+          "severity": "major",
+          "isReal": true,
+          "note": "Titre d'ecran = serif. Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/welcome/WelcomeGuideView.swift",
+          "line": 213,
+          "element": "doneStep — sous-titre « Votre fidelite, simplifiee »",
+          "issue": ".font(.system(size:14)) sur le sous-titre body.",
+          "fix": ".font(.system(size: 14)) -> OneClickFont.body(14)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/welcome/WelcomeGuideView.swift",
+          "line": 215,
+          "element": "doneStep — copyright footer",
+          "issue": ".font(.system(size:11)) sur le texte copyright.",
+          "fix": ".font(.system(size: 11)) -> OneClickFont.body(11)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/welcome/WelcomeGuideView.swift",
+          "line": 224,
+          "element": "helper title() — titre d'etape",
+          "issue": "Titre de section/etape en .font(.system(size:20,weight:.bold)) — doit etre serif (impacte Langue/Telephone/OTP/Consentements/Profil).",
+          "fix": ".font(.system(size: 20, weight: .bold)) -> OneClickFont.display(20, .medium) (= OneClickType.displayS)",
+          "severity": "major",
+          "isReal": true,
+          "note": "Helper partage par 5 etapes : impact systemique. Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/welcome/WelcomeGuideView.swift",
+          "line": 225,
+          "element": "helper title() — sous-titre d'etape",
+          "issue": ".font(.system(size:14)) sur le sous-titre body.",
+          "fix": ".font(.system(size: 14)) -> OneClickFont.body(14)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/welcome/WelcomeGuideView.swift",
+          "line": 229,
+          "element": "helper fieldLabel() — label de champ",
+          "issue": ".font(.system(size:11,weight:.semibold)) sur le label de champ (overline, partage).",
+          "fix": ".font(.system(size: 11, weight: .semibold)) -> OneClickFont.body(12, .semibold) (= OneClickType.overline)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/welcome/WelcomeGuideView.swift",
+          "line": 235,
+          "element": "helper field() — TextField",
+          "issue": ".font(.system(size:16)) sur les TextField (Prenom/Nom/Telephone, helper partage).",
+          "fix": ".font(.system(size: 16)) -> OneClickFont.body(16)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/welcome/WelcomeGuideView.swift",
+          "line": 243,
+          "element": "helper primaryButton() — CTA focal du wizard",
+          "issue": "CTA principal reconstruit ad-hoc (fond bordeaux primary #681237 + .font(.system(size:15,weight:.semibold))) au lieu de .oneClickPrimary. Charte : CTA focal = champagne #E0AF7C + Poltawski Bold. Impacte tous les CTA du wizard (Continuer/Envoyer le code/Verifier/Accepter/Creer mon compte/Decouvrir).",
+          "fix": "Remplacer le corps par Button(t, action: action).buttonStyle(.oneClickPrimary) (champagne + ombre .cta + OneClickFont.display(16,.bold)).",
+          "severity": "major",
+          "isReal": true,
+          "note": "Reel et important : c'est le CTA focal du parcours. Actuellement bordeaux + police system, doit etre champagne via PrimaryButtonStyle. Fix correct."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/welcome/WelcomeGuideView.swift",
+          "line": 249,
+          "element": "helper backButton() — bouton « Retour »",
+          "issue": ".font(.system(size:14,weight:.medium)) sur le label du bouton retour.",
+          "fix": "Button(\"Retour\", action: action).buttonStyle(.oneClickText) ; sinon .font(.system(size: 14, weight: .medium)) -> OneClickFont.body(14, .semibold)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/welcome/WelcomeGuideView.swift",
+          "line": 264,
+          "element": "toast overlay (texte)",
+          "issue": ".font(.system(size:13)) sur le texte du toast.",
+          "fix": ".font(.system(size: 13)) -> OneClickFont.body(13)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/legal/LegalView.swift",
+          "line": 42,
+          "element": "carte legale — titre",
+          "issue": ".font(.system(size:15,weight:.bold)) sur le titre de carte.",
+          "fix": ".font(.system(size: 15, weight: .bold)) -> OneClickFont.display(16, .semibold) (= OneClickType.title)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/legal/LegalView.swift",
+          "line": 43,
+          "element": "carte legale — sous-titre",
+          "issue": ".font(.system(size:12)) sur le sous-titre body.",
+          "fix": ".font(.system(size: 12)) -> OneClickFont.body(12)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Reel."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/legal/LegalView.swift",
+          "line": 19,
+          "element": "carte « Protection des donnees » — teinte icone",
+          "issue": "Teinte = OneClickColors.chart3 (#9B8598, token chart dashboard / = mutedForeground) detournee en couleur decorative ; melange chart3/warning/success cree un rainbow hors identite dual-accent.",
+          "fix": "tint chart3 -> OneClickColors.primary (uniformiser les 3 cartes sur bordeaux)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Reel. chart3 = #9B8598 (tokens) reserve aux dashboards staff, pas a une carte legale."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/legal/LegalView.swift",
+          "line": 21,
+          "element": "carte « CGU » — teinte icone",
+          "issue": "Teinte = OneClickColors.warning (#E8A33D) utilisee comme couleur decorative non semantique (pas un etat d'avertissement).",
+          "fix": "tint OneClickColors.warning -> OneClickColors.primary",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Reel. warning utilise hors semantique = violation §8.3."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/legal/LegalView.swift",
+          "line": 23,
+          "element": "carte « Politique de confidentialite » — teinte icone",
+          "issue": "Teinte = OneClickColors.success (#00881E) utilisee comme couleur decorative non semantique (vert hors contexte success).",
+          "fix": "tint OneClickColors.success -> OneClickColors.primary",
+          "severity": "minor",
+          "isReal": true,
+          "note": "Reel. success hors semantique = violation §8.3."
+        }
+      ],
+      "missed": [
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/notifications/ui/NotificationsView.swift",
+          "line": 32,
+          "element": "etat loading — ProgressView() spinner plein ecran",
+          "issue": "§8.5 impose : « Loading / skeleton = blocs #F1ECEF (creme desature) en shimmer doux ; PAS de spinner brut ». L'etat .loading affiche un ProgressView() centre = spinner brut natif, non conforme. L'auditeur a entierement omis l'axe etats-loading.",
+          "fix": "Remplacer le ProgressView centre par un skeleton shimmer (lignes/pastilles placeholder en #F1ECEF) reproduisant la forme des NotificationRow. A minima documenter la dette ; le .tint(primary) ne suffit pas a satisfaire §8.5.",
+          "severity": "minor"
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/assistant/ui/AssistantSheetView.swift",
+          "line": 119,
+          "element": "indicateur de frappe — ProgressView() spinner",
+          "issue": "§8.5 « pas de spinner brut » : le typing indicator utilise un ProgressView() natif. Tolerable car inline/transitoire, mais reste un spinner systeme non stylise ; omis par l'auditeur.",
+          "fix": "Preferer un indicateur de frappe a 3 points anime (charte motion) ou skeleton ; sinon teinter coherent (deja .tint(primary)). Severite minor.",
+          "severity": "minor"
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/notifications/ui/NotificationsView.swift",
+          "line": 154,
+          "element": "NotificationRow — carte sans ombre teintee",
+          "issue": "Recette carte charte (Phase 1 §5) = « cartes r12 + ombre teintee » via .oneClickShadow(.card/.cardSoft). La ligne notification a r12 + stroke border mais AUCUNE ombre teintee (.oneClickShadow). Idem cartes Legal (LegalView:49), langCard (WelcomeGuideView:102), consentRow (WelcomeGuideView:168), confirmationCard (AssistantSheetView:144). Gap systemique de relief omis par l'auditeur.",
+          "fix": "Ajouter .oneClickShadow(.cardSoft) sur le fond des cartes (NotificationRow, LegalView card, langCard, consentRow, confirmationCard) en complement (ou remplacement) du stroke border dur.",
+          "severity": "minor"
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Features/notifications/ui/NotificationsView.swift",
+          "line": 29,
+          "element": "transition d'etat (loading/empty/error/content) sans animation",
+          "issue": "§9/motion : pas de withAnimation/.transition sur le switch d'etat majeur (content vs empty vs error vs loading). Les changements d'etat apparaissent brutalement. L'auditeur a mentionne motion en preambule mais n'a liste aucun finding motion.",
+          "fix": "Envelopper le switch d'etat dans .animation(.easeInOut, value: vm.state) ou appliquer une .transition(.opacity) sur les sous-vues d'etat.",
+          "severity": "minor"
+        }
+      ]
+    },
+    {
+      "area": "Shell (finitions nav/header) + DesignSystem (etats/motion/status colors) — OneClick iOS native (Win)",
+      "confirmed": [
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/DesignSystem/Components/OutlinedTextField.swift",
+          "line": 44,
+          "element": "champ texte (TextField/SecureField)",
+          "issue": ".font(.system(size: 16)) applique sur le champ de saisie texte (field) — violation police: un champ texte est du corps (role body), doit etre en Nunito Sans",
+          "fix": ".font(.system(size: 16)) -> .font(OneClickFont.body(16))",
+          "severity": "minor",
+          "isReal": true,
+          "note": "CONFIRME. Ligne 44, applique sur `field` qui resout en TextField/SecureField (Text-bearing, pas une icone SF Symbol). Charte §3: body = Nunito Sans Regular 15-16. Fix charte-correct."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/DesignSystem/Components/OutlinedTextField.swift",
+          "line": 36,
+          "element": "libelle flottant du champ",
+          "issue": "Text(placeholder).font(.system(size: 12)) — libelle flottant (role meta/label) en police system au lieu de Nunito Sans",
+          "fix": ".font(.system(size: 12)) -> .font(OneClickFont.body(12, .medium))",
+          "severity": "minor",
+          "isReal": true,
+          "note": "CONFIRME. Ligne 36, Text(placeholder). Charte §3: meta = Nunito Sans Medium 13-14 ; un libelle de champ flottant = role meta/label -> body(12, .medium) approprie."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/DesignSystem/Components/OutlinedTextField.swift",
+          "line": 71,
+          "element": "message d'erreur du champ",
+          "issue": "Text(errorText).font(.system(size: 12)) — texte d'erreur (caption) en police system au lieu de Nunito Sans",
+          "fix": ".font(.system(size: 12)) -> .font(OneClickFont.body(12))",
+          "severity": "minor",
+          "isReal": true,
+          "note": "CONFIRME. Ligne 71, Text(errorText). Caption/helper = Nunito Sans. Fix charte-correct."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/DesignSystem/Components/OutlinedTextField.swift",
+          "line": 75,
+          "element": "texte d'aide (helper) du champ",
+          "issue": "Text(helperText).font(.system(size: 12)) — texte d'aide (caption) en police system au lieu de Nunito Sans",
+          "fix": ".font(.system(size: 12)) -> .font(OneClickFont.body(12))",
+          "severity": "minor",
+          "isReal": true,
+          "note": "CONFIRME. Ligne 75, Text(helperText). Meme recette que l'erreur. Fix charte-correct."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/Shell/GlassBottomNav.swift",
+          "line": 54,
+          "element": "ombre de la barre de navigation basse",
+          "issue": ".shadow(color: Color.black.opacity(0.05), radius: 12, x: 0, y: -2) — ombre brute posee a la main, contourne le helper de token .oneClickShadow(.bottomNav). La recette (noir @5%, radius 12, y=-2) correspond exactement au token bottomNav -> doit passer par le helper (DRY token usage)",
+          "fix": ".shadow(color: Color.black.opacity(0.05), radius: 12, x: 0, y: -2) -> .oneClickShadow(.bottomNav)",
+          "severity": "minor",
+          "isReal": true,
+          "note": "CONFIRME comme bypass du token, MAIS la couleur noire elle-meme N'EST PAS un defaut: la charte §4.4 (ligne 119) specifie explicitement `shadow.bottomNav = #000000 @5%, 0/-2/25`. La bottom nav est l'EXCEPTION documentee a la regle 'jamais noir'. Le seul vrai grief ici est le bypass du helper, pas la teinte. Le fix .oneClickShadow(.bottomNav) est correct ET preserve le noir charte (puisque le token bottomNav rend deja .black)."
+        },
+        {
+          "file": "/Users/hh/Documents/Onesley/OneClick_iOS_Native/OneClickWin/DesignSystem/OneClickShadows.swift",
+          "line": 25,
+          "element": "token d'ombre .bottomNav",
+          "issue": "OneClickShadow.bottomNav.color retourne .black — l'auditeur pretend que la charte impose toujours teinte",
+          "fix": "AUCUN CHANGEMENT — laisser .black",
+          "severity": "minor",
+          "isReal": false,
+          "note": "FAUX POSITIF. La charte §4.4 (tableau, ligne 119 du REBRANDING-CHARTE-GRAPHIQUE.md) specifie noir-sur-blanc: `shadow.bottomNav | #000000 @5% | 0 / -2 / 25`. La phrase intro 'toujours teintees, jamais noires' (§4.4 entete) est contredite par sa propre table pour ce token precis: la bottom nav est l'UNIQUE exception documentee (ombre inversee tres legere @5% sur barre blanche). Le commentaire du code (ligne 26 'jamais noir pur') est imprecis mais la VALEUR .black est conforme. Le fix propose (remplacer par shadowInk prune) VIOLERAIT la charte. Ne pas toucher."
+        }
+      ],
+      "missed": []
+    }
+  ]
+}

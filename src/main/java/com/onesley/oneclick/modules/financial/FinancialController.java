@@ -175,16 +175,17 @@ public class FinancialController {
     // ─── Wallet transactions ─────────────────────────────────────────────────
 
     @GetMapping("/wallet-tx")
-    @Operation(summary = "Mouvements wallet paginés — filtres restaurantId / type")
+    @Operation(summary = "Mouvements wallet paginés — filtres restaurantId / type / reason")
     @PreAuthorize("hasAuthority('VIEW:FINANCIAL')")
     public PageResponse<WalletTxDto> findAllWalletTx(
         @RequestParam(required = false) UUID restaurantId,
         @RequestParam(required = false) String type,
+        @RequestParam(required = false) String reason,
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size
     ) {
         scopeFinancialList(restaurantId);
-        return PageResponse.from(service.findAllWalletTx(restaurantId, type, page, size));
+        return PageResponse.from(service.findAllWalletTx(restaurantId, type, reason, page, size));
     }
 
     @GetMapping("/wallet/balances")

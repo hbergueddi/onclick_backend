@@ -47,7 +47,9 @@ public class ClientScoreConfig extends TimestampedEntity {
     @Setter private BigDecimal scoreInitial = new BigDecimal("5.0");
 
     @Column(name = "penalite_no_show", nullable = false, precision = 3, scale = 1)
-    @Setter private BigDecimal penaliteNoShow = new BigDecimal("0.1");
+    // Parité legacy (2026-06-20) : un no-show coûte 0.5 (et non 0.1). Avec scoreInitial=5.0,
+    // un 1er no-show fait passer le client à 4.5 ; un honoré (+gainParPalier=0.1) le maintient à 5.0.
+    @Setter private BigDecimal penaliteNoShow = new BigDecimal("0.5");
 
     @Column(name = "honorees_pour_remonter", nullable = false)
     @Setter private Integer honoreesPourRemonter = 5;

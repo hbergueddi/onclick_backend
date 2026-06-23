@@ -22,4 +22,11 @@ public interface MediaRepository extends JpaRepository<Media, UUID>, JpaSpecific
     List<Media> findByEntityTypeAndDeletedAtIsNullOrderByCreatedAtDesc(String entityType);
 
     Optional<Media> findByIdAndDeletedAtIsNull(UUID id);
+
+    /** Médias actifs d'une entité (ex: photos d'un restaurant), triés sort_order puis created_at. */
+    List<Media> findByEntityTypeAndEntityIdAndDeletedAtIsNullOrderBySortOrderAscCreatedAtAsc(
+        String entityType, UUID entityId);
+
+    /** Nombre de médias actifs d'une entité — application de quota (ex: max 5 photos restaurant). */
+    long countByEntityTypeAndEntityIdAndDeletedAtIsNull(String entityType, UUID entityId);
 }

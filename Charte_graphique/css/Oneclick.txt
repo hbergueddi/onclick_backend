@@ -1,0 +1,85 @@
+/* OneClick */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+justify-content: center;
+align-items: center;
+padding: 0px;
+gap: 18.28px;
+
+position: relative;
+width: 310px;
+height: 246px;
+
+background: #FFFFFF;
+
+
+/* Vector */
+
+width: 180.03px;
+height: 106.42px;
+
+background: linear-gradient(248.97deg, #C4C4C4 1.55%, #1A0610 67.51%, #E0AF7C 93.88%);
+box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* OneClick */
+
+width: 246px;
+height: 47px;
+
+font-family: 'Butler';
+font-style: normal;
+font-weight: 300;
+font-size: 67.1157px;
+line-height: 81px;
+/* leading-trim and text-edge are draft CSS properties.
+
+Read more: https://drafts.csswg.org/css-inline-3/#leading-trim
+*/
+leading-trim: both;
+text-edge: cap;
+display: flex;
+align-items: center;
+text-align: center;
+letter-spacing: -0.01em;
+
+color: #191919;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* réservations & loyauté */
+
+width: 310px;
+height: 18px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 15.2318px;
+line-height: 18px;
+display: flex;
+align-items: center;
+text-align: center;
+letter-spacing: 0.05em;
+text-transform: uppercase;
+
+color: #681237;
+
+
+/* Inside auto layout */
+flex: none;
+order: 2;
+align-self: stretch;
+flex-grow: 0;

@@ -76,6 +76,21 @@ public class MemberCircleController {
         return service.toggleLike(id, SecurityHelper.currentUserId());
     }
 
+    @GetMapping("/mine/pending")
+    @Operation(summary = "C9 — « Mes posts en attente » : mes posts non approuvés (pending/rejected) avec statut")
+    @PreAuthorize("hasAuthority('VIEW:COMMUNITY')")
+    public List<MemberPostDto> myPending() {
+        return service.myPosts(SecurityHelper.currentUserId());
+    }
+
+    @DeleteMapping("/mine/{id}")
+    @Operation(summary = "C9 — le membre supprime SON propre post non approuvé (pending/rejected)")
+    @PreAuthorize("hasAuthority('DELETE:COMMUNITY')")
+    public ResponseEntity<Void> deleteOwnPost(@PathVariable UUID id) {
+        service.deleteOwnPost(id, SecurityHelper.currentUserId());
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/{id}/comments")
     @Operation(summary = "A.2 — commentaires d'un post approuvé (enrichis auteur)")
     @PreAuthorize("hasAuthority('VIEW:COMMUNITY')")

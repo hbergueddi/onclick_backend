@@ -114,7 +114,7 @@ class TenantAdminInviteFlowIntegrationTest extends AbstractIntegrationTest {
             insertInvite(inviteId, tenantId, email, raw, "pending", "now() + interval '7 days'");
 
             int status = postPublicJson("/api/auth/accept-tenant-admin-invite",
-                Map.of("token", raw, "password", "Passw0rd!", "firstName", "Adil", "lastName", "Test"));
+                Map.of("token", raw, "password", "Passw0rd!1", "firstName", "Adil", "lastName", "Test"));
             assertThat(status).isEqualTo(200);
 
             UUID userId = UUID.fromString(jdbc.queryForObject(
@@ -140,7 +140,7 @@ class TenantAdminInviteFlowIntegrationTest extends AbstractIntegrationTest {
         try {
             insertInvite(inviteId, tenantId, email, raw, "accepted", "now() + interval '7 days'");
             int status = postPublicJson("/api/auth/accept-tenant-admin-invite",
-                Map.of("token", raw, "password", "Passw0rd!", "firstName", "A", "lastName", "B"));
+                Map.of("token", raw, "password", "Passw0rd!1", "firstName", "A", "lastName", "B"));
             assertThat(status).isEqualTo(400);
         } finally {
             jdbc.update("DELETE FROM tenant_admin_invites WHERE id=?::uuid", inviteId);
@@ -156,7 +156,7 @@ class TenantAdminInviteFlowIntegrationTest extends AbstractIntegrationTest {
         try {
             insertInvite(inviteId, tenantId, email, raw, "pending", "now() - interval '1 day'");
             int status = postPublicJson("/api/auth/accept-tenant-admin-invite",
-                Map.of("token", raw, "password", "Passw0rd!", "firstName", "A", "lastName", "B"));
+                Map.of("token", raw, "password", "Passw0rd!1", "firstName", "A", "lastName", "B"));
             assertThat(status).isEqualTo(400);
         } finally {
             jdbc.update("DELETE FROM tenant_admin_invites WHERE id=?::uuid", inviteId);
@@ -166,7 +166,7 @@ class TenantAdminInviteFlowIntegrationTest extends AbstractIntegrationTest {
     @Test
     void accept_invalidToken_returns400() {
         int status = postPublicJson("/api/auth/accept-tenant-admin-invite",
-            Map.of("token", "does-not-exist-" + UUID.randomUUID(), "password", "Passw0rd!",
+            Map.of("token", "does-not-exist-" + UUID.randomUUID(), "password", "Passw0rd!1",
                 "firstName", "A", "lastName", "B"));
         assertThat(status).isEqualTo(400);
     }

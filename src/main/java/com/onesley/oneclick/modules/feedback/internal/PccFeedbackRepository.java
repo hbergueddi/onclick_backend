@@ -123,6 +123,9 @@ public interface PccFeedbackRepository extends JpaRepository<PccFeedback, UUID> 
             UNION
             SELECT rs.user_id AS recipient_id
             FROM restaurant_staffs rs
+            JOIN restaurants r ON r.id = rs.restaurant_id
+              AND r.tenant_id = :tenantId
+              AND r.deleted_at IS NULL
             WHERE :targetRestaurantId IS NOT NULL
               AND rs.restaurant_id = :targetRestaurantId
               AND rs.role_code = 'owner'
@@ -133,4 +136,22 @@ public interface PccFeedbackRepository extends JpaRepository<PccFeedback, UUID> 
     List<UUID> findFeedbackRecipientIds(@Param("tenantId") UUID tenantId,
                                         @Param("targetRestaurantId") UUID targetRestaurantId,
                                         @Param("authorId") UUID authorId);
+
+    /**
+     * true si le resto {@code restaurantId} appartient au {@code tenantId} (non supprimé). Garde-fou
+     * anti-spoof à la création d'un avis : un membre ne peut cibler qu'un resto de SON programme
+     * (sinon la notif « nouvel avis » fuiterait vers l'owner d'un autre tenant — cf. branche owners
+     * tenant-scopée de {@link #findFeedbackRecipientIds}). Read-view native (table {@code restaurants}
+     * du module restaurant CLOSED, non importable) — même invariant que les autres finders du repo.
+     */
+    @Query(value = """
+        SELECT EXISTS (
+            SELECT 1 FROM restaurants r
+            WHERE r.id = :restaurantId
+              AND r.tenant_id = :tenantId
+              AND r.deleted_at IS NULL
+        )
+        """, nativeQuery = true)
+    boolean restaurantBelongsToTenant(@Param("restaurantId") UUID restaurantId,
+                                      @Param("tenantId") UUID tenantId);
 }

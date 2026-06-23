@@ -68,6 +68,10 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID>,
             rest.name         AS restaurantName,
             rest.city         AS restaurantCity,
             rest.image        AS restaurantImage,
+            rest.address          AS restaurantAddress,
+            rest.latitude         AS restaurantLatitude,
+            rest.longitude        AS restaurantLongitude,
+            rest.google_place_id  AS restaurantGooglePlaceId,
             ms.name           AS mealServiceName,
             rz.name           AS zoneName,
             rt.table_number   AS tableNumber,
@@ -145,6 +149,10 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID>,
             rest.name         AS restaurantName,
             rest.city         AS restaurantCity,
             rest.image        AS restaurantImage,
+            rest.address          AS restaurantAddress,
+            rest.latitude         AS restaurantLatitude,
+            rest.longitude        AS restaurantLongitude,
+            rest.google_place_id  AS restaurantGooglePlaceId,
             ms.name           AS mealServiceName,
             rz.name           AS zoneName,
             rt.table_number   AS tableNumber,
@@ -201,5 +209,26 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID>,
     java.util.List<Object[]> countByRestaurantGrouped(
         @Param("since") Instant since,
         @Param("status") String status
+    );
+
+    /**
+     * Gap #2 — destinataires « staff actif du restaurant » d'une nouvelle réservation
+     * (le staff doit être notifié d'une demande à traiter). Staff actif = soft-delete
+     * {@code deleted_at IS NULL} (la table {@code restaurant_staffs} n'a pas de colonne
+     * status). On exclut le client demandeur par sécurité (un user staff pourrait aussi
+     * être client de son propre resto). SQL natif (noms de tables) : la résolution se fait
+     * côté module reservation et les UUID sont portés sur {@code ReservationCreatedEvent}
+     * (frontière Modulith). Calque {@code AnnouncementRepository.findStaffRecipientIds}.
+     */
+    @Query(value = """
+        SELECT rs.user_id
+        FROM restaurant_staffs rs
+        WHERE rs.restaurant_id = :restaurantId
+          AND rs.deleted_at IS NULL
+          AND rs.user_id <> :clientId
+        """, nativeQuery = true)
+    java.util.List<UUID> findStaffRecipientIdsForRestaurant(
+        @Param("restaurantId") UUID restaurantId,
+        @Param("clientId") UUID clientId
     );
 }

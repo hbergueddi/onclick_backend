@@ -8,10 +8,15 @@ import jakarta.persistence.Query;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import com.onesley.oneclick.shared.events.PromoApprovedEvent;
+import com.onesley.oneclick.shared.events.PromoRequestReviewedEvent;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.quality.Strictness;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
@@ -23,6 +28,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -36,7 +42,10 @@ class PromoNotificationServiceTest {
     @Mock PromoNotificationRequestRepository requestRepo;
     @Mock EntityManager em;
     @Mock Query query;
+    @Mock ApplicationEventPublisher events;
     @InjectMocks PromoNotificationService service;
+
+    @Captor ArgumentCaptor<Object> eventCaptor;
 
     @BeforeEach
     void setup() {
@@ -87,6 +96,44 @@ class PromoNotificationServiceTest {
         when(requestRepo.findById(any())).thenReturn(Optional.of(p));
         var dto = service.review(UUID.randomUUID(), new PromoRequestReviewDto("rejected", UUID.randomUUID(), "raison"));
         assertThat(dto.status()).isEqualTo("rejected");
+    }
+
+    // ── B12 — verdict de modération → event PromoRequestReviewedEvent au demandeur ──
+    @Test
+    void review_rejected_publishesReviewedEvent_notApprovedEvent() {
+        UUID requester = UUID.randomUUID();
+        PromoNotificationRequest p = req();
+        p.setRequestedBy(requester);
+        when(requestRepo.findById(any())).thenReturn(Optional.of(p));
+
+        service.review(UUID.randomUUID(), new PromoRequestReviewDto("rejected", UUID.randomUUID(), "hors charte"));
+
+        verify(events).publishEvent(eventCaptor.capture());
+        Object ev = eventCaptor.getValue();
+        assertThat(ev).isInstanceOf(PromoRequestReviewedEvent.class);
+        PromoRequestReviewedEvent reviewed = (PromoRequestReviewedEvent) ev;
+        assertThat(reviewed.requesterId()).isEqualTo(requester);
+        assertThat(reviewed.approved()).isFalse();
+        assertThat(reviewed.rejectionReason()).isEqualTo("hors charte");
+    }
+
+    @Test
+    void review_approved_publishesBothApprovedAndReviewedEvents() {
+        UUID requester = UUID.randomUUID();
+        PromoNotificationRequest p = req();
+        p.setRequestedBy(requester);
+        when(requestRepo.findById(any())).thenReturn(Optional.of(p));
+
+        service.review(UUID.randomUUID(), new PromoRequestReviewDto("approved", UUID.randomUUID(), null));
+
+        verify(events, org.mockito.Mockito.times(2)).publishEvent(eventCaptor.capture());
+        List<Object> all = eventCaptor.getAllValues();
+        assertThat(all).anyMatch(e -> e instanceof PromoApprovedEvent); // fan-out FCM (existant)
+        PromoRequestReviewedEvent reviewed = all.stream()
+            .filter(e -> e instanceof PromoRequestReviewedEvent)
+            .map(e -> (PromoRequestReviewedEvent) e).findFirst().orElseThrow();
+        assertThat(reviewed.requesterId()).isEqualTo(requester);
+        assertThat(reviewed.approved()).isTrue();
     }
 
     @Test

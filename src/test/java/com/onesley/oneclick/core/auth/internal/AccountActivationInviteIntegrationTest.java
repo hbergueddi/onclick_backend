@@ -78,7 +78,7 @@ class AccountActivationInviteIntegrationTest extends AbstractIntegrationTest {
         seedUserWithInvite(raw);
         ResponseEntity<String> res = restTemplate.postForEntity(
             url("/api/auth/accept-activation-invite"),
-            Map.of("token", raw, "password", ""), // @NotBlank + @Size(min=8) → 400
+            Map.of("token", raw, "password", ""), // @NotBlank + @Size(min=10) → 400
             String.class);
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }

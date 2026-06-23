@@ -14,7 +14,7 @@
     type = org.springframework.modulith.ApplicationModule.Type.CLOSED,
     id = "core.email",
     displayName = "core/email",
-    allowedDependencies = {"core.tenant", "audit", "exception", "security", "shared"}
+    allowedDependencies = {"core.identity", "core.tenant", "audit", "exception", "security", "shared"}
 )
 package com.onesley.oneclick.core.email;
 

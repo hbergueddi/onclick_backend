@@ -165,7 +165,34 @@ public class PccStoryService {
             .orElseThrow(() -> new BadRequestException(
                 "Aucun tenant associé à votre compte — la publication de stories n'est pas disponible"));
         requireTenantStaff(caller, tenantId);
+        return doCreate(tenantId, caller, dto);
+    }
 
+    /**
+     * Lot 4b — création CROSS-TENANT par un super-admin plateforme : publie une story pour un
+     * {@code tenantId} CIBLE (≠ tenant du caller), depuis le portail {@code /super-admin/tenants/:id}.
+     *
+     * <p>Gardé au controller par {@code hasAuthority('UPDATE:TENANTS')} (autorité SUPERADMIN-only de
+     * gestion des tenants ; un staff-tenant a CREATE:STORIES mais PAS UPDATE:TENANTS → 403 en amont).
+     * Cohérent avec le bypass {@code isAdmin()} déjà en place sur update/softDelete (cross-tenant).
+     * L'auteur reste le super-admin appelant. 400 si {@code tenantId} absent. Validité du tenant
+     * garantie par la FK {@code pcc_stories.tenant_id}.</p>
+     */
+    @Transactional
+    public StoryDto adminCreate(UUID tenantId, CreateStoryDto dto) {
+        UUID caller = requireCaller();
+        if (tenantId == null) {
+            throw new BadRequestException("tenantId requis pour la publication d'une story");
+        }
+        return doCreate(tenantId, caller, dto);
+    }
+
+    /**
+     * Cœur de création partagé — caller-tenant via {@link #create} (garde staff) ou cross-tenant via
+     * {@link #adminCreate} (gardé UPDATE:TENANTS au controller). Applique les défauts (mediaType image,
+     * durationS 15, sortOrder 0, publishAt now) + valide la fenêtre de visibilité.
+     */
+    private StoryDto doCreate(UUID tenantId, UUID author, CreateStoryDto dto) {
         String mediaUrl = requireMediaUrl(dto.mediaUrl());
         String mediaType = normalizeMediaType(dto.mediaType());
         String caption = trimToNull(dto.caption());
@@ -176,10 +203,10 @@ public class PccStoryService {
         requireValidWindow(publishAt, expiresAt);
 
         PccStory saved = repo.save(new PccStory(
-            UUID.randomUUID(), tenantId, caller,
+            UUID.randomUUID(), tenantId, author,
             mediaUrl, mediaType, caption, durationS, sortOrder, publishAt, expiresAt));
         log.info("[stories] create (id={}, tenant={}, author={}, type={}, publishAt={}, expiresAt={})",
-            saved.getId(), tenantId, caller, mediaType, publishAt, expiresAt);
+            saved.getId(), tenantId, author, mediaType, publishAt, expiresAt);
 
         return toDto(saved, Instant.now(), false);
     }

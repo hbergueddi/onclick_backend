@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -75,6 +76,14 @@ public class AnnouncementController {
     @PreAuthorize("hasAuthority('CREATE:ANNOUNCEMENTS')")
     public AnnouncementDto create(@Valid @RequestBody CreateAnnouncementDto body) {
         return service.create(body);
+    }
+
+    @PostMapping("/admin")
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Publier une annonce pour un tenant CIBLE (super-admin cross-tenant, Lot 4b)")
+    @PreAuthorize("hasAuthority('UPDATE:TENANTS')")
+    public AnnouncementDto adminCreate(@RequestParam UUID tenantId, @Valid @RequestBody CreateAnnouncementDto body) {
+        return service.adminCreate(tenantId, body);
     }
 
     @PatchMapping("/{id}")

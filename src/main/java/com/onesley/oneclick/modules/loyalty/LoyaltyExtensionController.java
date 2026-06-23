@@ -90,7 +90,10 @@ public class LoyaltyExtensionController {
     @Operation(summary = "Enregistre un rating delta (+0.1 honorée, -0.5 no_show, etc.)")
     @PreAuthorize("hasAuthority('CREATE:LOYALTY')")
     public ClientRatingDto recordRating(@Valid @RequestBody RatingRecordDto dto) {
-        return service.recordRating(dto.userId(), dto.reservationId(), dto.delta(), dto.reason());
+        ClientRatingDto r = service.recordRating(dto.userId(), dto.reservationId(), dto.delta(), dto.reason());
+        // null = réservation/user référencé absent (garde-fou FK) → 404 propre (au lieu d'un 500 FK différé)
+        if (r == null) throw new com.onesley.oneclick.exception.NotFoundException("Reservation/User", dto.reservationId());
+        return r;
     }
 
     // ─── AI usage ────────────────────────────────────────────────────────
@@ -141,6 +144,18 @@ public class LoyaltyExtensionController {
     @PreAuthorize("hasAuthority('UPDATE:LOYALTY')")
     public RestaurantRestitutionDto createRestitution(@Valid @RequestBody RestitutionCreateDto dto) {
         return service.createRestitution(dto.restaurantId(), dto.amount(), dto.points() == null ? 0 : dto.points(), dto.reason());
+    }
+
+    @PostMapping("/restitutions/{id}/pay")
+    @Operation(
+        summary = "Verser une restitution (B6) — passe le statut à 'paid' et notifie le staff du resto",
+        description = "UPDATE:LOYALTY (gérant/admin, comme la création). Idempotent : une restitution "
+                    + "déjà 'paid' n'est pas re-notifiée. Publie RestaurantRestitutionPaidEvent → notif "
+                    + "in-app au staff actif du restaurant bénéficiaire (catégorie de préférence 'loyalty')."
+    )
+    @PreAuthorize("hasAuthority('UPDATE:LOYALTY')")
+    public RestaurantRestitutionDto payRestitution(@PathVariable UUID id) {
+        return service.payRestitution(id);
     }
 
     @GetMapping("/restitutions")

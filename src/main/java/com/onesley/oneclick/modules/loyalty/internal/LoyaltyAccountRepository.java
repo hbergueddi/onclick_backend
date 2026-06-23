@@ -42,4 +42,16 @@ public interface LoyaltyAccountRepository extends JpaRepository<LoyaltyAccount, 
         WHERE a.client_id = :clientId
         """, nativeQuery = true)
     java.util.List<LoyaltyAccountWithRestaurantView> findAllByClientIdWithRestaurant(@Param("clientId") java.util.UUID clientId);
+
+    /**
+     * CH-3 — total de points du client AU SEIN d'un tenant (agrégat des soldes de ses comptes resto
+     * de ce tenant). Sert à détecter le franchissement de palier (paliers = par tenant).
+     * {@code COALESCE(…, 0)} → 0 si aucun compte. NB : {@code loyalty_accounts} n'a pas de
+     * soft-delete (pas d'attribut {@code deletedAt}) — pas de filtre à ajouter.
+     */
+    @Query("""
+        SELECT COALESCE(SUM(a.balance), 0) FROM LoyaltyAccount a
+         WHERE a.clientId = :clientId AND a.tenantId = :tenantId
+        """)
+    int sumBalanceByClientAndTenant(@Param("clientId") UUID clientId, @Param("tenantId") UUID tenantId);
 }

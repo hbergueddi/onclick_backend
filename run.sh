@@ -9,6 +9,7 @@
 # Usage:
 #   ./run.sh                       # monolith profil enterprise (port 8083)
 #   ./run.sh --secure              # monolith profil enterprise,secure (OAuth2 JWT)
+#   ./run.sh --push                # enterprise + FCM dispatch RÉEL (test d'envoi push)
 #   ./run.sh --dev                 # legacy profil dev (DB oneclick_local, port 8081)
 #   APP_SECURITY_JWT_SECRET=xxx ./run.sh --secure   # avec ton secret JWT
 
@@ -42,11 +43,17 @@ case "${1:-}" in
     PORT=8083
     MODE="enterprise + OAuth2 JWT"
     ;;
+  --push)
+    PROFILES="enterprise"
+    PORT=8083
+    MODE="enterprise + FCM PUSH RÉEL (dispatch activé)"
+    PUSH_ENABLED=true
+    ;;
   "")
     ;;
   *)
     echo "✗ Argument inconnu: $1"
-    echo "  Usage: ./run.sh [--dev|--secure]"
+    echo "  Usage: ./run.sh [--dev|--secure|--push]"
     exit 1
     ;;
 esac
@@ -82,6 +89,19 @@ if [[ "${PROFILES}" == *secure* ]]; then
     echo "⚠️  APP_SECURITY_JWT_SECRET non défini — secret de test (NE PAS faire en prod)"
   fi
   echo "→ OAuth2 Resource Server enabled (HS256 secret length = ${#APP_SECURITY_JWT_SECRET})"
+fi
+
+# ─── FCM real dispatch (opt-in via --push) ───────────────────────────
+# Safe-by-default : sans --push, FCM_DISPATCH_ENABLED garde sa valeur d'env/.env
+# (défaut FALSE côté Spring → mode stub). Avec --push, on force l'envoi RÉEL.
+# ⚠️ Un push part alors vers TOUS les device_tokens enregistrés (clients ET staff),
+# y compris les events Modulith dormants rejoués au boot. À réserver à un test
+# d'envoi réel sur des appareils de test. Les clés FCM (FCM_PROJECT_ID +
+# FCM_SERVICE_ACCOUNT_JSON) doivent être présentes (env/.env) sinon le service
+# reste en stub (dégradation gracieuse, cf FcmPushService.stubReason()).
+if [[ "${PUSH_ENABLED:-false}" == "true" ]]; then
+  export FCM_DISPATCH_ENABLED=true
+  echo "⚠️  FCM_DISPATCH_ENABLED=true — PUSHES FCM RÉELS activés (vers les vrais devices)"
 fi
 
 echo

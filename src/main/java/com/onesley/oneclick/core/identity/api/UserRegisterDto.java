@@ -21,9 +21,13 @@ public record UserRegisterDto(
     UUID tenantId,
     @Email @NotBlank @Size(min = 1, max = 256) String email,
     @Pattern(regexp = "^\\+?[0-9 ]{6,20}$") @Size(min = 1, max = 64) String phone,
-    @NotBlank @Size(min = 8, max = 100) String password,
+    @NotBlank @Size(min = 10, max = 100) String password,  // P1 — min 10 (NIST length-first, sans composition)
     @NotBlank @Size(min = 1, max = 128) String firstName,
     @NotBlank @Size(min = 1, max = 128) String lastName,
-    @Pattern(regexp = "^(fr|en|ar)$") @Size(min = 1, max = 64) String language
+    @Pattern(regexp = "^(fr|en|ar)$") @Size(min = 1, max = 64) String language,
+    /** RGPD — consentement CGU/Politique de confidentialité au signup. Optionnel pour compat
+     *  ascendante (clients pas encore à jour) : la trace {@code cgu_accepted_at} est persistée
+     *  seulement si {@code true}. Le refus reste bloqué côté client ; durcissement serveur ultérieur. */
+    Boolean cguAccepted
 ) {
 }

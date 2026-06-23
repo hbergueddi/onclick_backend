@@ -82,6 +82,18 @@ class ResourceBookingRbacIntegrationTest extends AbstractIntegrationTest {
         return om.readTree(rPost.getBody()).get("id").asText();
     }
 
+    /**
+     * Nettoyage dur d'une ressource AYANT des bookings vivants. Depuis P1.3, DELETE /resources/{id}
+     * renvoie 409 si des réservations actives y sont rattachées (« désactivez plutôt que supprimer »)
+     * → on purge ici en SQL (bookings puis ressource) pour ne pas polluer la base entre tests.
+     */
+    private void hardCleanResourceWithBookings(String resourceId) {
+        jdbc.update("DELETE FROM resource_booking_guests WHERE booking_id IN "
+            + "(SELECT id FROM resource_bookings WHERE resource_id = ?::uuid)", resourceId);
+        jdbc.update("DELETE FROM resource_bookings WHERE resource_id = ?::uuid", resourceId);
+        jdbc.update("DELETE FROM resources WHERE id = ?::uuid", resourceId);
+    }
+
     private Map<String, Object> bookingBody(String resourceId, UUID organizerId) {
         return Map.of(
             "resourceId", resourceId,
@@ -116,9 +128,8 @@ class ResourceBookingRbacIntegrationTest extends AbstractIntegrationTest {
                 "resourceId", resourceId, "name", "90min", "price", 200), client), String.class);
         assertThat(pPost.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
 
-        // self-clean
-        restTemplate.exchange(url("/api/resource-bookings/resources/" + resourceId),
-            HttpMethod.DELETE, jwtEntity(admin), String.class);
+        // self-clean : le CLIENT a créé un booking actif → DELETE renverrait 409 (P1.3), purge SQL.
+        hardCleanResourceWithBookings(resourceId);
     }
 
     @Test
@@ -163,8 +174,7 @@ class ResourceBookingRbacIntegrationTest extends AbstractIntegrationTest {
         assertThat(body.get("organizerId").asText()).isEqualTo(clientUserId().toString());
         assertThat(body.get("organizerId").asText()).isNotEqualTo(someoneElse.toString());
 
-        restTemplate.exchange(url("/api/resource-bookings/resources/" + resourceId),
-            HttpMethod.DELETE, jwtEntity(admin), String.class);
+        hardCleanResourceWithBookings(resourceId); // booking actif créé → purge SQL (P1.3 → 409 sur DELETE)
     }
 
     // ─── C. Le staff/admin confirme un booking ────────────────────────────────────
@@ -193,8 +203,7 @@ class ResourceBookingRbacIntegrationTest extends AbstractIntegrationTest {
         assertThat(patchResto.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(om.readTree(patchResto.getBody()).get("status").asText()).isEqualTo("completed");
 
-        restTemplate.exchange(url("/api/resource-bookings/resources/" + resourceId),
-            HttpMethod.DELETE, jwtEntity(admin), String.class);
+        hardCleanResourceWithBookings(resourceId); // booking actif créé → purge SQL (P1.3 → 409 sur DELETE)
     }
 
     // ─── D. busy-slots : disponibilité sans PII ────────────────────────────────────
@@ -230,8 +239,7 @@ class ResourceBookingRbacIntegrationTest extends AbstractIntegrationTest {
         assertThat(slot.fieldNames()).toIterable().containsExactlyInAnyOrder("startAt", "endAt");
         assertThat(busy.getBody()).doesNotContain("organizerId", "secret-pii-note", "notes");
 
-        restTemplate.exchange(url("/api/resource-bookings/resources/" + resourceId),
-            HttpMethod.DELETE, jwtEntity(admin), String.class);
+        hardCleanResourceWithBookings(resourceId); // booking actif créé → purge SQL (P1.3 → 409 sur DELETE)
     }
 
     @Test

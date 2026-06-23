@@ -2,7 +2,10 @@ package com.onesley.oneclick.modules.loyalty.internal;
 
 import com.onesley.oneclick.core.identity.api.UserRepository;
 import com.onesley.oneclick.exception.BadRequestException;
+import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
+import com.onesley.oneclick.core.membership.api.MembershipDirectoryApi;
+import com.onesley.oneclick.core.tenant.api.TenantDirectoryApi;
 import com.onesley.oneclick.security.SecurityHelper;
 import com.onesley.oneclick.modules.loyalty.api.ClientNameDto;
 import com.onesley.oneclick.modules.loyalty.api.ExpiredPointsSummaryDto;
@@ -11,6 +14,7 @@ import com.onesley.oneclick.modules.loyalty.api.GainRuleDto;
 import com.onesley.oneclick.modules.loyalty.api.GainRulePatchDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyAccountDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyEarnDto;
+import com.onesley.oneclick.modules.loyalty.api.LoyaltyParamsDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyTransactionDto;
 import com.onesley.oneclick.modules.loyalty.api.Snap2EarnDto;
 import com.onesley.oneclick.modules.loyalty.api.Snap2EarnResultDto;
@@ -18,6 +22,8 @@ import com.onesley.oneclick.modules.loyalty.api.TierDto;
 import com.onesley.oneclick.modules.loyalty.api.TierUpdateDto;
 import com.onesley.oneclick.shared.events.LoyaltyEarnedEvent;
 import com.onesley.oneclick.shared.events.LoyaltyRedeemedEvent;
+import com.onesley.oneclick.shared.events.PointsGiftedEvent;
+import com.onesley.oneclick.shared.events.TierReachedEvent;
 import static com.onesley.oneclick.shared.Temporals.toInstant;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -31,6 +37,7 @@ import java.math.RoundingMode;
 import java.time.Instant;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -56,7 +63,11 @@ public class LoyaltyService {
     private final LoyaltyAccountRepository accountRepository;
     private final LoyaltyTransactionRepository transactionRepository;
     private final GainRuleRepository gainRuleRepository;
+    private final LoyaltyRuleRepository loyaltyRuleRepository; // source de vérité point_value (loyalty_rules)
     private final TierRepository tierRepository;
+    private final LoyaltyTierResolver tierResolver; // CL-2 — source unique du palier (DB + fallback canonique)
+    private final TenantDirectoryApi tenantDirectory; // CL-3 — slug du tenant (gate enrollment)
+    private final MembershipDirectoryApi membershipDirectory; // CL-3 — adhésion active (gate enrollment)
     private final ApplicationEventPublisher eventPublisher;
     private final UserRepository userRepository; // domaine identity (API publique) — résolution noms clients
     private final RedemptionOtpService redemptionOtpService; // Gap #2 — OTP grosses conversions
@@ -182,6 +193,15 @@ public class LoyaltyService {
     public LoyaltyTransactionDto earnPoints(LoyaltyEarnDto dto) {
         LoyaltyAccount account = findOrCreateInternal(dto.clientId(), dto.restaurantId());
 
+        // CL-3 — gate enrollment : accumuler de la fidélité sur un resto d'un tenant À ADHÉSION
+        // (PCC/HOMU/…) est réservé aux membres actifs. Le throw annule la transaction (compte
+        // éventuellement créé par findOrCreateInternal compris). Tenant public (oneclick) = pas de gate.
+        requireMembershipForGatedTenant(dto.clientId(), account.getTenantId());
+
+        // CH-3 — agrégat de points du client DANS ce tenant, AVANT le crédit (base de détection
+        // du franchissement de palier ; paliers = par tenant via la table `tiers`).
+        int tierTotalBefore = accountRepository.sumBalanceByClientAndTenant(dto.clientId(), account.getTenantId());
+
         LoyaltyTransaction tx = new LoyaltyTransaction(
             UUID.randomUUID(), account.getId(), "earn", dto.points(), dto.reason()
         );
@@ -198,6 +218,17 @@ public class LoyaltyService {
             dto.points(), dto.amount(), dto.reason(),
             Instant.now()
         ));
+
+        // CH-3 — si le palier (seuils DB par tenant) change à la HAUSSE → event dédié (jamais sur
+        // chaque gain : on ne publie que lorsque le nom du palier diffère). Consommé par
+        // NotificationEventHandler → notif + push « Nouveau palier atteint 🎉 ».
+        int tierTotalAfter = tierTotalBefore + dto.points();
+        String oldTier = tierResolver.tierNameFor(tierTotalBefore, account.getTenantId());
+        String newTier = tierResolver.tierNameFor(tierTotalAfter, account.getTenantId());
+        if (newTier != null && !newTier.equals(oldTier)) {
+            eventPublisher.publishEvent(new TierReachedEvent(
+                dto.clientId(), account.getTenantId(), newTier, tierTotalAfter, Instant.now()));
+        }
 
         return tx.toDto();
     }
@@ -356,6 +387,12 @@ public class LoyaltyService {
         receiverAccount.addPoints(dto.points());
         accountRepository.save(receiverAccount);
 
+        // Lot B7 — notif in-app « Cadeau de points » au bénéficiaire (server-side : le donneur n'a
+        // pas CREATE:NOTIFICATIONS). Frontière Modulith : event consommé par core.notification.
+        // fromName non résolu ici (pas de dépendance identity) → null → handler affiche « un ami ».
+        eventPublisher.publishEvent(new PointsGiftedEvent(
+            senderId, dto.receiverId(), dto.points(), null, Instant.now()));
+
         return credit.toDto();
     }
 
@@ -398,9 +435,102 @@ public class LoyaltyService {
      */
     public GainRuleDto findGainRuleByRestaurant(UUID restaurantId) {
         return gainRuleRepository.findByRestaurantIdAndDeletedAtIsNull(restaurantId)
-            .map(GainRule::toDto)
+            .map(rule -> rule.toDto(resolvePointValueMad(restaurantId)))
             .orElse(null);
     }
+
+    /**
+     * Valeur du point (MAD) du restaurant — source de vérité {@code loyalty_rules.point_value}
+     * (hors table {@code gain_rules}). Défaut {@link GainRule#DEFAULT_POINT_VALUE_MAD}
+     * (1 pt = 1 MAD) si aucune règle de valeur n'est configurée.
+     */
+    private BigDecimal resolvePointValueMad(UUID restaurantId) {
+        return loyaltyRuleRepository
+            .findFirstByRestaurantIdAndEnabledTrueOrderByCreatedAtDesc(restaurantId)
+            .map(LoyaltyRule::getPointValue)
+            .orElse(GainRule.DEFAULT_POINT_VALUE_MAD);
+    }
+
+    /**
+     * Paramètres fidélité <b>effectifs</b> d'un client pour un restaurant — port du
+     * hook legacy {@code useLoyaltyParams.ts} consommé par l'écran « Vos avantages »
+     * + {@code ConversionGuide} ({@code OneClickVault.tsx}).
+     *
+     * <p>Calcul (parité legacy) :
+     * <ol>
+     *   <li><b>Base conversion</b> = {@code gain_rules.conversion_rate} du restaurant
+     *       (défaut {@code 0.10} si aucune règle).</li>
+     *   <li><b>Bonus palier</b> = on résout le palier du client via
+     *       {@link LoyaltyTierResolver} sur le total de ses soldes <i>dans ce tenant</i>,
+     *       puis on lit {@code tiers.bonus_percent} du palier nommé (0 si fallback canonique
+     *       sans ligne {@code tiers}). Conversion effective = {@code base × (1 + bonus/100)}.</li>
+     *   <li><b>Valeur du point</b> = {@link #resolvePointValueMad} ({@code loyalty_rules.point_value},
+     *       défaut 1.0).</li>
+     *   <li><b>Durée de validité</b> = {@code loyalty_rules.expires_after_days} (défaut 365).</li>
+     * </ol>
+     *
+     * <p>Self-scope strict : le palier/bonus est calculé pour {@code clientId} (le user
+     * courant, imposé par le controller via {@link SecurityHelper#currentUserId()}). On ne
+     * révèle que les params du client appelant — jamais ceux d'autrui.
+     *
+     * <p>Lecture pure (aucune écriture) → pas de {@code findOrCreate} : on agrège les soldes
+     * existants. Si le client n'a aucun compte dans ce restaurant, le tenant est résolu depuis
+     * le restaurant via la règle existante / défaut canonique (tenant null → fallback resolver).
+     */
+    public LoyaltyParamsDto resolveLoyaltyParams(UUID clientId, UUID restaurantId) {
+        // 1. Tenant du restaurant via un compte fidélité du client (tenant_id rempli par trigger
+        //    DB V10). Pas de compte → tenant null → le resolver applique le fallback canonique.
+        UUID tenantId = accountRepository.findAllByClientId(clientId).stream()
+            .filter(a -> a.getRestaurantId().equals(restaurantId))
+            .map(LoyaltyAccount::getTenantId)
+            .filter(Objects::nonNull)
+            .findFirst()
+            .orElseGet(() -> accountRepository.findAllByClientId(clientId).stream()
+                .map(LoyaltyAccount::getTenantId)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(null));
+
+        // 2. Total des points du client dans ce tenant → palier courant.
+        int tenantTotal = tenantId != null
+            ? accountRepository.sumBalanceByClientAndTenant(clientId, tenantId)
+            : 0;
+        String tierName = tierResolver.tierNameFor(tenantTotal, tenantId);
+
+        // 3. Bonus du palier nommé (table tiers du tenant). Fallback canonique (pas de ligne
+        //    tiers) → bonus 0 : on n'invente pas de bonus hors de la DB.
+        BigDecimal tierBonusPct = tenantId != null
+            ? tierRepository.findAllByTenantId(tenantId).stream()
+                .filter(t -> t.getName() != null && t.getName().equals(tierName))
+                .map(Tier::getBonusPercent)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(BigDecimal.ZERO)
+            : BigDecimal.ZERO;
+
+        // 4. Conversion de base (gain_rules) + valeur point + durée (loyalty_rules).
+        BigDecimal baseConversion = gainRuleRepository
+            .findByRestaurantIdAndDeletedAtIsNull(restaurantId)
+            .map(GainRule::getConversionRate)
+            .orElse(DEFAULT_CONVERSION_RATE);
+        BigDecimal effectiveConversion = baseConversion
+            .multiply(BigDecimal.ONE.add(tierBonusPct.movePointLeft(2)));
+
+        BigDecimal pointValueMad = resolvePointValueMad(restaurantId);
+        int benefitDurationDays = loyaltyRuleRepository
+            .findFirstByRestaurantIdAndEnabledTrueOrderByCreatedAtDesc(restaurantId)
+            .map(LoyaltyRule::getExpiresAfterDays)
+            .orElse(DEFAULT_BENEFIT_DURATION_DAYS);
+
+        return new LoyaltyParamsDto(
+            effectiveConversion, pointValueMad, benefitDurationDays, tierName, tierBonusPct);
+    }
+
+    /** Conversion par défaut (parité {@code GainRule.conversionRate} = 0.1000) si aucune {@code gain_rules}. */
+    private static final BigDecimal DEFAULT_CONVERSION_RATE = new BigDecimal("0.1000");
+
+    /** Durée de validité par défaut (parité {@code LoyaltyRule.expiresAfterDays} = 365) si aucune {@code loyalty_rules}. */
+    private static final int DEFAULT_BENEFIT_DURATION_DAYS = 365;
 
     /**
      * Crée une nouvelle règle de gain pour un restaurant.
@@ -419,6 +549,12 @@ public class LoyaltyService {
         if (dto.capPerVisit() != null) rule.setCapPerVisit(dto.capPerVisit());
         if (dto.capPerMonth() != null) rule.setCapPerMonth(dto.capPerMonth());
         if (dto.minAmount() != null) rule.setMinAmount(dto.minAmount());
+        // Lot 4b — champs RuleBuilder legacy (optionnels)
+        if (dto.pointValueMad() != null) rule.setPointValueMad(dto.pointValueMad());
+        if (dto.evalPeriodType() != null) rule.setEvalPeriodType(dto.evalPeriodType());
+        if (dto.evalPeriodValue() != null) rule.setEvalPeriodValue(dto.evalPeriodValue());
+        if (dto.benefitDurationDays() != null) rule.setBenefitDurationDays(dto.benefitDurationDays());
+        if (dto.minSpendMonthly() != null) rule.setMinSpendMonthly(dto.minSpendMonthly());
         GainRule saved = gainRuleRepository.save(rule);
 
         // tenant_id rempli par trigger DB V13 → refresh pour récupérer la valeur
@@ -439,6 +575,12 @@ public class LoyaltyService {
         if (dto.isActive() != null) rule.setActive(dto.isActive());
         if (dto.welcomePointsDefault() != null) rule.setWelcomePointsDefault(dto.welcomePointsDefault());
         if (dto.welcomePointsMax() != null) rule.setWelcomePointsMax(dto.welcomePointsMax());
+        // Lot 4b — champs RuleBuilder legacy (optionnels, partial update)
+        if (dto.pointValueMad() != null) rule.setPointValueMad(dto.pointValueMad());
+        if (dto.evalPeriodType() != null) rule.setEvalPeriodType(dto.evalPeriodType());
+        if (dto.evalPeriodValue() != null) rule.setEvalPeriodValue(dto.evalPeriodValue());
+        if (dto.benefitDurationDays() != null) rule.setBenefitDurationDays(dto.benefitDurationDays());
+        if (dto.minSpendMonthly() != null) rule.setMinSpendMonthly(dto.minSpendMonthly());
         // Garde-fou applicatif redondant avec CHECK DB — meilleur message d'erreur.
         if (rule.getWelcomePointsMax() < rule.getWelcomePointsDefault()) {
             throw new BadRequestException(
@@ -629,6 +771,23 @@ public class LoyaltyService {
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
+
+    /** Slug du tenant <b>public</b> (catalogue OneClick standard) — seul tenant SANS gate d'adhésion. */
+    private static final String PUBLIC_TENANT_SLUG = "oneclick";
+
+    /**
+     * CL-3 — refuse l'accumulation de fidélité pour un non-membre sur un tenant à adhésion.
+     * No-op sur le tenant public (oneclick) ou si le tenant est introuvable (défensif).
+     */
+    private void requireMembershipForGatedTenant(UUID clientId, UUID tenantId) {
+        if (tenantId == null) return;
+        String slug = tenantDirectory.slugById(tenantId).orElse(null);
+        if (slug == null || PUBLIC_TENANT_SLUG.equals(slug)) return; // tenant public → pas de gate
+        if (!membershipDirectory.isActiveMember(clientId, tenantId)) {
+            throw new ForbiddenException(
+                "Fidélité réservée aux membres de ce club — adhésion requise pour accumuler des points.");
+        }
+    }
 
     private LoyaltyAccount findOrCreateInternal(UUID clientId, UUID restaurantId) {
         // Recherche par couple (client, restaurant) — UNIQUE constraint en DB

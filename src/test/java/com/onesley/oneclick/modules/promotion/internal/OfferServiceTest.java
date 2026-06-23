@@ -240,20 +240,39 @@ class OfferServiceTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    void findAll_scoped_usesNativeJoinFilter_whenVisibleNotNull() {
-        Set<UUID> visible = Set.of(UUID.randomUUID());
-        when(tenantScope.visibleTenantIdsOrNull()).thenReturn(visible);
-        when(repository.findAllScoped(eq(visible), any(), org.mockito.ArgumentMatchers.anyBoolean(),
+    void findAll_genericCatalog_usesPublicScope_notMemberships() {
+        // Promos GÉNÉRIQUE (sans restaurantId) → tenant public seul (publicCatalogScopeOrNull),
+        // PAS le périmètre membre (fuite « PCC dans le flux générique »). Finder natif JOIN.
+        Set<UUID> publicScope = Set.of(UUID.randomUUID());
+        when(tenantScope.publicCatalogScopeOrNull()).thenReturn(publicScope);
+        when(repository.findAllScoped(eq(publicScope), any(), org.mockito.ArgumentMatchers.anyBoolean(),
                 any(), any(org.springframework.data.domain.Pageable.class)))
             .thenReturn(Page.empty());
 
         assertThat(service.findAll(null, true, 0, 20).getContent()).isEmpty();
 
-        // Scopé → passe par le finder natif JOIN restaurants, JAMAIS par le finder Specification legacy.
-        verify(repository).findAllScoped(eq(visible), org.mockito.ArgumentMatchers.isNull(), eq(true),
+        verify(repository).findAllScoped(eq(publicScope), org.mockito.ArgumentMatchers.isNull(), eq(true),
             any(), any(org.springframework.data.domain.Pageable.class));
         verify(repository, org.mockito.Mockito.never())
             .findAll(any(Specification.class), any(Pageable.class));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void findAll_explicitRestaurant_usesVisibleScope_notPublicOnly() {
+        // Offres d'UN resto précis (Spotlight / reveal) → périmètre VISIBLE (oneclick ∪ memberships) :
+        // un membre voit les offres de son resto programme. Finder natif JOIN scopé.
+        UUID restaurantId = UUID.randomUUID();
+        Set<UUID> visible = Set.of(UUID.randomUUID());
+        when(tenantScope.visibleTenantIdsOrNull()).thenReturn(visible);
+        when(repository.findAllScoped(eq(visible), eq(restaurantId), org.mockito.ArgumentMatchers.anyBoolean(),
+                any(), any(org.springframework.data.domain.Pageable.class)))
+            .thenReturn(Page.empty());
+
+        assertThat(service.findAll(restaurantId, true, 0, 20).getContent()).isEmpty();
+
+        verify(repository).findAllScoped(eq(visible), eq(restaurantId), eq(true),
+            any(), any(org.springframework.data.domain.Pageable.class));
     }
 
     @Test

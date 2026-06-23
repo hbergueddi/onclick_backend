@@ -39,6 +39,10 @@ public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificat
     @Query("SELECT u FROM User u WHERE u.id IN :ids AND u.deletedAt IS NULL")
     java.util.List<User> findAllByIds(@Param("ids") java.util.Collection<UUID> ids);
 
+    /** Ids des utilisateurs actifs d'un rôle donné (ex: {@code SUPERADMIN}) — destinataires d'alertes globales. */
+    @Query("SELECT u.id FROM User u WHERE u.role.code = :roleCode AND u.deletedAt IS NULL")
+    java.util.List<UUID> findIdsByRoleCode(@Param("roleCode") String roleCode);
+
     /**
      * Résolution « Ma Famille » (PCC Lot 5) — email scopé tenant, insensible à la casse,
      * soft-deletes exclus. Le filtre {@code tenant_id} garantit qu'on ne résout qu'un membre

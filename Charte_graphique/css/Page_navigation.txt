@@ -1,0 +1,411 @@
+/* Page navigation */
+
+box-sizing: border-box;
+
+position: relative;
+width: 433px;
+height: 284px;
+
+border: 1px dashed #8A38F5;
+border-radius: 5px;
+
+
+/* Icons=2, Title=no */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: space-between;
+align-items: center;
+padding: 13px 20px;
+gap: 10px;
+
+position: absolute;
+width: 393px;
+height: 68px;
+left: 20px;
+top: 20px;
+
+background: #F9F6F4;
+
+
+/* Icon nav */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 10px;
+gap: 10px;
+
+margin: 0 auto;
+width: 40px;
+height: 40px;
+
+background: #FFFFFF;
+box-shadow: 0px 4px 40px rgba(138, 149, 158, 0.4);
+border-radius: 12px;
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* icon nav lib */
+
+width: 20px;
+height: 20px;
+
+background: #FFFFFF;
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Group 6 */
+
+position: absolute;
+width: 6.5px;
+height: 13px;
+left: 6.75px;
+top: 3.5px;
+
+
+
+/* Vector */
+
+position: absolute;
+left: 33.75%;
+right: 33.75%;
+top: 17.5%;
+bottom: 17.5%;
+
+/* Primary */
+border: 1.5px solid #242424;
+
+
+/* Icon nav */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 10px;
+gap: 10px;
+
+margin: 0 auto;
+width: 40px;
+height: 40px;
+
+background: #FFFFFF;
+box-shadow: 0px 4px 40px rgba(138, 149, 158, 0.4);
+border-radius: 12px;
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* icon nav lib */
+
+width: 20px;
+height: 20px;
+
+background: #FFFFFF;
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* bell */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+
+
+/* Vector */
+
+position: absolute;
+left: 12.5%;
+right: 12.5%;
+top: 8.33%;
+bottom: 29.17%;
+
+border: 1.5px solid #242424;
+
+
+/* Vector */
+
+position: absolute;
+left: 42.79%;
+right: 42.79%;
+top: 87.5%;
+bottom: 8.35%;
+
+border: 1.5px solid #242424;
+
+
+/* Icons=1, Title=no */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 13px 20px;
+gap: 10px;
+
+position: absolute;
+width: 393px;
+height: 68px;
+left: 20px;
+top: 108px;
+
+background: #F9F6F4;
+
+
+/* Back Container */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 10px;
+gap: 10px;
+
+width: 40px;
+height: 40px;
+
+background: #FFFFFF;
+box-shadow: 0px 4px 40px rgba(138, 149, 158, 0.4);
+border-radius: 12px;
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Frame 14 */
+
+width: 20px;
+height: 20px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Group 6 */
+
+position: absolute;
+width: 6.5px;
+height: 13px;
+left: 6.75px;
+top: 3.5px;
+
+
+
+/* Vector */
+
+position: absolute;
+left: 33.75%;
+right: 33.75%;
+top: 17.5%;
+bottom: 17.5%;
+
+/* Primary */
+border: 1.5px solid #242424;
+
+
+/* Icons=2, Title=yes */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: space-between;
+align-items: center;
+padding: 13px 20px;
+gap: 10px;
+
+position: absolute;
+width: 393px;
+height: 68px;
+left: 20px;
+top: 196px;
+
+background: #F9F6F4;
+
+
+/* Icon nav */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 10px;
+gap: 10px;
+
+margin: 0 auto;
+width: 40px;
+height: 40px;
+
+background: #FFFFFF;
+box-shadow: 0px 4px 40px rgba(138, 149, 158, 0.4);
+border-radius: 12px;
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* icon nav lib */
+
+width: 20px;
+height: 20px;
+
+background: #FFFFFF;
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Group 6 */
+
+position: absolute;
+width: 6.5px;
+height: 13px;
+left: 6.75px;
+top: 3.5px;
+
+
+
+/* Vector */
+
+position: absolute;
+left: 33.75%;
+right: 33.75%;
+top: 17.5%;
+bottom: 17.5%;
+
+/* Primary */
+border: 1.5px solid #242424;
+
+
+/* page title */
+
+margin: 0 auto;
+width: 108px;
+height: 17px;
+
+font-family: 'Poltawski Nowy';
+font-style: normal;
+font-weight: 500;
+font-size: 24px;
+line-height: 31px;
+/* leading-trim and text-edge are draft CSS properties.
+
+Read more: https://drafts.csswg.org/css-inline-3/#leading-trim
+*/
+leading-trim: both;
+text-edge: cap;
+display: flex;
+align-items: center;
+text-align: right;
+letter-spacing: 0.1em;
+text-transform: capitalize;
+
+color: #3B2338;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Icon nav */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 10px;
+gap: 10px;
+
+margin: 0 auto;
+width: 40px;
+height: 40px;
+
+background: #FFFFFF;
+box-shadow: 0px 4px 40px rgba(138, 149, 158, 0.4);
+border-radius: 12px;
+
+/* Inside auto layout */
+flex: none;
+order: 2;
+flex-grow: 0;
+
+
+/* icon nav lib */
+
+width: 20px;
+height: 20px;
+
+background: #FFFFFF;
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* bell */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+
+
+/* Vector */
+
+position: absolute;
+left: 12.5%;
+right: 12.5%;
+top: 8.33%;
+bottom: 29.17%;
+
+border: 1.5px solid #242424;
+
+
+/* Vector */
+
+position: absolute;
+left: 42.79%;
+right: 42.79%;
+top: 87.5%;
+bottom: 8.35%;
+
+border: 1.5px solid #242424;

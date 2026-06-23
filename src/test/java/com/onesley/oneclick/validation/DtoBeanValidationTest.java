@@ -121,7 +121,7 @@ class DtoBeanValidationTest {
     @Test
     void resourceCreate_negativeCapacity_flagged() {
         assertThat(violated(new ResourceBookingDtos.ResourceCreateDto(
-            ID, "padel", "Court 1", null, -1))).contains("capacity");
+            ID, "padel", "Court 1", null, -1, null, null, null))).contains("capacity");
     }
 
     @Test

@@ -1,0 +1,11 @@
+-- BE-3 (plan RESTAURANT-ONBOARDING) — « changement de mot de passe obligatoire au 1er login ».
+--
+-- Drapeau dédié, distinct de `credentials_non_expired` : ce dernier, mis à false, BLOQUE le login
+-- (Spring Security lève CredentialsExpiredException). Ici on veut au contraire LAISSER passer le
+-- login avec le mot de passe temporaire, puis FORCER l'écran « définir mon mot de passe » côté
+-- client (le flag est exposé dans /api/users/me/context). Le flag est remis à false dès que
+-- l'utilisateur change effectivement son mot de passe (UserService.changePassword/resetPassword).
+--
+-- Posé à true par le provisioning d'un compte restaurateur à l'approbation d'une demande
+-- d'inscription (BE-2). Défaut false → aucun impact sur les comptes existants.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password_must_change BOOLEAN NOT NULL DEFAULT false;

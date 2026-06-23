@@ -42,6 +42,17 @@ import lombok.Setter;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User extends SoftDeletableAuditedEntity {
 
+    /** Compte actif et utilisable (valeur par défaut). */
+    public static final String STATUS_ACTIVE = "active";
+
+    /**
+     * Compte créé mais email non encore vérifié (P1 enrollment — vérification OTP au signup).
+     * Le mot de passe est correct mais le login est gaté ({@code EmailNotVerifiedException} 403)
+     * tant que l'OTP envoyé par email n'a pas été validé via {@code /api/auth/otp/verify}.
+     * Posé uniquement quand le flag {@code app.auth.email-verification-required=true}.
+     */
+    public static final String STATUS_PENDING_EMAIL_VERIFICATION = "pending_email_verification";
+
     @Id
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
@@ -111,6 +122,10 @@ public class User extends SoftDeletableAuditedEntity {
     @Column(name = "status", nullable = false, length = 64)
     @Setter private String status = "active";
 
+    /** RGPD — horodatage du consentement CGU/confidentialité au signup (null = legacy / non renseigné). */
+    @Column(name = "cgu_accepted_at")
+    @Setter private java.time.Instant cguAcceptedAt;
+
     // ─── Flags Spring Security (§2.1) ────────────────────────────────────────
     @Column(name = "account_non_expired", nullable = false)
     private boolean accountNonExpired = true;
@@ -120,6 +135,15 @@ public class User extends SoftDeletableAuditedEntity {
 
     @Column(name = "credentials_non_expired", nullable = false)
     private boolean credentialsNonExpired = true;
+
+    /**
+     * BE-3 — force la saisie d'un nouveau mot de passe au 1er login (compte restaurateur provisionné
+     * avec un mot de passe temporaire à l'approbation d'une demande d'inscription). NE bloque PAS le
+     * login (≠ {@code credentialsNonExpired}) : exposé dans {@code MeContextDto} pour que le client
+     * impose l'écran « définir mon mot de passe ». Remis à false dès le changement effectif.
+     */
+    @Column(name = "password_must_change", nullable = false)
+    @Setter private boolean passwordMustChange = false;
 
     @Column(name = "enabled", nullable = false)
     private boolean enabled = true;

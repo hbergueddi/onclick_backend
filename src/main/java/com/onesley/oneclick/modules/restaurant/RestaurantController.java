@@ -9,9 +9,11 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.net.URI;
 import java.util.List;
@@ -23,6 +25,7 @@ import com.onesley.oneclick.modules.restaurant.api.BusinessHourDtos.BusinessHour
 import com.onesley.oneclick.modules.restaurant.api.RestaurantCreateDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantPatchDto;
+import com.onesley.oneclick.modules.restaurant.api.RestaurantPhotoDto;
 import com.onesley.oneclick.modules.restaurant.api.StaffTransferDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.MealServiceCreateDto;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantSubResourceDtos.MealServiceDto;
@@ -43,6 +46,7 @@ import com.onesley.oneclick.modules.restaurant.internal.BusinessHourService;
 import com.onesley.oneclick.modules.restaurant.internal.RestaurantAnnouncementService;
 import com.onesley.oneclick.modules.restaurant.internal.Restaurant;
 import com.onesley.oneclick.modules.restaurant.internal.RestaurantCatalogService;
+import com.onesley.oneclick.modules.restaurant.internal.RestaurantPhotoService;
 import com.onesley.oneclick.modules.restaurant.internal.RestaurantRepository;
 import com.onesley.oneclick.modules.restaurant.internal.RestaurantSubResourceService;
 import com.onesley.oneclick.security.TenantScope;
@@ -69,6 +73,7 @@ public class RestaurantController {
     private final RestaurantAccessGuard restaurantAccessGuard;
     private final RestaurantAnnouncementService announcementService;
     private final TenantScope tenantScope;
+    private final RestaurantPhotoService restaurantPhotoService;
 
     @GetMapping
     @Operation(summary = "Liste paginée des restaurants — filtres city + tenantId optionnels (PUBLIC catalogue)")
@@ -214,6 +219,51 @@ public class RestaurantController {
     public ResponseEntity<Void> deleteAnnouncement(@PathVariable UUID id) {
         announcementService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  Identité visuelle — galerie photos (max 5 : principale + 4) — fiche Spotlight
+    // ═══════════════════════════════════════════════════════════════════════
+    // La photo principale est synchronisée sur restaurants.image → réutilisée partout
+    // (Explore, cartes réservation, récaps). La galerie complète n'est exposée que sur
+    // la fiche Spotlight (GET /api/restaurants/{id} → RestaurantDto.photos). Gestion :
+    // UPDATE:RESTAURANTS (mutations) + VIEW:RESTAURANTS (lecture gestion) + ABAC staff-of-resto.
+
+    @GetMapping("/{restaurantId}/photos")
+    @Operation(summary = "Galerie photos d'un restaurant (gestion Identité visuelle, principale en tête)")
+    @PreAuthorize("hasAuthority('VIEW:RESTAURANTS')")
+    public List<RestaurantPhotoDto> listPhotos(@PathVariable UUID restaurantId) {
+        restaurantAccessGuard.requireAdminOrActiveStaffOf(restaurantId);
+        return restaurantPhotoService.list(restaurantId);
+    }
+
+    @PostMapping(value = "/{restaurantId}/photos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Ajoute une photo (max 5). makePrimary=true (ou 1re photo) → devient la principale.")
+    @PreAuthorize("hasAuthority('UPDATE:RESTAURANTS')")
+    public ResponseEntity<RestaurantPhotoDto> addPhoto(
+        @PathVariable UUID restaurantId,
+        @RequestParam("file") MultipartFile file,
+        @RequestParam(value = "makePrimary", defaultValue = "false") boolean makePrimary
+    ) {
+        restaurantAccessGuard.requireAdminOrActiveStaffOf(restaurantId);
+        RestaurantPhotoDto created = restaurantPhotoService.upload(restaurantId, file, makePrimary);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    @PatchMapping("/{restaurantId}/photos/{mediaId}/primary")
+    @Operation(summary = "Définit la photo principale (synchronise restaurants.image, affichée partout).")
+    @PreAuthorize("hasAuthority('UPDATE:RESTAURANTS')")
+    public List<RestaurantPhotoDto> setPrimaryPhoto(@PathVariable UUID restaurantId, @PathVariable UUID mediaId) {
+        restaurantAccessGuard.requireAdminOrActiveStaffOf(restaurantId);
+        return restaurantPhotoService.setPrimary(restaurantId, mediaId);
+    }
+
+    @DeleteMapping("/{restaurantId}/photos/{mediaId}")
+    @Operation(summary = "Supprime une photo (soft-delete). Si principale → réaffectée à la suivante.")
+    @PreAuthorize("hasAuthority('UPDATE:RESTAURANTS')")
+    public List<RestaurantPhotoDto> deletePhoto(@PathVariable UUID restaurantId, @PathVariable UUID mediaId) {
+        restaurantAccessGuard.requireAdminOrActiveStaffOf(restaurantId);
+        return restaurantPhotoService.delete(restaurantId, mediaId);
     }
 
     // ═══════════════════════════════════════════════════════════════════════

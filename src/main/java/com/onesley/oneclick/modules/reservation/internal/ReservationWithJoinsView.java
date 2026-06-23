@@ -54,6 +54,11 @@ public interface ReservationWithJoinsView {
     String getRestaurantName();
     String getRestaurantCity();
     String getRestaurantImage();
+    // ─── Géo restaurant (Maps « Y aller ») — projetée pour le deep-link client ──
+    String getRestaurantAddress();
+    java.math.BigDecimal getRestaurantLatitude();
+    java.math.BigDecimal getRestaurantLongitude();
+    String getRestaurantGooglePlaceId();
     String getMealServiceName();
     String getZoneName();
     String getTableNumber();

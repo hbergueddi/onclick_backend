@@ -1,0 +1,152 @@
+/* Icon nav */
+
+box-sizing: border-box;
+
+position: relative;
+width: 80px;
+height: 140px;
+
+border: 1px dashed #8A38F5;
+border-radius: 5px;
+
+
+/* Property 1=Default */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 10px;
+gap: 10px;
+
+position: absolute;
+width: 40px;
+height: 40px;
+left: 20px;
+top: 20px;
+
+background: #FFFFFF;
+box-shadow: 0px 4px 40px rgba(138, 149, 158, 0.4);
+border-radius: 12px;
+
+
+/* icon nav lib */
+
+width: 20px;
+height: 20px;
+
+background: #FFFFFF;
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Group 6 */
+
+position: absolute;
+width: 6.5px;
+height: 13px;
+left: 6.75px;
+top: 3.5px;
+
+
+
+/* Vector */
+
+position: absolute;
+left: 33.75%;
+right: 33.75%;
+top: 17.5%;
+bottom: 17.5%;
+
+/* Primary */
+border: 1.5px solid #242424;
+
+
+/* Property 1=Variant2 */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 10px;
+gap: 10px;
+isolation: isolate;
+
+position: absolute;
+width: 40px;
+height: 40px;
+left: 20px;
+top: 80px;
+
+background: #FFFFFF;
+box-shadow: 0px 4px 40px rgba(138, 149, 158, 0.4);
+border-radius: 12px;
+
+
+/* icon nav lib */
+
+width: 20px;
+height: 20px;
+
+background: #FFFFFF;
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+z-index: 0;
+
+
+/* bell */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+
+
+/* Vector */
+
+position: absolute;
+left: 12.5%;
+right: 12.5%;
+top: 8.33%;
+bottom: 29.17%;
+
+border: 1.5px solid #242424;
+
+
+/* Vector */
+
+position: absolute;
+left: 42.79%;
+right: 42.79%;
+top: 87.5%;
+bottom: 8.35%;
+
+border: 1.5px solid #242424;
+
+
+/* Ellipse 70 */
+
+position: absolute;
+width: 5px;
+height: 5px;
+left: 27px;
+top: 7.5px;
+
+/* CodeRed */
+background: #DB4545;
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+z-index: 1;

@@ -59,7 +59,7 @@ server:
 app:
   google:
     places:
-      api-key: ${GOOGLE_PLACES_API_KEY:AIzaSyDazJrl-4y4vceQw9XhRuKQgMe4eDtBiM8}
+      api-key: ${GOOGLE_PLACES_API_KEY:}
 
 logging:
   level:

@@ -8,10 +8,12 @@ import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.security.OneClickUserDetailsService;
 import com.onesley.oneclick.security.SecurityHelper;
 import com.onesley.oneclick.shared.events.UserRegisteredEvent;
+import com.onesley.oneclick.shared.events.AccountDeletedEvent;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -59,6 +61,17 @@ public class UserService {
      */
     private final OneClickUserDetailsService userDetailsService;
 
+    /**
+     * P1 enrollment — quand {@code true}, le signup public crée le compte en
+     * {@code pending_email_verification} : le user doit valider l'OTP envoyé par email
+     * (POST /api/auth/otp/request signup → /verify) avant de pouvoir se connecter.
+     * Défaut {@code false} (rétro-compat : clients web/natifs déjà déployés sans écran OTP) ;
+     * activable en prod via {@code APP_AUTH_EMAIL_VERIFICATION_REQUIRED=true} quand tous les
+     * clients embarquent l'écran OTP.
+     */
+    @Value("${app.auth.email-verification-required:false}")
+    private boolean emailVerificationRequired;
+
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -83,11 +96,15 @@ public class UserService {
 
     @Transactional
     public UserDto create(UserCreateDto dto) {
+        // Anti-énumération (light) : message générique SANS renvoyer la valeur (email/téléphone),
+        // pour ne pas confirmer l'existence d'un compte via le contenu de l'erreur. (La réponse
+        // 409 révèle encore l'existence par le statut — l'uniformisation complète 201+email est
+        // une décision UX différée.)
         if (repository.existsByEmailIgnoreCase(dto.email())) {
-            throw new ConflictException("Email déjà utilisé : " + dto.email());
+            throw new ConflictException("Cet email est déjà associé à un compte.");
         }
         if (dto.phone() != null && repository.existsByPhone(dto.phone())) {
-            throw new ConflictException("Téléphone déjà utilisé : " + dto.phone());
+            throw new ConflictException("Ce numéro de téléphone est déjà associé à un compte.");
         }
         Role role = roleRepository.findById(dto.roleId())
             .orElseThrow(() -> new NotFoundException("Role", dto.roleId()));
@@ -133,9 +150,26 @@ public class UserService {
     public UserDto register(UserRegisterDto dto) {
         Role client = roleRepository.findByCode("CLIENT")
             .orElseThrow(() -> new NotFoundException("Role", "CLIENT"));
-        return create(new UserCreateDto(
+        UserDto created = create(new UserCreateDto(
             dto.tenantId(), client.getId(), dto.email(), dto.phone(),
             dto.password(), dto.firstName(), dto.lastName(), dto.language()));
+
+        // Mutations post-création regroupées en un seul fetch/save :
+        //  - RGPD : trace du consentement CGU (optionnel, compat ascendante — seulement si cguAccepted=true).
+        //  - P1 enrollment : si la vérification email est requise, on bascule en pending_email_verification
+        //    pour gater le login jusqu'à validation de l'OTP. Le statut renvoyé dans la réponse sert de
+        //    signal au client (status=pending_email_verification → afficher l'écran OTP).
+        boolean recordCgu = Boolean.TRUE.equals(dto.cguAccepted());
+        if (recordCgu || emailVerificationRequired) {
+            User u = repository.findById(created.id()).orElse(null);
+            if (u != null) {
+                if (recordCgu) u.setCguAcceptedAt(Instant.now());
+                if (emailVerificationRequired) u.setStatus(User.STATUS_PENDING_EMAIL_VERIFICATION);
+                repository.save(u);
+                created = u.toDto();  // reflète le statut pending dans la réponse de register
+            }
+        }
+        return created;
     }
 
     @Transactional
@@ -191,6 +225,37 @@ public class UserService {
         userDetailsService.evictUser(id);
     }
 
+    /**
+     * Suppression self-service du PROPRE compte ({@code DELETE /api/users/me}).
+     *
+     * <p>Conformité App Store §5.1.1(v) (« suppression de compte in-app, permanente, pas une
+     * simple désactivation ») + RGPD « droit à l'effacement ». On <b>anonymise</b> les PII et on
+     * libère l'email/téléphone (uniques) pour une ré-inscription, tout en gardant la ligne
+     * (intégrité FK des données historiques : réservations, points). Le user devient inaccessible
+     * (soft-delete + cache évincé) et ses sessions/push sont révoqués via {@link AccountDeletedEvent}
+     * (frontière Modulith : aucun appel direct vers auth/notification).
+     */
+    @Transactional
+    @CacheEvict(value = CacheConfig.CACHE_USERS_BY_EMAIL, allEntries = true)
+    public void deleteOwnAccount(UUID id) {
+        User user = repository.findById(id)
+            .filter(u -> u.getDeletedAt() == null)
+            .orElseThrow(() -> new NotFoundException("User", id));
+        // Anonymisation PII : strip + tombstone unique (email/téléphone libérés).
+        user.setEmail("deleted-" + id + "@deleted.oneclick");
+        user.setPhone(null);
+        user.setFirstName("Compte");
+        user.setLastName("supprimé");
+        user.setAvatarUrl(null);
+        user.setStatus("deleted");
+        user.markDeleted();
+        repository.save(user);
+        // Purge cache userDetails : un JWT déjà émis ne doit plus réauthentifier (0 autorité).
+        userDetailsService.evictUser(id);
+        // Cross-module (events Modulith) : auth → révoque refresh tokens ; notification → purge device tokens.
+        eventPublisher.publishEvent(new AccountDeletedEvent(id, Instant.now()));
+    }
+
     // ───────────────────────────────────────────────────────────────────────
     //  Sécurité — Changement de password (owner exact, admins refusés)
     // ───────────────────────────────────────────────────────────────────────
@@ -220,11 +285,40 @@ public class UserService {
         }
 
         user.setPasswordHash(passwordEncoder.encode(newPassword));
+        // BE-3 — l'utilisateur a défini son propre mot de passe : le drapeau « changement forcé »
+        // (posé au provisioning avec mdp temporaire) tombe. No-op pour un compte normal (déjà false).
+        user.setPasswordMustChange(false);
         repository.save(user);
         // Bug 34 — purge UserDetails cache : le hash ayant changé, le payload
         // sérialisé Redis devient stale et empêcherait une réauthentification
         // immédiate avec le nouveau password si un autre flow (BasicAuth, etc.)
         // tape le {@code passwordHash} via {@code UserDetails.getPassword()}.
+        userDetailsService.evictUser(id);
+    }
+
+    /**
+     * Réinitialisation du mot de passe SANS mot de passe actuel — flow « mot de passe oublié »
+     * (Phase A enrollment). L'identité de l'appelant est prouvée en amont par l'OTP email
+     * (purpose=reset_password) vérifié dans {@code AuthService.resetPassword} ; ce service ne
+     * gère que le stockage (BCrypt) + l'éviction de cache, comme {@link #changePassword}.
+     *
+     * <p>Refuse la réutilisation du mot de passe courant (même garde que changePassword).
+     * Même cache evict ({@code userDetails}) pour invalider tout payload sérialisé stale.</p>
+     */
+    @Transactional
+    public void resetPassword(UUID id, String newPassword) {
+        User user = repository.findById(id)
+            .filter(u -> u.getDeletedAt() == null)
+            .orElseThrow(() -> new NotFoundException("User", id));
+
+        if (passwordEncoder.matches(newPassword, user.getPasswordHash())) {
+            throw new BadRequestException("Le nouveau mot de passe doit être différent de l'ancien");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        // BE-3 — cohérent avec changePassword : un reset effectif lève aussi le « changement forcé ».
+        user.setPasswordMustChange(false);
+        repository.save(user);
         userDetailsService.evictUser(id);
     }
 
@@ -360,11 +454,19 @@ public class UserService {
                 m -> m.sortOrder() == null ? Integer.MAX_VALUE : m.sortOrder()))
             .toList();
 
+        // Slug du tenant (additif au tenantId UUID) : accès LAZY autorisé en session
+        // (@Transactional readOnly). null pour un user global (admin plateforme, tenant null).
+        // Sert au gating UI par slug côté clients multi-tenant (ex. app Store staff) — la
+        // sécurité reste serveur (ABAC par JWT).
+        Tenant tenant = u.getTenant();
+        String tenantSlug = tenant != null ? tenant.getSlug() : null;
+
         return new MeContextDto(
             new MeContextDto.UserSummary(u.getId(), u.getEmail(), u.getFirstName(), u.getLastName(),
                 u.getPhone(), u.getAvatarUrl(), u.getCity(),
                 u.getAllergens() == null ? List.of() : java.util.Arrays.asList(u.getAllergens()),
-                u.getLanguage(), u.getStatus(), u.getTenantId()),
+                u.getLanguage(), u.getStatus(), u.getTenantId(), tenantSlug,
+                u.isPasswordMustChange()),
             role != null ? new MeContextDto.RoleSummary(role.getCode(), role.getName()) : null,
             menus,
             List.copyOf(permissions)

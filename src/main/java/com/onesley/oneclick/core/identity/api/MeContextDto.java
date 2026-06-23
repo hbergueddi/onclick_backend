@@ -31,7 +31,22 @@ public record MeContextDto(
         List<String> allergens,
         String language,
         String status,
-        UUID tenantId
+        UUID tenantId,
+        /**
+         * Slug stable du tenant du compte (ex. {@code oneclick}, {@code palmeraie}, {@code homu}),
+         * ou {@code null} pour un user global (admin plateforme). <b>Additif</b> au {@link #tenantId}
+         * (UUID) : permet aux clients (ex. app Store staff multi-tenant) de faire du gating UI par
+         * slug sans figer le tenant au build, et sans embarquer une table UUID→slug côté client.
+         * La sécurité reste serveur (ABAC par JWT) — ce champ ne sert qu'au confort d'affichage.
+         */
+        String tenantSlug,
+        /**
+         * BE-3 — {@code true} si le compte a été provisionné avec un mot de passe temporaire et
+         * doit en définir un nouveau avant d'accéder à l'app (1re connexion d'un restaurateur
+         * approuvé). Le client force alors l'écran « définir mon mot de passe ». Remis à
+         * {@code false} dès le changement effectif (cf. {@code UserService.changePassword}).
+         */
+        boolean passwordMustChange
     ) {}
 
     public record RoleSummary(String code, String name) {}

@@ -1,0 +1,727 @@
+/* UI kit */
+
+position: relative;
+width: 1838px;
+height: 1545px;
+
+background: #FFFFFF;
+
+
+/* image 4 */
+
+position: absolute;
+width: 1838px;
+height: 455px;
+left: 0px;
+top: 0px;
+
+background: url(image.png);
+
+
+/* image 3 */
+
+position: absolute;
+visibility: hidden;
+width: 800px;
+height: 715px;
+left: 0px;
+top: 726px;
+
+background: url(image);
+
+
+/* image 7 */
+
+position: absolute;
+width: 1838px;
+height: 818px;
+left: 0px;
+top: 727px;
+
+background: url(upscale_image [Upscaled].png);
+
+
+/* Frame 12 */
+
+position: absolute;
+width: 683.21px;
+height: 233px;
+left: 36px;
+top: 795px;
+
+background: #FBF7F6;
+
+
+/* Bordeaux #7E3658 */
+
+position: absolute;
+width: 114.18px;
+height: 34px;
+left: 13.92px;
+top: 160.59px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 13.9242px;
+line-height: 17px;
+text-align: center;
+letter-spacing: 0.05em;
+text-transform: uppercase;
+
+color: #A6A6A6;
+
+
+
+/* aubergine #3B2338 */
+
+position: absolute;
+width: 114.18px;
+height: 34px;
+left: 149.45px;
+top: 160.59px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 13.9242px;
+line-height: 17px;
+text-align: center;
+letter-spacing: 0.05em;
+text-transform: uppercase;
+
+color: #A6A6A6;
+
+
+
+/* champagne #E0AF7C */
+
+position: absolute;
+width: 114.18px;
+height: 34px;
+left: 284.98px;
+top: 160.59px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 13.9242px;
+line-height: 17px;
+text-align: center;
+letter-spacing: 0.05em;
+text-transform: uppercase;
+
+color: #A6A6A6;
+
+
+
+/* champagne #F9ECE1 */
+
+position: absolute;
+width: 114.18px;
+height: 34px;
+left: 418.65px;
+top: 160.59px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 13.9242px;
+line-height: 17px;
+text-align: center;
+letter-spacing: 0.05em;
+text-transform: uppercase;
+
+color: #A6A6A6;
+
+
+
+/* charcoal #A6A6A6 */
+
+position: absolute;
+width: 114.18px;
+height: 34px;
+left: 556.04px;
+top: 160.59px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 13.9242px;
+line-height: 17px;
+text-align: center;
+letter-spacing: 0.05em;
+text-transform: uppercase;
+
+color: #A6A6A6;
+
+
+
+/* Ellipse 1 */
+
+position: absolute;
+width: 100.25px;
+height: 100.25px;
+left: 20.42px;
+top: 42.7px;
+
+background: #7E3658;
+
+
+/* Ellipse 2 */
+
+position: absolute;
+width: 100.25px;
+height: 100.25px;
+left: 155.95px;
+top: 42.7px;
+
+background: #3B2338;
+
+
+/* Ellipse 3 */
+
+position: absolute;
+width: 100.25px;
+height: 100.25px;
+left: 291.48px;
+top: 42.7px;
+
+background: #E0AF7C;
+
+
+/* Ellipse 4 */
+
+position: absolute;
+width: 100.25px;
+height: 100.25px;
+left: 427.01px;
+top: 42.7px;
+
+background: #F9ECE1;
+
+
+/* Ellipse 5 */
+
+position: absolute;
+width: 100.25px;
+height: 100.25px;
+left: 562.54px;
+top: 42.7px;
+
+background: #A6A6A6;
+
+
+/* Frame 2 */
+
+position: absolute;
+width: 1838px;
+height: 240px;
+left: 0px;
+top: 471px;
+
+background: #F8F4F3;
+
+
+/* Frame 6 */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px;
+gap: 70px;
+
+position: absolute;
+width: 742.99px;
+height: 135px;
+left: 81px;
+top: 28px;
+
+
+
+/* Frame 3 */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 12px;
+
+width: 151px;
+height: 135px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Vector */
+
+width: 151px;
+height: 111px;
+
+background: #46021D;
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* réservations & loyauté */
+
+width: 151px;
+height: 12px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 10px;
+line-height: 12px;
+display: flex;
+align-items: center;
+letter-spacing: 0.05em;
+text-transform: uppercase;
+
+color: #C09C59;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Line 1 */
+
+width: 102px;
+height: 0px;
+
+border: 1px solid #C5C5C5;
+transform: rotate(90deg);
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Frame 4 */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 9.84px;
+
+width: 123.79px;
+height: 91px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 2;
+flex-grow: 0;
+
+
+/* Vector */
+
+width: 123.79px;
+height: 91px;
+
+background: #46021D;
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Line 2 */
+
+width: 102px;
+height: 0px;
+
+border: 1px solid #C5C5C5;
+transform: rotate(90deg);
+
+/* Inside auto layout */
+flex: none;
+order: 3;
+flex-grow: 0;
+
+
+/* Vector */
+
+width: 118.2px;
+height: 69.87px;
+
+background: #46021D;
+
+/* Inside auto layout */
+flex: none;
+order: 4;
+flex-grow: 0;
+
+
+/* Line 3 */
+
+width: 102px;
+height: 0px;
+
+border: 1px solid #C5C5C5;
+transform: rotate(90deg);
+
+/* Inside auto layout */
+flex: none;
+order: 5;
+flex-grow: 0;
+
+
+/* primaire */
+
+position: absolute;
+width: 151px;
+height: 18px;
+left: 81px;
+top: 191px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 15px;
+line-height: 18px;
+display: flex;
+align-items: center;
+text-align: center;
+letter-spacing: 0.05em;
+text-transform: uppercase;
+
+color: #A6A6A6;
+
+
+
+/* logo */
+
+position: absolute;
+width: 151px;
+height: 18px;
+left: 359px;
+top: 191px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 15px;
+line-height: 18px;
+display: flex;
+align-items: center;
+text-align: center;
+letter-spacing: 0.05em;
+text-transform: uppercase;
+
+color: #A6A6A6;
+
+
+
+/* iconographie */
+
+position: absolute;
+width: 151px;
+height: 18px;
+left: 620px;
+top: 191px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 15px;
+line-height: 18px;
+display: flex;
+align-items: center;
+text-align: center;
+letter-spacing: 0.05em;
+text-transform: uppercase;
+
+color: #A6A6A6;
+
+
+
+/* logo gradient */
+
+position: absolute;
+width: 151px;
+height: 18px;
+left: 894px;
+top: 191px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 15px;
+line-height: 18px;
+display: flex;
+align-items: center;
+text-align: center;
+letter-spacing: 0.05em;
+text-transform: uppercase;
+
+color: #A6A6A6;
+
+
+
+/* icônes d’app */
+
+position: absolute;
+width: 151px;
+height: 18px;
+left: 1397px;
+top: 191px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 15px;
+line-height: 18px;
+display: flex;
+align-items: center;
+text-align: center;
+letter-spacing: 0.05em;
+text-transform: uppercase;
+
+color: #A6A6A6;
+
+
+
+/* Frame 7 */
+
+position: absolute;
+width: 129px;
+height: 129px;
+left: 1146px;
+top: 28px;
+
+background: linear-gradient(225deg, #681237 0%, #1A0610 100%);
+box-shadow: 0px 12px 16px -4px rgba(16, 24, 40, 0.32), 0px 0px 6px -2px rgba(16, 24, 40, 0.23);
+border-radius: 32px;
+
+
+/* Frame 11 */
+
+position: absolute;
+width: 129px;
+height: 129px;
+left: 1146px;
+top: 28px;
+
+background: linear-gradient(225deg, #681237 0%, #1A0610 100%);
+box-shadow: 0px 12px 16px -4px rgba(16, 24, 40, 0.32), 0px 0px 6px -2px rgba(16, 24, 40, 0.23);
+border-radius: 32px;
+
+
+/* Vector */
+
+position: absolute;
+width: 89px;
+height: 53px;
+left: 20px;
+top: calc(50% - 53px/2);
+
+background: #FFFFFF;
+
+
+/* Frame 8 */
+
+position: absolute;
+width: 129px;
+height: 129px;
+left: 1317px;
+top: 28px;
+
+background: #FDF3EE;
+box-shadow: 0px 12px 16px -4px rgba(16, 24, 40, 0.32), 0px 0px 6px -2px rgba(16, 24, 40, 0.23);
+border-radius: 32px;
+
+
+/* Vector */
+
+position: absolute;
+width: 89px;
+height: 53px;
+left: 20px;
+top: calc(50% - 53px/2);
+
+background: #270919;
+
+
+/* Frame 10 */
+
+position: absolute;
+width: 129px;
+height: 129px;
+left: 1659px;
+top: 28px;
+
+background: linear-gradient(218.17deg, #FCD9AB 24.57%, #A9794D 80.4%);
+box-shadow: 0px 12px 16px -4px rgba(16, 24, 40, 0.32), 0px 0px 6px -2px rgba(16, 24, 40, 0.23);
+border-radius: 32px;
+
+
+/* Vector */
+
+position: absolute;
+width: 89px;
+height: 53px;
+left: 20px;
+top: calc(50% - 53px/2);
+
+background: #270919;
+box-shadow: 0px 0px 4px rgba(255, 255, 255, 0.73);
+
+
+/* Frame 9 */
+
+position: absolute;
+width: 129px;
+height: 129px;
+left: 1488px;
+top: 28px;
+
+background: radial-gradient(67.03% 71.77% at 8.53% 88.76%, #7A1C35 0%, #3D0424 100%) /* warning: gradient uses a rotation that is not supported by CSS and may not behave as expected */;
+box-shadow: 0px 12px 16px -4px rgba(16, 24, 40, 0.32), 0px 0px 6px -2px rgba(16, 24, 40, 0.23);
+border-radius: 32px;
+
+
+/* Vector */
+
+position: absolute;
+width: 89px;
+height: 53px;
+left: 20px;
+top: calc(50% - 53px/2);
+
+background: linear-gradient(246.92deg, #D49C69 13.79%, #E6B77C 87.05%);
+
+
+/* Vector */
+
+position: absolute;
+width: 117.3px;
+height: 69px;
+left: 910px;
+top: 61px;
+
+background: linear-gradient(248.97deg, #C4C4C4 1.55%, #1A0610 67.51%, #E0AF7C 93.88%);
+box-shadow: 0px 6.9px 6.9px rgba(0, 0, 0, 0.25);
+
+
+/* C4C4C4 1A0610 E0AF7C */
+
+position: absolute;
+width: 324px;
+height: 59px;
+left: 943px;
+top: 747px;
+
+font-family: 'Poltawski Nowy';
+font-style: normal;
+font-weight: 500;
+font-size: 18px;
+line-height: 23px;
+/* leading-trim and text-edge are draft CSS properties.
+
+Read more: https://drafts.csswg.org/css-inline-3/#leading-trim
+*/
+leading-trim: both;
+text-edge: cap;
+display: flex;
+align-items: center;
+letter-spacing: 0.1em;
+text-transform: capitalize;
+
+color: #FFFFFF;
+
+
+
+/* Frame 11 */
+
+position: absolute;
+width: 784px;
+height: 455px;
+left: 0px;
+top: 0px;
+
+background: #F9F6F4;
+
+
+/* Frame 3 */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 28.61px;
+
+position: absolute;
+width: 360px;
+height: 322.25px;
+left: 212px;
+top: 66px;
+
+
+
+/* Vector */
+
+width: 360px;
+height: 264.64px;
+
+background: #46021D;
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* réservations & loyauté */
+
+width: 360px;
+height: 29px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 23.8411px;
+line-height: 29px;
+/* identical to box height */
+display: flex;
+align-items: center;
+letter-spacing: 0.05em;
+text-transform: uppercase;
+
+color: #C09C59;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 272 */
+
+position: absolute;
+width: 244px;
+height: 422px;
+left: 758px;
+top: 760px;
+
+background: #FAF6F3;

@@ -95,6 +95,12 @@ public class MembershipService implements MembershipDirectoryApi {
 
     @Override
     @Transactional(readOnly = true)
+    public java.util.Optional<UUID> publicTenantId() {
+        return tenantDirectory.findIdBySlug(publicTenantSlug);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Set<String> authoritiesFor(UUID userId) {
         if (userId == null) {
             return Set.of();

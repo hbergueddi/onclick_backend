@@ -34,7 +34,7 @@ class ResourceBookingPunchListenerTest {
     private ResourceBookingStatusChangedEvent event(UUID tenant, UUID organizer, String resourceType, String newStatus) {
         return new ResourceBookingStatusChangedEvent(
             UUID.randomUUID(), organizer, UUID.randomUUID(), tenant, resourceType,
-            "pending", newStatus, Instant.now());
+            "pending", newStatus, UUID.randomUUID(), Instant.now());
     }
 
     @Test

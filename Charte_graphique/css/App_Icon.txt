@@ -1,0 +1,22 @@
+/* Frame 11 */
+
+position: absolute;
+width: 129px;
+height: 129px;
+left: 1146px;
+top: 28px;
+
+background: linear-gradient(225deg, #681237 0%, #1A0610 100%);
+box-shadow: 0px 12px 16px -4px rgba(16, 24, 40, 0.32), 0px 0px 6px -2px rgba(16, 24, 40, 0.23);
+border-radius: 32px;
+
+
+/* Vector */
+
+position: absolute;
+width: 89px;
+height: 53px;
+left: 20px;
+top: calc(50% - 53px/2);
+
+background: #FFFFFF;

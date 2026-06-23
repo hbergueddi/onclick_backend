@@ -3,11 +3,15 @@ package com.onesley.oneclick.modules.loyalty.internal;
 import com.onesley.oneclick.core.identity.api.Role;
 import com.onesley.oneclick.core.identity.api.User;
 import com.onesley.oneclick.core.identity.api.UserRepository;
+import com.onesley.oneclick.core.membership.api.MembershipDirectoryApi;
+import com.onesley.oneclick.core.tenant.api.TenantDirectoryApi;
 import com.onesley.oneclick.exception.BadRequestException;
+import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.modules.loyalty.api.TierUpdateDto;
 import com.onesley.oneclick.modules.loyalty.api.ClientNameDto;
 import com.onesley.oneclick.modules.loyalty.api.GainRuleCreateDto;
+import com.onesley.oneclick.modules.loyalty.api.GainRuleDto;
 import com.onesley.oneclick.modules.loyalty.api.GainRulePatchDto;
 import com.onesley.oneclick.modules.loyalty.api.GiftPointsDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyEarnDto;
@@ -16,6 +20,8 @@ import com.onesley.oneclick.modules.loyalty.api.Snap2EarnResultDto;
 import com.onesley.oneclick.security.SecurityHelper;
 import com.onesley.oneclick.shared.events.LoyaltyEarnedEvent;
 import com.onesley.oneclick.shared.events.LoyaltyRedeemedEvent;
+import com.onesley.oneclick.shared.events.TierReachedEvent;
+import org.mockito.ArgumentCaptor;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,6 +46,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -55,7 +63,11 @@ class LoyaltyServiceTest {
     @Mock LoyaltyAccountRepository accountRepository;
     @Mock LoyaltyTransactionRepository transactionRepository;
     @Mock GainRuleRepository gainRuleRepository;
+    @Mock LoyaltyRuleRepository loyaltyRuleRepository; // source point_value (loyalty_rules)
     @Mock TierRepository tierRepository;
+    @Mock LoyaltyTierResolver tierResolver; // CL-2 — source unique du palier (collaborateur)
+    @Mock TenantDirectoryApi tenantDirectory;         // CL-3 — slug du tenant (gate enrollment)
+    @Mock MembershipDirectoryApi membershipDirectory; // CL-3 — adhésion active (gate enrollment)
     @Mock ApplicationEventPublisher eventPublisher;
     @Mock EntityManager entityManager;
     @Mock UserRepository userRepository;
@@ -96,6 +108,134 @@ class LoyaltyServiceTest {
     }
     private GainRule gainRule(UUID restaurantId, String rate) {
         return new GainRule(UUID.randomUUID(), restaurantId, new BigDecimal(rate));
+    }
+
+    private LoyaltyRule loyaltyRule(UUID restaurantId, String pointValue) {
+        LoyaltyRule r = new LoyaltyRule(UUID.randomUUID(), restaurantId);
+        r.setPointValue(new BigDecimal(pointValue));
+        return r;
+    }
+
+    private LoyaltyAccount accountWithTenant(UUID clientId, UUID restaurantId, int balance, UUID tenant) {
+        LoyaltyAccount a = account(clientId, restaurantId, balance);
+        ReflectionTestUtils.setField(a, "tenantId", tenant);
+        return a;
+    }
+
+    private Tier tier(UUID tenant, String name, int minPoints, String bonusPct) {
+        return new Tier(UUID.randomUUID(), tenant, name, minPoints, new BigDecimal(bonusPct));
+    }
+
+    // ─── resolveLoyaltyParams (écran « Vos avantages » / ConversionGuide) ────────
+
+    @Test
+    void resolveLoyaltyParams_appliesTierBonusToConversion_andResolvesAllValues() {
+        UUID clientId = UUID.randomUUID();
+        UUID restaurantId = UUID.randomUUID();
+        UUID tenant = UUID.randomUUID();
+
+        // Compte avec tenant + solde 2000 dans ce tenant.
+        LoyaltyAccount acc = accountWithTenant(clientId, restaurantId, 2000, tenant);
+        when(accountRepository.findAllByClientId(clientId)).thenReturn(List.of(acc));
+        when(accountRepository.sumBalanceByClientAndTenant(clientId, tenant)).thenReturn(2000);
+
+        // Palier résolu = "Signature" avec 20% de bonus dans la table tiers.
+        when(tierResolver.tierNameFor(2000, tenant)).thenReturn("Signature");
+        when(tierRepository.findAllByTenantId(tenant)).thenReturn(List.of(
+            tier(tenant, "Connaisseur", 0, "0.00"),
+            tier(tenant, "Signature", 1000, "20.00")));
+
+        // gain_rules : conversion de base 0.10 ; loyalty_rules : point_value 2.5 + 180j.
+        GainRule gr = gainRule(restaurantId, "0.1000");
+        when(gainRuleRepository.findByRestaurantIdAndDeletedAtIsNull(restaurantId)).thenReturn(Optional.of(gr));
+        LoyaltyRule lr = loyaltyRule(restaurantId, "2.5000");
+        lr.setExpiresAfterDays(180);
+        when(loyaltyRuleRepository.findFirstByRestaurantIdAndEnabledTrueOrderByCreatedAtDesc(restaurantId))
+            .thenReturn(Optional.of(lr));
+
+        var params = service.resolveLoyaltyParams(clientId, restaurantId);
+
+        // effective = 0.10 × (1 + 20/100) = 0.12
+        assertThat(params.conversionRatePct()).isEqualByComparingTo("0.12");
+        assertThat(params.pointValueMad()).isEqualByComparingTo("2.5000");
+        assertThat(params.benefitDurationDays()).isEqualTo(180);
+        assertThat(params.tierName()).isEqualTo("Signature");
+        assertThat(params.tierBonusPct()).isEqualByComparingTo("20.00");
+    }
+
+    @Test
+    void resolveLoyaltyParams_noTierBonus_keepsBaseConversion() {
+        UUID clientId = UUID.randomUUID();
+        UUID restaurantId = UUID.randomUUID();
+        UUID tenant = UUID.randomUUID();
+
+        LoyaltyAccount acc = accountWithTenant(clientId, restaurantId, 50, tenant);
+        when(accountRepository.findAllByClientId(clientId)).thenReturn(List.of(acc));
+        when(accountRepository.sumBalanceByClientAndTenant(clientId, tenant)).thenReturn(50);
+        when(tierResolver.tierNameFor(50, tenant)).thenReturn("Connaisseur");
+        // tiers du tenant : Connaisseur a 0% de bonus.
+        when(tierRepository.findAllByTenantId(tenant)).thenReturn(List.of(tier(tenant, "Connaisseur", 0, "0.00")));
+
+        GainRule gr = gainRule(restaurantId, "0.0500");
+        when(gainRuleRepository.findByRestaurantIdAndDeletedAtIsNull(restaurantId)).thenReturn(Optional.of(gr));
+        when(loyaltyRuleRepository.findFirstByRestaurantIdAndEnabledTrueOrderByCreatedAtDesc(restaurantId))
+            .thenReturn(Optional.of(loyaltyRule(restaurantId, "1.0000")));
+
+        var params = service.resolveLoyaltyParams(clientId, restaurantId);
+
+        assertThat(params.conversionRatePct()).isEqualByComparingTo("0.05"); // bonus 0 → inchangé
+        assertThat(params.tierBonusPct()).isEqualByComparingTo("0.00");
+        assertThat(params.tierName()).isEqualTo("Connaisseur");
+    }
+
+    @Test
+    void resolveLoyaltyParams_noRulesNoAccount_usesDocumentedDefaults() {
+        UUID clientId = UUID.randomUUID();
+        UUID restaurantId = UUID.randomUUID();
+
+        // Aucun compte → tenant null → fallback resolver, total 0, pas d'appel sumBalance.
+        when(accountRepository.findAllByClientId(clientId)).thenReturn(List.of());
+        when(tierResolver.tierNameFor(0, null)).thenReturn("Connaisseur");
+        // Pas de gain_rules ni loyalty_rules.
+        when(gainRuleRepository.findByRestaurantIdAndDeletedAtIsNull(restaurantId)).thenReturn(Optional.empty());
+        when(loyaltyRuleRepository.findFirstByRestaurantIdAndEnabledTrueOrderByCreatedAtDesc(restaurantId))
+            .thenReturn(Optional.empty());
+
+        var params = service.resolveLoyaltyParams(clientId, restaurantId);
+
+        assertThat(params.conversionRatePct()).isEqualByComparingTo("0.1000"); // défaut GainRule
+        assertThat(params.pointValueMad()).isEqualByComparingTo("1.0000");     // défaut DEFAULT_POINT_VALUE_MAD
+        assertThat(params.benefitDurationDays()).isEqualTo(365);               // défaut LoyaltyRule
+        assertThat(params.tierBonusPct()).isEqualByComparingTo("0");           // pas de tenant → pas de bonus
+        assertThat(params.tierName()).isEqualTo("Connaisseur");
+        // tenant null → on n'agrège jamais de solde.
+        verify(accountRepository, never()).sumBalanceByClientAndTenant(any(), any());
+    }
+
+    @Test
+    void resolveLoyaltyParams_fallbackTier_noTiersRow_bonusZero() {
+        UUID clientId = UUID.randomUUID();
+        UUID restaurantId = UUID.randomUUID();
+        UUID tenant = UUID.randomUUID();
+
+        LoyaltyAccount acc = accountWithTenant(clientId, restaurantId, 800, tenant);
+        when(accountRepository.findAllByClientId(clientId)).thenReturn(List.of(acc));
+        when(accountRepository.sumBalanceByClientAndTenant(clientId, tenant)).thenReturn(800);
+        // resolver renvoie un palier canonique mais la table tiers est VIDE pour ce tenant.
+        when(tierResolver.tierNameFor(800, tenant)).thenReturn("Grand Cru");
+        when(tierRepository.findAllByTenantId(tenant)).thenReturn(List.of());
+
+        GainRule gr = gainRule(restaurantId, "0.1000");
+        when(gainRuleRepository.findByRestaurantIdAndDeletedAtIsNull(restaurantId)).thenReturn(Optional.of(gr));
+        when(loyaltyRuleRepository.findFirstByRestaurantIdAndEnabledTrueOrderByCreatedAtDesc(restaurantId))
+            .thenReturn(Optional.of(loyaltyRule(restaurantId, "1.0000")));
+
+        var params = service.resolveLoyaltyParams(clientId, restaurantId);
+
+        // Aucune ligne tiers → on n'invente pas de bonus → conversion inchangée.
+        assertThat(params.tierBonusPct()).isEqualByComparingTo("0");
+        assertThat(params.conversionRatePct()).isEqualByComparingTo("0.1000");
+        assertThat(params.tierName()).isEqualTo("Grand Cru");
     }
 
     // ─── findAccount / findOrCreate / findByClient ──────────────────────────────
@@ -206,6 +346,101 @@ class LoyaltyServiceTest {
 
         service.earnPoints(new LoyaltyEarnDto(client, resto, 5, null, "manual"));
         assertThat(acc.getBalance()).isEqualTo(5);
+    }
+
+    // ─── CH-3 : franchissement de palier (TierReachedEvent) ─────────────────────────
+    @Test
+    void earnPoints_crossesTierUp_publishesTierReachedEvent() {
+        UUID client = UUID.randomUUID(), resto = UUID.randomUUID(), tenant = UUID.randomUUID();
+        LoyaltyAccount acc = account(client, resto, 90);
+        ReflectionTestUtils.setField(acc, "tenantId", tenant);
+        when(accountRepository.findAllByClientId(client)).thenReturn(List.of(acc));
+        when(transactionRepository.save(any(LoyaltyTransaction.class))).thenAnswer(i -> i.getArgument(0));
+        when(accountRepository.save(any(LoyaltyAccount.class))).thenAnswer(i -> i.getArgument(0));
+        when(accountRepository.sumBalanceByClientAndTenant(client, tenant)).thenReturn(90); // avant le crédit
+        when(tierResolver.tierNameFor(90, tenant)).thenReturn("Ruby");   // avant
+        when(tierResolver.tierNameFor(110, tenant)).thenReturn("Gold");  // après → franchit
+
+        service.earnPoints(new LoyaltyEarnDto(client, resto, 20, null, "scan")); // 90 → 110 : franchit Gold
+
+        ArgumentCaptor<Object> cap = ArgumentCaptor.forClass(Object.class);
+        verify(eventPublisher, times(2)).publishEvent(cap.capture()); // LoyaltyEarnedEvent + TierReachedEvent
+        TierReachedEvent tr = cap.getAllValues().stream()
+            .filter(e -> e instanceof TierReachedEvent).map(e -> (TierReachedEvent) e).findFirst().orElse(null);
+        assertThat(tr).as("TierReachedEvent publié au franchissement").isNotNull();
+        assertThat(tr.tierName()).isEqualTo("Gold");
+        assertThat(tr.clientId()).isEqualTo(client);
+        assertThat(tr.totalPoints()).isEqualTo(110);
+    }
+
+    @Test
+    void earnPoints_sameTier_noTierReachedEvent() {
+        UUID client = UUID.randomUUID(), resto = UUID.randomUUID(), tenant = UUID.randomUUID();
+        LoyaltyAccount acc = account(client, resto, 90);
+        ReflectionTestUtils.setField(acc, "tenantId", tenant);
+        when(accountRepository.findAllByClientId(client)).thenReturn(List.of(acc));
+        when(transactionRepository.save(any(LoyaltyTransaction.class))).thenAnswer(i -> i.getArgument(0));
+        when(accountRepository.save(any(LoyaltyAccount.class))).thenAnswer(i -> i.getArgument(0));
+        when(accountRepository.sumBalanceByClientAndTenant(client, tenant)).thenReturn(90);
+        when(tierResolver.tierNameFor(90, tenant)).thenReturn("Ruby"); // avant
+        when(tierResolver.tierNameFor(95, tenant)).thenReturn("Ruby"); // après → même palier
+
+        service.earnPoints(new LoyaltyEarnDto(client, resto, 5, null, "scan")); // 90 → 95 : reste Ruby
+
+        ArgumentCaptor<Object> cap = ArgumentCaptor.forClass(Object.class);
+        verify(eventPublisher, times(1)).publishEvent(cap.capture()); // seulement LoyaltyEarnedEvent
+        assertThat(cap.getAllValues()).noneMatch(e -> e instanceof TierReachedEvent);
+    }
+
+    // ─── CL-3 : gate enrollment (earn réservé aux membres sur tenant à adhésion) ─────
+    @Test
+    void earnPoints_gatedTenant_nonMember_throwsForbidden_noCredit() {
+        UUID client = UUID.randomUUID(), resto = UUID.randomUUID(), tenant = UUID.randomUUID();
+        LoyaltyAccount acc = account(client, resto, 0);
+        ReflectionTestUtils.setField(acc, "tenantId", tenant);
+        when(accountRepository.findAllByClientId(client)).thenReturn(List.of(acc));
+        when(tenantDirectory.slugById(tenant)).thenReturn(Optional.of("palmeraie")); // tenant à adhésion
+        when(membershipDirectory.isActiveMember(client, tenant)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.earnPoints(new LoyaltyEarnDto(client, resto, 20, null, "scan")))
+            .isInstanceOf(ForbiddenException.class);
+
+        verify(transactionRepository, never()).save(any());     // aucun crédit
+        verify(eventPublisher, never()).publishEvent(any());     // aucun event
+    }
+
+    @Test
+    void earnPoints_gatedTenant_activeMember_credits() {
+        UUID client = UUID.randomUUID(), resto = UUID.randomUUID(), tenant = UUID.randomUUID();
+        LoyaltyAccount acc = account(client, resto, 0);
+        ReflectionTestUtils.setField(acc, "tenantId", tenant);
+        when(accountRepository.findAllByClientId(client)).thenReturn(List.of(acc));
+        when(tenantDirectory.slugById(tenant)).thenReturn(Optional.of("palmeraie"));
+        when(membershipDirectory.isActiveMember(client, tenant)).thenReturn(true);
+        when(transactionRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(accountRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(accountRepository.sumBalanceByClientAndTenant(client, tenant)).thenReturn(0);
+
+        var tx = service.earnPoints(new LoyaltyEarnDto(client, resto, 20, null, "scan"));
+
+        assertThat(tx).isNotNull();
+        verify(transactionRepository).save(any());
+    }
+
+    @Test
+    void earnPoints_publicTenant_noMembershipCheck() {
+        UUID client = UUID.randomUUID(), resto = UUID.randomUUID(), tenant = UUID.randomUUID();
+        LoyaltyAccount acc = account(client, resto, 0);
+        ReflectionTestUtils.setField(acc, "tenantId", tenant);
+        when(accountRepository.findAllByClientId(client)).thenReturn(List.of(acc));
+        when(tenantDirectory.slugById(tenant)).thenReturn(Optional.of("oneclick")); // public → pas de gate
+        when(transactionRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(accountRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(accountRepository.sumBalanceByClientAndTenant(client, tenant)).thenReturn(0);
+
+        service.earnPoints(new LoyaltyEarnDto(client, resto, 20, null, "scan"));
+
+        verify(membershipDirectory, never()).isActiveMember(any(), any());
     }
 
     // ─── snap2earn ──────────────────────────────────────────────────────────────
@@ -345,6 +580,17 @@ class LoyaltyServiceTest {
 
         assertThat(sa.getBalance()).isEqualTo(70);
         assertThat(ra.getBalance()).isEqualTo(30);
+        // B7 — event PointsGiftedEvent publié (fromUserId=sender, toUserId=receiver, points=30)
+        org.mockito.ArgumentCaptor<com.onesley.oneclick.shared.events.PointsGiftedEvent> captor =
+            org.mockito.ArgumentCaptor.forClass(com.onesley.oneclick.shared.events.PointsGiftedEvent.class);
+        verify(eventPublisher, org.mockito.Mockito.atLeastOnce()).publishEvent(captor.capture());
+        com.onesley.oneclick.shared.events.PointsGiftedEvent gifted = captor.getAllValues().stream()
+            .filter(e -> e instanceof com.onesley.oneclick.shared.events.PointsGiftedEvent)
+            .map(e -> (com.onesley.oneclick.shared.events.PointsGiftedEvent) e)
+            .findFirst().orElseThrow();
+        assertThat(gifted.fromUserId()).isEqualTo(sender);
+        assertThat(gifted.toUserId()).isEqualTo(receiver);
+        assertThat(gifted.points()).isEqualTo(30);
     }
 
     // ─── spendPoints ────────────────────────────────────────────────────────────
@@ -389,21 +635,75 @@ class LoyaltyServiceTest {
         assertThat(service.findGainRuleByRestaurant(resto2)).isNull();
     }
 
+    /**
+     * Finance Snap2Earn — {@code pointValueMad} exposé sur le DTO depuis la source
+     * de vérité {@code loyalty_rules.point_value} (table distincte de gain_rules).
+     */
+    @Test
+    void findGainRuleByRestaurant_exposesPointValueMad_fromLoyaltyRule() {
+        UUID resto = UUID.randomUUID();
+        when(gainRuleRepository.findByRestaurantIdAndDeletedAtIsNull(resto))
+            .thenReturn(Optional.of(gainRule(resto, "0.10")));
+        when(loyaltyRuleRepository.findFirstByRestaurantIdAndEnabledTrueOrderByCreatedAtDesc(resto))
+            .thenReturn(Optional.of(loyaltyRule(resto, "2.5000")));
+
+        GainRuleDto dto = service.findGainRuleByRestaurant(resto);
+        assertThat(dto).isNotNull();
+        assertThat(dto.pointValueMad()).isEqualByComparingTo(new BigDecimal("2.5000"));
+    }
+
+    /** Rétro-compat : aucune loyalty_rule configurée → défaut 1 pt = 1 MAD. */
+    @Test
+    void findGainRuleByRestaurant_pointValueMadDefaultsToOne_whenNoLoyaltyRule() {
+        UUID resto = UUID.randomUUID();
+        when(gainRuleRepository.findByRestaurantIdAndDeletedAtIsNull(resto))
+            .thenReturn(Optional.of(gainRule(resto, "0.10")));
+        when(loyaltyRuleRepository.findFirstByRestaurantIdAndEnabledTrueOrderByCreatedAtDesc(resto))
+            .thenReturn(Optional.empty());
+
+        GainRuleDto dto = service.findGainRuleByRestaurant(resto);
+        assertThat(dto).isNotNull();
+        assertThat(dto.pointValueMad()).isEqualByComparingTo(new BigDecimal("1.0000"));
+    }
+
+    /** {@code GainRule.toDto(..)} isolé : passe la valeur ; no-arg → défaut 1.0. */
+    @Test
+    void gainRule_toDto_exposesPointValueMad() {
+        GainRule rule = gainRule(UUID.randomUUID(), "0.10");
+        assertThat(rule.toDto(new BigDecimal("3.0000")).pointValueMad())
+            .isEqualByComparingTo(new BigDecimal("3.0000"));
+        // overload null-safe → défaut
+        assertThat(rule.toDto((BigDecimal) null).pointValueMad())
+            .isEqualByComparingTo(GainRule.DEFAULT_POINT_VALUE_MAD);
+        // no-arg (chemins d'écriture) → défaut 1 pt = 1 MAD
+        assertThat(rule.toDto().pointValueMad())
+            .isEqualByComparingTo(new BigDecimal("1.0000"));
+    }
+
     @Test
     void createGainRule_alreadyExists_throwsBadRequest() {
         UUID resto = UUID.randomUUID();
         when(gainRuleRepository.findByRestaurantIdAndDeletedAtIsNull(resto)).thenReturn(Optional.of(gainRule(resto, "0.10")));
         assertThatThrownBy(() -> service.createGainRule(new GainRuleCreateDto(
-            resto, new BigDecimal("0.15"), null, null, null))).isInstanceOf(BadRequestException.class);
+            resto, new BigDecimal("0.15"), null, null, null,
+            null, null, null, null, null))).isInstanceOf(BadRequestException.class);
     }
 
     @Test
-    void createGainRule_success_withOptionalFields() {
+    void createGainRule_success_withRuleBuilderFields() {
         UUID resto = UUID.randomUUID();
         when(gainRuleRepository.findByRestaurantIdAndDeletedAtIsNull(resto)).thenReturn(Optional.empty());
         when(gainRuleRepository.save(any(GainRule.class))).thenAnswer(i -> i.getArgument(0));
-        assertThat(service.createGainRule(new GainRuleCreateDto(
-            resto, new BigDecimal("0.15"), 50, 500, new BigDecimal("20.00")))).isNotNull();
+        // Lot 4b — round-trip des champs RuleBuilder legacy (point value / période / bénéfice / seuil).
+        var out = service.createGainRule(new GainRuleCreateDto(
+            resto, new BigDecimal("0.15"), 50, 500, new BigDecimal("20.00"),
+            new BigDecimal("1.5000"), "month", 1, 90, new BigDecimal("1000.00")));
+        assertThat(out).isNotNull();
+        assertThat(out.pointValueMad()).isEqualByComparingTo("1.5000"); // override RuleBuilder prime
+        assertThat(out.evalPeriodType()).isEqualTo("month");
+        assertThat(out.evalPeriodValue()).isEqualTo(1);
+        assertThat(out.benefitDurationDays()).isEqualTo(90);
+        assertThat(out.minSpendMonthly()).isEqualByComparingTo("1000.00");
         verify(entityManager).refresh(any());
     }
 
@@ -411,17 +711,25 @@ class LoyaltyServiceTest {
     void patchGainRule_notFound_throwsNotFound() {
         when(gainRuleRepository.findByIdAndDeletedAtIsNull(any())).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.patchGainRule(UUID.randomUUID(),
-            new GainRulePatchDto(null, null, null, null, null, null, null))).isInstanceOf(NotFoundException.class);
+            new GainRulePatchDto(null, null, null, null, null, null, null, null, null, null, null, null)))
+            .isInstanceOf(NotFoundException.class);
     }
 
     @Test
-    void patchGainRule_success_updatesFields() {
+    void patchGainRule_success_updatesRuleBuilderFields() {
         GainRule rule = gainRule(UUID.randomUUID(), "0.10");
         when(gainRuleRepository.findByIdAndDeletedAtIsNull(any())).thenReturn(Optional.of(rule));
         when(gainRuleRepository.save(any(GainRule.class))).thenAnswer(i -> i.getArgument(0));
         service.patchGainRule(rule.getId(), new GainRulePatchDto(
-            new BigDecimal("0.20"), 10, 100, new BigDecimal("5.00"), false, null, null));
+            new BigDecimal("0.20"), 10, 100, new BigDecimal("5.00"), false, null, null,
+            new BigDecimal("2.0000"), "week", 4, 30, new BigDecimal("500.00")));
         assertThat(rule.getConversionRate()).isEqualByComparingTo("0.20");
+        // Lot 4b — les champs RuleBuilder sont persistés sur l'entité.
+        assertThat(rule.getPointValueMad()).isEqualByComparingTo("2.0000");
+        assertThat(rule.getEvalPeriodType()).isEqualTo("week");
+        assertThat(rule.getEvalPeriodValue()).isEqualTo(4);
+        assertThat(rule.getBenefitDurationDays()).isEqualTo(30);
+        assertThat(rule.getMinSpendMonthly()).isEqualByComparingTo("500.00");
     }
 
     @Test
@@ -429,7 +737,7 @@ class LoyaltyServiceTest {
         GainRule rule = gainRule(UUID.randomUUID(), "0.10");
         when(gainRuleRepository.findByIdAndDeletedAtIsNull(any())).thenReturn(Optional.of(rule));
         assertThatThrownBy(() -> service.patchGainRule(rule.getId(),
-            new GainRulePatchDto(null, null, null, null, null, 400, 100)))
+            new GainRulePatchDto(null, null, null, null, null, 400, 100, null, null, null, null, null)))
             .isInstanceOf(BadRequestException.class);
     }
 

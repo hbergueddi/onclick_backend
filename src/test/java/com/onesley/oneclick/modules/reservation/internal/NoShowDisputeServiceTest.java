@@ -12,6 +12,8 @@ import com.onesley.oneclick.modules.reservation.api.NoShowDisputeDtos.ResolveDis
 import com.onesley.oneclick.security.RestaurantAccessGuard;
 import com.onesley.oneclick.security.SecurityHelper;
 import com.onesley.oneclick.shared.events.NoShowDisputeResolvedEvent;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,6 +35,8 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -69,6 +73,7 @@ class NoShowDisputeServiceTest {
     @Mock RestaurantAccessGuard restaurantAccessGuard;
     @Mock ApplicationEventPublisher eventPublisher;
     @Mock UserDirectoryApi userDirectory;
+    @Mock EntityManager entityManager;
 
     NoShowDisputeService service;
 
@@ -77,6 +82,14 @@ class NoShowDisputeServiceTest {
         service = new NoShowDisputeService(
             disputeRepository, reservationRepository, restaurantAccessGuard, eventPublisher,
             userDirectory, FIXED_CLOCK);
+        // B8 : create() résout désormais les staff destinataires via une requête native
+        // (`staffRecipientIdsForRestaurant`). En unitaire, l'EntityManager (champ @PersistenceContext)
+        // est injecté par réflexion et renvoie une liste vide → staffRecipientIds vide, aucun staff notifié.
+        ReflectionTestUtils.setField(service, "entityManager", entityManager);
+        Query staffQuery = mock(Query.class);
+        lenient().when(entityManager.createNativeQuery(anyString())).thenReturn(staffQuery);
+        lenient().when(staffQuery.setParameter(anyString(), any())).thenReturn(staffQuery);
+        lenient().when(staffQuery.getResultList()).thenReturn(List.of());
         when(disputeRepository.save(any())).thenAnswer(i -> i.getArgument(0));
         // Enrichissement DTO : par défaut, annuaire vide + aucun contexte résa (les tests qui
         // assertent les noms surchargent ces stubs). LENIENT car les chemins d'erreur ne mappent pas.

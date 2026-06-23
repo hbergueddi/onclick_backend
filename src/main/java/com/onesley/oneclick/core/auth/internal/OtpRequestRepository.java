@@ -16,4 +16,13 @@ import java.util.UUID;
 @Repository
 public interface OtpRequestRepository extends JpaRepository<OtpRequest, UUID>, JpaSpecificationExecutor<OtpRequest> {
     java.util.List<OtpRequest> findAllByUserId(java.util.UUID userId);
+
+    /**
+     * Dernier OTP non encore vérifié pour un user et un purpose donné (le plus récent).
+     * Utilisé par le flow « mot de passe oublié » (reset_password) où le client ne connaît
+     * pas l'{@code otpId} (anti-énumération : {@code forgot-password} ne renvoie pas d'id) :
+     * la vérification se fait par (email → user) + purpose + code.
+     */
+    java.util.Optional<OtpRequest> findTopByUserIdAndPurposeAndVerifiedAtIsNullOrderByCreatedAtDesc(
+        java.util.UUID userId, String purpose);
 }

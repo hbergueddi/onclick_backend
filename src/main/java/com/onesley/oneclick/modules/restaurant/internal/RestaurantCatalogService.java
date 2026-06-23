@@ -38,6 +38,7 @@ public class RestaurantCatalogService {
     private final RestaurantRepository repository;
     private final LifecycleEventService lifecycleEventService;
     private final TenantScope tenantScope;
+    private final RestaurantPhotoService photoService;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -47,14 +48,25 @@ public class RestaurantCatalogService {
         if (city != null && !city.isBlank()) {
             spec = spec.and((root, q, cb) -> cb.equal(root.get("city"), city));
         }
+        // Périmètre tenant (fuite de périmètre) :
+        //  • tenantId EXPLICITE (ex: écran restaurants d'un programme via le reveal) → honoré, mais
+        //    intersecté avec le périmètre VISIBLE (oneclick ∪ memberships) : un non-membre ne peut
+        //    pas énumérer un programme dont il n'est pas membre.
+        //  • SANS tenantId (découverte GÉNÉRIQUE « Explore ») → tenant public « oneclick » UNIQUEMENT :
+        //    un programme (PCC/HOMU…) ne remonte JAMAIS dans le catalogue grand public, même pour un
+        //    membre (son contenu de club passe par le reveal dédié, pas par Explore).
+        //  • SUPERADMIN (scope null) → aucun filtre (vue cross-tenant).
         if (tenantId != null) {
             spec = spec.and((root, q, cb) -> cb.equal(root.get("tenantId"), tenantId));
-        }
-        // Périmètre tenant (fuite de périmètre) : un client ne voit que {tenant public} ∪ ses
-        // memberships ; SUPERADMIN (null) → aucun filtre. Catalogue PUBLIC : non authentifié → public seul.
-        Set<UUID> visible = tenantScope.visibleTenantIdsOrNull();
-        if (visible != null) {
-            spec = spec.and((root, q, cb) -> root.get("tenantId").in(visible));
+            Set<UUID> visible = tenantScope.visibleTenantIdsOrNull();
+            if (visible != null) {
+                spec = spec.and((root, q, cb) -> root.get("tenantId").in(visible));
+            }
+        } else {
+            Set<UUID> publicScope = tenantScope.publicCatalogScopeOrNull();
+            if (publicScope != null) {
+                spec = spec.and((root, q, cb) -> root.get("tenantId").in(publicScope));
+            }
         }
         return repository.findAll(spec, PageRequest.of(page, size, Sort.by("name"))).map(Restaurant::toDto);
     }
@@ -69,7 +81,9 @@ public class RestaurantCatalogService {
         if (!tenantScope.canSeeTenant(r.getTenantId())) {
             throw new NotFoundException("Restaurant", id);
         }
-        return r.toDto();
+        // Spotlight : enrichit la galerie « Identité visuelle » (principale + secondaires).
+        // Uniquement sur le détail (les listes Explore/search n'exposent que la photo principale → pas de N+1).
+        return r.toDto().withPhotos(photoService.publicList(id, r.getImage()));
     }
 
     @Transactional

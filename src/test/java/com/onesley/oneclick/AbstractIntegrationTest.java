@@ -88,16 +88,63 @@ public abstract class AbstractIntegrationTest {
     @Autowired
     protected org.springframework.jdbc.core.JdbcTemplate jdbc;
 
+    @Autowired
+    protected org.springframework.transaction.PlatformTransactionManager txManager;
+
+    /** Baseline temporelle pour scoper le nettoyage des events Modulith créés par le test. */
+    private java.time.Instant eventPublicationBaseline;
+
+    @org.junit.jupiter.api.BeforeEach
+    void captureEventPublicationBaseline() {
+        eventPublicationBaseline = java.time.Instant.now();
+    }
+
+    /**
+     * Isolation events (racine systémique) : clôt les publications Spring Modulith créées PENDANT ce
+     * test (scopées {@code publication_date >= baseline}) pour qu'elles ne restent pas <b>incomplètes</b>
+     * dans la DB partagée {@code oneclick_enterprise}. Sans ça, ces lignes étaient rejouées au boot du
+     * backend live (profil enterprise, {@code republish-outstanding-events-on-restart=true}) et
+     * provoquaient des violations de FK en boucle (listener référençant une donnée de test supprimée).
+     * Scopé à la fenêtre du test → ne touche aucune ligne préexistante (live/autres).
+     */
+    @org.junit.jupiter.api.AfterEach
+    void completeTestEventPublications() {
+        if (eventPublicationBaseline == null) return;
+        // L'UPDATE de complétion s'exécute dans une transaction NEUVE en lecture-écriture
+        // (REQUIRES_NEW, readOnly=false) : il ne doit PAS hériter d'un éventuel
+        // @Transactional(readOnly = true) posé sur la méthode de test — sinon SQLSTATE 25006
+        // « cannot execute UPDATE in a read-only transaction » (cf SystemHealthDashboardPublisherIntegrationTest).
+        var tx = new org.springframework.transaction.support.TransactionTemplate(txManager);
+        tx.setPropagationBehavior(
+            org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        tx.setReadOnly(false);
+        tx.executeWithoutResult(status -> jdbc.update(
+            "UPDATE event_publication SET completion_date = now() "
+            + "WHERE completion_date IS NULL AND publication_date >= ?",
+            java.sql.Timestamp.from(eventPublicationBaseline)));
+    }
+
     /**
      * Bearer signé pour un user RÉEL du rôle donné (lookup DB). Les authorities
      * ne viennent PAS du claim {@code role} mais du graphe role→permissions chargé
      * en DB par {@link com.onesley.oneclick.security.UserRoleAuthoritiesConverter} —
      * d'où un user existant requis (CLIENT, RESTAURATEUR, GROUP_ADMIN seedés).
+     *
+     * <p><b>Déterminisme + tenant canonique</b> : la sélection est ordonnée pour (a) préférer le
+     * tenant {@code oneclick} (tenant de référence des tests) puis (b) trancher par {@code id}. Sans
+     * cet {@code ORDER BY}, {@code LIMIT 1} renvoyait un user arbitraire (ordre de scan Postgres) :
+     * sur 17050 RESTAURATEUR seedés, 20 ne sont PAS oneclick → les tests tenant-scopés (gestion du
+     * parc {@code resource_bookings}, no-show-stats…) tombaient en 404/scope vide de façon flaky
+     * selon les écritures des tests précédents. Préférer oneclick garantit que le user résolu partage
+     * le tenant des fixtures créées sous {@code oneclick}.</p>
      */
     protected String bearerForRole(String roleCode) {
         String id = jdbc.queryForObject(
             "SELECT u.id::text FROM users u JOIN roles r ON r.id = u.role_id "
-            + "WHERE r.code = ? AND u.deleted_at IS NULL LIMIT 1", String.class, roleCode);
+            + "WHERE r.code = ? AND u.deleted_at IS NULL "
+            + "ORDER BY (u.tenant_id = (SELECT id FROM tenants WHERE slug = 'oneclick' "
+            + "AND deleted_at IS NULL)) DESC NULLS LAST, u.id "
+            + "LIMIT 1", String.class, roleCode);
         return jwtIssuer.issueAccessToken(java.util.UUID.fromString(id), roleCode).token();
     }
 

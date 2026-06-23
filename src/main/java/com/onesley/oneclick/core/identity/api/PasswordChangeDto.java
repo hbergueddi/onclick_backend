@@ -17,7 +17,7 @@ public record PasswordChangeDto(
     @Size(min = 1, max = 64) String currentPassword,
 
     @NotBlank(message = "newPassword requis")
-    @Size(min = 8, max = 100, message = "newPassword doit faire entre 8 et 100 caractères")
+    @Size(min = 10, max = 100, message = "newPassword doit faire entre 10 et 100 caractères")  // P1 — min 10 (NIST)
     @Size(min = 1, max = 64) String newPassword
 ) {
 }

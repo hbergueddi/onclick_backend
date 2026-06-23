@@ -5,9 +5,11 @@ import com.onesley.oneclick.core.notification.api.NotificationDtos.DeviceTokenCr
 import com.onesley.oneclick.core.notification.api.NotificationDtos.NotificationCreateDto;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.security.SecurityHelper;
+import com.onesley.oneclick.shared.events.NotificationCreatedEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -29,6 +31,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -44,6 +47,7 @@ class NotificationServiceTest {
     @Mock NotificationCampaignRepository campaignRepo;
     @Mock DeviceTokenRepository tokenRepo;
     @Mock ApplicationEventPublisher events;
+    @Mock NotificationRecipientGuard recipientGuard;
     @InjectMocks NotificationService service;
 
     @BeforeEach
@@ -51,6 +55,8 @@ class NotificationServiceTest {
         lenient().when(notifRepo.save(any())).thenAnswer(i -> i.getArgument(0));
         lenient().when(campaignRepo.save(any())).thenAnswer(i -> i.getArgument(0));
         lenient().when(tokenRepo.save(any())).thenAnswer(i -> i.getArgument(0));
+        // par défaut : destinataire présent (les tests "missing" overrident).
+        lenient().when(recipientGuard.exists(any())).thenReturn(true);
     }
 
     private Notification notif() {
@@ -72,6 +78,46 @@ class NotificationServiceTest {
     void create_withChannelAndDefault() {
         assertThat(service.create(new NotificationCreateDto(UUID.randomUUID(), "promotion", "push", "T", "B", "/link"))).isNotNull();
         assertThat(service.create(new NotificationCreateDto(UUID.randomUUID(), "system", null, "T", "B", null))).isNotNull();
+    }
+
+    @Test
+    void create_recipientMissing_skipsInsertAndReturnsNull() {
+        // Garde-fou FK : destinataire absent de users (ex: event Modulith dormant rejoué après
+        // suppression du compte) → aucune insertion, aucun event publié, retour null.
+        when(recipientGuard.exists(any())).thenReturn(false);
+        var result = service.create(new NotificationCreateDto(UUID.randomUUID(), "reservation", "inapp", "T", "B", "/l"));
+        assertThat(result).isNull();
+        verify(notifRepo, never()).save(any());
+        verify(events, never()).publishEvent(any());
+    }
+
+    @Test
+    void createReservationReminder_recipientMissing_skips() {
+        when(recipientGuard.exists(any())).thenReturn(false);
+        service.createReservationReminder(UUID.randomUUID(), "T", "B", "/l", UUID.randomUUID(), "h2");
+        verify(notifRepo, never()).save(any());
+        verify(events, never()).publishEvent(any());
+    }
+
+    @Test
+    void createReservationReminder_writesMetadataChannelPush_andPublishesCreatedEvent() {
+        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+        UUID recipient = UUID.randomUUID();
+        UUID resa = UUID.randomUUID();
+
+        service.createReservationReminder(recipient, "Réservation dans 2h", "À tout à l'heure.",
+            "/pocket/oneclick?tab=suivi", resa, "h2");
+
+        verify(notifRepo).save(captor.capture());
+        Notification saved = captor.getValue();
+        assertThat(saved.getRecipientUserId()).isEqualTo(recipient);
+        assertThat(saved.getType()).isEqualTo("reservation");
+        assertThat(saved.getChannel()).isEqualTo("push");
+        assertThat(saved.getLink()).isEqualTo("/pocket/oneclick?tab=suivi");
+        assertThat(saved.getMetadata())
+            .containsEntry("reservationId", resa.toString())
+            .containsEntry("slot", "h2");
+        verify(events).publishEvent(any(NotificationCreatedEvent.class));
     }
 
     @Test

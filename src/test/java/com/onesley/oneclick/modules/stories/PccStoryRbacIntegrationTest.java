@@ -57,6 +57,11 @@ class PccStoryRbacIntegrationTest extends AbstractIntegrationTest {
         return jwtIssuer.issueAccessToken(userIdByEmail(email), roleCode).token();
     }
 
+    private UUID tenantIdBySlug(String slug) {
+        return UUID.fromString(jdbc.queryForObject(
+            "SELECT id::text FROM tenants WHERE slug = ?", String.class, slug));
+    }
+
     @AfterEach
     void cleanup() {
         for (UUID id : createdIds) {
@@ -302,6 +307,41 @@ class PccStoryRbacIntegrationTest extends AbstractIntegrationTest {
         // Membre : 403 (pas de stats pour un membre).
         assertThat(restTemplate.exchange(url("/api/pcc/stories/view-counts"),
             HttpMethod.GET, jwtEntity(member), String.class).getStatusCode())
+            .isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    // ─── I. Lot 4b : super-admin publie une story pour un tenant CIBLE (POST /admin) ──
+
+    @Test
+    void superAdmin_adminCreate_forTargetTenant_succeeds() throws Exception {
+        UUID palmeraie = tenantIdBySlug("palmeraie");
+        ResponseEntity<String> resp = restTemplate.exchange(
+            url("/api/pcc/stories/admin?tenantId=" + palmeraie),
+            HttpMethod.POST,
+            jsonJwtEntity("{\"mediaUrl\":\"https://cdn/admin-story.jpg\",\"mediaType\":\"image\",\"caption\":\"Story poussée par le super-admin\"}", adminBearer()),
+            String.class);
+        assertThat(resp.getStatusCode())
+            .as("admin create story — reçu %s, body=%s", resp.getStatusCode(), resp.getBody())
+            .isEqualTo(HttpStatus.CREATED);
+        JsonNode created = om.readTree(resp.getBody());
+        UUID id = UUID.fromString(created.get("id").asText());
+        createdIds.add(id);
+        assertThat(created.get("tenantId").asText()).isEqualTo(palmeraie.toString());
+        Integer cnt = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM pcc_stories WHERE id = ? AND tenant_id = ?", Integer.class, id, palmeraie);
+        assertThat(cnt).isEqualTo(1);
+    }
+
+    @Test
+    void tenantStaff_adminCreate_forbidden_lacksUpdateTenants() {
+        UUID palmeraie = tenantIdBySlug("palmeraie");
+        // L'owner palmeraie a CREATE:STORIES mais PAS UPDATE:TENANTS (SUPERADMIN-only) → 403 sur /admin.
+        String owner = bearerFor(PALMERAIE_OWNER);
+        assertThat(restTemplate.exchange(
+            url("/api/pcc/stories/admin?tenantId=" + palmeraie),
+            HttpMethod.POST,
+            jsonJwtEntity("{\"mediaUrl\":\"https://cdn/x.jpg\",\"caption\":\"X\"}", owner),
+            String.class).getStatusCode())
             .isEqualTo(HttpStatus.FORBIDDEN);
     }
 

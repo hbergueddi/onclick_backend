@@ -56,10 +56,13 @@ public class EventService {
             }
             spec = spec.and((root, q, cb) -> cb.equal(root.get("tenantId"), tenantId));
         } else {
-            // Pas de tenantId : scoper par défaut au périmètre visible. SUPERADMIN (null) → aucun filtre.
-            Set<UUID> visible = tenantScope.visibleTenantIdsOrNull();
-            if (visible != null) {
-                spec = spec.and((root, q, cb) -> root.get("tenantId").in(visible));
+            // Pas de tenantId = découverte GÉNÉRIQUE : tenant public « oneclick » UNIQUEMENT — un
+            // programme (PCC/HOMU) ne remonte JAMAIS ses events dans le flux générique, même pour un
+            // membre (son contenu de club passe par le reveal = tenantId explicite ci-dessus).
+            // SUPERADMIN (null) → aucun filtre. Même règle que le catalogue restaurants (fuite de périmètre).
+            Set<UUID> publicScope = tenantScope.publicCatalogScopeOrNull();
+            if (publicScope != null) {
+                spec = spec.and((root, q, cb) -> root.get("tenantId").in(publicScope));
             }
         }
         if (restaurantId != null) spec = spec.and((root, q, cb) -> cb.equal(root.get("restaurantId"), restaurantId));

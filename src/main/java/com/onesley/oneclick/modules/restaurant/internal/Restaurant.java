@@ -152,7 +152,7 @@ public class Restaurant extends SoftDeletableAuditedEntity {
             tags == null ? java.util.List.of() : java.util.List.of(tags),
             loungePts == null ? 0 : loungePts, image, cuisine, maxStaff, groupId,
             googlePlaceId, googleRating, googleReviewsCount, websiteUrl, openingHours, googleUpdatedAt,
-            getCreatedAt(), onboardingCompletedAt);
+            getCreatedAt(), onboardingCompletedAt, java.util.List.of());
     }
 
     @Override

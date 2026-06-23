@@ -13,6 +13,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -78,6 +79,20 @@ public class ResourceBookingController {
     public ResponseEntity<ResourceDto> createResource(@Valid @RequestBody ResourceCreateDto dto) {
         ResourceDto r = service.createResource(dto);
         return ResponseEntity.created(URI.create("/api/resource-bookings/resources/" + r.id())).body(r);
+    }
+
+    @PatchMapping("/resources/{id}")
+    @Operation(summary = "P1.3 — édition partielle d'une ressource (COALESCE ; type verrouillé)")
+    @PreAuthorize("hasAuthority('UPDATE:RESOURCE_BOOKINGS')")
+    public ResourceDto updateResource(@PathVariable UUID id, @Valid @RequestBody ResourceUpdateDto dto) {
+        return service.updateResource(id, dto);
+    }
+
+    @PatchMapping("/resources/{id}/enabled")
+    @Operation(summary = "P1.3 — active/désactive une ressource (toggle parc)")
+    @PreAuthorize("hasAuthority('UPDATE:RESOURCE_BOOKINGS')")
+    public ResourceDto setResourceEnabled(@PathVariable UUID id, @Valid @RequestBody ResourceEnabledPatchDto dto) {
+        return service.setResourceEnabled(id, dto.enabled());
     }
 
     @DeleteMapping("/resources/{id}")
@@ -155,6 +170,18 @@ public class ResourceBookingController {
         // ABAC service : staff/admin uniquement (un CLIENT → 403) + scope tenant du caller
         // (anti-spoof : le tenant n'est jamais un paramètre client, il vient du JWT).
         return PageResponse.from(service.findTenantBookings(resourceId, status, page, size));
+    }
+
+    @GetMapping("/no-show-stats")
+    @Operation(summary = "P1.4 — assiduité par organisateur (no-show stats) du tenant sur [from, to)")
+    @PreAuthorize("hasAuthority('VIEW:BOOKINGS')")
+    public List<NoShowStatsDto> noShowStats(
+        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to
+    ) {
+        // Scope tenant + ABAC staff/admin résolus côté service (calque exact de findTenantBookings) :
+        // le tenant vient du JWT, jamais d'un paramètre client (anti-spoof) ; un CLIENT → 403.
+        return service.noShowStats(from, to);
     }
 
     /** Push STOMP best-effort du board staff (un échec de push ne casse jamais la mutation). */

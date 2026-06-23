@@ -29,6 +29,7 @@ public class TenantService {
     private final TenantRepository repository;
     private final TenantBrandingRepository brandingRepository;
     private final TenantFeatureRepository featureRepository;
+    private final CompanySettingsRepository companySettingsRepository;
 
     private static final Set<String> VALID_STATUSES = Set.of("active", "paused", "archived");
 
@@ -43,7 +44,13 @@ public class TenantService {
         Tenant t = repository.findById(id)
             .filter(x -> x.getDeletedAt() == null)
             .orElseThrow(() -> new NotFoundException("Tenant", id));
-        return t.toDto();
+        // legalName (raison sociale) enrichi uniquement sur la vue détail (SUPERADMIN). Lookup
+        // company_settings null-safe (Optional) ; absent → legalName null. La propriété tenantId de
+        // l'entité étant un UUID, on passe l'UUID directement.
+        String legalName = companySettingsRepository.findByTenantId(id)
+            .map(CompanySettings::getRaisonSociale)
+            .orElse(null);
+        return t.toDto(legalName);
     }
 
     @Cacheable(value = CacheConfig.CACHE_TENANTS_BY_SLUG, key = "#slug")

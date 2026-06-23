@@ -92,7 +92,9 @@ public class AuditLog {
 
     /** Mapping vers le DTO public exposé hors du module. */
     public AuditLogDto toDto() {
-        return new AuditLogDto(id, userId, tenantId, entityType, entityId, action, diff,
+        // userName null ici (base/écriture) — enrichi en batch par AuditLogService.findAuditLogs
+        // via UserDirectoryApi (anti-N+1). Pas de résolution de nom sur le chemin d'écriture.
+        return new AuditLogDto(id, userId, null, tenantId, entityType, entityId, action, diff,
             ipAddress, userAgent, createdAt);
     }
 

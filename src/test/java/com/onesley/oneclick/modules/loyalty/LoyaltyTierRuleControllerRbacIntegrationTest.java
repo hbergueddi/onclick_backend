@@ -18,9 +18,11 @@ import static org.assertj.core.api.Assertions.assertThat;
  * (filter chain → JwtDecoder → UserRoleAuthoritiesConverter → @PreAuthorize →
  * service → repo → DB).
  *
- * <p>Contrat : ressource admin-only (SUPERADMIN). On NE réutilise PAS {@code *:LOYALTY}
- * (que STAFF/RESTAURATEUR détiennent en partie) → RESTAURATEUR et CLIENT obtiennent
- * 403, ce qui verrouille l'absence de sur-grant.
+ * <p>Contrat (après migration V99) : la MODIFICATION (CREATE/UPDATE/DELETE) reste
+ * admin-only (SUPERADMIN). La LECTURE (VIEW) est accordée en plus au RESTAURATEUR et
+ * au GROUP_ADMIN (bloc « Paliers globaux Lounge » en ProDesk) → GET = 200, mais
+ * POST/PATCH/DELETE = 403 (pas de sur-grant). CLIENT n'a aucun grant LOYALTY_TIER →
+ * 403 même sur GET.
  */
 class LoyaltyTierRuleControllerRbacIntegrationTest extends AbstractIntegrationTest {
 
@@ -75,7 +77,28 @@ class LoyaltyTierRuleControllerRbacIntegrationTest extends AbstractIntegrationTe
     }
 
     @Test
+    void restaurateur_list_returns200_readGranted() {
+        // V99 : VIEW:LOYALTY_TIER accordé au RESTAURATEUR (lecture seule).
+        int status = restTemplate.exchange(
+            url("/api/loyalty/tier-rules"), HttpMethod.GET,
+            jwtEntity(bearerForRole("RESTAURATEUR")), String.class)
+            .getStatusCode().value();
+        assertThat(status).isEqualTo(200);
+    }
+
+    @Test
+    void groupAdmin_list_returns200_readGranted() {
+        // V99 : VIEW:LOYALTY_TIER accordé aussi au GROUP_ADMIN (lecture seule).
+        int status = restTemplate.exchange(
+            url("/api/loyalty/tier-rules"), HttpMethod.GET,
+            jwtEntity(bearerForRole("GROUP_ADMIN")), String.class)
+            .getStatusCode().value();
+        assertThat(status).isEqualTo(200);
+    }
+
+    @Test
     void restaurateur_create_returns403_notOvergranted() {
+        // VIEW seulement : pas de CREATE:LOYALTY_TIER → POST reste interdit.
         int status = restTemplate.exchange(
             url("/api/loyalty/tier-rules"), HttpMethod.POST,
             jsonJwtEntity(Map.of("name", "x"), bearerForRole("RESTAURATEUR")), String.class)
@@ -84,7 +107,28 @@ class LoyaltyTierRuleControllerRbacIntegrationTest extends AbstractIntegrationTe
     }
 
     @Test
-    void client_list_returns403_adminOnly() {
+    void restaurateur_patch_returns403_notOvergranted() {
+        // VIEW seulement : pas de UPDATE:LOYALTY_TIER → PATCH reste interdit.
+        int status = restTemplate.exchange(
+            url("/api/loyalty/tier-rules/" + UUID.randomUUID()), HttpMethod.PATCH,
+            jsonJwtEntity(Map.of("enabled", false), bearerForRole("RESTAURATEUR")), String.class)
+            .getStatusCode().value();
+        assertThat(status).isEqualTo(403);
+    }
+
+    @Test
+    void restaurateur_delete_returns403_notOvergranted() {
+        // VIEW seulement : pas de DELETE:LOYALTY_TIER → DELETE reste interdit.
+        int status = restTemplate.exchange(
+            url("/api/loyalty/tier-rules/" + UUID.randomUUID()), HttpMethod.DELETE,
+            jwtEntity(bearerForRole("RESTAURATEUR")), String.class)
+            .getStatusCode().value();
+        assertThat(status).isEqualTo(403);
+    }
+
+    @Test
+    void client_list_returns403_noGrant() {
+        // CLIENT n'a aucun grant LOYALTY_TIER → 403 même sur GET.
         int status = restTemplate.exchange(
             url("/api/loyalty/tier-rules"), HttpMethod.GET,
             jwtEntity(bearerForRole("CLIENT")), String.class)

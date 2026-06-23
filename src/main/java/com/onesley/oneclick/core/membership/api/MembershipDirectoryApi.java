@@ -49,6 +49,15 @@ public interface MembershipDirectoryApi {
     Set<UUID> visibleTenantIds(UUID userId);
 
     /**
+     * Id du tenant <b>public « oneclick »</b> (slug configurable {@code app.tenant.public-slug}).
+     * C'est le <b>périmètre de la découverte générique</b> (catalogue Explore sans tenant explicite) :
+     * un membre d'un programme (PCC/HOMU) ne doit pas y voir les ressources de son club — celles-ci
+     * passent par le <i>reveal</i> dédié (tenantId explicite). {@code Optional.empty()} si le tenant
+     * public est introuvable (misconfiguration) → l'appelant doit <b>fail-closed</b> (catalogue vide).
+     */
+    java.util.Optional<UUID> publicTenantId();
+
+    /**
      * Authorities ({@code VERB:RESOURCE}) octroyées par les memberships <b>actives</b> de
      * l'utilisateur, via le {@code role} programme de chaque membership. Pliées dans le security
      * context par {@code OneClickUserDetailsService} (modèle « l'invitation accorde les

@@ -3,6 +3,7 @@ package com.onesley.oneclick.modules.membercircle.internal;
 import com.onesley.oneclick.core.identity.api.UserDirectoryApi;
 import com.onesley.oneclick.core.membership.api.MembershipDirectoryApi;
 import com.onesley.oneclick.exception.BadRequestException;
+import com.onesley.oneclick.exception.ConflictException;
 import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.shared.events.MemberPostCommentedEvent;
@@ -151,6 +152,35 @@ public class MemberPostService {
         return rows;
     }
 
+    /**
+     * C9 — « Mes posts en attente » : les posts NON approuvés de l'appelant (pending/rejected),
+     * non supprimés, triés DESC. Self par construction (filtré sur {@code author_id = authorId} —
+     * JWT.sub au controller, jamais un autre auteur). Le statut + le motif de rejet sont exposés
+     * (le membre voit pourquoi son post est en attente / a été refusé) contrairement au feed public.
+     *
+     * <p>Lecture native SQL read-view (enrichie auteur), homogène avec {@link #feed}/{@link #list}.
+     */
+    @Transactional(readOnly = true)
+    @SuppressWarnings("unchecked")
+    public List<MemberPostDto> myPosts(UUID authorId) {
+        var query = em.createNativeQuery("""
+            SELECT p.id, p.author_id, u.first_name, u.last_name, u.avatar_url,
+                   p.content, p.photo_url, p.activity_tag, p.status, p.rejection_reason, p.created_at
+              FROM member_posts p
+              LEFT JOIN users u ON u.id = p.author_id
+             WHERE p.author_id = :a AND p.status <> 'approved' AND p.deleted_at IS NULL
+             ORDER BY p.created_at DESC
+            """).setParameter("a", authorId);
+        List<MemberPostDto> rows = new ArrayList<>();
+        for (Object[] p : (List<Object[]>) query.getResultList()) {
+            rows.add(new MemberPostDto(
+                (UUID) p[0], (UUID) p[1], (String) p[2], (String) p[3], (String) p[4],
+                (String) p[5], (String) p[6], (String) p[7], (String) p[8], (String) p[9],
+                toInstant(p[10])));
+        }
+        return rows;
+    }
+
     /** Commentaires d'un post (post approuvé) enrichis auteur, triés chronologiquement (ASC). */
     @Transactional(readOnly = true)
     @SuppressWarnings("unchecked")
@@ -213,6 +243,35 @@ public class MemberPostService {
             throw new ForbiddenException("Suppression non autorisée");
         }
         commentRepo.delete(c);
+    }
+
+    /**
+     * C9 — suppression par le MEMBRE de SON propre post NON approuvé (pending/rejected). Soft-delete.
+     * RBAC {@code DELETE:COMMUNITY} au controller ; ABAC fin author-only ici (calque {@link #deleteComment}).
+     *
+     * <ul>
+     *   <li>post absent / déjà supprimé → {@link NotFoundException} (404)</li>
+     *   <li>post d'un AUTRE membre → {@link ForbiddenException} (403) — on ne touche que SES posts</li>
+     *   <li>post approuvé → {@link ConflictException} (409) — un post publié ne s'auto-supprime pas
+     *       (la dépublication relève de la modération tenant-admin {@code DELETE:TENANTS})</li>
+     * </ul>
+     *
+     * @throws NotFoundException  post absent ou déjà soft-supprimé
+     * @throws ForbiddenException le caller n'est pas l'auteur du post
+     * @throws ConflictException  le post est approuvé (état incompatible avec l'auto-suppression)
+     */
+    @Transactional
+    public void deleteOwnPost(UUID postId, UUID callerId) {
+        MemberPost post = repo.findById(postId)
+            .filter(p -> p.getDeletedAt() == null)
+            .orElseThrow(() -> new NotFoundException("MemberPost", postId));
+        if (!callerId.equals(post.getAuthorId())) {
+            throw new ForbiddenException("Suppression non autorisée"); // ABAC : SES posts uniquement
+        }
+        if ("approved".equals(post.getStatus())) {
+            throw new ConflictException("Un post approuvé ne peut pas être supprimé par son auteur");
+        }
+        post.setDeletedAt(Instant.now()); // soft-delete (dirty-checking JPA)
     }
 
     /**

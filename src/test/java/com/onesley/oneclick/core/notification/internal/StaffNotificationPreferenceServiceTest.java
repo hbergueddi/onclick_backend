@@ -106,6 +106,50 @@ class StaffNotificationPreferenceServiceTest {
         }
     }
 
+    // ─── P1pref : isStaffCategoryEnabled (lookup non self-service, défaut ON) ──────
+
+    @Test
+    void isStaffCategoryEnabled_noRow_defaultsOn() {
+        when(repository.findByUserId(userId)).thenReturn(Optional.empty());
+        // aucune préférence enregistrée → toutes catégories ON (opt-out)
+        assertThat(service.isStaffCategoryEnabled(userId, "booking")).isTrue();
+        assertThat(service.isStaffCategoryEnabled(userId, "reservation")).isTrue();
+        assertThat(service.isStaffCategoryEnabled(userId, "feedback")).isTrue();
+        assertThat(service.isStaffCategoryEnabled(userId, "loyalty")).isTrue();
+        assertThat(service.isStaffCategoryEnabled(userId, "system")).isTrue();
+    }
+
+    @Test
+    void isStaffCategoryEnabled_existingRow_readsTheRightToggle() {
+        StaffNotificationPreference pref = new StaffNotificationPreference(UUID.randomUUID(), userId);
+        pref.setBooking(false);
+        pref.setLoyalty(false);
+        // les 3 autres restent true (défaut entité)
+        when(repository.findByUserId(userId)).thenReturn(Optional.of(pref));
+
+        assertThat(service.isStaffCategoryEnabled(userId, "booking")).isFalse();
+        assertThat(service.isStaffCategoryEnabled(userId, "loyalty")).isFalse();
+        assertThat(service.isStaffCategoryEnabled(userId, "reservation")).isTrue();
+        assertThat(service.isStaffCategoryEnabled(userId, "feedback")).isTrue();
+        assertThat(service.isStaffCategoryEnabled(userId, "system")).isTrue();
+    }
+
+    @Test
+    void isStaffCategoryEnabled_unknownCategory_doesNotFilter() {
+        StaffNotificationPreference pref = new StaffNotificationPreference(UUID.randomUUID(), userId);
+        pref.setReservation(false);
+        when(repository.findByUserId(userId)).thenReturn(Optional.of(pref));
+        // catégorie inconnue → on ne filtre jamais à tort
+        assertThat(service.isStaffCategoryEnabled(userId, "weird")).isTrue();
+    }
+
+    @Test
+    void isStaffCategoryEnabled_nullArgs_defaultsOn_noLookup() {
+        assertThat(service.isStaffCategoryEnabled(null, "reservation")).isTrue();
+        assertThat(service.isStaffCategoryEnabled(userId, null)).isTrue();
+        verify(repository, never()).findByUserId(any());
+    }
+
     @Test
     void getMine_noAuth_throwsUnauthorized() {
         try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {

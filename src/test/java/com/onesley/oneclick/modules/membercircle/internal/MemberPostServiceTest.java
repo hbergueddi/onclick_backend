@@ -3,6 +3,7 @@ package com.onesley.oneclick.modules.membercircle.internal;
 import com.onesley.oneclick.core.identity.api.UserDirectoryApi;
 import com.onesley.oneclick.core.membership.api.MembershipDirectoryApi;
 import com.onesley.oneclick.exception.BadRequestException;
+import com.onesley.oneclick.exception.ConflictException;
 import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.modules.membercircle.api.MemberPostDtos.CommentCreateDto;
@@ -251,6 +252,69 @@ class MemberPostServiceTest {
         assertThatThrownBy(() -> service.deleteComment(UUID.randomUUID(), commentId, UUID.randomUUID()))
             .isInstanceOf(NotFoundException.class);
         verify(commentRepo, never()).delete(any());
+    }
+
+    // ─── C9 — deleteOwnPost (ABAC author-only + garde statut) ────────────────
+    //
+    // Note : myPosts() est une lecture native SQL (EntityManager) → couverte par
+    // l'intégration (cf. javadoc de la classe), homogène avec feed()/list().
+
+    @Test
+    void deleteOwnPost_byAuthor_pending_softDeletes() {
+        UUID postId = UUID.randomUUID(), author = UUID.randomUUID();
+        MemberPost pending = new MemberPost(postId, UUID.randomUUID(), author, "c", null, null); // pending
+        when(repo.findById(postId)).thenReturn(Optional.of(pending));
+        service.deleteOwnPost(postId, author);
+        assertThat(pending.getDeletedAt()).as("soft-delete posé").isNotNull();
+    }
+
+    @Test
+    void deleteOwnPost_byAuthor_rejected_softDeletes() {
+        UUID postId = UUID.randomUUID(), author = UUID.randomUUID();
+        MemberPost rejected = new MemberPost(postId, UUID.randomUUID(), author, "c", null, null);
+        rejected.setStatus("rejected");
+        when(repo.findById(postId)).thenReturn(Optional.of(rejected));
+        service.deleteOwnPost(postId, author);
+        assertThat(rejected.getDeletedAt()).isNotNull();
+    }
+
+    @Test
+    void deleteOwnPost_byOther_throwsForbidden() {
+        UUID postId = UUID.randomUUID(), author = UUID.randomUUID(), stranger = UUID.randomUUID();
+        MemberPost pending = new MemberPost(postId, UUID.randomUUID(), author, "c", null, null);
+        when(repo.findById(postId)).thenReturn(Optional.of(pending));
+        assertThatThrownBy(() -> service.deleteOwnPost(postId, stranger))
+            .isInstanceOf(ForbiddenException.class);
+        assertThat(pending.getDeletedAt()).as("pas supprimé").isNull();
+    }
+
+    @Test
+    void deleteOwnPost_approvedPost_throwsConflict() {
+        UUID postId = UUID.randomUUID(), author = UUID.randomUUID();
+        MemberPost approved = new MemberPost(postId, UUID.randomUUID(), author, "c", null, null);
+        approved.setStatus("approved");
+        when(repo.findById(postId)).thenReturn(Optional.of(approved));
+        // l'auteur lui-même ne peut PAS supprimer son post une fois approuvé (dépublication = modération).
+        assertThatThrownBy(() -> service.deleteOwnPost(postId, author))
+            .isInstanceOf(ConflictException.class);
+        assertThat(approved.getDeletedAt()).isNull();
+    }
+
+    @Test
+    void deleteOwnPost_notFound_throws() {
+        when(repo.findById(any())).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.deleteOwnPost(UUID.randomUUID(), UUID.randomUUID()))
+            .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void deleteOwnPost_alreadyDeleted_throwsNotFound() {
+        UUID postId = UUID.randomUUID(), author = UUID.randomUUID();
+        MemberPost gone = new MemberPost(postId, UUID.randomUUID(), author, "c", null, null);
+        gone.setDeletedAt(java.time.Instant.now()); // déjà soft-supprimé
+        when(repo.findById(postId)).thenReturn(Optional.of(gone));
+        assertThatThrownBy(() -> service.deleteOwnPost(postId, author))
+            .isInstanceOf(NotFoundException.class);
     }
 
     // ─── A.2 — mentionRecipients (fonction pure) ─────────────────────────────

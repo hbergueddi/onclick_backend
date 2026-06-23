@@ -42,6 +42,31 @@ public class TenantScope {
     }
 
     /**
+     * Périmètre de la <b>découverte générique publique</b> (catalogue Explore SANS tenant explicite) :
+     * tenant public « oneclick » <b>UNIQUEMENT</b> pour un client (membre ou non), ou {@code null}
+     * pour un acteur cross-tenant (SUPERADMIN, vue globale).
+     *
+     * <p>Différence clé avec {@link #visibleTenantIdsOrNull()} : ce dernier inclut les programmes du
+     * membre ({@code oneclick ∪ memberships}) — adapté aux lectures par id / aux écrans <i>de</i>
+     * programme (tenantId explicite). Mais la découverte GÉNÉRIQUE (Explore) ne doit JAMAIS faire
+     * remonter les ressources d'un programme (Padel/Spa/Golf/Coiffeur/Palm Gym/Tennis/Foot/Basket
+     * PCC…), <b>même pour un membre</b> : ce contenu est atteint via le <i>reveal</i> dédié
+     * (PccHome / écran restaurants du programme, qui passe un tenantId explicite). Ferme la fuite
+     * d'un tenant programme dans le catalogue grand public.
+     *
+     * <p>Fail-closed : si le tenant public est introuvable (misconfiguration) → ensemble <b>vide</b>
+     * (catalogue vide) plutôt qu'aucun filtre.
+     */
+    public Set<UUID> publicCatalogScopeOrNull() {
+        if (SecurityHelper.hasAuthority("VIEW:TENANTS")) {
+            return null; // acteur cross-tenant (SUPERADMIN) — vue globale, pas de filtre
+        }
+        return membershipDirectory.publicTenantId()
+            .map(Set::of)
+            .orElseGet(Set::of); // public introuvable → vide (fail-closed)
+    }
+
+    /**
      * Vrai si le caller peut voir une ressource du tenant {@code tenantId} : acteur cross-tenant
      * (aucune restriction), ou {@code tenantId} dans son périmètre visible. Pour les lectures par id.
      */

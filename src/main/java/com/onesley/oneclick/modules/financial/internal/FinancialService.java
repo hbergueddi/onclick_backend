@@ -238,10 +238,14 @@ public class FinancialService {
 
     // ─── Wallet transactions ─────────────────────────────────────────────────
 
-    public Page<WalletTxDto> findAllWalletTx(UUID restaurantId, String type, int page, int size) {
+    public Page<WalletTxDto> findAllWalletTx(UUID restaurantId, String type, String reason, int page, int size) {
         Specification<WalletTransaction> spec = (root, q, cb) -> cb.conjunction();
         if (restaurantId != null) spec = spec.and((root, q, cb) -> cb.equal(root.get("restaurantId"), restaurantId));
         if (type != null)         spec = spec.and((root, q, cb) -> cb.equal(root.get("type"), type));
+        // P1.8 — filtre par motif (ex. reason='referral_commission' → isole les commissions de
+        // parrainage). Le scope ABAC par restaurant est appliqué côté contrôleur (inchangé).
+        if (reason != null && !reason.isBlank())
+            spec = spec.and((root, q, cb) -> cb.equal(root.get("reason"), reason));
         return walletRepo.findAll(spec, PageRequest.of(page, size, Sort.by("createdAt").descending()))
             .map(WalletTransaction::toDto);
     }

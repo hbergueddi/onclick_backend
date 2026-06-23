@@ -41,6 +41,11 @@ class UserDirectoryService implements UserDirectoryApi {
     }
 
     @Override
+    public List<UUID> adminUserIds() {
+        return userRepository.findIdsByRoleCode("SUPERADMIN");
+    }
+
+    @Override
     public Optional<UUID> tenantIdById(UUID userId) {
         if (userId == null) return Optional.empty();
         return userRepository.findById(userId)

@@ -72,10 +72,30 @@ spring:
 # Local dev : MinIO sur localhost:9000 (cf scripts/minio-start.sh)
 # Prod      : override endpoint + access-key + secret-key via env vars (S3 AWS)
 app:
-  # ─── Frontend base URL (liens magiques email : invitation tenant-admin E2) ──
-  # Prod : override via APP_FRONTEND_BASE_URL (ex. https://app-oneclick.net).
+  # ─── Frontend base URLs (liens email : invitation tenant-admin, décision onboarding) ──
+  # Prod : override via les variables d'env correspondantes.
+  #  - base-url     : portail public/client (app-oneclick.net)
+  #  - admin-base-url    : Command Center super-admin (admin.app-oneclick.net) — lien « Examiner la demande »
+  #  - business-base-url : portail restaurateur OneClick Business (business.app-oneclick.net) — lien « Accéder à mon espace »
   frontend:
     base-url: ${APP_FRONTEND_BASE_URL:https://app-oneclick.net}
+    admin-base-url: ${APP_FRONTEND_ADMIN_BASE_URL:https://admin.app-oneclick.net}
+    business-base-url: ${APP_FRONTEND_BUSINESS_BASE_URL:https://business.app-oneclick.net}
+
+  # ─── CORS (origines autorisées à appeler l'API cross-origin) ───────────────
+  # Les SPA prod (app/admin/business) servies sur leurs sous-domaines appellent
+  # api.app-oneclick.net → doivent être whitelistées ici. Override prod via APP_CORS_ALLOWED_ORIGINS.
+  cors:
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:8080,http://localhost:5173,https://app-oneclick.net,https://admin.app-oneclick.net,https://business.app-oneclick.net}
+
+  # ─── Auth / enrollment (P1) ────────────────────────────────────────────
+  # email-verification-required=true → le signup public crée le compte en
+  # pending_email_verification : l'utilisateur doit valider l'OTP reçu par email
+  # (POST /api/auth/otp/request signup → /otp/verify) avant de pouvoir se connecter.
+  # Défaut false (rétro-compat clients déployés sans écran OTP). Activer en prod via
+  # APP_AUTH_EMAIL_VERIFICATION_REQUIRED=true quand tous les clients embarquent l'OTP.
+  auth:
+    email-verification-required: ${APP_AUTH_EMAIL_VERIFICATION_REQUIRED:false}
 
   # ─── Rate limiting (Sprint G.6.1 — Bucket4j in-memory) ─────────────────
   # Active = false par défaut (DX dev). En prod : enabled=true via env var
@@ -103,6 +123,14 @@ app:
       - path: /api/auth/accept-tenant-admin-invite
         capacity: 10
         refill-period: PT15M
+      # Mot de passe oublié (Phase A) : anti-abus de l'envoi de code — 5 / 15 min par IP
+      - path: /api/auth/forgot-password
+        capacity: 5
+        refill-period: PT15M
+      # Réinitialisation mot de passe (Phase A) : anti-bruteforce du code OTP — 10 / 15 min par IP
+      - path: /api/auth/reset-password
+        capacity: 10
+        refill-period: PT15M
       # Catalogue public restos : 120 / min (browse rapide Login.tsx picker)
       - path: /api/restaurants
         capacity: 120
@@ -110,6 +138,10 @@ app:
       # Search full-text : 30 / min (anti-scraping)
       - path: /api/search/restaurants/**
         capacity: 30
+        refill-period: PT1M
+      # BE-4 — autocomplétion Google Places (coût $/appel + clé serveur) : 20 / min par IP
+      - path: /api/places/search
+        capacity: 20
         refill-period: PT1M
       # OCR (coûteux) : 20 / heure par IP
       - path: /api/loyalty/ocr-receipt
@@ -143,6 +175,13 @@ app:
   fcm:
     project-id: ${FCM_PROJECT_ID:}
     service-account-json: ${FCM_SERVICE_ACCOUNT_JSON:}
+    # Garde-fou d'envoi réel. Défaut FALSE = safe-by-default : même AVEC des clés
+    # valides (ex: run-config dev IntelliJ), AUCUN push FCM réel n'est émis tant que
+    # ce flag n'est pas explicitement activé. Évite que des dispatches dormants
+    # (events Modulith republiés au restart) ou des tests partent vers de vrais
+    # appareils. Prod l'active (application-prod.yml) ; en dev, exporter
+    # FCM_DISPATCH_ENABLED=true le temps d'un test d'envoi réel.
+    dispatch-enabled: ${FCM_DISPATCH_ENABLED:false}
 
   # ─── AI Groq (Sprint B.1 G.4-bis — port 4 EFs : care-chat, ai-assistant, elite-review, generate-plan) ──
   # Si api-key non défini : GroqClient bascule en stub mode (réponse factice + log warn).
@@ -151,6 +190,17 @@ app:
       api-key: ${GROQ_API_KEY:}
       endpoint: ${GROQ_ENDPOINT:https://api.groq.com/openai/v1/chat/completions}
       model: ${GROQ_MODEL:llama-3.3-70b-versatile}
+
+  # ─── Email Resend (Sprint I.3 — emails brandés : onboarding, feedback, verdicts) ──
+  # Si api-key non défini : ResendClient bascule en stub mode (log warn, AUCUN envoi).
+  # Prod : RESEND_API_KEY dans l'EnvironmentFile systemd (cf deploy/DEPLOYMENT-ENV.md).
+  email:
+    resend:
+      api-key: ${RESEND_API_KEY:}
+    # Boîte interne qui reçoit le récap de CHAQUE demande d'inscription resto.
+    # contact@app-oneclick.net (OVH) — PAS contact@onesley.com (M365 → quarantaine).
+    internal:
+      onboarding: ${APP_EMAIL_INTERNAL_ONBOARDING:contact@app-oneclick.net}
 
   storage:
     s3:

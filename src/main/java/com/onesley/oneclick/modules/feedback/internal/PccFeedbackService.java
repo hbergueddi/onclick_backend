@@ -111,6 +111,17 @@ public class PccFeedbackService {
         }
         String comment = trimToNull(dto.comment());
 
+        // Garde-fou anti-spoof : un avis CIBLÉ ne peut viser qu'un resto du PROGRAMME du membre
+        // (même tenant). Sans ça, un membre PCC pourrait cibler un resto d'un autre tenant (ex
+        // OneClick standard) → l'owner non-PCC recevrait « Nouvel avis à traiter » (in-app + push) :
+        // fuite de périmètre d'un module exclusivement PCC. La branche owners de
+        // findFeedbackRecipientIds est elle aussi tenant-scopée (défense en profondeur).
+        UUID target = dto.targetRestaurantId();
+        if (target != null && !repo.restaurantBelongsToTenant(target, tenantId)) {
+            throw new ForbiddenException(
+                "Le restaurant ciblé n'appartient pas à votre programme.");
+        }
+
         PccFeedback saved = repo.save(new PccFeedback(
             UUID.randomUUID(), caller, tenantId, sentiment, category, comment, dto.targetRestaurantId()));
         log.info("[feedback] create (id={}, member={}, sentiment={}, target={})",
@@ -189,6 +200,14 @@ public class PccFeedbackService {
 
         // Owner-scope : un owner non-admin ne répond qu'aux avis de ses restos / généraux.
         if (!SecurityHelper.isAdmin()) {
+            // Défense en profondeur tenant : un owner non-admin ne peut répondre qu'à un avis de SON
+            // tenant (neutralise l'amplification cross-tenant — un avis qui aurait fuité vers le resto
+            // d'un owner d'un autre programme ne pourrait pas être traité par cet owner).
+            UUID callerTenant = userDirectory.tenantIdById(caller).orElse(null);
+            if (callerTenant == null || !callerTenant.equals(fb.getTenantId())) {
+                throw new ForbiddenException(
+                    "Accès interdit : cet avis est hors de votre périmètre.");
+            }
             UUID target = fb.getTargetRestaurantId();
             boolean isGeneral = target == null;
             boolean ownsTarget = target != null && repo.isActiveOwnerOf(caller, target);
@@ -210,7 +229,7 @@ public class PccFeedbackService {
 
         // Notif server-side au membre + push STOMP sur le topic du membre.
         eventPublisher.publishEvent(new FeedbackRepliedEvent(
-            saved.getId(), saved.getMemberId(), caller, saved.getSentiment(), Instant.now()));
+            saved.getId(), saved.getMemberId(), saved.getTenantId(), caller, saved.getSentiment(), Instant.now()));
         feedbackPublisher.publishReply(saved.getMemberId(), out);
 
         return out;

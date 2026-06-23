@@ -122,9 +122,37 @@ class ReservationGuestServiceTest {
 
         when(repository.findById(any())).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.delete(UUID.randomUUID())).isInstanceOf(NotFoundException.class);
+        // guest anonyme (guestUserId null) → delete OK mais AUCUN event B14 (pas de compte destinataire)
         ReservationGuest g = guest("invited");
         when(repository.findById(g.getId())).thenReturn(Optional.of(g));
         service.delete(g.getId());
         verify(repository).delete(g);
+        verify(eventPublisher, org.mockito.Mockito.never())
+            .publishEvent(any(com.onesley.oneclick.shared.events.ReservationGuestRemovedEvent.class));
+    }
+
+    // ── B14 — retrait d'un invité IDENTIFIÉ → event ReservationGuestRemovedEvent ──
+    @Test
+    void delete_identifiedGuest_publishesRemovedEvent() {
+        UUID guestId = UUID.randomUUID(), guestUserId = UUID.randomUUID(), resId = UUID.randomUUID();
+        // guestUserId/reservationId sont des colonnes read-only (insertable/updatable=false) — non
+        // hydratées par le constructeur en unit test. On mocke l'entité pour exposer les deux getters.
+        ReservationGuest identified = mock(ReservationGuest.class);
+        when(identified.getId()).thenReturn(guestId);
+        when(identified.getGuestUserId()).thenReturn(guestUserId);
+        when(identified.getReservationId()).thenReturn(resId);
+        when(repository.findById(guestId)).thenReturn(Optional.of(identified));
+
+        org.mockito.ArgumentCaptor<com.onesley.oneclick.shared.events.ReservationGuestRemovedEvent> captor =
+            org.mockito.ArgumentCaptor.forClass(com.onesley.oneclick.shared.events.ReservationGuestRemovedEvent.class);
+
+        service.delete(guestId);
+
+        verify(repository).delete(identified);
+        verify(eventPublisher).publishEvent(captor.capture());
+        com.onesley.oneclick.shared.events.ReservationGuestRemovedEvent removed = captor.getValue();
+        assertThat(removed.invitedUserId()).isEqualTo(guestUserId);
+        assertThat(removed.reservationId()).isEqualTo(resId);
+        assertThat(removed.organizerName()).isNull();
     }
 }

@@ -43,9 +43,18 @@ public class Tenant extends SoftDeletableAuditedEntity {
         this.slug = slug;
     }
 
-    /** Mapping vers le DTO public exposé hors du module. */
+    /** Mapping vers le DTO public exposé hors du module ({@code legalName} null — liste / by-slug). */
     public TenantDto toDto() {
-        return new TenantDto(id, name, slug, status, getCreatedAt());
+        return toDto(null);
+    }
+
+    /**
+     * Mapping vers le DTO public avec raison sociale ({@code company_settings.raison_sociale}).
+     * Utilisé uniquement par la vue détail {@code findById} (SUPERADMIN) ; {@code legalName} reste
+     * null sur les chemins liste / by-slug (PUBLIC) pour ne pas exposer de donnée légale.
+     */
+    public TenantDto toDto(String legalName) {
+        return new TenantDto(id, name, slug, status, getCreatedAt(), legalName);
     }
 
     @Override

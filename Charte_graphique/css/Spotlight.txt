@@ -1,0 +1,1437 @@
+/* Enseigne */
+
+position: relative;
+width: 393px;
+height: 852px;
+
+background: #F9F6F4;
+border-radius: 16px;
+
+
+/* Container */
+
+position: absolute;
+width: 393px;
+height: 200px;
+left: 0px;
+top: 0px;
+
+border-radius: 12px;
+
+
+/* image 25 */
+
+position: absolute;
+width: 393px;
+height: 200px;
+left: 0px;
+bottom: 0px;
+
+background: linear-gradient(180deg, rgba(0, 0, 0, 0.1232) 50%, rgba(0, 0, 0, 0.44) 100%), url(image.png);
+
+
+/* Page navigation */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: space-between;
+align-items: center;
+padding: 13px 20px;
+gap: 10px;
+
+position: absolute;
+width: 393px;
+height: 68px;
+left: 0px;
+top: 132px;
+
+
+
+/* Icon nav */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 10px;
+gap: 10px;
+
+margin: 0 auto;
+width: 40px;
+height: 40px;
+
+background: #FFFFFF;
+box-shadow: 0px 4px 40px rgba(138, 149, 158, 0.4);
+border-radius: 12px;
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* icon nav lib */
+
+width: 20px;
+height: 20px;
+
+background: #FFFFFF;
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Group 6 */
+
+position: absolute;
+width: 6.5px;
+height: 13px;
+left: 6.75px;
+top: 3.5px;
+
+
+
+/* Vector */
+
+position: absolute;
+left: 33.75%;
+right: 33.75%;
+top: 17.5%;
+bottom: 17.5%;
+
+/* Primary */
+border: 1.5px solid #242424;
+
+
+/* page title */
+
+margin: 0 auto;
+width: 110px;
+height: 17px;
+
+font-family: 'Poltawski Nowy';
+font-style: normal;
+font-weight: 500;
+font-size: 24px;
+line-height: 31px;
+/* leading-trim and text-edge are draft CSS properties.
+
+Read more: https://drafts.csswg.org/css-inline-3/#leading-trim
+*/
+leading-trim: both;
+text-edge: cap;
+display: flex;
+align-items: center;
+text-align: right;
+letter-spacing: 0.1em;
+text-transform: capitalize;
+
+color: #FFFFFF;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Icon nav */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 10px;
+gap: 10px;
+
+margin: 0 auto;
+display: none;
+width: 40px;
+height: 40px;
+
+background: #FFFFFF;
+border-radius: 12px;
+
+/* Inside auto layout */
+flex: none;
+order: 2;
+flex-grow: 0;
+
+
+/* time and battery */
+
+position: absolute;
+width: 393px;
+height: 60px;
+left: 0px;
+top: 0px;
+
+
+
+/* ui-lock-top */
+
+position: absolute;
+width: 309.03px;
+height: 25.19px;
+left: 51.39px;
+top: 20.49px;
+
+
+
+/* system-ui-left */
+
+position: absolute;
+width: 37.28px;
+height: 22.17px;
+left: 0px;
+top: 0px;
+
+
+
+/* 9:41 */
+
+position: absolute;
+width: 37px;
+height: 22px;
+left: -1.34px;
+top: 0px;
+
+font-family: 'SF Pro Display';
+font-style: normal;
+font-weight: 600;
+font-size: 18.4744px;
+line-height: 22px;
+/* identical to box height */
+display: flex;
+align-items: center;
+
+color: #FFFFFF;
+
+
+
+/* system-ui-right */
+
+position: absolute;
+width: 79.27px;
+height: 21.5px;
+left: 229.75px;
+top: 3.69px;
+
+
+
+/* cell */
+
+position: absolute;
+width: 17.8px;
+height: 11.08px;
+left: 0px;
+top: 0.67px;
+
+opacity: 0.9;
+
+
+/* Rectangle 81 */
+
+position: absolute;
+width: 3.36px;
+height: 4.03px;
+left: 0px;
+top: 7.05px;
+
+background: #FFFFFF;
+border-radius: 0.335897px;
+
+
+/* Rectangle 82 */
+
+position: absolute;
+width: 3.36px;
+height: 6.05px;
+left: 4.7px;
+top: 5.04px;
+
+background: #FFFFFF;
+border-radius: 0.335897px;
+
+
+/* Rectangle 83 */
+
+position: absolute;
+width: 3.36px;
+height: 8.4px;
+left: 9.74px;
+top: 2.69px;
+
+background: #FFFFFF;
+border-radius: 0.335897px;
+
+
+/* Rectangle 84 */
+
+position: absolute;
+width: 3.36px;
+height: 11.08px;
+left: 14.44px;
+top: 0px;
+
+background: #FFFFFF;
+border-radius: 0.335897px;
+
+
+/* Intersect */
+
+position: absolute;
+width: 17.18px;
+height: 12.17px;
+left: 27.21px;
+top: 0px;
+
+background: #FFFFFF;
+opacity: 0.9;
+
+
+/* Frame 26 */
+
+position: absolute;
+width: 24.52px;
+height: 9.74px;
+left: 54.75px;
+top: 1.34px;
+
+
+
+/* Rectangle 87 */
+
+position: absolute;
+width: 21.5px;
+height: 9.74px;
+left: 0px;
+top: 0px;
+
+opacity: 0.6;
+border: 1.00769px solid #FFFFFF;
+border-radius: 1.67949px;
+
+
+/* Rectangle 88 */
+
+position: absolute;
+width: 20.15px;
+height: 8.4px;
+left: 0.67px;
+top: 0.67px;
+
+background: #FFFFFF;
+opacity: 0.9;
+border-radius: 1.34359px;
+
+
+/* Rectangle 89 */
+
+position: absolute;
+width: 1.34px;
+height: 3.02px;
+left: 23.18px;
+top: 3.36px;
+
+background: #FFFFFF;
+opacity: 0.6;
+border-radius: 0px 3.02308px 3.02308px 0px;
+
+
+/* Menu flottant */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+justify-content: space-between;
+align-items: center;
+padding: 0px 20px;
+gap: 10px;
+
+position: absolute;
+height: 98px;
+left: 0px;
+right: 0px;
+top: 754px;
+
+/* white */
+background: #FFFFFF;
+box-shadow: 0px -2px 50px rgba(0, 0, 0, 0.05);
+
+
+/* Frame 3 */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: space-between;
+align-items: flex-start;
+padding: 0px;
+gap: 12px;
+
+margin: 0 auto;
+width: 361px;
+height: 62px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Component 25 */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+justify-content: space-between;
+align-items: center;
+padding: 0px;
+gap: 2px;
+
+margin: 0 auto;
+width: 62px;
+height: 62px;
+
+background: #FFFFFF;
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Icon nav */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 10px;
+gap: 10px;
+
+margin: 0 auto;
+width: 44px;
+height: 44px;
+
+background: #681237;
+border-radius: 12px;
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* ChefHat */
+
+width: 24px;
+height: 24px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+left: 6.25%;
+right: 6.25%;
+top: 9.38%;
+bottom: 12.5%;
+
+background: #FFFFFF;
+
+
+/* Enseignes */
+
+margin: 0 auto;
+width: 62px;
+height: 15px;
+
+font-family: 'Nunito Sans';
+font-style: normal;
+font-weight: 400;
+font-size: 11px;
+line-height: 15px;
+/* identical to box height */
+text-align: center;
+
+color: #3B2338;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Component 25 */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+justify-content: space-between;
+align-items: center;
+padding: 0px;
+gap: 2px;
+
+margin: 0 auto;
+width: 62px;
+height: 62px;
+
+background: #FFFFFF;
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Icon nav */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 10px;
+gap: 10px;
+
+margin: 0 auto;
+width: 44px;
+height: 44px;
+
+background: #F5F5F5;
+border-radius: 12px;
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Vector */
+
+width: 18px;
+height: 19.5px;
+
+background: #3B2338;
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Réservations */
+
+margin: 0 auto;
+width: 70px;
+height: 15px;
+
+font-family: 'Nunito Sans';
+font-style: normal;
+font-weight: 400;
+font-size: 11px;
+line-height: 15px;
+/* identical to box height */
+text-align: center;
+
+/* Disabled button */
+color: #999999;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Component 25 */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+justify-content: space-between;
+align-items: center;
+padding: 0px;
+gap: 2px;
+
+margin: 0 auto;
+width: 62px;
+height: 62px;
+
+background: #FFFFFF;
+
+/* Inside auto layout */
+flex: none;
+order: 2;
+flex-grow: 0;
+
+
+/* Icon nav */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 10px;
+gap: 10px;
+
+margin: 0 auto;
+width: 44px;
+height: 44px;
+
+background: #F5F5F5;
+border-radius: 12px;
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Vector */
+
+width: 21px;
+height: 18px;
+
+background: #3B2338;
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Majordome */
+
+margin: 0 auto;
+width: 62px;
+height: 15px;
+
+font-family: 'Nunito Sans';
+font-style: normal;
+font-weight: 400;
+font-size: 11px;
+line-height: 15px;
+/* identical to box height */
+text-align: center;
+
+/* Disabled button */
+color: #999999;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Component 25 */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+justify-content: space-between;
+align-items: center;
+padding: 0px;
+gap: 2px;
+
+margin: 0 auto;
+width: 62px;
+height: 62px;
+
+background: #FFFFFF;
+
+/* Inside auto layout */
+flex: none;
+order: 3;
+flex-grow: 0;
+
+
+/* Icon nav */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 10px;
+gap: 10px;
+
+margin: 0 auto;
+width: 44px;
+height: 44px;
+
+background: #F5F5F5;
+border-radius: 12px;
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* IdentificationBadge */
+
+width: 24px;
+height: 24px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 12.5%;
+bottom: 12.5%;
+
+background: #3B2338;
+
+
+/* Cercle */
+
+margin: 0 auto;
+width: 62px;
+height: 16px;
+
+font-family: 'Nunito Sans';
+font-style: normal;
+font-weight: 400;
+font-size: 12px;
+line-height: 16px;
+text-align: center;
+
+/* Disabled button */
+color: #999999;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Component 25 */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+justify-content: space-between;
+align-items: center;
+padding: 0px;
+gap: 2px;
+
+margin: 0 auto;
+width: 62px;
+height: 62px;
+
+background: #FFFFFF;
+
+/* Inside auto layout */
+flex: none;
+order: 4;
+flex-grow: 0;
+
+
+/* Icon nav */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 10px;
+gap: 10px;
+
+margin: 0 auto;
+width: 44px;
+height: 44px;
+
+background: #F5F5F5;
+border-radius: 12px;
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* IdentificationBadge */
+
+width: 24px;
+height: 24px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+left: 15.62%;
+right: 15.62%;
+top: 9.38%;
+bottom: 9.38%;
+
+background: #3B2338;
+
+
+/* Profil */
+
+margin: 0 auto;
+width: 62px;
+height: 16px;
+
+font-family: 'Nunito Sans';
+font-style: normal;
+font-weight: 400;
+font-size: 12px;
+line-height: 16px;
+text-align: center;
+
+/* Disabled button */
+color: #999999;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* button */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 14px 18px 18px 19px;
+gap: 12px;
+
+position: absolute;
+width: 296px;
+height: 52px;
+left: calc(50% - 296px/2 - 0.5px);
+top: 659px;
+
+background: #E0AF7C;
+box-shadow: 0px 8px 30px rgba(48, 48, 48, 0.3);
+border-radius: 12px;
+
+
+/* Icon */
+
+width: 19.99px;
+height: 19.99px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+left: 4.99%;
+right: 4.99%;
+top: 1.24%;
+bottom: 1.24%;
+
+background: #FFFFFF;
+
+
+/* Confirmer la réservation */
+
+width: 187px;
+height: 11px;
+
+/* OneClick/CTA */
+font-family: 'Poltawski Nowy';
+font-style: normal;
+font-weight: 700;
+font-size: 16px;
+line-height: 21px;
+/* leading-trim and text-edge are draft CSS properties.
+
+Read more: https://drafts.csswg.org/css-inline-3/#leading-trim
+*/
+leading-trim: both;
+text-edge: cap;
+text-align: center;
+
+color: #FFFFFF;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Bienvenue */
+
+position: absolute;
+width: 123px;
+height: 14px;
+left: calc(50% - 123px/2);
+top: 231px;
+
+font-family: 'Nunito Sans';
+font-style: normal;
+font-weight: 700;
+font-size: 20px;
+line-height: 27px;
+/* leading-trim and text-edge are draft CSS properties.
+
+Read more: https://drafts.csswg.org/css-inline-3/#leading-trim
+*/
+leading-trim: both;
+text-edge: cap;
+display: flex;
+align-items: center;
+text-align: center;
+letter-spacing: 0.05em;
+text-transform: uppercase;
+
+color: #3B2338;
+
+
+
+/* Vous désirez réserver une table pour */
+
+position: absolute;
+width: 236px;
+height: 18px;
+left: 79px;
+top: 262px;
+
+/* OneClick/small text */
+font-family: 'Nunito Sans';
+font-style: normal;
+font-weight: 400;
+font-size: 13px;
+line-height: 18px;
+/* identical to box height */
+text-align: justify;
+letter-spacing: 0.05em;
+
+color: #3B2338;
+
+
+
+/* à la date du */
+
+position: absolute;
+width: 76px;
+height: 18px;
+left: 158px;
+top: 372px;
+
+/* OneClick/small text */
+font-family: 'Nunito Sans';
+font-style: normal;
+font-weight: 400;
+font-size: 13px;
+line-height: 18px;
+/* identical to box height */
+text-align: justify;
+letter-spacing: 0.05em;
+
+color: #3B2338;
+
+
+
+/* NumberSelector */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px;
+gap: 12px;
+
+position: absolute;
+width: 156px;
+height: 40px;
+left: 118px;
+top: 304px;
+
+
+
+/* Button - Diminuer */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 0px;
+
+width: 40px;
+height: 40px;
+
+background: #F5F0EE;
+border-radius: 10px;
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Icon */
+
+width: 16px;
+height: 2px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+left: 6.25%;
+right: 6.25%;
+top: 50%;
+bottom: 50%;
+
+border: 2px solid #3B2338;
+
+
+/* Container */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 0px;
+
+width: 52px;
+height: 40px;
+
+background: #FFFFFF;
+box-shadow: 0px 2px 8px rgba(59, 35, 56, 0.08);
+border-radius: 10px;
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Text */
+
+width: 10.8px;
+height: 18px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* 2 */
+
+position: absolute;
+width: 11px;
+height: 18px;
+left: 0px;
+top: -0.5px;
+
+font-family: 'Nunito Sans';
+font-style: normal;
+font-weight: 700;
+font-size: 18px;
+line-height: 18px;
+/* identical to box height, or 100% */
+
+color: #3B2338;
+
+
+
+/* Button - Augmenter */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 0px;
+
+width: 40px;
+height: 40px;
+
+background: #3B2338;
+border-radius: 10px;
+
+/* Inside auto layout */
+flex: none;
+order: 2;
+flex-grow: 0;
+
+
+/* Icon */
+
+width: 16px;
+height: 16px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+left: 6.25%;
+right: 6.25%;
+top: 6.25%;
+bottom: 6.25%;
+
+border: 2px solid #FFFFFF;
+
+
+/* Button */
+
+box-sizing: border-box;
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 0px 16px;
+gap: 10px;
+
+position: absolute;
+width: 353px;
+height: 48px;
+left: calc(50% - 353px/2);
+top: 415px;
+
+background: #FFFFFF;
+border: 1px solid #F0E8E8;
+box-shadow: 0px 2px 10px rgba(59, 35, 56, 0.08);
+border-radius: 12px;
+
+
+/* Text */
+
+width: 55px;
+height: 14px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Mar */
+
+position: absolute;
+width: 26px;
+height: 14px;
+left: calc(50% - 26px/2 - 0.5px);
+top: calc(50% - 14px/2);
+
+font-family: 'Nunito Sans';
+font-style: normal;
+font-weight: 700;
+font-size: 14px;
+line-height: 14px;
+/* identical to box height, or 100% */
+text-align: center;
+
+color: #3B2338;
+
+
+
+/* Text */
+
+width: 55px;
+height: 14px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* 09 */
+
+position: absolute;
+width: 17px;
+height: 14px;
+left: calc(50% - 17px/2);
+top: calc(50% - 14px/2);
+
+font-family: 'Nunito Sans';
+font-style: normal;
+font-weight: 700;
+font-size: 14px;
+line-height: 14px;
+/* identical to box height, or 100% */
+text-align: center;
+
+color: #3B2338;
+
+
+
+/* Text */
+
+width: 55px;
+height: 14px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 2;
+flex-grow: 0;
+
+
+/* Juin */
+
+position: absolute;
+width: 25px;
+height: 14px;
+left: calc(50% - 25px/2);
+top: calc(50% - 14px/2);
+
+font-family: 'Nunito Sans';
+font-style: normal;
+font-weight: 700;
+font-size: 14px;
+line-height: 14px;
+/* identical to box height, or 100% */
+text-align: center;
+
+color: #3B2338;
+
+
+
+/* Text */
+
+width: 55px;
+height: 14px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 3;
+flex-grow: 0;
+
+
+/* 10:30 */
+
+position: absolute;
+width: 38px;
+height: 14px;
+left: calc(50% - 38px/2 - 0.5px);
+top: calc(50% - 14px/2);
+
+font-family: 'Nunito Sans';
+font-style: normal;
+font-weight: 700;
+font-size: 14px;
+line-height: 14px;
+/* identical to box height, or 100% */
+text-align: center;
+
+color: #3B2338;
+
+
+
+/* Icon (margin) */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: flex-start;
+padding: 0px 0px 0px 2px;
+
+width: 14px;
+height: 12px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 4;
+flex-grow: 0;
+
+
+/* Icon */
+
+width: 12px;
+height: 12px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+left: 16.67%;
+right: 16.67%;
+top: 33.33%;
+bottom: 33.33%;
+
+border: 1.5px solid #3B2338;
+
+
+/* Bloc Evenement */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 20px;
+gap: 10px;
+
+position: absolute;
+width: 393px;
+height: 128px;
+left: 0px;
+top: 497px;
+
+
+
+/* Carte blanche */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 12px;
+gap: 24px;
+
+width: 353px;
+height: 88px;
+
+background: #FFFFFF;
+box-shadow: 0px 0px 6px -2px rgba(16, 24, 40, 0.4);
+border-radius: 12px;
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* texte */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 4px;
+
+width: 236px;
+height: 30px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Ajouter une note (optionnel) */
+
+width: 201px;
+height: 8px;
+
+/* OneClick/small cap */
+font-family: 'Nunito Sans';
+font-style: normal;
+font-weight: 700;
+font-size: 11px;
+line-height: 15px;
+/* leading-trim and text-edge are draft CSS properties.
+
+Read more: https://drafts.csswg.org/css-inline-3/#leading-trim
+*/
+leading-trim: both;
+text-edge: cap;
+display: flex;
+align-items: center;
+letter-spacing: 0.05em;
+text-transform: uppercase;
+
+color: #999999;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Anniversaire, non fumeur, allergies... */
+
+width: 236px;
+height: 18px;
+
+/* OneClick/small text */
+font-family: 'Nunito Sans';
+font-style: normal;
+font-weight: 400;
+font-size: 13px;
+line-height: 18px;
+/* identical to box height */
+text-align: justify;
+letter-spacing: 0.05em;
+
+color: #A6A6A6;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;

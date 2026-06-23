@@ -122,6 +122,17 @@ public class Announcement extends TimestampedEntity {
         return publishAt != null && !publishAt.isAfter(now);
     }
 
+    /**
+     * B13 — marque l'annonce comme « notifiée » : pose {@link #pushSentAt}. Sert d'idempotence au
+     * cron de publication différée (le partial index {@code WHERE push_sent_at IS NULL} ne capte plus
+     * cette ligne) ET au chemin de publication immédiate de {@code AnnouncementService} (qui stampe
+     * aussi, pour que le cron ne re-notifie jamais une annonce déjà notifiée à la création).
+     * Idempotent (re-stamp inoffensif si déjà posé).
+     */
+    public void markNotified(Instant when) {
+        this.pushSentAt = when;
+    }
+
     /** true si l'annonce est vivante (ni archivée ni soft-deletée). */
     public boolean isLive() {
         return archivedAt == null && deletedAt == null;

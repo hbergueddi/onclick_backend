@@ -72,6 +72,13 @@ public class StoreOnboardingRequest extends TimestampedEntity {
     @Column(name = "decision_email_sent_at")
     @Setter private Instant decisionEmailSentAt;
 
+    // BE-2 — entités créées à l'approbation (provisioning) : ancre d'idempotence + audit.
+    @Column(name = "provisioned_user_id")
+    @Setter private UUID provisionedUserId;
+
+    @Column(name = "provisioned_restaurant_id")
+    @Setter private UUID provisionedRestaurantId;
+
     @Column(name = "deleted_at")
     @Setter private Instant deletedAt;
 }

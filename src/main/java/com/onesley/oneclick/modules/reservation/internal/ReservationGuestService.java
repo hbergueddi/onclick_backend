@@ -6,6 +6,7 @@ import com.onesley.oneclick.exception.ConflictException;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.modules.reservation.api.ReservationGuestDto;
 import com.onesley.oneclick.shared.events.ReservationGuestAddedEvent;
+import com.onesley.oneclick.shared.events.ReservationGuestRemovedEvent;
 import com.onesley.oneclick.shared.events.ReservationGuestRespondedEvent;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -164,6 +165,18 @@ public class ReservationGuestService {
     public void delete(UUID guestId) {
         ReservationGuest guest = repository.findById(guestId)
             .orElseThrow(() -> new NotFoundException("ReservationGuest", guestId));
+        // Capture les ids AVANT la suppression (l'entité devient détachée après delete).
+        UUID invitedUserId = guest.getGuestUserId();
+        UUID reservationId = guest.getReservationId();
         repository.delete(guest);
+        // Lot B14 — notif server-side à l'invité IDENTIFIÉ que son invitation a été annulée
+        // (le CLIENT organisateur n'a pas CREATE:NOTIFICATIONS). Guests anonymes (téléphone/nom
+        // seul, sans guestUserId) non notifiés (pas de compte destinataire). Calque l'invite().
+        // organizerName non résolu ici (pas de dépendance identity dans ce service) → null →
+        // le handler affiche un corps générique.
+        if (invitedUserId != null) {
+            eventPublisher.publishEvent(
+                new ReservationGuestRemovedEvent(reservationId, invitedUserId, null));
+        }
     }
 }

@@ -11,6 +11,7 @@ import com.onesley.oneclick.modules.reservation.api.NoShowDisputeDtos.NoShowDisp
 import com.onesley.oneclick.modules.reservation.api.NoShowDisputeDtos.ResolveDisputeDto;
 import com.onesley.oneclick.security.RestaurantAccessGuard;
 import com.onesley.oneclick.security.SecurityHelper;
+import com.onesley.oneclick.shared.events.NoShowDisputeCreatedEvent;
 import com.onesley.oneclick.shared.events.NoShowDisputeResolvedEvent;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -152,7 +153,39 @@ public class NoShowDisputeService {
         NoShowDispute dispute = new NoShowDispute(
             UUID.randomUUID(), reservationId, r.getClientId(), r.getRestaurantId(),
             phase, dto.reason(), dto.photoUrl());
-        return toEnrichedDto(disputeRepository.save(dispute));
+        NoShowDispute saved = disputeRepository.save(dispute);
+        NoShowDisputeDto enriched = toEnrichedDto(saved);
+
+        // Lot B8 — notifier le staff du restaurant qu'une contestation à traiter vient d'arriver
+        // (parité legacy). Frontière Modulith : on résout les destinataires staff ici (requête native,
+        // client contestataire exclu) et on les porte sur l'event ; core.notification n'a qu'à itérer
+        // (calque ReservationCreatedEvent → onReservationCreated). In-app + push (comme nouvelle résa).
+        List<UUID> staffRecipientIds = staffRecipientIdsForRestaurant(saved.getRestaurantId(), saved.getClientId());
+        eventPublisher.publishEvent(new NoShowDisputeCreatedEvent(
+            saved.getId(), saved.getReservationId(), saved.getRestaurantId(),
+            staffRecipientIds, enriched.clientName(), Instant.now()));
+
+        return enriched;
+    }
+
+    /**
+     * Lot B8 — IDs des staff ACTIFS du restaurant (destinataires de la notif « contestation à
+     * traiter »), client contestataire exclu. Staff actif = {@code restaurant_staffs.deleted_at IS NULL}
+     * (la table n'a pas de colonne status). SQL natif (noms de tables) : la résolution reste côté
+     * module reservation et les UUID sont portés sur {@code NoShowDisputeCreatedEvent} (frontière
+     * Modulith). Calque {@code ReservationRepository.findStaffRecipientIdsForRestaurant}.
+     */
+    @SuppressWarnings("unchecked")
+    private List<UUID> staffRecipientIdsForRestaurant(UUID restaurantId, UUID clientId) {
+        return entityManager.createNativeQuery("""
+                SELECT rs.user_id FROM restaurant_staffs rs
+                 WHERE rs.restaurant_id = :restaurantId
+                   AND rs.deleted_at IS NULL
+                   AND rs.user_id <> :clientId
+                """)
+            .setParameter("restaurantId", restaurantId)
+            .setParameter("clientId", clientId)
+            .getResultList();
     }
 
     // ═══════════════════════════════════════════════════════════════════════

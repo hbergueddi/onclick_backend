@@ -17,4 +17,11 @@ public interface TenantDirectoryApi {
      * UUID du tenant portant ce {@code slug} (non soft-deleted), ou vide si introuvable / slug vide.
      */
     Optional<UUID> findIdBySlug(String slug);
+
+    /**
+     * Slug du tenant portant cet {@code id} (non soft-deleted), ou vide si introuvable / id null.
+     * Utilisé pour brander un email sortant à partir d'un {@code tenant_id} porté par un event
+     * (ex: emails feedback PCC — gap #6).
+     */
+    Optional<String> slugById(UUID tenantId);
 }

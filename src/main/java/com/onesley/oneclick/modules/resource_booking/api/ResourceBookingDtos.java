@@ -1,6 +1,8 @@
 package com.onesley.oneclick.modules.resource_booking.api;
 
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotBlank;
@@ -9,6 +11,8 @@ import jakarta.validation.constraints.Pattern;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -24,15 +28,47 @@ public final class ResourceBookingDtos {
 
     // ─── Resource ────────────────────────────────────────────────────────────
 
+    /**
+     * Ressource bookable. {@code openingHours} ({@code mon..sun} → plages {@code "HH:MM-HH:MM"}),
+     * {@code slotDurationMinutes} et {@code maxInvitees} alimentent la grille de créneaux du client
+     * (Android natif / iOS) — sans eux, aucun créneau n'est générable (cf migration V96).
+     */
     public record ResourceDto(UUID id, UUID tenantId, String resourceType, String name, String description,
-                              Integer capacity, boolean enabled, Instant createdAt) {}
+                              Integer capacity, boolean enabled, Instant createdAt,
+                              Map<String, List<String>> openingHours, Integer slotDurationMinutes,
+                              Integer maxInvitees) {}
 
     public record ResourceCreateDto(
         @NotNull UUID tenantId,
         @NotBlank @Size(min = 1, max = 64) String resourceType,
         @NotBlank @Size(min = 1, max = 128) String name,
         @Size(min = 1, max = 1024) String description,
-        @PositiveOrZero Integer capacity
+        @PositiveOrZero Integer capacity,
+        // Parité création (P1.3) : l'admin peut désormais fournir directement les paramètres de
+        // génération de créneaux à la création (jusqu'ici peuplés par seed uniquement). Optionnels.
+        @Min(15) Integer slotDurationMinutes,
+        @PositiveOrZero Integer maxInvitees,
+        Map<String, List<String>> openingHours
+    ) {}
+
+    /**
+     * Patch partiel d'une ressource (P1.3) — tous les champs sont <b>nullables</b> : seul un champ
+     * fourni (non null) est appliqué (sémantique COALESCE), les autres restent inchangés. Le
+     * <b>type</b> de ressource n'est volontairement PAS modifiable (verrouillé). Les bornes de
+     * validation calquent {@link ResourceCreateDto}.
+     */
+    public record ResourceUpdateDto(
+        @Size(min = 1, max = 128) String name,
+        @Size(min = 1, max = 1024) String description,
+        @Positive Integer capacity,
+        @Min(15) Integer slotDurationMinutes,
+        @PositiveOrZero Integer maxInvitees,
+        Map<String, List<String>> openingHours
+    ) {}
+
+    /** Toggle d'activation d'une ressource (P1.3) — {@code enabled} requis (active/désactive le parc). */
+    public record ResourceEnabledPatchDto(
+        @NotNull Boolean enabled
     ) {}
 
     // ─── Pricing ─────────────────────────────────────────────────────────────
@@ -82,6 +118,23 @@ public final class ResourceBookingDtos {
         @Pattern(regexp = "^(pending|confirmed|cancelled|no_show|completed)$") @Size(min = 1, max = 64) String status,
         @Size(min = 1, max = 1024) String notes
     ) {}
+
+    // ─── No-show stats (agrégation export staff, P1.4) ────────────────────────
+
+    /**
+     * Statistiques de no-show <b>par organisateur</b> sur une fenêtre temporelle (P1.4) — alimente
+     * l'export « assiduité » du dashboard staff/admin.
+     *
+     * <p>{@code total} = nombre de bookings de l'organisateur dans la fenêtre (tous statuts).
+     * {@code honored} = bookings honorés ({@code completed}), {@code noShows} = bookings non honorés
+     * ({@code no_show}), {@code cancelled} = bookings annulés ({@code cancelled}). Le taux
+     * {@code noShowRatePct} = {@code noShows / (honored + noShows) * 100} (les annulations
+     * <b>n'entrent PAS</b> au dénominateur ; 0 si le dénominateur est nul). {@code lastNoShowAt}
+     * = date de début du dernier no-show (nullable). PII minimisée : seul le nom d'affichage.</p>
+     */
+    public record NoShowStatsDto(
+        UUID organizerId, String organizerName, long total, long honored, long noShows,
+        long cancelled, double noShowRatePct, Instant lastNoShowAt) {}
 
     // ─── Busy slot (disponibilité calendrier, sans PII) ───────────────────────
 

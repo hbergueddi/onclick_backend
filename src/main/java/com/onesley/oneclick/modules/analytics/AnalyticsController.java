@@ -13,6 +13,7 @@ import com.onesley.oneclick.modules.analytics.api.TenantStaffDtos.TenantStaffRes
 import com.onesley.oneclick.modules.analytics.api.TenantContractDtos.TenantContractsResultDto;
 import com.onesley.oneclick.modules.analytics.api.TenantAnnouncementDtos.TenantAnnouncementsResultDto;
 import com.onesley.oneclick.modules.analytics.api.TenantStoryDtos.TenantStoriesResultDto;
+import com.onesley.oneclick.modules.analytics.api.TenantDashboardDtos.TenantDashboardDto;
 import com.onesley.oneclick.modules.analytics.internal.AdminStatsService;
 import com.onesley.oneclick.modules.analytics.internal.AnalyticsService;
 import com.onesley.oneclick.modules.analytics.internal.CrossTenantStatsService;
@@ -24,6 +25,7 @@ import com.onesley.oneclick.modules.analytics.internal.TenantStaffService;
 import com.onesley.oneclick.modules.analytics.internal.TenantContractsService;
 import com.onesley.oneclick.modules.analytics.internal.TenantAnnouncementsService;
 import com.onesley.oneclick.modules.analytics.internal.TenantStoriesService;
+import com.onesley.oneclick.modules.analytics.internal.TenantDashboardService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -56,6 +58,7 @@ public class AnalyticsController {
     private final TenantContractsService tenantContractsService;
     private final TenantAnnouncementsService tenantAnnouncementsService;
     private final TenantStoriesService tenantStoriesService;
+    private final TenantDashboardService tenantDashboardService;
 
     // ─── Admin stats — Sprint G.2.4 ────────────────────────────────────────
 
@@ -69,6 +72,25 @@ public class AnalyticsController {
     @PreAuthorize("hasAuthority('VIEW:ANALYTICS')")
     public AdminStatsDto getAdminStats(@RequestParam(required = false) UUID tenantId) {
         return adminStatsService.computeStats(tenantId);
+    }
+
+    // ─── TenantDashboard cockpit (C4.0, SUPERADMIN via VIEW:TENANTS) ─────────────────────
+    // Temps réel via STOMP /topic/admin/tenant-kpis/{tenantId} (TenantKpisPublisher) ; le front
+    // re-fetch ce snapshot REST à chaque message WS — pas de polling client.
+
+    @GetMapping("/tenant-dashboard")
+    @Operation(
+        summary = "Cockpit business d'un tenant (vue d'ensemble, SUPERADMIN) — 1:1 cockpit legacy 4Click",
+        description = "Agrégat tenant-scopé : KPIs 30j (CA / réservations / clients actifs / points) + "
+                    + "deltas vs 30j précédents (null si base = 0) + restaurants actifs/total + offres "
+                    + "actives + tendance quotidienne + top 5 restaurants + top 5 clients + réservations "
+                    + "à venir (7j) + alertes opérationnelles. Native SQL (anti-N+1). Le dashboard est "
+                    + "poussé en temps réel via STOMP (/topic/admin/tenant-kpis/{tenantId}) ; cet endpoint "
+                    + "sert le snapshot REST consommé à l'abonnement et à chaque message WS."
+    )
+    @PreAuthorize("hasAuthority('VIEW:TENANTS')")
+    public TenantDashboardDto tenantDashboard(@RequestParam UUID tenantId) {
+        return tenantDashboardService.compute(tenantId);
     }
 
     // ─── CrossTenantDashboard (C3, SUPERADMIN) — temps réel via STOMP /topic/admin/cross-tenant ──

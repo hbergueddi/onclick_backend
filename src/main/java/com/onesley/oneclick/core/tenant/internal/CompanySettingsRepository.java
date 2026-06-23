@@ -15,5 +15,12 @@ import java.util.UUID;
  */
 @Repository
 public interface CompanySettingsRepository extends JpaRepository<CompanySettings, UUID>, JpaSpecificationExecutor<CompanySettings> {
-    java.util.Optional<CompanySettings> findByTenantId(String tenantId);
+
+    /**
+     * Lookup par tenant. La propriété {@code CompanySettings.tenantId} est typée {@link UUID}
+     * (colonne {@code tenant_id uuid}) — le paramètre dérivé doit donc être un {@link UUID}, sinon
+     * Hibernate échoue au binding (String vs uuid). Auparavant déclaré {@code String} (jamais
+     * exercé) ; corrigé à l'introduction du 1ᵉʳ consommateur (legalName sur la vue détail tenant).
+     */
+    java.util.Optional<CompanySettings> findByTenantId(UUID tenantId);
 }

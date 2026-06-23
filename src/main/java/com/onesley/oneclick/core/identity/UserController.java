@@ -129,6 +129,22 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
+    @DeleteMapping("/me")
+    @Operation(
+        summary = "Suppression de SON PROPRE compte (self-service) — DELETE:PROFILE",
+        description = "App Store §5.1.1(v) + RGPD : un user supprime son compte sans friction. " +
+                      "Soft-delete + anonymisation PII (email/téléphone libérés), révocation des " +
+                      "refresh tokens et purge des device tokens (events Modulith). Self par " +
+                      "construction (JWT.sub) — gardé par DELETE:PROFILE (≠ DELETE:USERS admin)."
+    )
+    @PreAuthorize("hasAuthority('DELETE:PROFILE')")
+    public ResponseEntity<Void> deleteMe() {
+        UUID me = SecurityHelper.currentUserId();
+        if (me == null) throw new ForbiddenException("Authentification requise");
+        service.deleteOwnAccount(me);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Détail d'un user par UUID — owner ou SUPERADMIN")
     @PreAuthorize("hasAuthority('VIEW:USERS')")

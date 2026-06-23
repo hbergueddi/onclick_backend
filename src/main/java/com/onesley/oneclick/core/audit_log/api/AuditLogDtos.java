@@ -23,9 +23,26 @@ public final class AuditLogDtos {
 
     // ─── AuditLog ────────────────────────────────────────────────────────────
 
-    public record AuditLogDto(UUID id, UUID userId, UUID tenantId, String entityType, UUID entityId,
-                              String action, Map<String, Object> diff, String ipAddress, String userAgent,
-                              Instant createdAt) {}
+    /**
+     * Une entrée du journal d'audit.
+     *
+     * <p>{@code userName} = "Prénom Nom" de l'auteur ({@code userId}), résolu en lecture
+     * de liste via {@code UserDirectoryApi.namesByIds} (anti-N+1) pour que le « Journal des
+     * actions » (ProDesk) affiche un nom plutôt qu'un UUID. <b>Null</b> sur les écritures
+     * ({@code recordAudit}) et pour les actions système (userId null) ou les utilisateurs
+     * supprimés — l'enrichissement n'introduit <b>aucune nouvelle autorité</b> (la lecture
+     * reste {@code VIEW:AUDIT}).</p>
+     */
+    public record AuditLogDto(UUID id, UUID userId, String userName, UUID tenantId, String entityType,
+                              UUID entityId, String action, Map<String, Object> diff, String ipAddress,
+                              String userAgent, Instant createdAt) {
+
+        /** Copie enrichie du nom d'auteur (préserve tous les autres champs). */
+        public AuditLogDto withUserName(String resolvedUserName) {
+            return new AuditLogDto(id, userId, resolvedUserName, tenantId, entityType, entityId,
+                action, diff, ipAddress, userAgent, createdAt);
+        }
+    }
 
     public record AuditLogCreateDto(
         UUID userId,

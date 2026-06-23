@@ -8,9 +8,11 @@ import com.onesley.oneclick.modules.loyalty.api.LoyaltyExtensionDtos.*;
 import com.onesley.oneclick.modules.loyalty.api.RedemptionDto;
 import com.onesley.oneclick.security.SecurityHelper;
 import com.onesley.oneclick.shared.PageResponse;
+import com.onesley.oneclick.shared.events.RestaurantRestitutionPaidEvent;
 import static com.onesley.oneclick.shared.Temporals.toInstant;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -35,11 +37,13 @@ import lombok.RequiredArgsConstructor;
 @Service
 @Transactional
 @RequiredArgsConstructor
+@lombok.extern.slf4j.Slf4j
 public class LoyaltyExtensionService {
 
     private static final int AI_DAILY_LIMIT = 20;
 
     private final ClientRatingRepository ratingRepo;
+    private final LoyaltyEventRefGuard refGuard; // garde-fou FK client_ratings (reservation/user)
     private final AIUsageRepository aiUsageRepo;
     private final RestaurantRestitutionRepository restitutionRepo;
     private final RedemptionRepository redemptionRepo;
@@ -47,6 +51,8 @@ public class LoyaltyExtensionService {
     private final ClientScoreConfigRepository scoreConfigRepo;
     /** P2 — noms clients via contrat identity (plus de JOIN users pour l'enrichissement). */
     private final UserDirectoryApi userDirectory;
+    /** B6 — signal Modulith vers core.notification au versement d'une restitution (frontière OPEN shared.events). */
+    private final ApplicationEventPublisher events;
 
     @PersistenceContext
     private EntityManager em;
@@ -91,8 +97,13 @@ public class LoyaltyExtensionService {
         }
 
         String label = scoreLabel(score, total, cfg);
+        // `stars` = note affichable 0-5. null si AUCUNE réservation notée (aucune ligne
+        // client_ratings) → les badges (web ClientScoreBadge + natifs ClientScoreFormat) rendent
+        // « 🆕 Nouveau client » au lieu d'un ⭐5.0 trompeur (cas `totalReservations==0 && stars==null`).
+        // `averageRating`/`score` gardent leur défaut (5.0 / 100) pour le calcul interne.
+        BigDecimal stars = (count == null || count == 0L) ? null : averageRating;
         return new ClientScoreDto(userId, averageRating, count == null ? 0L : count, score,
-            label, averageRating, total, honorees, noShows);
+            label, stars, total, honorees, noShows);
     }
 
     /** Label de fiabilité depuis le score (/100) et les seuils config. */
@@ -136,6 +147,15 @@ public class LoyaltyExtensionService {
     }
 
     public ClientRatingDto recordRating(UUID userId, UUID reservationId, BigDecimal delta, String reason) {
+        // Garde-fou FK : si la réservation ou le user référencé n'existe plus (ex: event Modulith
+        // dormant rejoué après suppression), on saute l'insert au lieu de violer la FK au COMMIT
+        // (ce qui ferait échouer le listener async + laisserait la publication incomplète → rejeu
+        // en boucle). Retour null = rating non enregistré (cf appelants : listener ignore, controller → 404).
+        if (!refGuard.refsExist(userId, reservationId)) {
+            log.warn("[loyalty-rating] user {} ou résa {} absent — rating ignoré (reason={})",
+                userId, reservationId, reason);
+            return null;
+        }
         var existing = ratingRepo.findByUser(userId);
         BigDecimal current = existing.isEmpty() ? new BigDecimal("5.0") : existing.get(0).getVisibleRating();
         BigDecimal next = current.add(delta).max(BigDecimal.ZERO).min(new BigDecimal("5.0"))
@@ -205,6 +225,58 @@ public class LoyaltyExtensionService {
         r.setPoints(points);
         r.setReason(reason);
         return RestaurantRestitutionDto.from(restitutionRepo.save(r));
+    }
+
+    /**
+     * B6 — VERSE une restitution (passe son statut à {@code paid}) et notifie le staff du restaurant
+     * bénéficiaire. Idempotent : une restitution déjà {@code paid} n'est ni re-marquée ni re-notifiée
+     * (pas de double notif). 404 si la restitution n'existe pas.
+     *
+     * <p>Frontière Modulith : on résout ici (côté loyalty) les destinataires staff actifs du resto
+     * (requête native sur {@code restaurant_staffs} — table de {@code modules.restaurant}, non
+     * importable, on reste au niveau SQL comme {@code NoShowDisputeService}) et on les porte sur
+     * {@link RestaurantRestitutionPaidEvent} ; {@code core.notification} (CLOSED) n'a qu'à itérer.
+     * Le push éventuel et le filtre de préférences staff (catégorie {@code loyalty}) sont appliqués
+     * côté listener.
+     *
+     * @return la restitution (statut {@code paid})
+     */
+    public RestaurantRestitutionDto payRestitution(UUID restitutionId) {
+        RestaurantRestitution r = restitutionRepo.findById(restitutionId)
+            .orElseThrow(() -> new NotFoundException("RestaurantRestitution", restitutionId));
+        if ("paid".equals(r.getStatus())) {
+            // déjà versée → idempotent (ni re-save ni re-notif), retour de l'état courant
+            return RestaurantRestitutionDto.from(r);
+        }
+        r.setStatus("paid");
+        RestaurantRestitution saved = restitutionRepo.save(r);
+
+        List<UUID> staffRecipientIds = staffRecipientIdsForRestaurant(saved.getRestaurantId());
+        events.publishEvent(new RestaurantRestitutionPaidEvent(
+            saved.getId(), saved.getRestaurantId(), saved.getAmount(),
+            staffRecipientIds, Instant.now()));
+        log.info("[restitution] versée (id={}, resto={}, montant={}, staff notifiés={})",
+            saved.getId(), saved.getRestaurantId(), saved.getAmount(), staffRecipientIds.size());
+
+        return RestaurantRestitutionDto.from(saved);
+    }
+
+    /**
+     * B6 — IDs des staff ACTIFS du restaurant (destinataires de la notif « restitution versée »).
+     * Staff actif = {@code restaurant_staffs.deleted_at IS NULL} (la table n'a pas de colonne status).
+     * SQL natif (noms de tables) : la résolution reste côté module loyalty et les UUID sont portés
+     * sur {@code RestaurantRestitutionPaidEvent} (frontière Modulith). {@code DISTINCT} dédoublonne.
+     * Calque {@code NoShowDisputeService.staffRecipientIdsForRestaurant}.
+     */
+    @SuppressWarnings("unchecked")
+    private List<UUID> staffRecipientIdsForRestaurant(UUID restaurantId) {
+        return em.createNativeQuery("""
+                SELECT DISTINCT rs.user_id FROM restaurant_staffs rs
+                 WHERE rs.restaurant_id = :restaurantId
+                   AND rs.deleted_at IS NULL
+                """)
+            .setParameter("restaurantId", restaurantId)
+            .getResultList();
     }
 
     // ─── Audit listings (Forge — RedemptionAudit / RestaurantRestitutions) ──────

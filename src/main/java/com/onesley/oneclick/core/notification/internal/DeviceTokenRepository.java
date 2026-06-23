@@ -17,4 +17,8 @@ import java.util.UUID;
 public interface DeviceTokenRepository extends JpaRepository<DeviceToken, UUID>, JpaSpecificationExecutor<DeviceToken> {
     java.util.List<DeviceToken> findAllByUserId(java.util.UUID userId);
     java.util.Optional<DeviceToken> findByToken(String token);
+
+    /** Purge des device tokens d'un user (hard delete — l'entité n'a pas de soft-delete).
+     *  Appelé sur suppression de compte (AccountDeletedEvent) → plus aucun push possible. */
+    long deleteByUserId(java.util.UUID userId);
 }

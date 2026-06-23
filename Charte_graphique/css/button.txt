@@ -1,0 +1,112 @@
+/* button */
+
+box-sizing: border-box;
+
+position: relative;
+width: 353px;
+height: 92px;
+
+border: 1px dashed #8A38F5;
+border-radius: 5px;
+
+
+/* Property 1=Primary */
+
+position: absolute;
+width: 148px;
+height: 52px;
+left: 20px;
+top: 20px;
+
+border-radius: 12px;
+
+
+/* Rectangle 3 */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: #E0AF7C;
+box-shadow: 0px 8px 30px rgba(48, 48, 48, 0.3);
+border-radius: 12px;
+
+
+/* Postuler */
+
+position: absolute;
+height: 11px;
+left: 28.1%;
+right: 28.66%;
+top: calc(50% - 11px/2 - 0.5px);
+
+/* OneClick/CTA */
+font-family: 'Poltawski Nowy';
+font-style: normal;
+font-weight: 700;
+font-size: 16px;
+line-height: 21px;
+/* leading-trim and text-edge are draft CSS properties.
+
+Read more: https://drafts.csswg.org/css-inline-3/#leading-trim
+*/
+leading-trim: both;
+text-edge: cap;
+text-align: center;
+
+color: #FFFFFF;
+
+
+
+/* Property 1=Secondary */
+
+box-sizing: border-box;
+
+position: absolute;
+width: 148px;
+height: 52px;
+left: 185px;
+top: 20px;
+
+background: #FFFFFF;
+border: 4px solid #E0AF7C;
+border-radius: 12px;
+
+
+/* Rectangle 3 */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+border-radius: 12px;
+
+
+/* Parrainer */
+
+position: absolute;
+height: 11px;
+left: 24.24%;
+right: 25.76%;
+top: calc(50% - 11px/2 - 0.5px);
+
+/* OneClick/CTA */
+font-family: 'Poltawski Nowy';
+font-style: normal;
+font-weight: 700;
+font-size: 16px;
+line-height: 21px;
+/* leading-trim and text-edge are draft CSS properties.
+
+Read more: https://drafts.csswg.org/css-inline-3/#leading-trim
+*/
+leading-trim: both;
+text-edge: cap;
+text-align: center;
+
+color: #E0AF7C;
+

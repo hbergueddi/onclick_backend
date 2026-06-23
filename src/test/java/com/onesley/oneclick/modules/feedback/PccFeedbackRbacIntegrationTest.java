@@ -139,4 +139,52 @@ class PccFeedbackRbacIntegrationTest extends AbstractIntegrationTest {
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(om.readTree(resp.getBody()).isArray()).isTrue();
     }
+
+    // ─── E. FUITE DE PÉRIMÈTRE (fix 17/06) — un avis ciblé ne peut viser qu'un resto du tenant ──
+
+    /**
+     * Anti-fuite : un membre ne peut soumettre un avis CIBLÉ que vers un resto de SON programme
+     * (même tenant). Cibler un resto d'un AUTRE tenant (ex resto OneClick standard) est rejeté 403
+     * AVANT persistance — sinon l'owner non-PCC recevrait « Nouvel avis à traiter » (in-app + push).
+     *
+     * <p>Robuste : le tenant programme EFFECTIF du membre est dérivé de l'API elle-même (tenantId
+     * renvoyé sur un avis général), sans hypothèse sur le slug/flip V95.</p>
+     */
+    @Test
+    void create_targetRestaurant_tenantScoped() throws Exception {
+        String member = bearerFor("member1@palmeraie.com");
+
+        // 1. Avis général → tenant programme effectif (source de vérité = l'API).
+        ResponseEntity<String> general = restTemplate.exchange(url("/api/pcc/feedbacks"),
+            HttpMethod.POST, jsonJwtEntity("{\"sentiment\":\"happy\",\"category\":\"Accueil\"}", member), String.class);
+        assertThat(general.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        JsonNode g = om.readTree(general.getBody());
+        createdFeedbackIds.add(UUID.fromString(g.get("id").asText()));
+        String memberTenant = g.get("tenantId").asText();
+
+        // 2. Resto d'un AUTRE tenant → avis ciblé REJETÉ (403).
+        String foreign = jdbc.queryForObject(
+            "SELECT id::text FROM restaurants WHERE tenant_id <> ?::uuid AND deleted_at IS NULL LIMIT 1",
+            String.class, memberTenant);
+        ResponseEntity<String> leak = restTemplate.exchange(url("/api/pcc/feedbacks"),
+            HttpMethod.POST,
+            jsonJwtEntity("{\"sentiment\":\"unhappy\",\"category\":\"Padel\",\"targetRestaurantId\":\"" + foreign + "\"}", member),
+            String.class);
+        assertThat(leak.getStatusCode())
+            .as("avis ciblant un resto HORS tenant — attendu 403, reçu %s body=%s", leak.getStatusCode(), leak.getBody())
+            .isEqualTo(HttpStatus.FORBIDDEN);
+
+        // 3. Resto du MÊME tenant → autorisé (201).
+        String own = jdbc.queryForObject(
+            "SELECT id::text FROM restaurants WHERE tenant_id = ?::uuid AND deleted_at IS NULL LIMIT 1",
+            String.class, memberTenant);
+        ResponseEntity<String> ok = restTemplate.exchange(url("/api/pcc/feedbacks"),
+            HttpMethod.POST,
+            jsonJwtEntity("{\"sentiment\":\"happy\",\"category\":\"Padel\",\"comment\":\"Top\",\"targetRestaurantId\":\"" + own + "\"}", member),
+            String.class);
+        assertThat(ok.getStatusCode())
+            .as("avis ciblant un resto DU tenant — attendu 201, reçu %s body=%s", ok.getStatusCode(), ok.getBody())
+            .isEqualTo(HttpStatus.CREATED);
+        createdFeedbackIds.add(UUID.fromString(om.readTree(ok.getBody()).get("id").asText()));
+    }
 }

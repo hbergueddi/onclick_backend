@@ -1,6 +1,7 @@
 package com.onesley.oneclick.modules.loyalty.internal;
 
 import com.onesley.oneclick.core.identity.api.UserDirectoryApi;
+import com.onesley.oneclick.core.tenant.api.TenantDirectoryApi;
 import com.onesley.oneclick.modules.loyalty.api.WalletPassDtos.*;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -39,6 +40,12 @@ public class WalletPassService {
     /** P2 — résolution du nom via le contrat identity (remplace la lecture SQL de {@code users}). */
     private final UserDirectoryApi userDirectory;
 
+    /** CL-2 — source unique du palier (table {@code tiers} + fallback canonique), partagée avec CH-3. */
+    private final LoyaltyTierResolver tierResolver;
+
+    /** CL-2 — résout le tenant public « oneclick » : le wallet pass utilise les paliers OneClick standard. */
+    private final TenantDirectoryApi tenantDirectory;
+
     @Value("${app.wallet.apple.pass-type-id:pass.ma.oneclick.loyalty}")
     private String applePassTypeId;
 
@@ -73,12 +80,15 @@ public class WalletPassService {
         String firstName = name != null ? name.firstName() : null;
         String lastName = name != null ? name.lastName() : null;
         int totalPoints = pts.intValue();
-        String tier = computeTier(totalPoints);
+        // CL-2 — palier via la source unique (table tiers du tenant public OneClick + fallback canonique),
+        // identique au push « palier atteint » (CH-3) et à useClientTier côté front.
+        UUID oneclickTenantId = tenantDirectory.findIdBySlug("oneclick").orElse(null);
+        String tier = tierResolver.tierNameFor(totalPoints, oneclickTenantId);
         String serial = "OC-" + userId.toString().substring(0, 8).toUpperCase();
 
         Map<String, Object> extra = new LinkedHashMap<>();
         extra.put("memberSince", java.time.LocalDate.now().toString());
-        extra.put("nextTierAt", nextTierPoints(tier));
+        extra.put("nextTierAt", tierResolver.nextTierPoints(totalPoints, oneclickTenantId));
 
         return new WalletPassMetadataDto(
             userId.toString(),
@@ -196,22 +206,6 @@ public class WalletPassService {
         return new GoogleWalletResponseDto(saveUrl, jwt, exp);
     }
 
-    /** Calcule le tier en fonction du nombre de points. */
-    private String computeTier(int points) {
-        if (points >= 10_000) return "Black";
-        if (points >= 5_000) return "Émeraude";
-        if (points >= 1_500) return "Sapphire";
-        return "Ruby";
-    }
-
-    private int nextTierPoints(String tier) {
-        return switch (tier) {
-            case "Ruby" -> 1_500;
-            case "Sapphire" -> 5_000;
-            case "Émeraude" -> 10_000;
-            default -> -1; // already top
-        };
-    }
 
     private String safe(String s) {
         return s == null ? "" : s.replace("\"", "\\\"");

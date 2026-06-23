@@ -3,6 +3,7 @@ package com.onesley.oneclick.modules.loyalty.api;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Pattern;
 
 import java.math.BigDecimal;
 
@@ -21,6 +22,12 @@ public record GainRulePatchDto(
     /** Bonus bienvenue par défaut. CHECK DB : welcomePointsMax >= welcomePointsDefault. */
     @Min(0) Integer welcomePointsDefault,
     /** Plafond bonus bienvenue (anti-abus). */
-    @Min(0) Integer welcomePointsMax
+    @Min(0) Integer welcomePointsMax,
+    // ─── Lot 4b — champs RuleBuilder legacy (optionnels) ────────────────────────
+    @DecimalMin("0.0000") BigDecimal pointValueMad,
+    @Pattern(regexp = "^(week|month)$", message = "evalPeriodType doit être 'week' ou 'month'") String evalPeriodType,
+    @Min(1) Integer evalPeriodValue,
+    @Min(1) Integer benefitDurationDays,
+    @DecimalMin("0.00") BigDecimal minSpendMonthly
 ) {
 }

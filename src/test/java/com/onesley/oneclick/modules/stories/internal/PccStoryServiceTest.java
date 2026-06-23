@@ -112,6 +112,28 @@ class PccStoryServiceTest {
         verify(repo, never()).save(any());
     }
 
+    // ─── adminCreate (Lot 4b — cross-tenant super-admin) ─────────────────────────
+
+    @Test
+    void adminCreate_usesTargetTenant_notCallerTenant() {
+        UUID targetTenant = UUID.randomUUID(); // tenant CIBLE ≠ tenant home du caller
+        StoryDto out = service.adminCreate(targetTenant, new CreateStoryDto(
+            "https://cdn/admin.jpg", "image", "Depuis le super-admin", 15, 0, null, null));
+        assertThat(out.tenantId()).isEqualTo(targetTenant);
+        assertThat(out.authorId()).isEqualTo(caller);
+        // Aucune garde staff ici (gardé au controller par UPDATE:TENANTS) → insert direct.
+        verify(repo, never()).isActiveStaffOfTenant(any(), any());
+        verify(repo).save(any(PccStory.class));
+    }
+
+    @Test
+    void adminCreate_nullTenant_throws400() {
+        assertThatThrownBy(() -> service.adminCreate(null, new CreateStoryDto(
+            "https://cdn/x.jpg", "image", "cap", 15, 0, null, null)))
+            .isInstanceOf(BadRequestException.class);
+        verify(repo, never()).save(any());
+    }
+
     @Test
     void create_byRestaurateurOfOtherTenant_forbidden() {
         // Acteur gestion MAIS pas staff actif de CE tenant (cross-tenant) → 403.

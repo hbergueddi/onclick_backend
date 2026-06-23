@@ -35,6 +35,7 @@ class TenantServiceTest {
     @Mock TenantRepository repository;
     @Mock TenantBrandingRepository brandingRepository;
     @Mock TenantFeatureRepository featureRepository;
+    @Mock CompanySettingsRepository companySettingsRepository;
     @InjectMocks TenantService service;
 
     private Tenant tenant() { return new Tenant(UUID.randomUUID(), "OneClick", "oneclick"); }
@@ -53,7 +54,67 @@ class TenantServiceTest {
         assertThatThrownBy(() -> service.findById(UUID.randomUUID())).isInstanceOf(NotFoundException.class);
         Tenant t = tenant();
         when(repository.findById(t.getId())).thenReturn(Optional.of(t));
+        when(companySettingsRepository.findByTenantId(t.getId())).thenReturn(Optional.empty());
         assertThat(service.findById(t.getId())).isNotNull();
+    }
+
+    @Test
+    void findById_populatesLegalName_fromCompanySettings() {
+        Tenant t = tenant();
+        when(repository.findById(t.getId())).thenReturn(Optional.of(t));
+        CompanySettings cs = new CompanySettings(UUID.randomUUID(), t, "OneClick SARL");
+        when(companySettingsRepository.findByTenantId(t.getId())).thenReturn(Optional.of(cs));
+
+        TenantDto dto = service.findById(t.getId());
+
+        assertThat(dto.legalName()).isEqualTo("OneClick SARL");
+    }
+
+    @Test
+    void findById_legalNameNull_whenNoCompanySettings() {
+        Tenant t = tenant();
+        when(repository.findById(t.getId())).thenReturn(Optional.of(t));
+        when(companySettingsRepository.findByTenantId(t.getId())).thenReturn(Optional.empty());
+
+        TenantDto dto = service.findById(t.getId());
+
+        assertThat(dto.legalName()).isNull();
+    }
+
+    @Test
+    void findAll_doesNotLookupCompanySettings_legalNameNull() {
+        when(repository.findAll()).thenReturn(List.of(tenant()));
+        List<TenantDto> out = service.findAll();
+        assertThat(out).hasSize(1);
+        assertThat(out.get(0).legalName()).isNull();
+        // findAll ne doit JAMAIS toucher company_settings (pas de fuite légale + lookup léger).
+        org.mockito.Mockito.verifyNoInteractions(companySettingsRepository);
+    }
+
+    @Test
+    void findBySlug_doesNotLookupCompanySettings_legalNameNull() {
+        when(repository.findBySlug("oneclick")).thenReturn(Optional.of(tenant()));
+        TenantDto dto = service.findBySlug("oneclick");
+        assertThat(dto.legalName()).isNull();
+        // by-slug est PUBLIC → ne doit pas exposer la raison sociale.
+        org.mockito.Mockito.verifyNoInteractions(companySettingsRepository);
+    }
+
+    // ─── Tenant.toDto overload (mapping entité → DTO) ────────────────────────────────
+
+    @Test
+    void tenantToDto_noArg_leavesLegalNameNull() {
+        Tenant t = new Tenant(UUID.randomUUID(), "OneClick", "oneclick");
+        assertThat(t.toDto().legalName()).isNull();
+    }
+
+    @Test
+    void tenantToDto_withLegalName_setsIt() {
+        Tenant t = new Tenant(UUID.randomUUID(), "OneClick", "oneclick");
+        TenantDto dto = t.toDto("OneClick SARL");
+        assertThat(dto.legalName()).isEqualTo("OneClick SARL");
+        assertThat(dto.name()).isEqualTo("OneClick");
+        assertThat(dto.slug()).isEqualTo("oneclick");
     }
 
     @Test

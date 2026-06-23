@@ -3,11 +3,13 @@ package com.onesley.oneclick.modules.resource_booking.internal;
 import com.onesley.oneclick.core.identity.api.User;
 import com.onesley.oneclick.core.identity.api.UserDirectoryApi;
 import com.onesley.oneclick.core.tenant.api.Tenant;
+import com.onesley.oneclick.exception.ConflictException;
 import com.onesley.oneclick.exception.ForbiddenException;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.exception.UnprocessableException;
 import com.onesley.oneclick.security.SecurityHelper;
 import com.onesley.oneclick.security.TenantScope;
+import com.onesley.oneclick.shared.events.ResourceBookingCreatedEvent;
 import com.onesley.oneclick.shared.events.ResourceBookingStatusChangedEvent;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -99,12 +101,30 @@ public class ResourceBookingService {
     // ─── Resources ───────────────────────────────────────────────────────────
 
     public Page<ResourceDto> findAllResources(UUID tenantId, String resourceType, Boolean enabledOnly, int page, int size) {
-        // Périmètre tenant (fuite de périmètre) : un tenantId explicite n'est honoré que si le
-        // caller peut le voir ({tenant public} ∪ memberships actives) ; sinon 403 (le client
-        // ne « devine » jamais les ressources d'un programme dont il n'est pas membre).
-        if (tenantId != null && !tenantScope.canSeeTenant(tenantId)) {
-            throw new ForbiddenException(
-                "Accès interdit : ce programme ne fait pas partie de votre périmètre");
+        // ── Détermination du périmètre tenant (anti-fuite) ──────────────────────────────────────
+        // Le STAFF (gestion du parc, autorité {CREATE|UPDATE}:RESOURCE_BOOKINGS) consulte SON propre
+        // parc — qui vit dans son tenant HOME (résolu serveur depuis le JWT), PAS dans ses memberships :
+        // un owner PCC est STAFF de palmeraie, jamais MEMBRE → palmeraie ∉ visibleTenantIds. Sans cet
+        // alignement, son écran de gestion listait 0 ressource (cause-racine du 403/liste vide).
+        //
+        // On distingue donc deux intentions :
+        //   • DÉCOUVERTE client (tenantId explicite passé par PccHome reveal, ou liste publique sans
+        //     tenantId) → périmètre VISIBLE membership-scopé inchangé (NE PAS dégrader l'anti-fuite client).
+        //   • GESTION staff (autorité parc + AUCUN tenantId explicite) → scope sur le tenant HOME du staff.
+        final boolean parcManager = SecurityHelper.hasAuthority("CREATE:RESOURCE_BOOKINGS")
+            || SecurityHelper.hasAuthority("UPDATE:RESOURCE_BOOKINGS");
+        final UUID staffTenant = parcManager ? resolveStaffTenantOrNull() : null;
+
+        if (tenantId != null) {
+            // tenantId explicite : honoré si le caller peut le voir (client membre / public) OU s'il
+            // s'agit du tenant HOME du staff gestionnaire (sinon 403 — le client ne « devine » jamais
+            // les ressources d'un programme dont il n'est pas membre).
+            boolean allowed = tenantScope.canSeeTenant(tenantId)
+                || (staffTenant != null && staffTenant.equals(tenantId));
+            if (!allowed) {
+                throw new ForbiddenException(
+                    "Accès interdit : ce programme ne fait pas partie de votre périmètre");
+            }
         }
         Specification<Resource> spec = (root, q, cb) -> cb.isNull(root.get("deletedAt"));
         if (tenantId != null)     spec = spec.and((root, q, cb) -> cb.equal(root.get("tenantId"), tenantId));
@@ -112,12 +132,21 @@ public class ResourceBookingService {
         if (Boolean.TRUE.equals(enabledOnly)) {
             spec = spec.and((root, q, cb) -> cb.isTrue(root.get("enabled")));
         }
-        // Sans tenantId explicite : scoper la liste au périmètre visible. SUPERADMIN (null) →
-        // aucun filtre (le set inclut toujours le tenant public, donc jamais vide pour un client).
-        Set<UUID> visible = tenantScope.visibleTenantIdsOrNull();
-        if (visible != null) {
-            final Set<UUID> scoped = visible;
-            spec = spec.and((root, q, cb) -> root.get("tenantId").in(scoped));
+        // Sans tenantId explicite : choisir le périmètre de scoping.
+        if (tenantId == null) {
+            if (staffTenant != null) {
+                // GESTION staff : son parc = son tenant HOME (board admin des ressources PCC).
+                final UUID scopedStaff = staffTenant;
+                spec = spec.and((root, q, cb) -> cb.equal(root.get("tenantId"), scopedStaff));
+            } else {
+                // DÉCOUVERTE client : périmètre VISIBLE (oneclick ∪ memberships). SUPERADMIN (null)
+                // → aucun filtre (le set inclut toujours le tenant public, donc jamais vide pour un client).
+                Set<UUID> visible = tenantScope.visibleTenantIdsOrNull();
+                if (visible != null) {
+                    final Set<UUID> scoped = visible;
+                    spec = spec.and((root, q, cb) -> root.get("tenantId").in(scoped));
+                }
+            }
         }
         return resourceRepo.findAll(spec, PageRequest.of(page, size, Sort.by("name").ascending()))
             .map(Resource::toDto);
@@ -127,8 +156,14 @@ public class ResourceBookingService {
         Resource r = resourceRepo.findById(id)
             .filter(x -> x.getDeletedAt() == null)
             .orElseThrow(() -> new NotFoundException("Resource", id));
-        // Hors périmètre : 404 (ne pas divulguer l'existence d'une ressource d'un programme non accessible).
-        if (!tenantScope.canSeeTenant(r.getTenantId())) {
+        // Visible si dans le périmètre membership du caller (découverte client : lecture par id d'un
+        // programme dont il est membre) OU si la ressource appartient au tenant HOME du staff appelant
+        // (board de gestion : pré-remplir le form d'édition d'une ressource PCC, où l'owner est STAFF
+        // non membre). Hors de ces deux périmètres → 404 (ne pas divulguer l'existence).
+        UUID staffTenant = resolveStaffTenantOrNull();
+        boolean visible = tenantScope.canSeeTenant(r.getTenantId())
+            || (staffTenant != null && staffTenant.equals(r.getTenantId()));
+        if (!visible) {
             throw new NotFoundException("Resource", id);
         }
         return r.toDto();
@@ -136,10 +171,91 @@ public class ResourceBookingService {
 
     @Transactional
     public ResourceDto createResource(ResourceCreateDto dto) {
-        Tenant tenantRef = entityManager.getReference(Tenant.class, dto.tenantId());
+        // Anti-spoof : une ressource est TOUJOURS créée sous le tenant HOME du staff appelant
+        // (résolu serveur depuis le JWT), JAMAIS sous un tenantId arbitraire fourni par le client.
+        // Un acteur cross-tenant (SUPERADMIN — VIEW:TENANTS) peut viser un tenant arbitraire (vue
+        // globale) ; tout autre caller est limité à son propre tenant.
+        final UUID tenantId;
+        if (isCrossTenant()) {
+            // SUPERADMIN : tenantId du DTO respecté (création pour le compte d'un tenant donné).
+            tenantId = dto.tenantId();
+        } else {
+            UUID staffTenant = resolveStaffTenantOrNull();
+            if (staffTenant == null) {
+                // Pas de tenant HOME (admin plateforme global sans tenant) → la création de parc
+                // n'a pas de tenant de rattachement : réservée au staff/admin d'un tenant.
+                throw new ForbiddenException(
+                    "Accès interdit : la création de ressources est réservée au staff d'un programme");
+            }
+            // Si un tenantId est fourni ET diffère du tenant HOME → spoof tenté → refus.
+            if (dto.tenantId() != null && !dto.tenantId().equals(staffTenant)) {
+                throw new ForbiddenException(
+                    "Accès interdit : vous ne pouvez créer des ressources que dans votre propre programme");
+            }
+            tenantId = staffTenant; // forcé au tenant du staff (même si le DTO en porte un autre/null)
+        }
+        Tenant tenantRef = entityManager.getReference(Tenant.class, tenantId);
         Resource r = new Resource(UUID.randomUUID(), tenantRef, dto.resourceType(), dto.name());
         if (dto.description() != null) r.setDescription(dto.description());
         if (dto.capacity() != null)    r.setCapacity(dto.capacity());
+        // Parité création (P1.3) : paramètres de génération de créneaux fournis directement
+        // (jusqu'ici peuplés par seed). L'entité/la table les supportent (migration V96).
+        if (dto.slotDurationMinutes() != null) r.setSlotDurationMinutes(dto.slotDurationMinutes());
+        if (dto.maxInvitees() != null)         r.setMaxInvitees(dto.maxInvitees());
+        if (dto.openingHours() != null)        r.setOpeningHours(dto.openingHours());
+        return resourceRepo.save(r).toDto();
+    }
+
+    /**
+     * P1.3 — patch partiel d'une ressource (parc admin). Charge la ressource non soft-deleted,
+     * vérifie le périmètre tenant (même mécanisme {@link TenantScope#canSeeTenant} que les autres
+     * lectures — hors périmètre → 404), valide les champs <b>fournis</b> (métier) puis applique
+     * uniquement ceux-ci (COALESCE). Le <b>type</b> de ressource n'est jamais modifié (verrouillé).
+     */
+    @Transactional
+    public ResourceDto updateResource(UUID id, ResourceUpdateDto dto) {
+        Resource r = resourceRepo.findById(id)
+            .filter(x -> x.getDeletedAt() == null)
+            .orElseThrow(() -> new NotFoundException("Resource", id));
+        // Gestion du parc : autorisée si acteur cross-tenant (SUPERADMIN) OU si la ressource appartient
+        // au tenant HOME du staff appelant. Hors de ce périmètre → 404 (ne pas divulguer l'existence).
+        requireManageableByStaff(r, id);
+        // Validations métier sur les champs FOURNIS (les bornes structurelles sont déjà gardées par
+        // les annotations du DTO ; ici on défend la cohérence sémantique côté service).
+        if (dto.name() != null && dto.name().isBlank()) {
+            throw new UnprocessableException("Le nom de la ressource ne peut pas être vide.");
+        }
+        if (dto.capacity() != null && dto.capacity() < 1) {
+            throw new UnprocessableException("La capacité doit être au moins de 1.");
+        }
+        if (dto.slotDurationMinutes() != null && dto.slotDurationMinutes() < 15) {
+            throw new UnprocessableException("La durée d'un créneau doit être d'au moins 15 minutes.");
+        }
+        if (dto.maxInvitees() != null && dto.maxInvitees() < 0) {
+            throw new UnprocessableException("Le nombre d'invités ne peut pas être négatif.");
+        }
+        // Patch partiel (COALESCE) — seuls les champs non null sont appliqués ; le type reste verrouillé.
+        if (dto.name() != null)                r.setName(dto.name());
+        if (dto.description() != null)         r.setDescription(dto.description());
+        if (dto.capacity() != null)            r.setCapacity(dto.capacity());
+        if (dto.slotDurationMinutes() != null) r.setSlotDurationMinutes(dto.slotDurationMinutes());
+        if (dto.maxInvitees() != null)         r.setMaxInvitees(dto.maxInvitees());
+        if (dto.openingHours() != null)        r.setOpeningHours(dto.openingHours());
+        return resourceRepo.save(r).toDto();
+    }
+
+    /**
+     * P1.3 — toggle d'activation d'une ressource (active/désactive le parc). Même périmètre tenant
+     * que {@link #updateResource} (hors périmètre → 404). Une ressource désactivée ({@code enabled=false})
+     * reste réservable côté staff mais disparaît de la découverte membre ({@code enabledOnly}).
+     */
+    @Transactional
+    public ResourceDto setResourceEnabled(UUID id, boolean enabled) {
+        Resource r = resourceRepo.findById(id)
+            .filter(x -> x.getDeletedAt() == null)
+            .orElseThrow(() -> new NotFoundException("Resource", id));
+        requireManageableByStaff(r, id);
+        r.setEnabled(enabled);
         return resourceRepo.save(r).toDto();
     }
 
@@ -148,6 +264,16 @@ public class ResourceBookingService {
         Resource r = resourceRepo.findById(id)
             .filter(x -> x.getDeletedAt() == null)
             .orElseThrow(() -> new NotFoundException("Resource", id));
+        // Gestion du parc : suppression réservée au staff du tenant propriétaire (ou cross-tenant) —
+        // hors de ce périmètre → 404 (ne divulgue pas l'existence d'une ressource d'un autre programme).
+        requireManageableByStaff(r, id);
+        // P1.3 — refuser (409) la suppression d'une ressource ayant des réservations VIVANTES
+        // (non soft-deleted) : on ne casse pas un parc encore réservé. Les bookings annulés
+        // (soft-deleted) ne comptent pas → la ressource redevient supprimable une fois purgée.
+        if (bookingRepo.countActiveByResourceId(id) > 0) {
+            throw new ConflictException(
+                "Désactivez la ressource au lieu de la supprimer : des réservations y sont rattachées.");
+        }
         r.markDeleted();
         resourceRepo.save(r);
     }
@@ -265,6 +391,71 @@ public class ResourceBookingService {
         return new org.springframework.data.domain.PageImpl<>(dtos, bookings.getPageable(), bookings.getTotalElements());
     }
 
+    /**
+     * P1.4 — statistiques de no-show <b>par organisateur</b> du tenant de l'appelant, sur la fenêtre
+     * {@code [from, to)}. C'est le seul vrai trou des exports bookable : le board staff peut voir
+     * QUI accumule les no-shows pour adapter la politique (relances, dépôts de garantie…).
+     *
+     * <p><b>ABAC identique à {@link #findTenantBookings}</b> (calque exact) : réservé au staff/admin
+     * ({@link SecurityHelper#isStaffOrAdmin()} → un CLIENT est refusé 403) ; le tenant vient TOUJOURS
+     * du contexte sécurité (sub du JWT → {@link UserDirectoryApi#tenantIdById}), JAMAIS d'un paramètre
+     * client (anti-spoof) → le staff ne voit QUE l'assiduité de SON tenant. Staff sans tenant (admin
+     * plateforme global) → liste vide. Agrégation en UNE requête (anti-N+1), enrichie du nom
+     * d'affichage de l'organisateur en un seul batch, triée no-shows DESC.</p>
+     *
+     * @param from borne basse incluse (sur {@code startAt})
+     * @param to   borne haute exclue
+     */
+    public List<NoShowStatsDto> noShowStats(Instant from, Instant to) {
+        if (!SecurityHelper.isStaffOrAdmin()) {
+            throw new ForbiddenException(
+                "Accès interdit : les statistiques d'assiduité sont réservées au staff/admin");
+        }
+        UUID current = SecurityHelper.currentUserId();
+        UUID tenantId = current != null ? userDirectory.tenantIdById(current).orElse(null) : null;
+        if (tenantId == null) {
+            // Staff/admin sans tenant (admin plateforme global) → aucun parc tenant à agréger.
+            return List.of();
+        }
+
+        List<Object[]> rows = bookingRepo.aggregateNoShowStatsByOrganizer(tenantId, from, to);
+        if (rows.isEmpty()) return List.of();
+
+        // Enrichissement nom d'affichage organizer en un seul batch (anti-N+1), comme enrichForStaff.
+        List<UUID> organizerIds = rows.stream()
+            .map(r -> (UUID) r[0]).filter(java.util.Objects::nonNull).distinct().toList();
+        Map<UUID, UserDirectoryApi.UserName> names = organizerIds.isEmpty()
+            ? Map.of()
+            : userDirectory.namesByIds(organizerIds).stream()
+                .collect(Collectors.toMap(UserDirectoryApi.UserName::id, Function.identity(), (a, b) -> a));
+
+        List<NoShowStatsDto> stats = new ArrayList<>(rows.size());
+        for (Object[] r : rows) {
+            UUID organizerId = (UUID) r[0];
+            long total     = ((Number) r[1]).longValue();
+            long honored   = r[2] == null ? 0L : ((Number) r[2]).longValue();
+            long noShows   = r[3] == null ? 0L : ((Number) r[3]).longValue();
+            long cancelled = r[4] == null ? 0L : ((Number) r[4]).longValue();
+            Instant lastNoShowAt = (Instant) r[5];
+            // Taux = no-shows / (honorés + no-shows). Les annulations N'entrent PAS au dénominateur.
+            long denom = honored + noShows;
+            double rate = denom == 0 ? 0.0 : (noShows * 100.0) / denom;
+
+            UserDirectoryApi.UserName n = organizerId != null ? names.get(organizerId) : null;
+            String organizerName = n != null
+                ? java.util.stream.Stream.of(n.firstName(), n.lastName())
+                    .filter(s -> s != null && !s.isBlank())
+                    .collect(Collectors.joining(" ")).trim()
+                : null;
+            stats.add(new NoShowStatsDto(
+                organizerId, (organizerName == null || organizerName.isBlank()) ? null : organizerName,
+                total, honored, noShows, cancelled, rate, lastNoShowAt));
+        }
+        // Tri no-shows DESC (les pires assiduités en tête du board).
+        stats.sort(java.util.Comparator.comparingLong(NoShowStatsDto::noShows).reversed());
+        return stats;
+    }
+
     public BookingDto findBookingById(UUID id) {
         ResourceBooking b = bookingRepo.findById(id)
             .filter(x -> x.getDeletedAt() == null)
@@ -294,6 +485,17 @@ public class ResourceBookingService {
         // renvoyé porte bien organizer_id (= self forcé) — cohérent avec un GET ultérieur.
         entityManager.flush();
         entityManager.refresh(saved);
+        // Gap #3 — notifier le staff du tenant d'une nouvelle demande (parité legacy
+        // send-pcc-staff-notification). Destinataires résolus ici (frontière Modulith) et portés
+        // sur l'event ; core.notification n'a qu'à itérer.
+        Resource resource = saved.getResource();
+        if (resource != null) {
+            List<UUID> staffRecipientIds =
+                bookingRepo.findStaffRecipientIdsForTenant(resource.getTenantId(), saved.getOrganizerId());
+            eventPublisher.publishEvent(new ResourceBookingCreatedEvent(
+                saved.getId(), saved.getOrganizerId(), saved.getResourceId(),
+                resource.getTenantId(), resource.getResourceType(), staffRecipientIds, Instant.now()));
+        }
         return saved.toDto();
     }
 
@@ -325,6 +527,7 @@ public class ResourceBookingService {
                 resource != null ? resource.getTenantId() : null,
                 resource != null ? resource.getResourceType() : null,
                 oldStatus, newStatus,
+                SecurityHelper.currentUserId(),   // acteur : staff/admin OU membre (anti self-notify cancel, R3-bis)
                 Instant.now()
             ));
         }
@@ -343,8 +546,34 @@ public class ResourceBookingService {
         if (!SecurityHelper.isStaffOrAdmin()) {
             requireCancellableByMember(b);
         }
+        String oldStatus = b.getStatus();
         b.markDeleted();
-        bookingRepo.save(b);
+        ResourceBooking saved = bookingRepo.save(b);
+
+        // Lot B9 — l'annulation d'un booking (soft-delete) publie un event « cancelled » consommé par
+        // core.notification. L'acteur (changedBy) route la notif (R3-bis) : membre lui-même
+        // (changedBy == organizerId) → notif au STAFF du tenant (et pas de push redondant au membre) ;
+        // staff/admin → push d'annulation au CLIENT (comportement existant du listener).
+        // Frontière Modulith : on résout les destinataires staff ici (uniquement quand le membre
+        // s'annule) et on les porte sur l'event ; core.notification n'a qu'à itérer.
+        UUID changedBy = SecurityHelper.currentUserId();
+        Resource resource = saved.getResource();
+        boolean memberSelfCancel = changedBy != null && changedBy.equals(saved.getOrganizerId());
+        List<UUID> staffRecipientIds = null;
+        if (memberSelfCancel && resource != null) {
+            staffRecipientIds = bookingRepo.findStaffRecipientIdsForTenant(
+                resource.getTenantId(), saved.getOrganizerId());
+        }
+        eventPublisher.publishEvent(new ResourceBookingStatusChangedEvent(
+            saved.getId(),
+            saved.getOrganizerId(),
+            saved.getResourceId(),
+            resource != null ? resource.getTenantId() : null,
+            resource != null ? resource.getResourceType() : null,
+            oldStatus, "cancelled",
+            changedBy,
+            staffRecipientIds,
+            Instant.now()));
     }
 
     // ─── Guests ──────────────────────────────────────────────────────────────
@@ -411,6 +640,43 @@ public class ResourceBookingService {
             .orElseThrow(() -> new NotFoundException("Resource", resourceId));
         if (!tenantScope.canSeeTenant(r.getTenantId())) {
             throw new NotFoundException("Resource", resourceId);
+        }
+    }
+
+    /**
+     * Acteur <b>cross-tenant</b> (SUPERADMIN) — identifié par l'autorité {@code VIEW:TENANTS} (que
+     * seul le SUPERADMIN détient, cf. {@link TenantScope}). Un tel acteur gère le parc de N'IMPORTE
+     * quel tenant (vue globale), sans restriction au tenant HOME. Aligné sur la sémantique de
+     * {@link TenantScope#visibleTenantIdsOrNull()} == {@code null}. {@code hasAuthority} only.
+     */
+    private boolean isCrossTenant() {
+        return SecurityHelper.hasAuthority("VIEW:TENANTS");
+    }
+
+    /**
+     * Tenant <b>HOME</b> du staff appelant (résolu serveur depuis le sub du JWT via
+     * {@link UserDirectoryApi#tenantIdById(UUID)}), ou {@code null} si non authentifié / admin
+     * plateforme global sans tenant. C'est le périmètre de GESTION du parc — un owner PCC est STAFF
+     * de palmeraie (tenant home), <b>pas membre</b> : son parc n'est donc PAS résolu via les
+     * memberships ({@link TenantScope}), mais via son tenant home (calque exact de
+     * {@link #findTenantBookings} / {@link #noShowStats}).
+     */
+    private UUID resolveStaffTenantOrNull() {
+        UUID current = SecurityHelper.currentUserId();
+        return current != null ? userDirectory.tenantIdById(current).orElse(null) : null;
+    }
+
+    /**
+     * Gate de GESTION du parc (édition / toggle / suppression) : autorise si l'appelant est
+     * cross-tenant (SUPERADMIN — vue globale) OU si la ressource appartient à son tenant HOME de
+     * staff. Sinon {@link NotFoundException} (404) — on ne divulgue jamais l'existence d'une ressource
+     * d'un programme que l'appelant ne gère pas (cohérent avec le 404 hors-périmètre des lectures).
+     */
+    private void requireManageableByStaff(Resource r, UUID id) {
+        if (isCrossTenant()) return;
+        UUID staffTenant = resolveStaffTenantOrNull();
+        if (staffTenant == null || !staffTenant.equals(r.getTenantId())) {
+            throw new NotFoundException("Resource", id);
         }
     }
 

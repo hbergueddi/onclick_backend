@@ -9,6 +9,7 @@ import com.onesley.oneclick.modules.loyalty.api.GainRuleRequestDto;
 import com.onesley.oneclick.modules.loyalty.api.GiftPointsDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyAccountDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyEarnDto;
+import com.onesley.oneclick.modules.loyalty.api.LoyaltyParamsDto;
 import com.onesley.oneclick.modules.loyalty.api.LoyaltyTransactionDto;
 import com.onesley.oneclick.modules.loyalty.api.ScannedTicketStatsDto;
 import com.onesley.oneclick.modules.loyalty.api.ScannedTicketDto;
@@ -295,6 +296,24 @@ public class LoyaltyController {
     }
 
     // ─── Helpers loyalty pour Pocket ─────────────────────────────────────────
+
+    @GetMapping("/params")
+    @Operation(
+        summary = "Paramètres fidélité effectifs du client courant pour un restaurant (écran « Vos avantages » / ConversionGuide).",
+        description = "Port du hook legacy useLoyaltyParams. Renvoie le taux de conversion effectif " +
+                      "(gain_rules.conversion_rate × bonus palier), la valeur du point (loyalty_rules.point_value, " +
+                      "défaut 1.0), la durée de validité (loyalty_rules.expires_after_days, défaut 365) et le palier " +
+                      "courant + son bonus. ABAC self-scope STRICT : les params sont toujours calculés pour le user " +
+                      "courant (SecurityHelper.currentUserId), jamais pour un autre client."
+    )
+    @PreAuthorize("hasAuthority('VIEW:LOYALTY')")
+    public LoyaltyParamsDto loyaltyParams(@RequestParam UUID restaurantId) {
+        // Self-scope : on ne lit JAMAIS les params d'un autre client. clientId = user courant.
+        // VIEW:LOYALTY est l'autorité que détient CLIENT pour ses lectures fidélité (Pocket),
+        // partagée avec staff/admin ; ici le scoping est garanti par currentUserId() (pas de
+        // paramètre clientId exposé → aucune énumération possible).
+        return service.resolveLoyaltyParams(SecurityHelper.currentUserId(), restaurantId);
+    }
 
     @GetMapping("/transactions/by-client/{clientId}")
     @Operation(summary = "Toutes les transactions fidélité d'un client (cross-comptes, anti-N+1).")

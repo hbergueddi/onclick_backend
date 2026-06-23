@@ -34,6 +34,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -55,6 +56,8 @@ class LoyaltyExtensionServiceTest {
     @Mock UserDirectoryApi userDirectory;
     @Mock EntityManager em;
     @Mock Query query;
+    @Mock LoyaltyEventRefGuard refGuard;
+    @Mock org.springframework.context.ApplicationEventPublisher events;
     @InjectMocks LoyaltyExtensionService service;
 
     private final UUID resto = UUID.randomUUID();
@@ -65,6 +68,8 @@ class LoyaltyExtensionServiceTest {
         ReflectionTestUtils.setField(service, "em", em);
         lenient().when(em.createNativeQuery(anyString())).thenReturn(query);
         lenient().when(query.setParameter(anyString(), any())).thenReturn(query);
+        // par défaut : réfs présentes (les tests "absent" overrident).
+        lenient().when(refGuard.refsExist(any(), any())).thenReturn(true);
         lenient().when(ratingRepo.save(any())).thenAnswer(i -> i.getArgument(0));
         lenient().when(aiUsageRepo.save(any())).thenAnswer(i -> i.getArgument(0));
         lenient().when(restitutionRepo.save(any())).thenAnswer(i -> i.getArgument(0));
@@ -96,6 +101,9 @@ class LoyaltyExtensionServiceTest {
         var s = service.computeUserScore(user);
         assertThat(s.averageRating()).isEqualByComparingTo("5.0");
         assertThat(s.score()).isEqualByComparingTo("100.00");
+        // 0 note → stars null : déclenche le badge « 🆕 Nouveau client » (web + natifs),
+        // plutôt qu'un ⭐5.0 trompeur. averageRating/score gardent 5.0/100 (calcul interne).
+        assertThat(s.stars()).isNull();
     }
 
     @Test
@@ -155,6 +163,16 @@ class LoyaltyExtensionServiceTest {
         ArgumentCaptor<ClientRating> cap = ArgumentCaptor.forClass(ClientRating.class);
         verify(ratingRepo).save(cap.capture());
         assertThat(cap.getValue().getRating()).isEqualByComparingTo("5.0");
+    }
+
+    @Test
+    void recordRating_missingRef_skipsAndReturnsNull() {
+        // Garde-fou FK : réservation/user référencé absent (ex: event Modulith rejoué après suppression)
+        // → aucun insert client_ratings, retour null.
+        when(refGuard.refsExist(any(), any())).thenReturn(false);
+        var result = service.recordRating(user, UUID.randomUUID(), new BigDecimal("-0.5"), "no_show");
+        assertThat(result).isNull();
+        verify(ratingRepo, never()).save(any());
     }
 
     // ─── AI usage ──────────────────────────────────────────────────────────────
@@ -225,6 +243,58 @@ class LoyaltyExtensionServiceTest {
     void findRestitutionsByRestaurants_emptyIds_returnsEmpty_noQuery() {
         assertThat(service.findRestitutionsByRestaurants(List.of())).isEmpty();
         verify(restitutionRepo, never()).findByRestaurants(any());
+    }
+
+    // ─── B6 : versement restitution → statut paid + event staff ─────────────────
+
+    @Test
+    void payRestitution_marksPaid_resolvesStaff_publishesEvent() {
+        UUID rid = UUID.randomUUID();
+        RestaurantRestitution r = new RestaurantRestitution();
+        r.setRestaurantId(resto);
+        r.setAmount(new BigDecimal("120.00"));
+        r.setStatus("pending");
+        when(restitutionRepo.findById(rid)).thenReturn(Optional.of(r));
+        // staff résolu via requête native (em.createNativeQuery(anyString()) → query par défaut)
+        UUID s1 = UUID.randomUUID(), s2 = UUID.randomUUID();
+        when(query.getResultList()).thenReturn(List.of(s1, s2));
+
+        var out = service.payRestitution(rid);
+
+        assertThat(out.status()).isEqualTo("paid");
+        assertThat(r.getStatus()).isEqualTo("paid");
+        verify(restitutionRepo).save(r);
+        ArgumentCaptor<com.onesley.oneclick.shared.events.RestaurantRestitutionPaidEvent> ev =
+            ArgumentCaptor.forClass(com.onesley.oneclick.shared.events.RestaurantRestitutionPaidEvent.class);
+        verify(events).publishEvent(ev.capture());
+        assertThat(ev.getValue().restaurantId()).isEqualTo(resto);
+        assertThat(ev.getValue().amount()).isEqualByComparingTo("120.00");
+        assertThat(ev.getValue().staffRecipientIds()).containsExactlyInAnyOrder(s1, s2);
+    }
+
+    @Test
+    void payRestitution_alreadyPaid_idempotent_noEvent_noResave() {
+        UUID rid = UUID.randomUUID();
+        RestaurantRestitution r = new RestaurantRestitution();
+        r.setRestaurantId(resto);
+        r.setAmount(new BigDecimal("50.00"));
+        r.setStatus("paid"); // déjà versée
+        when(restitutionRepo.findById(rid)).thenReturn(Optional.of(r));
+
+        var out = service.payRestitution(rid);
+
+        assertThat(out.status()).isEqualTo("paid");
+        verify(restitutionRepo, never()).save(any());
+        verify(events, never()).publishEvent(any());
+    }
+
+    @Test
+    void payRestitution_notFound_throws() {
+        UUID rid = UUID.randomUUID();
+        when(restitutionRepo.findById(rid)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.payRestitution(rid))
+            .isInstanceOf(com.onesley.oneclick.exception.NotFoundException.class);
+        verify(events, never()).publishEvent(any());
     }
 
     @Test

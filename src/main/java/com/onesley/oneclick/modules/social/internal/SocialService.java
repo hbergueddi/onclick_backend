@@ -11,6 +11,7 @@ import com.onesley.oneclick.exception.UnprocessableException;
 import com.onesley.oneclick.security.SecurityHelper;
 import com.onesley.oneclick.shared.events.FriendshipRequestedEvent;
 import com.onesley.oneclick.shared.events.FriendshipRespondedEvent;
+import com.onesley.oneclick.shared.events.ReferralActivatedEvent;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.beans.factory.annotation.Value;
@@ -69,6 +70,14 @@ public class SocialService {
     /** Plafond d'amitiés acceptées par user (défaut 50). Configurable. */
     @Value("${app.social.friends.cap:50}")
     private int friendsCap;
+
+    /**
+     * Points de récompense d'un parrainage CLIENT (Lot B1) — informational pour le libellé
+     * des 2 notifs in-app (parrain + filleul). Défaut 50 (parité legacy « +50 pts chacun »).
+     * Configurable ; ne crédite PAS de points (le port Spring n'en crédite pas, cf {@link #activateByCode}).
+     */
+    @Value("${app.social.referral.reward-points:50}")
+    private int referralRewardPoints;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -413,7 +422,12 @@ public class SocialService {
             .orElseThrow(() -> new NotFoundException("Referral", referralId));
         r.setReferredUser(entityManager.getReference(User.class, referredUserId));
         r.markActivated();
-        return referralRepo.save(r).toDto();
+        ReferralDto saved = referralRepo.save(r).toDto();
+        // Lot B1 — notif in-app au parrain ET au filleul (parité legacy). Frontière Modulith :
+        // on publie l'event, core.notification le consomme (aucun appel direct social→notification).
+        eventPublisher.publishEvent(new ReferralActivatedEvent(
+            saved.id(), saved.referrerId(), referredUserId, referralRewardPoints, Instant.now()));
+        return saved;
     }
 
     /**
@@ -449,6 +463,11 @@ public class SocialService {
 
         // Auto-amitié filleul↔parrain (idempotent + flip d'une éventuelle demande pending).
         upsertAcceptedFriendship(filleul, referrer.getId());
+
+        // Lot B1 — notif in-app au parrain ET au filleul (parité legacy ; pas de crédit de points
+        // côté Spring). Frontière Modulith : event consommé par core.notification.
+        eventPublisher.publishEvent(new ReferralActivatedEvent(
+            saved.id(), referrer.getId(), filleul, referralRewardPoints, Instant.now()));
         return saved;
     }
 

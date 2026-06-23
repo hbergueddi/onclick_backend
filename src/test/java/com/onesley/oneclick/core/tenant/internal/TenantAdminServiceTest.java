@@ -90,6 +90,47 @@ class TenantAdminServiceTest {
     }
 
     @Test
+    void listAdmins_mapsAvatarUrl_fromUserDirectory() {
+        UUID userId = UUID.randomUUID();
+        TenantAdmin row = new TenantAdmin(UUID.randomUUID(), tenantId, userId, "admin", caller);
+        UserName withAvatar = new UserName(userId, "Karim", "Benali", "+212600", "karim@a.ma",
+            "https://cdn/avatar.png");
+        when(repo.findByTenantIdOrderByCreatedAtDesc(tenantId)).thenReturn(List.of(row));
+        when(userDirectory.namesByIds(List.of(userId))).thenReturn(List.of(withAvatar));
+
+        List<TenantAdminDto> out = service.listAdmins(tenantId);
+
+        assertThat(out).hasSize(1);
+        assertThat(out.get(0).avatarUrl()).isEqualTo("https://cdn/avatar.png");
+    }
+
+    @Test
+    void listAdmins_nullAvatar_whenUserHasNone() {
+        UUID userId = UUID.randomUUID();
+        TenantAdmin row = new TenantAdmin(UUID.randomUUID(), tenantId, userId, "admin", caller);
+        when(repo.findByTenantIdOrderByCreatedAtDesc(tenantId)).thenReturn(List.of(row));
+        when(userDirectory.namesByIds(List.of(userId))).thenReturn(List.of(user(userId))); // avatar null
+
+        List<TenantAdminDto> out = service.listAdmins(tenantId);
+
+        assertThat(out).hasSize(1);
+        assertThat(out.get(0).avatarUrl()).isNull();
+    }
+
+    @Test
+    void addAdmin_mapsAvatarUrl() {
+        UUID userId = UUID.randomUUID();
+        UserName withAvatar = new UserName(userId, "Karim", "Benali", "+212600", "karim@a.ma",
+            "https://cdn/avatar.png");
+        when(userDirectory.findByIdentifier("karim@a.ma")).thenReturn(Optional.of(withAvatar));
+        when(repo.existsByTenantIdAndUserId(tenantId, userId)).thenReturn(false);
+
+        TenantAdminDto dto = service.addAdmin(tenantId, new AddTenantAdminDto("karim@a.ma", "admin"));
+
+        assertThat(dto.avatarUrl()).isEqualTo("https://cdn/avatar.png");
+    }
+
+    @Test
     void listAdmins_unknownTenant_throws404() {
         when(tenantRepository.findById(tenantId)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.listAdmins(tenantId)).isInstanceOf(NotFoundException.class);

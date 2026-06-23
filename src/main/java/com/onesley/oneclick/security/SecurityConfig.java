@@ -103,6 +103,7 @@ public class SecurityConfig {
                 // Catalogue public — Login.tsx picker resto avant authent (GET only)
                 .requestMatchers(HttpMethod.GET, "/api/restaurants", "/api/restaurants/*").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/search/restaurants", "/api/search/restaurants/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/places/search").permitAll()  // BE-4 — autocomplétion Google Places (formulaire inscription resto public)
                 .requestMatchers(HttpMethod.GET, "/api/tenants/by-slug").permitAll()  // whitelabel routing avant login
                 .requestMatchers(HttpMethod.POST, "/api/store/onboarding").permitAll()  // Sprint I.3 — formulaire public soumission resto
                 .requestMatchers(HttpMethod.POST, "/api/users/register").permitAll()  // Signup public — rôle CLIENT forcé serveur-side
@@ -110,6 +111,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/email/webhooks/resend").permitAll()  // Gap #4 — webhook Resend (auth = signature Svix)
                 .requestMatchers(HttpMethod.GET, "/api/restaurants/featured").permitAll()  // Sprint H — curation publique Explore
                 .requestMatchers(HttpMethod.GET, "/api/restaurants/*/announcement").permitAll()  // Gap #6 — bannière annonce 24h (fiche spotlight publique)
+                .requestMatchers(HttpMethod.GET, "/email/**").permitAll()  // assets statiques emails (logo) chargés par les clients mail
                 // Preflight CORS
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 // Tout le reste demande un JWT valide

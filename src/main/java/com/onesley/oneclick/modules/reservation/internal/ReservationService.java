@@ -104,6 +104,10 @@ public class ReservationService {
             v.getRestaurantName(),
             v.getRestaurantCity(),
             v.getRestaurantImage(),
+            v.getRestaurantAddress(),
+            v.getRestaurantLatitude(),
+            v.getRestaurantLongitude(),
+            v.getRestaurantGooglePlaceId(),
             v.getMealServiceName(),
             v.getZoneName(),
             v.getTableNumber(),
@@ -245,6 +249,10 @@ public class ReservationService {
         // NB : on prend les UUID des DTOs (jamais NULL) plutôt que de
         // saved.getClientId() (NULL côté Hibernate car FK column avec
         // insertable=false). Pattern récurrent dans le codebase.
+        // Gap #2 — destinataires staff du resto (notif « nouvelle demande à traiter »).
+        // Résolution côté module source (frontière Modulith) ; portée sur l'event.
+        java.util.List<UUID> staffRecipientIds =
+            repository.findStaffRecipientIdsForRestaurant(dto.restaurantId(), dto.clientId());
         eventPublisher.publishEvent(new ReservationCreatedEvent(
             saved.getId(),
             dto.clientId(),
@@ -252,7 +260,8 @@ public class ReservationService {
             dto.tenantId(),
             dto.reservationAt(),
             dto.guestCount(),
-            saved.getStatus()
+            saved.getStatus(),
+            staffRecipientIds
         ));
 
         return saved.toDto();
@@ -335,13 +344,27 @@ public class ReservationService {
         historyRepository.save(hist);
         Reservation saved = repository.save(r);
 
-        // Publish status change event for downstream consumers (notifications, etc.)
+        // Lot B9 — annulation PAR LE CLIENT (le client de la résa = acteur) → le staff du resto doit
+        // être notifié. On ne résout les destinataires staff QUE dans ce cas (cancelled + acteur ==
+        // client) ; pour une annulation/refus initié par le staff, on ne notifie pas le staff
+        // (anti self-notify). Le client exclu de la requête (par sécurité s'il est aussi staff).
+        // Frontière Modulith : résolution ici, UUID portés sur l'event ; core.notification itère.
+        java.util.List<UUID> staffRecipientIds = null;
+        if ("cancelled".equals(newStatus) && changedById != null
+                && changedById.equals(r.getClientId())) {
+            staffRecipientIds = repository.findStaffRecipientIdsForRestaurant(
+                r.getRestaurantId(), r.getClientId());
+        }
+
+        // Publish status change event for downstream consumers (notifications, loyalty, etc.)
         eventPublisher.publishEvent(new ReservationStatusChangedEvent(
             saved.getId(),
             r.getClientId(),
             r.getRestaurantId(),
             r.getTenantId(),
             oldStatus, newStatus, reason,
+            changedById,            // Lot B9 — acteur (client / staff / null=système)
+            staffRecipientIds,      // Lot B9 — staff à notifier si annulation par le client
             java.time.Instant.now()
         ));
 

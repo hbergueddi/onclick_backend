@@ -16,9 +16,9 @@ spring:
   datasource:
     # SECURITY : password externalisé via DEV_DB_PASSWORD. Default ci-dessous
     # uniquement pour le setup compose.yaml local — à override en CI/staging.
-    url: ${DEV_DB_URL:jdbc:postgresql://localhost:5432/oneclick_local}
-    username: ${DEV_DB_USERNAME:oneclick_app}
-    password: ${DEV_DB_PASSWORD:OneclickLocal2026}
+    url: ${ENTERPRISE_DB_URL:jdbc:postgresql://localhost:5432/oneclick_enterprise}
+    username: ${ENTERPRISE_DB_USERNAME:oneclick_app}
+    password: ${ENTERPRISE_DB_PASSWORD:OneclickLocal2026}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10

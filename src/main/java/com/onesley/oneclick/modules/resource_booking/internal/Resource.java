@@ -4,8 +4,12 @@ import com.onesley.oneclick.audit.SoftDeletableAuditedEntity;
 import com.onesley.oneclick.core.tenant.api.Tenant;
 import com.onesley.oneclick.modules.resource_booking.api.ResourceBookingDtos.ResourceDto;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.proxy.HibernateProxy;
+import org.hibernate.type.SqlTypes;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import lombok.AccessLevel;
@@ -46,6 +50,19 @@ public class Resource extends SoftDeletableAuditedEntity {
     @Column(name = "enabled", nullable = false)
     @Setter private boolean enabled = true;
 
+    /** Horaires d'ouverture par jour de semaine ({@code mon..sun} → plages {@code "HH:MM-HH:MM"}) — JSONB. */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "opening_hours", columnDefinition = "jsonb")
+    @Setter private Map<String, List<String>> openingHours;
+
+    /** Durée d'un créneau en minutes (génération de la grille de créneaux). */
+    @Column(name = "slot_duration_minutes")
+    @Setter private Integer slotDurationMinutes;
+
+    /** Nombre max d'invités en plus de l'organisateur. */
+    @Column(name = "max_invitees")
+    @Setter private Integer maxInvitees;
+
     public Resource(UUID id, Tenant tenant, String resourceType, String name) {
         this.id = id;
         this.tenant = tenant;
@@ -55,7 +72,8 @@ public class Resource extends SoftDeletableAuditedEntity {
 
     /** Mapping vers le DTO public exposé hors du module. */
     public ResourceDto toDto() {
-        return new ResourceDto(id, tenantId, resourceType, name, description, capacity, enabled, getCreatedAt());
+        return new ResourceDto(id, tenantId, resourceType, name, description, capacity, enabled, getCreatedAt(),
+            openingHours, slotDurationMinutes, maxInvitees);
     }
 
     @Override

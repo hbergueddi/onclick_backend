@@ -45,6 +45,18 @@ public record RestaurantDto(
     Instant googleUpdatedAt,
     Instant createdAt,
     /** E1 — onboarding self-service terminé (null si wizard non complété). */
-    Instant onboardingCompletedAt
+    Instant onboardingCompletedAt,
+    /**
+     * Galerie « Identité visuelle » (max 5 : principale + secondaires), principale en tête.
+     * Remplie UNIQUEMENT par {@code GET /api/restaurants/{id}} (fiche Spotlight) ; {@code List.of()}
+     * pour les listes (Explore / search) qui n'affichent que la photo principale ({@code image}).
+     */
+    List<RestaurantPhotoDto> photos
 ) {
+    /** Copie enrichie de la galerie photos (lecture détail / Spotlight). */
+    public RestaurantDto withPhotos(List<RestaurantPhotoDto> photos) {
+        return new RestaurantDto(id, tenantId, name, description, phone, address, city, latitude, longitude,
+            status, budget, tags, loungePts, image, cuisine, maxStaff, groupId, googlePlaceId, googleRating,
+            googleReviewsCount, websiteUrl, openingHours, googleUpdatedAt, createdAt, onboardingCompletedAt, photos);
+    }
 }

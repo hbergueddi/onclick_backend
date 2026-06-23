@@ -1,5 +1,6 @@
 package com.onesley.oneclick.modules.reservation.api;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -55,6 +56,12 @@ public record ReservationDto(
     String restaurantName,
     String restaurantCity,
     String restaurantImage,
+    // ─── Géo restaurant (Maps « Y aller » sur la fiche réservation, invité inclus) ──
+    // Joints, remplis uniquement par les lectures enrichies ; null pour les écritures.
+    String restaurantAddress,
+    BigDecimal restaurantLatitude,
+    BigDecimal restaurantLongitude,
+    String restaurantGooglePlaceId,
     String mealServiceName,
     String zoneName,
     String tableNumber,
@@ -72,8 +79,9 @@ public record ReservationDto(
             reservationAt, guestCount, status, notes, createdAt, lateCancellation, noShowMarkedAt,
             proposedReservationAt,
             // joints (clientFirstName, clientLastName, clientPhone, clientAllergens,
-            // restaurantName, restaurantCity, restaurantImage, mealServiceName,
-            // zoneName, tableNumber, refusalReason, cancellationReason) → null pour les écritures.
-            null, null, null, null, null, null, null, null, null, null, null, null);
+            // restaurantName, restaurantCity, restaurantImage, restaurantAddress,
+            // restaurantLatitude, restaurantLongitude, restaurantGooglePlaceId,
+            // mealServiceName, zoneName, tableNumber, refusalReason, cancellationReason) → null écritures.
+            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 }

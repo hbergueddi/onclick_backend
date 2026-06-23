@@ -109,6 +109,29 @@ public class AuthController {
         return ResponseEntity.ok(LoginResponseDto.from(r));
     }
 
+    @PostMapping("/forgot-password")
+    @Operation(
+        summary = "Phase A — demande un code de réinitialisation de mot de passe (PUBLIC)",
+        description = "Envoie un code OTP 6 chiffres par email (Resend) si le compte existe. Réponse 202 " +
+                      "GÉNÉRIQUE dans tous les cas (anti-énumération : ne révèle pas si l'email a un compte)."
+    )
+    public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequestDto body) {
+        authService.requestPasswordReset(body.email());
+        return ResponseEntity.accepted().build();
+    }
+
+    @PostMapping("/reset-password")
+    @Operation(
+        summary = "Phase A — réinitialise le mot de passe via le code OTP reçu par email (PUBLIC, 204)",
+        description = "Vérifie le code OTP (reset_password, usage unique, 10 min) puis écrit le nouveau mot de " +
+                      "passe. Reconnexion FORCÉE : toutes les sessions sont révoquées, aucun token n'est renvoyé. " +
+                      "Code/email invalide ou expiré → 400 générique."
+    )
+    public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequestDto body) {
+        authService.resetPassword(body.email(), body.code(), body.newPassword());
+        return ResponseEntity.noContent().build();
+    }
+
     // ─── Helpers ──────────────────────────────────────────────────────────────
     private static String clientIp(HttpServletRequest req) {
         String h = req.getHeader("X-Forwarded-For");
@@ -143,7 +166,7 @@ public class AuthController {
     /** Acceptation invitation tenant-admin (E2). Le {@code token} clair vient du lien email. */
     public record AcceptInviteRequestDto(
         @NotBlank String token,
-        @NotBlank @jakarta.validation.constraints.Size(min = 8, max = 100) String password,
+        @NotBlank @jakarta.validation.constraints.Size(min = 10, max = 100) String password,  // P1 — min 10 (NIST)
         @NotBlank @jakarta.validation.constraints.Size(max = 128) String firstName,
         @NotBlank @jakarta.validation.constraints.Size(max = 128) String lastName,
         @jakarta.validation.constraints.Size(max = 64) String phone
@@ -152,21 +175,36 @@ public class AuthController {
     /** Activation de compte membre (Gap #10). Le compte existe déjà : on ne collecte que le mot de passe. */
     public record AcceptActivationRequestDto(
         @NotBlank String token,
-        @NotBlank @jakarta.validation.constraints.Size(min = 8, max = 100) String password
+        @NotBlank @jakarta.validation.constraints.Size(min = 10, max = 100) String password  // P1 — min 10 (NIST)
+    ) {}
+
+    /** Phase A — « mot de passe oublié » : email seul. Réponse 202 générique (anti-énumération). */
+    public record ForgotPasswordRequestDto(
+        @Email @NotBlank String email
+    ) {}
+
+    /** Phase A — réinitialisation : email + code OTP 6 chiffres + nouveau mot de passe (min 10, NIST). */
+    public record ResetPasswordRequestDto(
+        @Email @NotBlank String email,
+        @NotBlank @Pattern(regexp = "^[0-9]{6}$", message = "code must be 6 digits") String code,
+        @NotBlank @jakarta.validation.constraints.Size(min = 10, max = 100) String newPassword
     ) {}
 
     public record LoginResponseDto(
         String accessToken, Instant accessExpiresAt,
         String refreshToken, Instant refreshExpiresAt,
         String tokenType,
-        UUID userId, String email, String firstName, String lastName, String role
+        UUID userId, String email, String firstName, String lastName, String role,
+        // BE-3 — le client force l'écran « définir mon mot de passe » si true (mdp temporaire au 1er login).
+        boolean passwordMustChange
     ) {
         public static LoginResponseDto from(AuthService.LoginResult r) {
             return new LoginResponseDto(
                 r.accessToken(), r.accessExpiresAt(),
                 r.refreshToken(), r.refreshExpiresAt(),
                 "Bearer",
-                r.userId(), r.email(), r.firstName(), r.lastName(), r.role()
+                r.userId(), r.email(), r.firstName(), r.lastName(), r.role(),
+                r.passwordMustChange()
             );
         }
     }

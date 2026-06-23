@@ -2,8 +2,11 @@ package com.onesley.oneclick.core.notification.internal;
 
 import com.onesley.oneclick.core.notification.api.PromoNotificationDtos.*;
 import com.onesley.oneclick.exception.NotFoundException;
+import com.onesley.oneclick.shared.events.PromoApprovedEvent;
+import com.onesley.oneclick.shared.events.PromoRequestReviewedEvent;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +21,10 @@ import lombok.RequiredArgsConstructor;
 public class PromoNotificationService {
 
     private final PromoNotificationRequestRepository requestRepo;
+    private final ApplicationEventPublisher events;
+
+    /** Lien promo par défaut du push (la demande n'a pas de champ link — parité legacy {@code /pocket/promos}). */
+    private static final String PROMO_LINK = "/pocket/promos";
 
     @PersistenceContext
     private EntityManager em;
@@ -52,7 +59,26 @@ public class PromoNotificationService {
         p.setReviewedBy(dto.reviewedBy());
         p.setReviewedAt(Instant.now());
         p.setRejectionReason(dto.rejectionReason());
-        return PromoRequestDto.from(requestRepo.save(p));
+        PromoRequestDto saved = PromoRequestDto.from(requestRepo.save(p));
+        // R2 (parité push promo) : l'approbation déclenche le fan-out FCM automatique.
+        // Event-only (frontière Modulith) : loyalty résout l'audience du segment puis
+        // notification pousse + markSent. Pas de push si refus/autre statut.
+        boolean approved = "approved".equalsIgnoreCase(dto.status());
+        if (approved) {
+            events.publishEvent(new PromoApprovedEvent(
+                p.getId(), p.getRestaurantId(), p.getSegment(),
+                p.getTitle(), p.getBody(), PROMO_LINK, Instant.now()));
+        }
+        // Lot B12 — notifie le DEMANDEUR (gérant) du verdict de modération (approuvée/refusée).
+        // On publie un event consommé par NotificationEventHandler (même module core.notification,
+        // mais on garde la discipline event→handler pour que TOUTES les notifs transitent par le
+        // handler). Émis pour approved ET rejected (les autres statuts : pas de verdict à notifier).
+        if (approved || "rejected".equalsIgnoreCase(dto.status())) {
+            events.publishEvent(new PromoRequestReviewedEvent(
+                p.getId(), p.getRequestedBy(), approved,
+                p.getTitle(), p.getRejectionReason(), Instant.now()));
+        }
+        return saved;
     }
 
     public PromoRequestDto markSent(UUID id, int sentCount, String error) {

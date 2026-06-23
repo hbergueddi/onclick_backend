@@ -6,6 +6,7 @@ import com.onesley.oneclick.core.identity.api.Permission;
 import com.onesley.oneclick.core.identity.api.Role;
 import com.onesley.oneclick.core.identity.api.User;
 import com.onesley.oneclick.core.identity.api.UserCreateDto;
+import com.onesley.oneclick.core.identity.api.UserRegisterDto;
 import com.onesley.oneclick.core.identity.api.UserRepository;
 import com.onesley.oneclick.core.identity.api.UserUpdateDto;
 import com.onesley.oneclick.core.tenant.api.Tenant;
@@ -14,11 +15,13 @@ import com.onesley.oneclick.exception.ConflictException;
 import com.onesley.oneclick.exception.NotFoundException;
 import com.onesley.oneclick.security.OneClickUserDetailsService;
 import com.onesley.oneclick.security.SecurityHelper;
+import com.onesley.oneclick.shared.events.AccountDeletedEvent;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -129,6 +132,15 @@ class UserServiceTest {
     }
 
     @Test
+    void create_emailConflict_genericMessage_doesNotEchoEmail() {
+        // Anti-énumération : le message d'erreur ne doit pas renvoyer l'email (info-leak).
+        when(repository.existsByEmailIgnoreCase(any())).thenReturn(true);
+        assertThatThrownBy(() -> service.create(new UserCreateDto(null, role.getId(), "secret-leak@x.ma", null, "password1", "F", "L", null)))
+            .isInstanceOf(ConflictException.class)
+            .hasMessageNotContaining("secret-leak@x.ma");
+    }
+
+    @Test
     void create_phoneConflict() {
         when(repository.existsByEmailIgnoreCase(any())).thenReturn(false);
         when(repository.existsByPhone(any())).thenReturn(true);
@@ -152,6 +164,38 @@ class UserServiceTest {
         assertThat(service.create(new UserCreateDto(UUID.randomUUID(), role.getId(), "Full@x.ma", "0600", "password1", "F", "L", "fr"))).isNotNull();
         assertThat(service.create(new UserCreateDto(null, role.getId(), "Min@x.ma", null, "password1", "F", "L", null))).isNotNull();
         verify(eventPublisher, org.mockito.Mockito.atLeastOnce()).publishEvent(any(Object.class));
+    }
+
+    // ─── register : vérification email (P1 enrollment) ─────────────────────
+
+    @Test
+    void register_emailVerificationRequired_setsPendingStatus_reflectedInDto() {
+        ReflectionTestUtils.setField(service, "emailVerificationRequired", true);
+        when(roleRepository.findByCode("CLIENT")).thenReturn(Optional.of(role));
+        when(roleRepository.findById(any())).thenReturn(Optional.of(role));
+        when(repository.existsByEmailIgnoreCase(any())).thenReturn(false);
+        User created = new User(UUID.randomUUID(), role, "p@x.ma", "$2a$h", "P", "P"); // status défaut "active"
+        when(repository.findById(any())).thenReturn(Optional.of(created));
+
+        var dto = service.register(new UserRegisterDto(
+            null, "p@x.ma", null, "password1234", "P", "P", "fr", false));
+
+        assertThat(created.getStatus()).isEqualTo(User.STATUS_PENDING_EMAIL_VERIFICATION);
+        assertThat(dto.status()).isEqualTo(User.STATUS_PENDING_EMAIL_VERIFICATION); // signal renvoyé au client
+        verify(repository).save(created);
+    }
+
+    @Test
+    void register_default_noFlag_staysActive_noRefetch() {
+        when(roleRepository.findByCode("CLIENT")).thenReturn(Optional.of(role));
+        when(roleRepository.findById(any())).thenReturn(Optional.of(role));
+        when(repository.existsByEmailIgnoreCase(any())).thenReturn(false);
+
+        var dto = service.register(new UserRegisterDto(
+            null, "q@x.ma", null, "password1234", "Q", "Q", "fr", false));
+
+        assertThat(dto.status()).isEqualTo(User.STATUS_ACTIVE);            // défaut rétro-compat
+        verify(repository, org.mockito.Mockito.never()).findById(any());   // ni CGU ni flag → pas de re-fetch
     }
 
     // ─── patch ────────────────────────────────────────────────────────────
@@ -262,6 +306,37 @@ class UserServiceTest {
         verify(userDetailsService).evictUser(u.getId());
     }
 
+    // ─── deleteOwnAccount (self-service RGPD / App Store §5.1.1(v)) ───────────────
+    @Test
+    void deleteOwnAccount_notFound_throws() {
+        when(repository.findById(any())).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.deleteOwnAccount(UUID.randomUUID()))
+            .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void deleteOwnAccount_anonymizes_softDeletes_evicts_publishesEvent() {
+        User u = user();
+        UUID id = u.getId();
+        when(repository.findById(id)).thenReturn(Optional.of(u));
+
+        service.deleteOwnAccount(id);
+
+        // Soft-delete + anonymisation PII (email/téléphone libérés)
+        assertThat(u.getDeletedAt()).isNotNull();
+        assertThat(u.getEmail()).startsWith("deleted-").contains(id.toString());
+        assertThat(u.getPhone()).isNull();
+        assertThat(u.getFirstName()).isEqualTo("Compte");
+        assertThat(u.getLastName()).isEqualTo("supprimé");
+        assertThat(u.getStatus()).isEqualTo("deleted");
+        // Cache évincé : un JWT déjà émis ne doit plus réauthentifier
+        verify(userDetailsService).evictUser(id);
+        // Event cross-module publié (frontière Modulith) avec le bon userId
+        ArgumentCaptor<AccountDeletedEvent> cap = ArgumentCaptor.forClass(AccountDeletedEvent.class);
+        verify(eventPublisher).publishEvent(cap.capture());
+        assertThat(cap.getValue().userId()).isEqualTo(id);
+    }
+
     // ─── changePassword ──────────────────────────────────────────────────────
 
     @Test
@@ -298,6 +373,63 @@ class UserServiceTest {
         when(passwordEncoder.matches(eq("brandnew"), any())).thenReturn(false);
         service.changePassword(u.getId(), "current", "brandnew");
         verify(userDetailsService).evictUser(u.getId());
+    }
+
+    /** BE-3 — un compte provisionné avec mdp temporaire (flag true) le perd dès qu'il change. */
+    @Test
+    void changePassword_success_clearsPasswordMustChange() {
+        User u = user();
+        u.setPasswordMustChange(true); // simulé : compte restaurateur provisionné (BE-2)
+        when(repository.findById(u.getId())).thenReturn(Optional.of(u));
+        when(passwordEncoder.matches(eq("temp"), any())).thenReturn(true);
+        when(passwordEncoder.matches(eq("brandnew"), any())).thenReturn(false);
+        service.changePassword(u.getId(), "temp", "brandnew");
+        assertThat(u.isPasswordMustChange()).isFalse();
+    }
+
+    // ─── resetPassword (Phase A — mot de passe oublié, sans mot de passe actuel) ──
+
+    @Test
+    void resetPassword_notFound() {
+        when(repository.findById(any())).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.resetPassword(UUID.randomUUID(), "BrandNewPass1"))
+            .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void resetPassword_sameAsOld_throws() {
+        User u = user();
+        when(repository.findById(u.getId())).thenReturn(Optional.of(u));
+        when(passwordEncoder.matches(eq("SamePass1234"), any())).thenReturn(true); // réutilisation interdite
+        assertThatThrownBy(() -> service.resetPassword(u.getId(), "SamePass1234"))
+            .isInstanceOf(BadRequestException.class);
+        verify(userDetailsService, org.mockito.Mockito.never()).evictUser(any());
+    }
+
+    @Test
+    void resetPassword_success_setsHash_evicts() {
+        User u = user();
+        when(repository.findById(u.getId())).thenReturn(Optional.of(u));
+        when(passwordEncoder.matches(eq("BrandNewPass1"), any())).thenReturn(false); // différent de l'ancien
+        when(passwordEncoder.encode("BrandNewPass1")).thenReturn("$2a$encoded");
+
+        service.resetPassword(u.getId(), "BrandNewPass1");
+
+        assertThat(u.getPasswordHash()).isEqualTo("$2a$encoded");
+        verify(repository).save(u);
+        verify(userDetailsService).evictUser(u.getId());
+    }
+
+    /** BE-3 — cohérent avec changePassword : un reset effectif lève aussi le « changement forcé ». */
+    @Test
+    void resetPassword_success_clearsPasswordMustChange() {
+        User u = user();
+        u.setPasswordMustChange(true);
+        when(repository.findById(u.getId())).thenReturn(Optional.of(u));
+        when(passwordEncoder.matches(eq("BrandNewPass1"), any())).thenReturn(false);
+        when(passwordEncoder.encode("BrandNewPass1")).thenReturn("$2a$encoded");
+        service.resetPassword(u.getId(), "BrandNewPass1");
+        assertThat(u.isPasswordMustChange()).isFalse();
     }
 
     // ─── rolesDistribution (native) ────────────────────────────────────────────
@@ -348,6 +480,18 @@ class UserServiceTest {
             var ctx = service.findMeContext();
             assertThat(ctx.menus()).hasSize(1);
             assertThat(ctx.permissions()).contains("VIEW:dashboard");
+        }
+    }
+
+    /** BE-3 — le drapeau « changement forcé » est exposé dans MeContextDto pour le gating client. */
+    @Test
+    void findMeContext_exposesPasswordMustChange() {
+        User u = new User(UUID.randomUUID(), role, "tmp@x.ma", "h", "F", "L");
+        u.setPasswordMustChange(true);
+        when(repository.findByIdWithRoleAndPermissions(u.getId())).thenReturn(Optional.of(u));
+        try (MockedStatic<SecurityHelper> sec = mockStatic(SecurityHelper.class)) {
+            sec.when(SecurityHelper::currentUserId).thenReturn(u.getId());
+            assertThat(service.findMeContext().user().passwordMustChange()).isTrue();
         }
     }
 }

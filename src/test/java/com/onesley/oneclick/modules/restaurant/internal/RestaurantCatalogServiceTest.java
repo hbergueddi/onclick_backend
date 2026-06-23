@@ -44,6 +44,7 @@ class RestaurantCatalogServiceTest {
     @Mock EntityManager em;
     @Mock LifecycleEventService lifecycleEventService;
     @Mock com.onesley.oneclick.security.TenantScope tenantScope;
+    @Mock RestaurantPhotoService photoService;
     @InjectMocks RestaurantCatalogService service;
 
     @BeforeEach

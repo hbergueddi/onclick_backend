@@ -32,6 +32,14 @@ public record ReservationCreatedEvent(
     UUID tenantId,
     Instant reservationAt,
     int guestCount,
-    String status
+    String status,
+    /**
+     * Destinataires « staff actif du restaurant » résolus côté {@code ReservationService}
+     * (requête native sur {@code restaurant_staffs}) et portés sur l'event — gap #2 : le
+     * staff doit être notifié d'une nouvelle demande à traiter. La résolution se fait dans
+     * le module source (frontière Modulith : {@code core.notification} ne lit pas
+     * {@code restaurant_staffs}), comme {@code SeminarRequestedEvent}/{@code AnnouncementPublishedEvent}.
+     */
+    java.util.List<UUID> staffRecipientIds
 ) {
 }

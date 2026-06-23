@@ -84,6 +84,7 @@ public final class TenantAdminDtos {
         String firstName,
         String lastName,
         String email,
+        String avatarUrl,
         String role,
         UUID invitedBy,
         Instant createdAt

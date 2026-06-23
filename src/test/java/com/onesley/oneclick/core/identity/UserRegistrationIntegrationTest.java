@@ -30,7 +30,7 @@ class UserRegistrationIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void register_isPublic_shortPassword_returns400_not401() {
-        // mot de passe 7 caractères < @Size(min=8) → 400. Un 401 signifierait que
+        // mot de passe 7 caractères < @Size(min=10) → 400. Un 401 signifierait que
         // l'endpoint n'est pas en permitAll (régression du fix signup).
         String body = "{\"email\":\"pub-" + java.util.UUID.randomUUID() + "@x.com\","
             + "\"password\":\"short12\",\"firstName\":\"A\",\"lastName\":\"B\"}";
@@ -40,7 +40,7 @@ class UserRegistrationIntegrationTest extends AbstractIntegrationTest {
     @Test
     void register_isPublic_missingLastName_returns400_not401() {
         String body = "{\"email\":\"pub-" + java.util.UUID.randomUUID() + "@x.com\","
-            + "\"password\":\"secret123\",\"firstName\":\"A\"}";
+            + "\"password\":\"secret1234\",\"firstName\":\"A\"}";  // password valide (10) : 400 dû au lastName manquant
         assertThat(postJson("/api/users/register", body, null)).isEqualTo(400);
     }
 

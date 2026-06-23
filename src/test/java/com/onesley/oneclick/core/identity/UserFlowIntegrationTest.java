@@ -26,7 +26,7 @@ class UserFlowIntegrationTest extends AbstractIntegrationTest {
         String email = "l4-" + UUID.randomUUID().toString().substring(0, 8) + "@x.ma";
 
         ResponseEntity<String> post = restTemplate.exchange(url("/api/users"), HttpMethod.POST,
-            jsonJwtEntity(Map.of("roleId", roleId(), "email", email, "password", "password1", "firstName", "L4", "lastName", "User"), admin), String.class);
+            jsonJwtEntity(Map.of("roleId", roleId(), "email", email, "password", "password12", "firstName", "L4", "lastName", "User"), admin), String.class);
         assertThat(post.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         String id = om.readTree(post.getBody()).get("id").asText();
         // V14+ : tout user créé reçoit un referral_code (8 chars hex de l'UUID), jamais NULL.
@@ -42,7 +42,7 @@ class UserFlowIntegrationTest extends AbstractIntegrationTest {
 
         // changePassword est owner-exact : un admin sur le compte d'autrui → 403.
         assertThat(restTemplate.exchange(url("/api/users/" + id + "/password"), HttpMethod.POST,
-            jsonJwtEntity(Map.of("currentPassword", "password1", "newPassword", "newpass1234"), admin), String.class)
+            jsonJwtEntity(Map.of("currentPassword", "password12", "newPassword", "newpass1234"), admin), String.class)
             .getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
 
         assertThat(restTemplate.exchange(url("/api/users/" + id), HttpMethod.DELETE, jwtEntity(admin), String.class)
@@ -61,7 +61,7 @@ class UserFlowIntegrationTest extends AbstractIntegrationTest {
         String token = "Zelda" + UUID.randomUUID().toString().substring(0, 6); // ASCII, distinctif
         ResponseEntity<String> post = restTemplate.exchange(url("/api/users"), HttpMethod.POST,
             jsonJwtEntity(Map.of("roleId", roleId(), "email", "l4-cs-" + UUID.randomUUID().toString().substring(0, 8) + "@x.ma",
-                "password", "password1", "firstName", token, "lastName", "Searchable"), admin), String.class);
+                "password", "password12", "firstName", token, "lastName", "Searchable"), admin), String.class);
         assertThat(post.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         String id = om.readTree(post.getBody()).get("id").asText();
         try {
@@ -85,7 +85,7 @@ class UserFlowIntegrationTest extends AbstractIntegrationTest {
         String admin = adminBearer();
         String email = "l4-me-" + UUID.randomUUID().toString().substring(0, 8) + "@x.ma";
         ResponseEntity<String> post = restTemplate.exchange(url("/api/users"), HttpMethod.POST,
-            jsonJwtEntity(Map.of("roleId", roleId(), "email", email, "password", "password1", "firstName", "Self", "lastName", "Svc"), admin), String.class);
+            jsonJwtEntity(Map.of("roleId", roleId(), "email", email, "password", "password12", "firstName", "Self", "lastName", "Svc"), admin), String.class);
         assertThat(post.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         String id = om.readTree(post.getBody()).get("id").asText();
 
@@ -110,14 +110,14 @@ class UserFlowIntegrationTest extends AbstractIntegrationTest {
         String admin = adminBearer();
         String email = "l4-pw-" + UUID.randomUUID().toString().substring(0, 8) + "@x.ma";
         ResponseEntity<String> post = restTemplate.exchange(url("/api/users"), HttpMethod.POST,
-            jsonJwtEntity(Map.of("roleId", roleId(), "email", email, "password", "password1", "firstName", "Pw", "lastName", "Self"), admin), String.class);
+            jsonJwtEntity(Map.of("roleId", roleId(), "email", email, "password", "password12", "firstName", "Pw", "lastName", "Self"), admin), String.class);
         assertThat(post.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         String id = om.readTree(post.getBody()).get("id").asText();
         String bearer = jwtIssuer.issueAccessToken(UUID.fromString(id), "CLIENT").token();
 
         // sans JWT → 401
         assertThat(restTemplate.exchange(url("/api/users/me/password"), HttpMethod.POST,
-            jsonJwtEntity(Map.of("currentPassword", "password1", "newPassword", "newpass1234"), null), String.class)
+            jsonJwtEntity(Map.of("currentPassword", "password12", "newPassword", "newpass1234"), null), String.class)
             .getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
 
         // mauvais mot de passe courant → 4xx (refusé)
@@ -127,7 +127,7 @@ class UserFlowIntegrationTest extends AbstractIntegrationTest {
 
         // CLIENT change SON mot de passe (currentPassword correct, sans UPDATE:USERS) → 204
         assertThat(restTemplate.exchange(url("/api/users/me/password"), HttpMethod.POST,
-            jsonJwtEntity(Map.of("currentPassword", "password1", "newPassword", "newpass1234"), bearer), String.class)
+            jsonJwtEntity(Map.of("currentPassword", "password12", "newPassword", "newpass1234"), bearer), String.class)
             .getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
 
         // self-clean

@@ -36,13 +36,16 @@ class TenantAdminInviteEmailListener {
     private final EmailTemplateService templateService;
     private final ResendClient resendClient;
 
-    /** Base URL frontend pour composer le lien magique (override prod via APP_FRONTEND_BASE_URL). */
-    @Value("${app.frontend.base-url:https://app-oneclick.net}")
-    private String frontendBaseUrl;
+    /**
+     * Base URL du Command Center admin pour composer le lien magique d'invitation tenant-admin
+     * (l'invité accède au back-office) — override prod via APP_FRONTEND_ADMIN_BASE_URL.
+     */
+    @Value("${app.frontend.admin-base-url:https://admin.app-oneclick.net}")
+    private String adminBaseUrl;
 
     @ApplicationModuleListener
     void onTenantAdminInvited(TenantAdminInvitedEvent ev) {
-        String link = frontendBaseUrl + "/onboarding/welcome?token="
+        String link = adminBaseUrl + "/onboarding/welcome?token="
             + URLEncoder.encode(ev.rawToken(), StandardCharsets.UTF_8);
         String subject = "Invitation administrateur — " + ev.tenantName();
 

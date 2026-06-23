@@ -57,6 +57,11 @@ class AnnouncementRbacIntegrationTest extends AbstractIntegrationTest {
         return jwtIssuer.issueAccessToken(userIdByEmail(email), roleCode).token();
     }
 
+    private UUID tenantIdBySlug(String slug) {
+        return UUID.fromString(jdbc.queryForObject(
+            "SELECT id::text FROM tenants WHERE slug = ?", String.class, slug));
+    }
+
     @AfterEach
     void cleanup() {
         for (UUID id : createdIds) {
@@ -78,17 +83,60 @@ class AnnouncementRbacIntegrationTest extends AbstractIntegrationTest {
             .getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
-    // ─── B. RBAC : CLIENT n'a ni VIEW ni CREATE:ANNOUNCEMENTS → 403 ───────────────
+    // ─── B. RBAC/ABAC membre (V97) : CLIENT membre LIT (GET 200) + acquitte, mais N'ÉCRIT pas ──────
 
     @Test
-    void client_forbidden_onViewAndCreate() {
-        String member = bearerFor(PALMERAIE_MEMBER);
-        assertThat(restTemplate.exchange(url("/api/announcements"),
-            HttpMethod.GET, jwtEntity(member), String.class).getStatusCode())
-            .isEqualTo(HttpStatus.FORBIDDEN);
+    void member_canViewPublished_butCannotCreateOrEditOrDelete() throws Exception {
+        String member = bearerFor(PALMERAIE_MEMBER); // CLIENT, membership active palmeraie
+
+        // GET / → 200 (V97 : VIEW:ANNOUNCEMENTS accordé à CLIENT ; ABAC service → publiées vivantes
+        // du tenant programme). Contient l'annonce seed palmeraie « Bienvenue sur les annonces PCC ».
+        ResponseEntity<String> list = restTemplate.exchange(url("/api/announcements"),
+            HttpMethod.GET, jwtEntity(member), String.class);
+        assertThat(list.getStatusCode())
+            .as("membre GET — reçu %s, body=%s", list.getStatusCode(), list.getBody())
+            .isEqualTo(HttpStatus.OK);
+        JsonNode arr = om.readTree(list.getBody());
+        assertThat(arr.isArray()).isTrue();
+        assertThat(arr).as("le membre voit au moins l'annonce publiée du tenant (seed V70)").isNotEmpty();
+        // Le membre ne voit JAMAIS de programmée/archivée — uniquement publiées vivantes.
+        for (JsonNode n : arr) {
+            assertThat(n.get("published").asBoolean()).isTrue();
+            assertThat(n.get("archivedAt").isNull()).isTrue();
+        }
+
+        // Écriture interdite : CLIENT n'a ni CREATE ni UPDATE ni DELETE:ANNOUNCEMENTS → 403.
+        UUID anyId = UUID.fromString(arr.get(0).get("id").asText());
         assertThat(restTemplate.exchange(url("/api/announcements"),
             HttpMethod.POST, jsonJwtEntity("{\"title\":\"T\",\"body\":\"B\"}", member), String.class)
             .getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(restTemplate.exchange(url("/api/announcements/" + anyId),
+            HttpMethod.PATCH, jsonJwtEntity("{\"title\":\"X\",\"body\":\"Y\"}", member), String.class)
+            .getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(restTemplate.exchange(url("/api/announcements/" + anyId),
+            HttpMethod.DELETE, jwtEntity(member), String.class).getStatusCode())
+            .isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void member_canMarkReadPublishedAnnouncement() throws Exception {
+        String member = bearerFor(PALMERAIE_MEMBER);
+        ResponseEntity<String> list = restTemplate.exchange(url("/api/announcements"),
+            HttpMethod.GET, jwtEntity(member), String.class);
+        JsonNode arr = om.readTree(list.getBody());
+        org.junit.jupiter.api.Assumptions.assumeTrue(arr.isArray() && !arr.isEmpty(),
+            "nécessite ≥1 annonce publiée pour le tenant palmeraie (seed V70)");
+        UUID id = UUID.fromString(arr.get(0).get("id").asText());
+
+        // mark-read par le membre → 200, readByMe=true (V97 : canReadInTenant accepte le membre actif).
+        ResponseEntity<String> readResp = restTemplate.exchange(url("/api/announcements/" + id + "/read"),
+            HttpMethod.POST, jsonJwtEntity("{}", member), String.class);
+        assertThat(readResp.getStatusCode())
+            .as("membre mark-read — reçu %s, body=%s", readResp.getStatusCode(), readResp.getBody())
+            .isEqualTo(HttpStatus.OK);
+        assertThat(om.readTree(readResp.getBody()).get("readByMe").asBoolean()).isTrue();
+        // Cleanup : retire l'acquittement du membre (ne pas polluer le seed partagé).
+        jdbc.update("DELETE FROM announcement_reads WHERE user_id = ?", userIdByEmail(PALMERAIE_MEMBER));
     }
 
     // ─── C. tenant-admin flow : create → list → mark-read → édition (ré-ack) ──────
@@ -232,5 +280,47 @@ class AnnouncementRbacIntegrationTest extends AbstractIntegrationTest {
             "SELECT COUNT(*) FROM tenant_announcements WHERE id = ? AND deleted_at IS NULL",
             Integer.class, id);
         assertThat(alive).isEqualTo(0);
+    }
+
+    // ─── G. Lot 4b : super-admin publie pour un tenant CIBLE (POST /admin?tenantId) ──
+
+    @Test
+    void superAdmin_adminCreate_forTargetTenant_succeeds() throws Exception {
+        UUID palmeraie = tenantIdBySlug("palmeraie");
+
+        // Le super-admin (UPDATE:TENANTS) crée une annonce POUR le tenant palmeraie (cross-tenant),
+        // sans avoir lui-même de tenant home. tenantId du DTO retourné = le tenant CIBLE.
+        ResponseEntity<String> resp = restTemplate.exchange(
+            url("/api/announcements/admin?tenantId=" + palmeraie),
+            HttpMethod.POST,
+            jsonJwtEntity("{\"title\":\"Pilotage admin\",\"body\":\"Annonce poussée depuis le super-admin\",\"priority\":\"permanent\",\"pinned\":false}", adminBearer()),
+            String.class);
+        assertThat(resp.getStatusCode())
+            .as("admin create — reçu %s, body=%s", resp.getStatusCode(), resp.getBody())
+            .isEqualTo(HttpStatus.CREATED);
+        JsonNode created = om.readTree(resp.getBody());
+        UUID id = UUID.fromString(created.get("id").asText());
+        createdIds.add(id);
+        assertThat(created.get("tenantId").asText()).isEqualTo(palmeraie.toString());
+
+        // L'annonce est bien lisible côté admin pour ce tenant (cross-tenant read existant).
+        Integer cnt = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM tenant_announcements WHERE id = ? AND tenant_id = ?",
+            Integer.class, id, palmeraie);
+        assertThat(cnt).isEqualTo(1);
+    }
+
+    @Test
+    void tenantAdmin_adminCreate_forbidden_lacksUpdateTenants() {
+        UUID palmeraie = tenantIdBySlug("palmeraie");
+        // Le owner palmeraie a CREATE:ANNOUNCEMENTS mais PAS UPDATE:TENANTS (autorité SUPERADMIN-only) →
+        // l'endpoint admin cross-tenant lui est interdit (403).
+        String owner = bearerFor(PALMERAIE_OWNER);
+        assertThat(restTemplate.exchange(
+            url("/api/announcements/admin?tenantId=" + palmeraie),
+            HttpMethod.POST,
+            jsonJwtEntity("{\"title\":\"X\",\"body\":\"Y\",\"priority\":\"permanent\",\"pinned\":false}", owner),
+            String.class).getStatusCode())
+            .isEqualTo(HttpStatus.FORBIDDEN);
     }
 }

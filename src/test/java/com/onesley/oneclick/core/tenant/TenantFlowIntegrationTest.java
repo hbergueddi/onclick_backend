@@ -41,6 +41,55 @@ class TenantFlowIntegrationTest extends AbstractIntegrationTest {
         jdbc.update("DELETE FROM tenants WHERE slug = ?", slug);
     }
 
+    // ─── legalName (raison sociale company_settings) — détail uniquement, jamais by-slug ──
+
+    @Test
+    void getById_includesLegalName_whenCompanySettingsExists() {
+        // palmeraie a une ligne company_settings (raison_sociale = 'ONESLEY SARL').
+        String tenantId = jdbc.queryForObject(
+            "SELECT id::text FROM tenants WHERE slug = 'palmeraie' AND deleted_at IS NULL", String.class);
+        String legalName = jdbc.queryForObject(
+            "SELECT raison_sociale FROM company_settings WHERE tenant_id = ?::uuid", String.class,
+            tenantId);
+        ResponseEntity<String> resp = restTemplate.exchange(url("/api/tenants/" + tenantId),
+            HttpMethod.GET, jwtEntity(adminBearer()), String.class);
+        assertThat(resp.getStatusCode())
+            .as("reçu %s, body=%s", resp.getStatusCode(), resp.getBody())
+            .isEqualTo(HttpStatus.OK);
+        assertThat(resp.getBody()).contains("\"legalName\":\"" + legalName + "\"");
+    }
+
+    @Test
+    void getById_legalNameNull_whenNoCompanySettings() {
+        String admin = adminBearer();
+        String slug = "ln-" + UUID.randomUUID().toString().substring(0, 8);
+        assertThat(restTemplate.exchange(url("/api/tenants"), HttpMethod.POST,
+            jsonJwtEntity(Map.of("name", "LegalName Tenant", "slug", slug), admin), String.class)
+            .getStatusCode().is2xxSuccessful()).isTrue();
+        UUID id = UUID.fromString(jdbc.queryForObject(
+            "SELECT id::text FROM tenants WHERE slug = ?", String.class, slug));
+        try {
+            ResponseEntity<String> resp = restTemplate.exchange(url("/api/tenants/" + id),
+                HttpMethod.GET, jwtEntity(admin), String.class);
+            assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
+            // Pas de company_settings → legalName null.
+            assertThat(resp.getBody()).contains("\"legalName\":null");
+        } finally {
+            jdbc.update("DELETE FROM tenants WHERE id = ?", id);
+        }
+    }
+
+    @Test
+    void getBySlug_doesNotIncludeLegalName() {
+        // by-slug est PUBLIC : même pour palmeraie (qui a company_settings), legalName = null.
+        ResponseEntity<String> resp = restTemplate.exchange(url("/api/tenants/by-slug?slug=palmeraie"),
+            HttpMethod.GET, jwtEntity(adminBearer()), String.class);
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(resp.getBody()).contains("\"legalName\":null");
+        // et surtout pas la raison sociale.
+        assertThat(resp.getBody()).doesNotContain("ONESLEY SARL");
+    }
+
     @Test
     void getById_unknown_404() {
         assertThat(restTemplate.exchange(url("/api/tenants/" + UUID.randomUUID()),

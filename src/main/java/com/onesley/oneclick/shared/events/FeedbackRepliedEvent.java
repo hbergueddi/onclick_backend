@@ -18,6 +18,7 @@ import java.util.UUID;
  *
  * @param feedbackId id du feedback répondu (deep-link {@code ?thread=})
  * @param memberId   destinataire de la notif = auteur original de l'avis
+ * @param tenantId   tenant du feedback (branding de l'email de réponse — gap #6)
  * @param repliedBy  owner/admin auteur de la réponse
  * @param sentiment  {@code happy} / {@code unhappy} (libellé notif)
  * @param occurredAt horodatage de la réponse
@@ -25,6 +26,7 @@ import java.util.UUID;
 public record FeedbackRepliedEvent(
     UUID feedbackId,
     UUID memberId,
+    UUID tenantId,
     UUID repliedBy,
     String sentiment,
     Instant occurredAt

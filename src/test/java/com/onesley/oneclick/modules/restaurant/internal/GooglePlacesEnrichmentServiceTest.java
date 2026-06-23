@@ -169,4 +169,41 @@ class GooglePlacesEnrichmentServiceTest {
         Object[] g = (Object[]) m.invoke(null, generic);
         assertThat(g[0]).isNull();
     }
+
+    // ─── conversion horaires Google brut → format canonique (fix régression 23/06/26) ──
+
+    @Test
+    void toCanonicalOpeningHours_convertsPeriods_toDayOpenCloseArray() throws Exception {
+        String google = "{\"openNow\":false,\"periods\":["
+            + "{\"open\":{\"day\":1,\"hour\":9,\"minute\":0},\"close\":{\"day\":1,\"hour\":18,\"minute\":30}},"
+            + "{\"open\":{\"day\":5,\"hour\":12,\"minute\":0},\"close\":{\"day\":5,\"hour\":14,\"minute\":0}}"
+            + "],\"weekdayDescriptions\":[\"Monday: 9:00 AM - 6:30 PM\"]}";
+        JsonNode arr = mapper.readTree(GooglePlacesEnrichmentService.toCanonicalOpeningHours(mapper, mapper.readTree(google)));
+        assertThat(arr.isArray()).isTrue();
+        assertThat(arr.size()).isEqualTo(2);
+        assertThat(arr.get(0).get("day").asInt()).isEqualTo(1);
+        assertThat(arr.get(0).get("open").asText()).isEqualTo("09:00");
+        assertThat(arr.get(0).get("close").asText()).isEqualTo("18:30");
+        assertThat(arr.get(1).get("open").asText()).isEqualTo("12:00");
+        assertThat(arr.get(1).get("close").asText()).isEqualTo("14:00");
+    }
+
+    @Test
+    void toCanonicalOpeningHours_periodWithoutClose_uses2359() throws Exception {
+        String google = "{\"periods\":[{\"open\":{\"day\":0,\"hour\":0,\"minute\":0}}]}";
+        JsonNode arr = mapper.readTree(GooglePlacesEnrichmentService.toCanonicalOpeningHours(mapper, mapper.readTree(google)));
+        assertThat(arr.size()).isEqualTo(1);
+        assertThat(arr.get(0).get("day").asInt()).isEqualTo(0);
+        assertThat(arr.get(0).get("open").asText()).isEqualTo("00:00");
+        assertThat(arr.get(0).get("close").asText()).isEqualTo("23:59");
+    }
+
+    @Test
+    void toCanonicalOpeningHours_noPeriods_orNull_returnsNull() throws Exception {
+        assertThat(GooglePlacesEnrichmentService.toCanonicalOpeningHours(
+            mapper, mapper.readTree("{\"weekdayDescriptions\":[]}"))).isNull();
+        assertThat(GooglePlacesEnrichmentService.toCanonicalOpeningHours(mapper, null)).isNull();
+        assertThat(GooglePlacesEnrichmentService.toCanonicalOpeningHours(
+            mapper, mapper.readTree("{\"periods\":[]}"))).isNull();
+    }
 }

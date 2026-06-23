@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 393 852" width="393" height="852">
+  <defs>
+    <filter id="shFloat" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="4" stdDeviation="10" flood-color="#8A959E" flood-opacity="0.40"/></filter>
+    <filter id="shCard" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#101828" flood-opacity="0.40"/></filter>
+    <filter id="shCta" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="8" stdDeviation="7.5" flood-color="#303030" flood-opacity="0.30"/></filter>
+    <filter id="shNav" x="-50%" y="-100%" width="200%" height="300%"><feDropShadow dx="0" dy="-2" stdDeviation="12.5" flood-color="#000000" flood-opacity="0.05"/></filter>
+    <clipPath id="thumb1"><rect x="36" y="160" width="64" height="64" rx="8"/></clipPath>
+    <clipPath id="thumb2"><rect x="36" y="294" width="64" height="64" rx="8"/></clipPath>
+    <clipPath id="thumb3"><rect x="36" y="428" width="64" height="64" rx="8"/></clipPath>
+    <clipPath id="thumb4"><rect x="36" y="562" width="64" height="64" rx="8"/></clipPath>
+  </defs>
+
+  <!-- Screen + status bar -->
+  <rect width="393" height="852" rx="16" fill="#F9F6F4"/>
+  <text x="28" y="38" font-family="'Nunito Sans',sans-serif" font-size="15" font-weight="700" fill="#242424">9:41</text>
+  <g stroke="#242424" stroke-width="1.4" stroke-linecap="round"><path d="M333 36 v-7 M338 36 v-10 M343 36 v-13"/></g>
+  <rect x="350" y="27" width="20" height="11" rx="2.5" stroke="#242424" stroke-width="1.2" opacity="0.6"/><rect x="352" y="29" width="14" height="7" rx="1.2" fill="#242424" opacity="0.9"/>
+
+  <!-- Back button -->
+  <g filter="url(#shFloat)"><rect x="20" y="74" width="40" height="40" rx="12" fill="#FFFFFF"/></g>
+  <path d="M44 88 l-6 6 l6 6" stroke="#242424" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- Bell -->
+  <g filter="url(#shFloat)"><rect x="333" y="74" width="40" height="40" rx="12" fill="#FFFFFF"/></g>
+  <g transform="translate(345,86)" stroke="#242424" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M3 11 a5 5 0 0 1 10 0 c0 2 0.6 3 1.4 3.6 a0.6 0.6 0 0 1 -0.4 1.1 H2 a0.6 0.6 0 0 1 -0.4 -1.1 C2.4 14 3 13 3 11 Z"/><path d="M6.4 16.6 a1.6 1.6 0 0 0 3.2 0"/></g>
+  <circle cx="362.5" cy="84" r="3" fill="#DB4545"/>
+
+  <!-- Header title -->
+  <text x="196.5" y="101" text-anchor="middle" font-family="'Poltawski Nowy',Georgia,serif" font-size="22" font-weight="600" fill="#3B2338">Offres</text>
+
+  <!-- Subtitle -->
+  <text x="196.5" y="136" text-anchor="middle" font-family="'Nunito Sans',sans-serif" font-size="13" fill="#999999">Toutes les offres actives près de vous</text>
+
+  <!-- ============ CARD 1 ============ -->
+  <g filter="url(#shCard)"><rect x="20" y="152" width="353" height="116" rx="12" fill="#FFFFFF"/></g>
+  <!-- thumbnail -->
+  <g clip-path="url(#thumb1)">
+    <rect x="36" y="160" width="64" height="64" fill="#3B2338"/>
+    <rect x="36" y="160" width="64" height="64" fill="#681237" opacity="0.55"/>
+    <path d="M36 200 q16 -18 32 -4 q16 14 32 -2 v30 h-64 Z" fill="#9B8598" opacity="0.45"/>
+    <circle cx="58" cy="180" r="9" fill="#E0AF7C" opacity="0.85"/>
+  </g>
+  <!-- discount badge -->
+  <g filter="url(#shFloat)"><rect x="305" y="164" width="52" height="26" rx="13" fill="#E0AF7C"/></g>
+  <text x="331" y="181" text-anchor="middle" font-family="'Poltawski Nowy',Georgia,serif" font-size="14" font-weight="600" fill="#FFFFFF">-25%</text>
+  <!-- title -->
+  <text x="116" y="180" font-family="'Poltawski Nowy',Georgia,serif" font-size="17" font-weight="600" fill="#3B2338">Menu découverte -25%</text>
+  <!-- resto + city -->
+  <text x="116" y="201" font-family="'Nunito Sans',sans-serif" font-size="13" fill="#808080">La Sqala · Casablanca</text>
+  <!-- divider -->
+  <rect x="36" y="234" width="321" height="1" fill="#EDEDED"/>
+  <!-- validity -->
+  <g transform="translate(36,243)" stroke="#A6A6A6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><rect x="0" y="1" width="14" height="13" rx="2.2"/><path d="M0 5 h14"/><path d="M4 -1 v3 M10 -1 v3"/></g>
+  <text x="58" y="254" font-family="'Nunito Sans',sans-serif" font-size="12.5" fill="#999999">Jusqu'au 30 juin</text>
+  <!-- inline CTA Voir -->
+  <rect x="305" y="241" width="52" height="20" rx="10" fill="#681237"/>
+  <text x="331" y="255" text-anchor="middle" font-family="'Nunito Sans',sans-serif" font-size="12" font-weight="700" fill="#FFFFFF">Voir</text>
+
+  <!-- ============ CARD 2 ============ -->
+  <g filter="url(#shCard)"><rect x="20" y="286" width="353" height="116" rx="12" fill="#FFFFFF"/></g>
+  <g clip-path="url(#thumb2)">
+    <rect x="36" y="294" width="64" height="64" fill="#3B2338"/>
+    <rect x="36" y="294" width="64" height="64" fill="#9B8598" opacity="0.40"/>
+    <rect x="50" y="318" width="14" height="20" rx="3" fill="#E0AF7C" opacity="0.9"/>
+    <path d="M64 322 h6 a3 3 0 0 1 0 8 h-6" stroke="#E0AF7C" stroke-width="2.4" fill="none"/>
+    <path d="M52 312 q2 -6 4 0 M58 312 q2 -6 4 0" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" fill="none" opacity="0.7"/>
+  </g>
+  <g filter="url(#shFloat)"><rect x="295" y="298" width="62" height="26" rx="13" fill="#E0AF7C"/></g>
+  <text x="326" y="315" text-anchor="middle" font-family="'Poltawski Nowy',Georgia,serif" font-size="13" font-weight="600" fill="#FFFFFF">Offert</text>
+  <text x="116" y="314" font-family="'Poltawski Nowy',Georgia,serif" font-size="17" font-weight="600" fill="#3B2338">2 cafés offerts</text>
+  <text x="116" y="335" font-family="'Nunito Sans',sans-serif" font-size="13" fill="#808080">Café Maure · Rabat</text>
+  <rect x="36" y="368" width="321" height="1" fill="#EDEDED"/>
+  <g transform="translate(36,377)" stroke="#A6A6A6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><rect x="0" y="1" width="14" height="13" rx="2.2"/><path d="M0 5 h14"/><path d="M4 -1 v3 M10 -1 v3"/></g>
+  <text x="58" y="388" font-family="'Nunito Sans',sans-serif" font-size="12.5" fill="#999999">Jusqu'au 15 juillet</text>
+  <rect x="305" y="375" width="52" height="20" rx="10" fill="#681237"/>
+  <text x="331" y="389" text-anchor="middle" font-family="'Nunito Sans',sans-serif" font-size="12" font-weight="700" fill="#FFFFFF">Voir</text>
+
+  <!-- ============ CARD 3 ============ -->
+  <g filter="url(#shCard)"><rect x="20" y="420" width="353" height="116" rx="12" fill="#FFFFFF"/></g>
+  <g clip-path="url(#thumb3)">
+    <rect x="36" y="428" width="64" height="64" fill="#681237"/>
+    <rect x="36" y="428" width="64" height="64" fill="#3B2338" opacity="0.40"/>
+    <circle cx="68" cy="458" r="14" fill="none" stroke="#E0AF7C" stroke-width="2.2"/>
+    <path d="M68 449 v9 l6 4" stroke="#E0AF7C" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+    <path d="M44 478 q24 -10 48 0" stroke="#9B8598" stroke-width="3" fill="none" opacity="0.6"/>
+  </g>
+  <g filter="url(#shFloat)"><rect x="305" y="432" width="52" height="26" rx="13" fill="#E0AF7C"/></g>
+  <text x="331" y="449" text-anchor="middle" font-family="'Poltawski Nowy',Georgia,serif" font-size="14" font-weight="600" fill="#FFFFFF">-30%</text>
+  <text x="116" y="448" font-family="'Poltawski Nowy',Georgia,serif" font-size="17" font-weight="600" fill="#3B2338">Happy hour -30%</text>
+  <text x="116" y="469" font-family="'Nunito Sans',sans-serif" font-size="13" fill="#808080">Le Cabestan · Casablanca</text>
+  <rect x="36" y="502" width="321" height="1" fill="#EDEDED"/>
+  <g transform="translate(36,511)" stroke="#A6A6A6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><rect x="0" y="1" width="14" height="13" rx="2.2"/><path d="M0 5 h14"/><path d="M4 -1 v3 M10 -1 v3"/></g>
+  <text x="58" y="522" font-family="'Nunito Sans',sans-serif" font-size="12.5" fill="#999999">Tous les jours 18h-20h</text>
+  <rect x="305" y="509" width="52" height="20" rx="10" fill="#681237"/>
+  <text x="331" y="523" text-anchor="middle" font-family="'Nunito Sans',sans-serif" font-size="12" font-weight="700" fill="#FFFFFF">Voir</text>
+
+  <!-- ============ CARD 4 ============ -->
+  <g filter="url(#shCard)"><rect x="20" y="554" width="353" height="116" rx="12" fill="#FFFFFF"/></g>
+  <g clip-path="url(#thumb4)">
+    <rect x="36" y="562" width="64" height="64" fill="#3B2338"/>
+    <rect x="36" y="562" width="64" height="64" fill="#E0AF7C" opacity="0.30"/>
+    <circle cx="68" cy="588" r="11" fill="#E0AF7C" opacity="0.85"/>
+    <path d="M42 614 q14 -16 26 -6 q12 10 26 -4 v18 h-52 Z" fill="#9B8598" opacity="0.5"/>
+  </g>
+  <g filter="url(#shFloat)"><rect x="295" y="566" width="62" height="26" rx="13" fill="#E0AF7C"/></g>
+  <text x="326" y="583" text-anchor="middle" font-family="'Poltawski Nowy',Georgia,serif" font-size="13" font-weight="600" fill="#FFFFFF">-20%</text>
+  <text x="116" y="582" font-family="'Poltawski Nowy',Georgia,serif" font-size="17" font-weight="600" fill="#3B2338">Brunch dominical</text>
+  <text x="116" y="603" font-family="'Nunito Sans',sans-serif" font-size="13" fill="#808080">Riad Kniza · Marrakech</text>
+  <rect x="36" y="636" width="321" height="1" fill="#EDEDED"/>
+  <g transform="translate(36,645)" stroke="#A6A6A6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><rect x="0" y="1" width="14" height="13" rx="2.2"/><path d="M0 5 h14"/><path d="M4 -1 v3 M10 -1 v3"/></g>
+  <text x="58" y="656" font-family="'Nunito Sans',sans-serif" font-size="12.5" fill="#999999">Dimanches de juin</text>
+  <rect x="305" y="643" width="52" height="20" rx="10" fill="#681237"/>
+  <text x="331" y="657" text-anchor="middle" font-family="'Nunito Sans',sans-serif" font-size="12" font-weight="700" fill="#FFFFFF">Voir</text>
+
+  <!-- ============ BOTTOM NAV ============ -->
+  <g filter="url(#shNav)"><rect x="0" y="754" width="393" height="98" fill="#FFFFFF"/></g>
+  <!-- Enseignes (active) -->
+  <rect x="25" y="766" width="44" height="44" rx="12" fill="#681237"/><g transform="translate(35,776)" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M7 13 a5 5 0 0 1 -2.2 -9.2 a3.8 3.8 0 0 1 6.7 -1.1 a3.8 3.8 0 0 1 6.7 1.1 a5 5 0 0 1 -2.2 9.2"/><path d="M7 13 h10 v4 a1.2 1.2 0 0 1 -1.2 1.2 h-7.6 a1.2 1.2 0 0 1 -1.2 -1.2 z"/></g><text x="47" y="826" text-anchor="middle" font-family="'Nunito Sans',sans-serif" font-size="11" font-weight="700" fill="#3B2338">Enseignes</text>
+  <!-- Réservations -->
+  <rect x="99.75" y="766" width="44" height="44" rx="12" fill="#F5F5F5"/><g transform="translate(109.75,776)" stroke="#3B2338" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"><rect x="4" y="6" width="16" height="15" rx="2.5"/><path d="M4 10 h16"/><path d="M9 4 v3 M15 4 v3"/><circle cx="9" cy="14.5" r="0.7" fill="#3B2338" stroke="none"/><circle cx="12" cy="14.5" r="0.7" fill="#3B2338" stroke="none"/><circle cx="15" cy="14.5" r="0.7" fill="#3B2338" stroke="none"/></g><text x="121.75" y="826" text-anchor="middle" font-family="'Nunito Sans',sans-serif" font-size="11" fill="#999999">Réservations</text>
+  <!-- Majordome -->
+  <rect x="174.5" y="766" width="44" height="44" rx="12" fill="#F5F5F5"/><g transform="translate(184.5,776)" stroke="#3B2338" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M3.5 18 h17"/><path d="M5 18 a7 7 0 0 1 14 0"/><path d="M12 7.5 v3.2"/><circle cx="12" cy="6" r="1.2" fill="#3B2338" stroke="none"/></g><text x="196.5" y="826" text-anchor="middle" font-family="'Nunito Sans',sans-serif" font-size="11" fill="#999999">Majordome</text>
+  <!-- Cercle -->
+  <rect x="249.25" y="766" width="44" height="44" rx="12" fill="#F5F5F5"/><g transform="translate(259.25,776)" stroke="#3B2338" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"><circle cx="9" cy="9" r="3"/><path d="M3.5 19 a5.5 5.5 0 0 1 11 0"/><circle cx="16.5" cy="8" r="2.2"/><path d="M16 13.2 a4.6 4.6 0 0 1 4.5 4.4"/></g><text x="271.25" y="826" text-anchor="middle" font-family="'Nunito Sans',sans-serif" font-size="11" fill="#999999">Cercle</text>
+  <!-- Profil -->
+  <rect x="324" y="766" width="44" height="44" rx="12" fill="#F5F5F5"/><g transform="translate(334,776)" stroke="#3B2338" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"><rect x="3.5" y="5.5" width="17" height="13" rx="2.5"/><circle cx="9" cy="11" r="2.2"/><path d="M5.8 16.2 a3.4 3.4 0 0 1 6.4 0"/><path d="M14.5 10 h3.2 M14.5 13 h3.2"/></g><text x="346" y="826" text-anchor="middle" font-family="'Nunito Sans',sans-serif" font-size="11" fill="#999999">Profil</text>
+</svg>

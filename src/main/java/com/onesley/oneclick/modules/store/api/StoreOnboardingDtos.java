@@ -43,7 +43,10 @@ public final class StoreOnboardingDtos {
         String rc,
         String patente,
         Integer capacity,
-        List<String> services
+        List<String> services,
+        // ─── BE-2 — entités créées à l'approbation (provisioning) : null tant que non approuvée ───
+        UUID provisionedUserId,
+        UUID provisionedRestaurantId
     ) {
         public static OnboardingRequestDto from(StoreOnboardingRequest r) {
             return new OnboardingRequestDto(
@@ -55,7 +58,8 @@ public final class StoreOnboardingDtos {
                 r.getCreatedAt(),
                 r.getBudget(), r.getDescription(), r.getOwnerRole(),
                 r.getIce(), r.getIfNumber(), r.getRc(), r.getPatente(), r.getCapacity(),
-                r.getServices() == null ? List.of() : Arrays.asList(r.getServices())
+                r.getServices() == null ? List.of() : Arrays.asList(r.getServices()),
+                r.getProvisionedUserId(), r.getProvisionedRestaurantId()
             );
         }
     }

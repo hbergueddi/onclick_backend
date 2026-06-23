@@ -172,4 +172,28 @@ public interface AnnouncementRepository extends JpaRepository<Announcement, UUID
         """, nativeQuery = true)
     List<UUID> findStaffRecipientIds(@Param("tenantId") UUID tenantId,
                                      @Param("authorId") UUID authorId);
+
+    // ─── B13 : publication différée (cron) ───────────────────────────────────────
+
+    /**
+     * B13 — annonces <b>programmées arrivées à échéance</b> à notifier : {@code publish_at <= now},
+     * vivantes ({@code archived_at IS NULL AND deleted_at IS NULL}) et <b>pas encore notifiées</b>
+     * ({@code push_sent_at IS NULL}). C'est exactement le périmètre du partial index V70
+     * {@code idx ... (publish_at) WHERE push_sent_at IS NULL AND deleted_at IS NULL}.
+     *
+     * <p>Idempotence : {@code push_sent_at} est posé par le service à la publication immédiate
+     * (annonce créée déjà publiée) ET par le cron après notification — une annonce ne ressort donc
+     * jamais deux fois. Tous tenants confondus (la notif est scopée par tenant via les destinataires
+     * résolus en aval).
+     */
+    @Query(value = """
+        SELECT a.*
+        FROM tenant_announcements a
+        WHERE a.deleted_at IS NULL
+          AND a.archived_at IS NULL
+          AND a.push_sent_at IS NULL
+          AND a.publish_at <= :now
+        ORDER BY a.publish_at ASC
+        """, nativeQuery = true)
+    List<Announcement> findDueForScheduledPublish(@Param("now") Instant now);
 }
