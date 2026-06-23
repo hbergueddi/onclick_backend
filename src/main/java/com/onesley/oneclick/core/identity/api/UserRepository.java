@@ -93,6 +93,16 @@ public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificat
     boolean existsByPhone(String phone);
 
     /**
+     * Comptes restés en {@code pending_email_verification} et créés avant {@code cutoff}
+     * (signup abandonné ou bot — l'OTP email n'a jamais été validé). Purgés par
+     * {@code PendingSignupPurgeJob} (cron horaire) pour libérer l'email + éviter le bloat DB.
+     * Exclut les soft-deletes ({@code deleted_at IS NULL}).
+     */
+    @Query("SELECT u FROM User u WHERE u.status = :status AND u.createdAt < :cutoff AND u.deletedAt IS NULL")
+    java.util.List<User> findStalePendingVerification(
+        @Param("status") String status, @Param("cutoff") java.time.Instant cutoff);
+
+    /**
      * Liste paginée des users d'un rôle (code), avec filtrage optionnel par tenant.
      *
      * <p>Exclut les rows soft-deleted ({@code deleted_at IS NULL}).

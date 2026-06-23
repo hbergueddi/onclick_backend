@@ -96,6 +96,10 @@ app:
   # APP_AUTH_EMAIL_VERIFICATION_REQUIRED=true quand tous les clients embarquent l'OTP.
   auth:
     email-verification-required: ${APP_AUTH_EMAIL_VERIFICATION_REQUIRED:false}
+    # Purge automatique des comptes restés pending_email_verification au-delà de ce délai
+    # (signup abandonné OU bot) : libère l'email pour une ré-inscription + évite le bloat DB.
+    # Cron horaire (PendingSignupPurgeJob). Inerte tant que email-verification-required=false.
+    pending-verification-ttl-hours: ${APP_AUTH_PENDING_VERIFICATION_TTL_HOURS:24}
 
   # ─── Rate limiting (Sprint G.6.1 — Bucket4j in-memory) ─────────────────
   # Active = false par défaut (DX dev). En prod : enabled=true via env var
@@ -111,7 +115,15 @@ app:
       - path: /api/auth/login
         capacity: 10
         refill-period: PT1M
-      # Anti-bruteforce OTP : 5 demandes / 15 min par IP
+      # Signup / vérification email — ENVOI du code OTP : anti-spam d'emails (Resend) — 5 / 15 min par IP
+      - path: /api/auth/otp/request
+        capacity: 5
+        refill-period: PT15M
+      # SAISIE du code OTP : marge pour les essais (typo) sans bloquer un user légitime — 10 / 15 min par IP
+      - path: /api/auth/otp/verify
+        capacity: 10
+        refill-period: PT15M
+      # Fallback autres /otp/* (le matcher prend le 1er match → les specifics ci-dessus l'emportent) — 5 / 15 min
       - path: /api/auth/otp/**
         capacity: 5
         refill-period: PT15M
