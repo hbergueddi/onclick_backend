@@ -117,4 +117,106 @@ class EmailVerificationFlowIntegrationTest extends AbstractIntegrationTest {
 
         restTemplate.exchange(url("/api/users/" + userId), HttpMethod.DELETE, jwtEntity(admin), String.class);
     }
+
+    private ResponseEntity<String> registerWith(String email, String phone, String firstName) {
+        String body = "{\"email\":\"" + email + "\",\"phone\":\"" + phone + "\",\"password\":\"password1234\","
+            + "\"firstName\":\"" + firstName + "\",\"lastName\":\"Flow\",\"cguAccepted\":true}";
+        return restTemplate.exchange(url("/api/users/register"), HttpMethod.POST,
+            jsonJwtEntity(body, null), String.class);
+    }
+
+    /**
+     * Bug « ce numéro / cet email est déjà utilisé » au re-submit : tant que le compte est
+     * {@code pending_email_verification} (jamais confirmé par OTP), re-soumettre le formulaire
+     * (email/téléphone identiques, un champ corrigé) doit RÉUTILISER le même compte — pas de 409,
+     * pas de doublon, {@code id} + {@code referralCode} conservés. Une fois le compte {@code active},
+     * la même re-soumission redevient un vrai conflit (409, pas de prise de contrôle).
+     */
+    @Test
+    void resubmitWhilePending_reusesSameAccount_thenConflictsOnceActive() throws Exception {
+        String admin = adminBearer();
+        String email = "resubmit-" + UUID.randomUUID() + "@x.ma";
+        String phone = "06" + Math.abs(UUID.randomUUID().getLeastSignificantBits() % 100_000_000L);
+
+        // 1) 1re soumission avec une faute → compte pending créé.
+        ResponseEntity<String> reg1 = registerWith(email, phone, "Typo");
+        assertThat(reg1.getStatusCode()).as("register #1 — body=%s", reg1.getBody()).isEqualTo(HttpStatus.CREATED);
+        String userId = om.readTree(reg1.getBody()).get("id").asText();
+        assertThat(om.readTree(reg1.getBody()).get("status").asText()).isEqualTo("pending_email_verification");
+        String referral1 = jdbc.queryForObject(
+            "SELECT referral_code FROM users WHERE id = ?::uuid", String.class, userId);
+
+        // 2) Re-soumission (prénom corrigé, mêmes email + téléphone) → réutilise le compte, PAS de 409.
+        ResponseEntity<String> reg2 = registerWith(email, phone, "Fixed");
+        assertThat(reg2.getStatusCode()).as("re-submit pending — body=%s", reg2.getBody())
+            .isEqualTo(HttpStatus.CREATED);
+        assertThat(reg2.getStatusCode()).isNotEqualTo(HttpStatus.CONFLICT);
+        assertThat(om.readTree(reg2.getBody()).get("id").asText()).as("même compte").isEqualTo(userId);
+        assertThat(om.readTree(reg2.getBody()).get("status").asText()).isEqualTo("pending_email_verification");
+
+        // Invariants : pas de doublon, referralCode conservé (QR déjà affiché), champ corrigé persisté.
+        Integer count = jdbc.queryForObject(
+            "SELECT count(*) FROM users WHERE lower(email) = lower(?) AND deleted_at IS NULL", Integer.class, email);
+        assertThat(count).as("un seul compte pour cet email").isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT referral_code FROM users WHERE id = ?::uuid", String.class, userId))
+            .as("referralCode inchangé").isEqualTo(referral1);
+        assertThat(jdbc.queryForObject("SELECT first_name FROM users WHERE id = ?::uuid", String.class, userId))
+            .as("prénom corrigé persisté").isEqualTo("Fixed");
+
+        // 3) L'OTP confirme et active le compte réutilisé (le flux normal continue de marcher).
+        String otpReqBody = "{\"email\":\"" + email + "\",\"purpose\":\"signup\"}";
+        String otpId = om.readTree(restTemplate.exchange(url("/api/auth/otp/request"), HttpMethod.POST,
+            jsonJwtEntity(otpReqBody, null), String.class).getBody()).get("otpId").asText();
+        String code = String.valueOf(jdbc.queryForMap(
+            "SELECT code FROM otp_requests WHERE id = ?::uuid", otpId).get("code"));
+        String verifyBody = "{\"otpId\":\"" + otpId + "\",\"code\":\"" + code + "\"}";
+        ResponseEntity<String> verify = restTemplate.exchange(url("/api/auth/otp/verify"), HttpMethod.POST,
+            jsonJwtEntity(verifyBody, null), String.class);
+        assertThat(verify.getStatusCode()).as("otp/verify — body=%s", verify.getBody()).isEqualTo(HttpStatus.OK);
+        assertThat(jdbc.queryForMap("SELECT status FROM users WHERE id = ?::uuid", userId).get("status"))
+            .isEqualTo("active");
+
+        // 4) Le compte est maintenant ACTIF → re-soumettre le même email est un vrai conflit (409).
+        ResponseEntity<String> reg3 = registerWith(email, phone, "Again");
+        assertThat(reg3.getStatusCode()).as("re-submit après activation — body=%s", reg3.getBody())
+            .isEqualTo(HttpStatus.CONFLICT);
+
+        restTemplate.exchange(url("/api/users/" + userId), HttpMethod.DELETE, jwtEntity(admin), String.class);
+    }
+
+    /**
+     * SÉCURITÉ E2E — non-régression du vol de compte. Un attaquant anonyme envoyant
+     * {email LIBRE + téléphone d'une victime en attente de vérification} ne doit PAS reprendre le
+     * compte de la victime : l'ancre de reprise est l'email (ici libre) → 409, et l'email + le hash
+     * du mot de passe + le statut de la victime restent STRICTEMENT inchangés (pas de réécriture de
+     * credentials, donc l'attaquant ne peut pas activer via OTP puis se connecter).
+     */
+    @Test
+    void resubmitWithVictimPhoneAndFreeEmail_isRejected_andVictimAccountUntouched() throws Exception {
+        String admin = adminBearer();
+        String victimEmail = "victim-" + UUID.randomUUID() + "@x.ma";
+        String victimPhone = "06" + Math.abs(UUID.randomUUID().getLeastSignificantBits() % 100_000_000L);
+
+        // Victime : inscription non encore vérifiée (pending).
+        ResponseEntity<String> vreg = registerWith(victimEmail, victimPhone, "Victim");
+        assertThat(vreg.getStatusCode()).as("register victime — body=%s", vreg.getBody()).isEqualTo(HttpStatus.CREATED);
+        String victimId = om.readTree(vreg.getBody()).get("id").asText();
+        Map<String, Object> before = jdbc.queryForMap(
+            "SELECT email, password_hash, status FROM users WHERE id = ?::uuid", victimId);
+
+        // Attaquant : email libre + téléphone de la victime + mot de passe choisi → doit être REJETÉ (409).
+        ResponseEntity<String> attack = registerWith(
+            "attacker-" + UUID.randomUUID() + "@evil.com", victimPhone, "ATTACKER");
+        assertThat(attack.getStatusCode()).as("attaque takeover — body=%s", attack.getBody())
+            .isEqualTo(HttpStatus.CONFLICT);
+
+        // Le compte de la victime est intact : email, hash mot de passe et statut inchangés.
+        Map<String, Object> after = jdbc.queryForMap(
+            "SELECT email, password_hash, status FROM users WHERE id = ?::uuid", victimId);
+        assertThat(after.get("email")).as("email victime inchangé").isEqualTo(before.get("email"));
+        assertThat(after.get("password_hash")).as("mot de passe victime NON réécrit").isEqualTo(before.get("password_hash"));
+        assertThat(after.get("status")).as("statut victime inchangé").isEqualTo("pending_email_verification");
+
+        restTemplate.exchange(url("/api/users/" + victimId), HttpMethod.DELETE, jwtEntity(admin), String.class);
+    }
 }

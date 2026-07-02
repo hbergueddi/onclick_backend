@@ -145,9 +145,31 @@ public class UserService {
      * Inscription PUBLIQUE (POST /api/users/register, permitAll).
      * Force le rôle CLIENT côté serveur — un visiteur anonyme ne peut pas
      * s'auto-attribuer un rôle privilégié. Délègue ensuite à {@link #create}.
+     *
+     * <p><b>Reprise d'une inscription non confirmée (bug « ce numéro est déjà utilisé » au re-submit).</b>
+     * Un compte resté {@code pending_email_verification} (créé mais jamais confirmé par OTP) ne doit pas
+     * bloquer une nouvelle soumission du MÊME visiteur qui corrige une faute de saisie. On RÉUTILISE alors
+     * ce compte ({@link #reusablePendingSignup} + {@link #updatePendingSignup}) en conservant {@code id} +
+     * {@code referralCode} (le QR déjà affiché reste valable).
+     *
+     * <p><b>Sécurité — endpoint anonyme.</b> La reprise est ancrée EXCLUSIVEMENT sur l'EMAIL (jamais sur le
+     * seul téléphone) et scopée au tenant. On ne réécrit JAMAIS l'email ni le mot de passe d'un compte existant :
+     * ces deux champs sont les credentials, et l'OTP de vérification part vers l'email enregistré — laisser un
+     * appelant anonyme les réécrire permettrait la prise de contrôle d'un compte pending appartenant à autrui
+     * (attaquant fournissant l'email/le téléphone d'une victime). On ne met à jour que des champs de profil
+     * corrigeables (nom, langue, téléphone — avec re-contrôle d'unicité). Cas non repris (email {@code active},
+     * conflit de téléphone avec un autre compte, faute de frappe dans l'email lui-même) → {@link #create} lève
+     * le 409 attendu ; les pending réellement abandonnés sont purgés par {@code PendingSignupPurgeJob}.
      */
     @Transactional
+    @CacheEvict(value = CacheConfig.CACHE_USERS_BY_EMAIL, allEntries = true)
     public UserDto register(UserRegisterDto dto) {
+        // Reprise d'une inscription non confirmée (ancrée sur l'email + tenant) au lieu de rejeter.
+        User reusable = reusablePendingSignup(dto);
+        if (reusable != null) {
+            return updatePendingSignup(reusable, dto);
+        }
+
         Role client = roleRepository.findByCode("CLIENT")
             .orElseThrow(() -> new NotFoundException("Role", "CLIENT"));
         UserDto created = create(new UserCreateDto(
@@ -170,6 +192,58 @@ public class UserService {
             }
         }
         return created;
+    }
+
+    /**
+     * Renvoie le compte {@code pending_email_verification} RÉUTILISABLE pour cette inscription, sinon {@code null}.
+     *
+     * <p><b>Ancre = EMAIL uniquement</b> (l'email est UNIQUE global et c'est la cible de livraison de l'OTP :
+     * seul son propriétaire peut activer le compte). Réutilisable ⟺ un compte existe pour cet email, est encore
+     * {@code pending_email_verification}, non supprimé, ET appartient au MÊME tenant que la demande. Tous les
+     * autres cas → {@code null} et le flux normal ({@link #register} → {@link #create}) s'applique (création,
+     * ou 409 si email/téléphone déjà pris). On ne réutilise JAMAIS sur un simple match de téléphone : sinon un
+     * appelant anonyme fournissant le téléphone d'une victime pourrait faire réécrire le compte de celle-ci.
+     *
+     * <p>NB : {@code findByEmailIgnoreCase} ne filtre PAS le soft-delete ({@link User} n'a pas de
+     * {@code @SQLRestriction}) → on écarte explicitement {@code deletedAt != null} ici.
+     */
+    private User reusablePendingSignup(UserRegisterDto dto) {
+        User byEmail = repository.findByEmailIgnoreCase(dto.email().toLowerCase())
+            .filter(u -> u.getDeletedAt() == null)
+            .orElse(null);
+        if (byEmail == null) return null;                                             // email libre → create()
+        if (!User.STATUS_PENDING_EMAIL_VERIFICATION.equals(byEmail.getStatus())) {
+            return null;                                                              // compte actif → create() → 409
+        }
+        // L'email étant unique global, on ne réutilise pas au travers d'une frontière de tenant.
+        UUID existingTenantId = byEmail.getTenant() != null ? byEmail.getTenant().getId() : null;
+        if (!java.util.Objects.equals(existingTenantId, dto.tenantId())) return null; // autre tenant → create()
+        return byEmail;
+    }
+
+    /**
+     * Reprend un compte pending identifié par son EMAIL : met à jour uniquement les champs de profil
+     * corrigeables (prénom, nom, langue, téléphone), en conservant {@code id} + {@code referralCode} +
+     * date de création (le QR déjà montré reste valable) et le statut {@code pending_email_verification}.
+     *
+     * <p><b>On ne réécrit NI l'email NI le mot de passe</b> (credentials) : l'email est l'ancre (inchangé) et
+     * réécrire le hash depuis un endpoint anonyme ouvrirait une prise de contrôle. Le téléphone n'est mis à
+     * jour qu'après re-contrôle d'unicité (message générique, anti-énumération). NE republie PAS
+     * {@link UserRegisteredEvent} — déjà émis à la 1re inscription (évite double welcome / enrollment / analytics).
+     */
+    private UserDto updatePendingSignup(User u, UserRegisterDto dto) {
+        if (dto.phone() != null && !dto.phone().equals(u.getPhone())) {
+            // existsByPhone couvre toutes les lignes (dont soft-deleted) → 409 propre AVANT le save (pas d'erreur DB brute).
+            if (repository.existsByPhone(dto.phone())) {
+                throw new ConflictException("Ce numéro de téléphone est déjà associé à un compte.");
+            }
+            u.setPhone(dto.phone());
+        }
+        u.setFirstName(dto.firstName());
+        u.setLastName(dto.lastName());
+        if (dto.language() != null) u.setLanguage(dto.language());
+        if (Boolean.TRUE.equals(dto.cguAccepted())) u.setCguAcceptedAt(Instant.now());
+        return repository.save(u).toDto();
     }
 
     @Transactional

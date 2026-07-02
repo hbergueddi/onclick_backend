@@ -198,6 +198,119 @@ class UserServiceTest {
         verify(repository, org.mockito.Mockito.never()).findById(any());   // ni CGU ni flag → pas de re-fetch
     }
 
+    // ─── register : reprise pending ancrée EMAIL + garde-fous sécurité ──────
+
+    @Test
+    void register_reusesPendingByEmail_updatesProfile_keepsCredentials_noEvent() {
+        // Re-soumission par le MÊME email (ancre) : compte pending réutilisé (pas de 409), on met à jour
+        // les champs de profil (prénom, téléphone corrigé) MAIS on ne touche NI l'email NI le mot de passe,
+        // et id + referralCode + statut pending sont conservés (QR déjà affiché toujours valable).
+        UUID pendingId = UUID.randomUUID();
+        User pending = new User(pendingId, role, "reuse@x.ma", "$2a$ORIGINAL", "Old", "Name");
+        pending.setPhone("0600");
+        pending.setStatus(User.STATUS_PENDING_EMAIL_VERIFICATION);
+        pending.setReferralCode("REF12345");
+        when(repository.findByEmailIgnoreCase("reuse@x.ma")).thenReturn(Optional.of(pending));
+        when(repository.existsByPhone("0700")).thenReturn(false); // nouveau téléphone libre
+
+        var dto = service.register(new UserRegisterDto(
+            null, "reuse@x.ma", "0700", "newpassword1234", "Fixed", "Newl", "en", true));
+
+        assertThat(dto.id()).isEqualTo(pendingId);                                    // même compte
+        assertThat(pending.getReferralCode()).isEqualTo("REF12345");                  // QR préservé
+        assertThat(pending.getStatus()).isEqualTo(User.STATUS_PENDING_EMAIL_VERIFICATION);
+        assertThat(pending.getFirstName()).isEqualTo("Fixed");                        // profil corrigé
+        assertThat(pending.getPhone()).isEqualTo("0700");                             // téléphone corrigé
+        assertThat(pending.getEmail()).isEqualTo("reuse@x.ma");                       // email (ancre) NON réécrit
+        assertThat(pending.getPasswordHash()).isEqualTo("$2a$ORIGINAL");             // credential NON écrasé (anti-takeover)
+        verify(passwordEncoder, org.mockito.Mockito.never()).encode(anyString());     // pas de ré-encodage sur reprise
+        verify(repository).save(pending);
+        verify(roleRepository, org.mockito.Mockito.never()).findByCode(anyString());  // pas passé par create()
+        verify(eventPublisher, org.mockito.Mockito.never()).publishEvent(any(Object.class)); // pas de re-UserRegisteredEvent
+    }
+
+    @Test
+    void register_phoneOnlyMatch_freeEmail_notReused_delegatesToCreate_409() {
+        // SÉCURITÉ (non-régression takeover) : un attaquant anonyme envoyant {email LIBRE + téléphone d'une
+        // victime} ne doit PAS reprendre le compte de la victime. L'ancre est l'email (ici libre) → pas de
+        // reprise → create() lève 409 sur le téléphone ; RIEN n'est muté (ni save, ni ré-encodage).
+        when(repository.findByEmailIgnoreCase("attacker@evil.com")).thenReturn(Optional.empty()); // email libre
+        when(repository.existsByEmailIgnoreCase(any())).thenReturn(false);
+        when(repository.existsByPhone("0600")).thenReturn(true);   // téléphone de la victime déjà pris
+        when(roleRepository.findByCode("CLIENT")).thenReturn(Optional.of(role));
+
+        assertThatThrownBy(() -> service.register(new UserRegisterDto(
+            null, "attacker@evil.com", "0600", "attackerpass1234", "M", "M", "fr", false)))
+            .isInstanceOf(ConflictException.class);
+        verify(repository, org.mockito.Mockito.never()).save(any());             // compte de la victime intact
+        verify(passwordEncoder, org.mockito.Mockito.never()).encode(anyString()); // aucun credential réécrit
+    }
+
+    @Test
+    void register_reuseByEmail_correctedPhoneOfAnotherAccount_throwsConflict() {
+        // Reprise par email OK, mais le téléphone corrigé appartient à un AUTRE compte → 409 (pas de vol
+        // de téléphone), message générique, avant tout save.
+        User pending = new User(UUID.randomUUID(), role, "reuse@x.ma", "$2a$h", "P", "P");
+        pending.setPhone("0600");
+        pending.setStatus(User.STATUS_PENDING_EMAIL_VERIFICATION);
+        when(repository.findByEmailIgnoreCase("reuse@x.ma")).thenReturn(Optional.of(pending));
+        when(repository.existsByPhone("0611")).thenReturn(true);   // téléphone appartenant à un autre compte
+
+        assertThatThrownBy(() -> service.register(new UserRegisterDto(
+            null, "reuse@x.ma", "0611", "password1234", "P", "P", "fr", false)))
+            .isInstanceOf(ConflictException.class);
+        verify(repository, org.mockito.Mockito.never()).save(any());
+    }
+
+    @Test
+    void register_activeEmail_notReused_throwsConflict() {
+        // Email d'un compte ACTIF (déjà confirmé) → jamais repris → create() lève 409 (pas de prise de contrôle).
+        User active = new User(UUID.randomUUID(), role, "taken@x.ma", "$2a$h", "A", "A"); // statut "active"
+        when(repository.findByEmailIgnoreCase("taken@x.ma")).thenReturn(Optional.of(active));
+        when(repository.existsByEmailIgnoreCase(any())).thenReturn(true);
+        when(roleRepository.findByCode("CLIENT")).thenReturn(Optional.of(role));
+
+        assertThatThrownBy(() -> service.register(new UserRegisterDto(
+            null, "taken@x.ma", null, "password1234", "N", "N", "fr", false)))
+            .isInstanceOf(ConflictException.class);
+        verify(repository, org.mockito.Mockito.never()).save(any());
+    }
+
+    @Test
+    void register_crossTenantPending_notReused_throwsConflict() {
+        // Compte pending pour cet email sur un AUTRE tenant → pas de reprise cross-tenant → create() → 409.
+        User pending = new User(UUID.randomUUID(), role, "reuse@x.ma", "$2a$h", "P", "P");
+        pending.setStatus(User.STATUS_PENDING_EMAIL_VERIFICATION);
+        pending.setTenant(new Tenant(UUID.randomUUID(), "T1", "t1"));    // tenant T1
+        when(repository.findByEmailIgnoreCase("reuse@x.ma")).thenReturn(Optional.of(pending));
+        when(repository.existsByEmailIgnoreCase(any())).thenReturn(true);
+        when(roleRepository.findByCode("CLIENT")).thenReturn(Optional.of(role));
+
+        assertThatThrownBy(() -> service.register(new UserRegisterDto(
+            UUID.randomUUID(), "reuse@x.ma", null, "password1234", "P", "P", "fr", false))) // demande sur tenant T2
+            .isInstanceOf(ConflictException.class);
+        verify(repository, org.mockito.Mockito.never()).save(any());
+    }
+
+    @Test
+    void register_softDeletedEmail_ignored_createsNormally() {
+        // Un compte SUPPRIMÉ (soft-delete) au même email ne doit ni bloquer ni être repris :
+        // reusablePendingSignup l'écarte (deletedAt != null) → create() crée un nouveau compte.
+        User deleted = new User(UUID.randomUUID(), role, "gone@x.ma", "$2a$h", "G", "G");
+        deleted.setStatus(User.STATUS_PENDING_EMAIL_VERIFICATION);
+        deleted.markDeleted();
+        when(repository.findByEmailIgnoreCase("gone@x.ma")).thenReturn(Optional.of(deleted));
+        when(repository.existsByEmailIgnoreCase(any())).thenReturn(false);
+        when(roleRepository.findByCode("CLIENT")).thenReturn(Optional.of(role));
+        when(roleRepository.findById(any())).thenReturn(Optional.of(role));
+
+        var dto = service.register(new UserRegisterDto(
+            null, "gone@x.ma", null, "password1234", "G2", "G2", "fr", false));
+
+        assertThat(dto.status()).isEqualTo(User.STATUS_ACTIVE);                 // nouveau compte, pas la reprise du supprimé
+        verify(repository, org.mockito.Mockito.never()).save(deleted);          // l'ancien compte supprimé n'est pas touché
+    }
+
     // ─── patch ────────────────────────────────────────────────────────────
 
     @Test
