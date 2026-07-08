@@ -149,6 +149,28 @@ class UserServiceTest {
     }
 
     @Test
+    void create_update_existingUser_byId_updatesAndDoesNotRepublishEvent() {
+        // Accès suivant : dto.id() renseigné → mise à jour de l'utilisateur existant.
+        User existing = user();
+        UUID id = existing.getId();
+        when(repository.findById(id)).thenReturn(Optional.of(existing));
+        when(roleRepository.findById(any())).thenReturn(Optional.of(role));
+
+        var result = service.create(new UserCreateDto(
+            id, null, role.getId(), "New@x.ma", null, null, "New", "Name", "en"));
+
+        assertThat(result).isNotNull();
+        assertThat(existing.getEmail()).isEqualTo("new@x.ma");   // normalisé lowercase + écrasé
+        assertThat(existing.getFirstName()).isEqualTo("New");
+        // Pas de mot de passe fourni → hash inchangé.
+        verify(passwordEncoder, org.mockito.Mockito.never()).encode(anyString());
+        // UserRegisteredEvent réservé à la création — jamais republié sur mise à jour.
+        verify(eventPublisher, org.mockito.Mockito.never()).publishEvent(any());
+        // Rôle/email/hash peuvent changer → éviction du cache userDetails.
+        verify(userDetailsService).evictUser(id);
+    }
+
+    @Test
     void create_roleNotFound() {
         when(repository.existsByEmailIgnoreCase(any())).thenReturn(false);
         when(roleRepository.findById(any())).thenReturn(Optional.empty());

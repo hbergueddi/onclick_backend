@@ -232,8 +232,12 @@ public class UserController {
     }
 
     @PostMapping
-    @Operation(summary = "Crée un user avec rôle arbitraire (création admin — authentifié). "
+    @Operation(summary = "Upsert user (création admin si id absent, mise à jour si id présent). "
         + "Pour le signup public, utiliser POST /api/users/register.")
+    // Upsert admin : réservé aux gestionnaires d'utilisateurs. Sans cette garde, tout compte
+    // authentifié pourrait fournir l'id d'un tiers et écraser son email/rôle/mot de passe
+    // (prise de contrôle + escalade de privilèges).
+    @PreAuthorize("hasAuthority('CREATE:USERS') or hasAuthority('UPDATE:USERS')")
     public ResponseEntity<UserDto> create(@Valid @RequestBody UserCreateDto dto) {
         UserDto created = service.create(dto);
         return ResponseEntity.created(URI.create("/api/users/" + created.id())).body(created);

@@ -94,26 +94,42 @@ public class UserService {
         return repository.findAll(PageRequest.of(page, size)).map(User::toDto);
     }
 
+    /**
+     * <b>Upsert</b> utilisateur — point d'entrée de {@code POST /api/users}.
+     *
+     * <p>{@code dto.id() == null} → <b>CRÉATION</b> (premier accès : signup / création admin) ;
+     * {@code dto.id()} renseigné → <b>MISE À JOUR</b> de l'utilisateur existant
+     * ({@link NotFoundException} s'il est introuvable ou soft-deleted).
+     *
+     * <p>Le contrat de création reste <b>inchangé</b> (un payload sans {@code id} suit exactement
+     * l'ancien comportement : 409 email/phone, 400 mot de passe manquant, 404 rôle, event
+     * {@code user.registered}, {@code referral_code} stable). L'{@code UserRegisteredEvent} n'est
+     * émis <b>qu'à la création</b> (jamais republié sur mise à jour).
+     */
     @Transactional
+    @CacheEvict(value = CacheConfig.CACHE_USERS_BY_EMAIL, allEntries = true)
     public UserDto create(UserCreateDto dto) {
-        // Anti-énumération (light) : message générique SANS renvoyer la valeur (email/téléphone),
-        // pour ne pas confirmer l'existence d'un compte via le contenu de l'erreur. (La réponse
-        // 409 révèle encore l'existence par le statut — l'uniformisation complète 201+email est
-        // une décision UX différée.)
-        if (repository.existsByEmailIgnoreCase(dto.email())) {
-            throw new ConflictException("Cet email est déjà associé à un compte.");
-        }
-        if (dto.phone() != null && repository.existsByPhone(dto.phone())) {
-            throw new ConflictException("Ce numéro de téléphone est déjà associé à un compte.");
-        }
-        Role role = roleRepository.findById(dto.roleId())
-            .orElseThrow(() -> new NotFoundException("Role", dto.roleId()));
+        return dto.id() == null ? insertNew(dto) : updateExisting(dto.id(), dto);
+    }
 
+    // ─── Chemin création (premier accès) ────────────────────────────────────────
+    private UserDto insertNew(UserCreateDto dto) {
+        // Mot de passe obligatoire à la création (optionnel côté DTO pour autoriser la MAJ sans
+        // le renvoyer) — la longueur minimale reste imposée par @Size sur UserCreateDto.password.
+        if (dto.password() == null || dto.password().isBlank()) {
+            throw new BadRequestException("Le mot de passe est obligatoire à la création");
+        }
+        String email = dto.email().toLowerCase();
+        // Anti-énumération (light) : messages génériques SANS renvoyer la valeur (email/téléphone).
+        requireEmailAvailable(email, null);
+        requirePhoneAvailable(dto.phone(), null);
+
+        Role role = resolveRole(dto.roleId());
         UUID userId = UUID.randomUUID();
         User user = new User(
             userId,
             role,
-            dto.email().toLowerCase(),
+            email,
             passwordEncoder.encode(dto.password()),
             dto.firstName(),
             dto.lastName()
@@ -129,9 +145,9 @@ public class UserService {
         user.setReferralCode(userId.toString().replace("-", "").substring(0, 8).toUpperCase());
         User saved = repository.save(user);
 
-        // Publish event Spring Modulith → Kafka topic 'user.registered'
+        // Publish event Spring Modulith → Kafka topic 'user.registered' (création uniquement).
         eventPublisher.publishEvent(new UserRegisteredEvent(
-            saved.getId(), dto.tenantId(), dto.email().toLowerCase(),
+            saved.getId(), dto.tenantId(), email,
             dto.firstName(), dto.lastName(),
             role.getCode(),
             dto.language() != null ? dto.language() : "fr",
@@ -139,6 +155,76 @@ public class UserService {
         ));
 
         return saved.toDto();
+    }
+
+    // ─── Chemin mise à jour (accès suivants) ──────────────────────────────────────
+    private UserDto updateExisting(UUID id, UserCreateDto dto) {
+        User user = loadActive(id);
+        String email = dto.email().toLowerCase();
+        requireEmailAvailable(email, id);          // s'exclut lui-même
+        requirePhoneAvailable(dto.phone(), id);
+
+        user.setEmail(email);
+        user.setFirstName(dto.firstName());
+        user.setLastName(dto.lastName());
+        user.setRole(resolveRole(dto.roleId()));
+        if (dto.phone() != null) user.setPhone(dto.phone());
+        if (dto.language() != null) user.setLanguage(dto.language());
+        if (dto.tenantId() != null) {
+            user.setTenant(entityManager.getReference(Tenant.class, dto.tenantId()));
+        }
+        // Mot de passe ré-encodé UNIQUEMENT s'il est fourni (sinon inchangé).
+        if (dto.password() != null && !dto.password().isBlank()) {
+            user.setPasswordHash(passwordEncoder.encode(dto.password()));
+        }
+        UserDto result = repository.save(user).toDto();
+        // Le rôle (→ autorités), l'email et le hash peuvent changer : purge le cache userDetails
+        // (payload sérialisé Redis stale) — cohérent avec changePassword/softDelete.
+        userDetailsService.evictUser(id);
+        return result;
+    }
+
+    // ─── Helpers upsert (DRY) ─────────────────────────────────────────────────────
+    private User loadActive(UUID id) {
+        return repository.findById(id)
+            .filter(u -> u.getDeletedAt() == null)
+            .orElseThrow(() -> new NotFoundException("User", id));
+    }
+
+    private Role resolveRole(UUID roleId) {
+        return roleRepository.findById(roleId)
+            .orElseThrow(() -> new NotFoundException("Role", roleId));
+    }
+
+    /**
+     * Email unique global (contrainte DB {@code users.email UNIQUE}) — message générique
+     * (anti-énumération) : ne renvoie PAS l'email dans l'erreur.
+     *
+     * <p>Création ({@code selfId == null}) : {@code existsByEmailIgnoreCase} (sémantique inchangée,
+     * compte les lignes soft-deleted comme la contrainte DB). Mise à jour : exclut {@code selfId}
+     * pour ne pas se signaler soi-même en conflit.
+     */
+    private void requireEmailAvailable(String email, UUID selfId) {
+        boolean taken = (selfId == null)
+            ? repository.existsByEmailIgnoreCase(email)
+            : repository.findByEmailIgnoreCase(email).filter(u -> !u.getId().equals(selfId)).isPresent();
+        if (taken) {
+            throw new ConflictException("Cet email est déjà associé à un compte.");
+        }
+    }
+
+    /**
+     * Téléphone unique global — mêmes règles que {@link #requireEmailAvailable} (existsBy en
+     * création, exclusion de {@code selfId} en mise à jour). No-op si le téléphone est absent.
+     */
+    private void requirePhoneAvailable(String phone, UUID selfId) {
+        if (phone == null) return;
+        boolean taken = (selfId == null)
+            ? repository.existsByPhone(phone)
+            : repository.findByPhone(phone).filter(u -> !u.getId().equals(selfId)).isPresent();
+        if (taken) {
+            throw new ConflictException("Ce numéro de téléphone est déjà associé à un compte.");
+        }
     }
 
     /**
