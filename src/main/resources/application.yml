@@ -198,10 +198,15 @@ app:
   # ─── AI Groq (Sprint B.1 G.4-bis — port 4 EFs : care-chat, ai-assistant, elite-review, generate-plan) ──
   # Si api-key non défini : GroqClient bascule en stub mode (réponse factice + log warn).
   ai:
+    # Provider du chatbot (module core/ai) : ollama (local, défaut) | groq (managé, rapide).
+    # Les embeddings restent servis par Ollama quel que soit le provider de chat.
+    provider: ${AI_PROVIDER:ollama}
     groq:
-      api-key: ${GROQ_API_KEY:}
-      endpoint: ${GROQ_ENDPOINT:https://api.groq.com/openai/v1/chat/completions}
+      api-key: ${GROQ_API_KEY:}                        # externalisée (.env / env prod) — jamais en dur
+      endpoint: ${GROQ_ENDPOINT:https://api.groq.com/openai/v1/chat/completions}  # client Groq legacy
+      base-url: ${GROQ_BASE_URL:https://api.groq.com/openai/v1}                    # ChatModel LangChain4j
       model: ${GROQ_MODEL:llama-3.3-70b-versatile}
+      timeout: ${GROQ_TIMEOUT:PT60S}
     # ─── Ollama (LangChain4j — module core/ai, LLM local self-hosted) ──────────
     # Connexion à un serveur Ollama local/distant. chat-model = génération,
     # embedding-model = vecteurs (préparé pour RAG + pgvector, pas encore câblé).

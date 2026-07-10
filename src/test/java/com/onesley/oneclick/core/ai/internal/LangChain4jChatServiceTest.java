@@ -1,5 +1,6 @@
 package com.onesley.oneclick.core.ai.internal;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.onesley.oneclick.core.ai.api.AiChatApi;
 import com.onesley.oneclick.exception.BadRequestException;
 import dev.langchain4j.exception.TimeoutException;
@@ -9,7 +10,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 
 import java.net.ConnectException;
-import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -17,18 +17,16 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Tests unitaires de {@link OllamaChatService} — valide la chaîne Service → (mock) modèle :
- * succès, réponse vide, et mapping des erreurs provider vers les bons codes HTTP.
- * Le {@link ChatModel} est mocké (pas d'appel réseau réel).
+ * Tests unitaires de {@link LangChain4jChatService} — provider-neutre (Ollama/Groq) : succès,
+ * réponse vide, et mapping des erreurs provider vers les bons codes HTTP. Le {@link ChatModel} est
+ * mocké (pas d'appel réseau réel) ; le nom du modèle vient de {@link AiChatModelName}.
  */
-class OllamaChatServiceTest {
+class LangChain4jChatServiceTest {
 
-    private final OllamaProperties props =
-        new OllamaProperties("http://localhost:11434", "llama3.1", "nomic-embed-text",
-            Duration.ofSeconds(60), false, false);
+    private final AiChatModelName modelName = new AiChatModelName("test-model");
 
-    private OllamaChatService serviceWith(ChatModel model) {
-        return new OllamaChatService(model, props);
+    private LangChain4jChatService serviceWith(ChatModel model) {
+        return new LangChain4jChatService(model, modelName, new ObjectMapper());
     }
 
     @Test
@@ -39,7 +37,7 @@ class OllamaChatServiceTest {
         AiChatApi.Result r = serviceWith(model).chat("bonjour");
 
         assertThat(r.content()).isEqualTo("salut !");
-        assertThat(r.model()).isEqualTo("llama3.1");
+        assertThat(r.model()).isEqualTo("test-model");
         assertThat(r.durationMs()).isGreaterThanOrEqualTo(0);
     }
 

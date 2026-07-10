@@ -22,6 +22,17 @@ public interface AiChatApi {
     Result chat(String prompt);
 
     /**
+     * Variante <b>Tool Calling</b> : expose des {@link AiTool} au modèle, exécute les appels d'outils
+     * qu'il demande (boucle interne) et renvoie la réponse finale. Les outils sont des ports du domaine —
+     * le mécanisme d'exposition/exécution côté provider reste confiné à l'implémentation.
+     *
+     * @param prompt message utilisateur
+     * @param tools  outils disponibles (liste vide = équivalent à {@link #chat(String)})
+     * @return le {@link Result} après résolution des éventuels appels d'outils
+     */
+    Result chat(String prompt, java.util.List<AiTool> tools);
+
+    /**
      * Résultat neutre d'une génération — indépendant du provider. Chaque implémentation renseigne
      * {@code model} depuis sa propre configuration ; {@code durationMs} mesure l'appel au modèle.
      *

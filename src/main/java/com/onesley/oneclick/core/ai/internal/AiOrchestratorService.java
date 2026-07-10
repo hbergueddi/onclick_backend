@@ -81,9 +81,9 @@ class AiOrchestratorService implements AiOrchestrator {
         // 2) Outils exposés (exécution Tool Calling câblée à l'étape suivante).
         List<AiTool> tools = decision.useTools() ? toolRegistry.all() : List.of();
 
-        // 3) Prompt + génération.
+        // 3) Prompt + génération (avec Tool Calling si des outils sont exposés).
         String prompt = promptBuilder.build(query.question(), context);
-        AiChatApi.Result result = chatApi.chat(prompt);
+        AiChatApi.Result result = tools.isEmpty() ? chatApi.chat(prompt) : chatApi.chat(prompt, tools);
 
         List<String> usedSources = decision.contextSources().stream().toList();
         List<String> toolNames = tools.stream().map(AiTool::name).toList();

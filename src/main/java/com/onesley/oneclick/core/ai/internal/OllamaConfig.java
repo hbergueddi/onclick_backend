@@ -5,6 +5,7 @@ import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.ollama.OllamaChatModel;
 import dev.langchain4j.model.ollama.OllamaEmbeddingModel;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,9 +34,11 @@ class OllamaConfig {
 
     /**
      * Modèle de chat Ollama, exposé sous l'interface neutre {@link ChatModel} de LangChain4j
-     * (découple les consommateurs du provider concret).
+     * (découple les consommateurs du provider concret). Actif quand {@code app.ai.provider=ollama}
+     * (défaut). Pour Groq, voir {@code GroqChatConfig}.
      */
     @Bean
+    @ConditionalOnProperty(name = "app.ai.provider", havingValue = "ollama", matchIfMissing = true)
     ChatModel ollamaChatModel(OllamaProperties props) {
         log.info("[core/ai] Ollama chat model '{}' @ {} (timeout={})",
             props.chatModel(), props.baseUrl(), props.timeout());
@@ -46,6 +49,13 @@ class OllamaConfig {
             .logRequests(props.logRequests())
             .logResponses(props.logResponses())
             .build();
+    }
+
+    /** Nom du modèle de chat actif (Ollama) — pour logs/métadonnées côté service. */
+    @Bean
+    @ConditionalOnProperty(name = "app.ai.provider", havingValue = "ollama", matchIfMissing = true)
+    AiChatModelName ollamaChatModelName(OllamaProperties props) {
+        return new AiChatModelName(props.chatModel());
     }
 
     /**

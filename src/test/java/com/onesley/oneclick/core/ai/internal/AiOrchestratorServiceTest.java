@@ -53,7 +53,9 @@ class AiOrchestratorServiceTest {
     }
 
     private void stubChat(String reply) {
-        when(chat.chat(any())).thenReturn(new AiChatApi.Result(reply, "test-model", 3L));
+        AiChatApi.Result result = new AiChatApi.Result(reply, "test-model", 3L);
+        when(chat.chat(any())).thenReturn(result);                 // sans outils
+        when(chat.chat(any(), anyList())).thenReturn(result);      // avec Tool Calling
         when(prompt.build(any(), anyList())).thenReturn("PROMPT");
     }
 

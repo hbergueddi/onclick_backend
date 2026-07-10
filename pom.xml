@@ -120,6 +120,12 @@
             <groupId>dev.langchain4j</groupId>
             <artifactId>langchain4j-ollama</artifactId>
         </dependency>
+        <!-- Connecteur OpenAI-compatible : sert Groq (base-url api.groq.com/openai/v1) — chat rapide.
+             Même ChatModel LangChain4j → Tool Calling identique, sans changer le code métier. -->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-open-ai</artifactId>
+        </dependency>
 
         <!-- ─── Persistence ─────────────────────────────────────────────────── -->
         <dependency>

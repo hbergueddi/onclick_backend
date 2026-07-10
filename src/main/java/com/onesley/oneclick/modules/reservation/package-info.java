@@ -27,7 +27,7 @@
     type = org.springframework.modulith.ApplicationModule.Type.CLOSED,
     id = "modules.reservation",
     displayName = "modules/reservation",
-    allowedDependencies = {"core.identity", "core.tenant", "audit", "exception", "search", "security", "shared", "realtime"}
+    allowedDependencies = {"core.identity", "core.tenant", "core.ai", "audit", "exception", "search", "security", "shared", "realtime"}
 )
 package com.onesley.oneclick.modules.reservation;
 

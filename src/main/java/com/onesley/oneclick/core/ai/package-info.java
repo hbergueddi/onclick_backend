@@ -21,7 +21,11 @@
  * en attendant le port).
  */
 @ApplicationModule(
-    type = org.springframework.modulith.ApplicationModule.Type.CLOSED,
+    // OPEN comme les autres contextes socles core/* (identity, tenant, membership…) : permet aux
+    // modules métier de fournir des AiTool (core.ai.api.AiTool) sans que core/ai ne dépende d'eux.
+    // Cross-module = api/ (ports/DTOs) ou events ; internal/ (Ollama, LangChain4j, pgvector) reste
+    // hors contrat par convention.
+    type = org.springframework.modulith.ApplicationModule.Type.OPEN,
     id = "core.ai",
     displayName = "core/ai",
     allowedDependencies = {"core.identity", "exception", "security", "shared"}
