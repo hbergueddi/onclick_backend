@@ -57,7 +57,8 @@ class LangChain4jChatService implements AiChatApi {
 
     private final ChatModel chatModel;
     private final AiChatModelName modelName;
-    private final ObjectMapper objectMapper;
+    // Instance locale (le projet ne déclare pas de bean ObjectMapper — cf. ResendClient/GroqStreamingClient).
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     public Result chat(String prompt) {
@@ -107,6 +108,11 @@ class LangChain4jChatService implements AiChatApi {
                     toolCalls++;
                     messages.add(ToolExecutionResultMessage.from(req, executeTool(byName, req)));
                 }
+            }
+            if (content == null) {
+                // Budget d'itérations d'outils épuisé sans conclusion : on force une réponse finale
+                // SANS outils (le modèle doit alors synthétiser les résultats d'outils déjà obtenus).
+                content = chatModel.chat(ChatRequest.builder().messages(messages).build()).aiMessage().text();
             }
         } catch (RuntimeException e) {
             throw mapAndLog(e, model, elapsedMs(start), prompt.length());

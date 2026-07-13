@@ -1,6 +1,5 @@
 package com.onesley.oneclick.core.ai.internal;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.onesley.oneclick.core.ai.api.AiChatApi;
 import com.onesley.oneclick.exception.BadRequestException;
 import dev.langchain4j.exception.TimeoutException;
@@ -26,7 +25,7 @@ class LangChain4jChatServiceTest {
     private final AiChatModelName modelName = new AiChatModelName("test-model");
 
     private LangChain4jChatService serviceWith(ChatModel model) {
-        return new LangChain4jChatService(model, modelName, new ObjectMapper());
+        return new LangChain4jChatService(model, modelName);
     }
 
     @Test

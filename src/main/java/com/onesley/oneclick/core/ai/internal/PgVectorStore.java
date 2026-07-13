@@ -41,7 +41,8 @@ class PgVectorStore implements VectorStore {
     @PersistenceContext
     private EntityManager em;
 
-    private final ObjectMapper objectMapper;
+    // Instance locale (le projet ne déclare pas de bean ObjectMapper — convention ResendClient, etc.).
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private final AiMetrics metrics;
 
     @Override
