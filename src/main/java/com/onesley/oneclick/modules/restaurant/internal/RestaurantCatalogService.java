@@ -14,6 +14,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import com.onesley.oneclick.modules.restaurant.api.RestaurantCreateDto;
@@ -69,6 +70,30 @@ public class RestaurantCatalogService {
             }
         }
         return repository.findAll(spec, PageRequest.of(page, size, Sort.by("name"))).map(Restaurant::toDto);
+    }
+
+    /**
+     * Recherche de restaurants par nom (ILIKE), <b>bornée au périmètre visible</b> du caller
+     * (oneclick ∪ memberships ; aucun filtre pour SUPERADMIN). Utilisée par l'outil chatbot
+     * {@code search_restaurants} : un client ne peut pas découvrir des restaurants hors de son périmètre.
+     *
+     * @param query terme recherché (nom, insensible à la casse)
+     * @param limit nombre max de résultats (borné 1..20)
+     * @return restaurants correspondants, triés par nom
+     */
+    public List<RestaurantDto> searchByName(String query, int limit) {
+        if (query == null || query.isBlank()) return List.of();
+        String like = "%" + query.toLowerCase().trim() + "%";
+        Specification<Restaurant> spec = (root, q, cb) -> cb.and(
+            cb.isNull(root.get("deletedAt")),
+            cb.like(cb.lower(root.get("name")), like));
+        Set<UUID> visible = tenantScope.visibleTenantIdsOrNull();
+        if (visible != null) {
+            spec = spec.and((root, q, cb) -> root.get("tenantId").in(visible));
+        }
+        int capped = Math.min(Math.max(limit, 1), 20);
+        return repository.findAll(spec, PageRequest.of(0, capped, Sort.by("name")))
+            .map(Restaurant::toDto).getContent();
     }
 
     // Pas de @Cacheable : le contrôle de périmètre (canSeeTenant) dépend du caller — un résultat mis

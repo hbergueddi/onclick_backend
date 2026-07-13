@@ -22,6 +22,15 @@ import java.util.UUID;
 public interface ReservationRepository extends JpaRepository<Reservation, UUID>, JpaSpecificationExecutor<Reservation> {
     java.util.List<Reservation> findAllByTenantId(java.util.UUID tenantId);
     java.util.List<Reservation> findAllByClientId(java.util.UUID clientId);
+
+    /**
+     * Résout le {@code tenant_id} d'un restaurant (SQL natif — le module lit déjà {@code restaurants}
+     * via ses jointures). Sert à l'outil chatbot {@code book_reservation} pour fixer le tenant
+     * <b>côté serveur</b> à partir du seul {@code restaurantId}, sans le faire fournir par le LLM.
+     */
+    @Query(value = "SELECT tenant_id FROM restaurants WHERE id = :restaurantId AND deleted_at IS NULL",
+        nativeQuery = true)
+    java.util.Optional<UUID> findTenantIdByRestaurantId(@Param("restaurantId") UUID restaurantId);
     java.util.List<Reservation> findAllByRestaurantId(java.util.UUID restaurantId);
     java.util.List<Reservation> findAllByTableId(java.util.UUID tableId);
     java.util.List<Reservation> findAllByServiceId(java.util.UUID serviceId);
