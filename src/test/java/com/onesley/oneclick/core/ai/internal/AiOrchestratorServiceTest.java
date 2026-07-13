@@ -39,10 +39,12 @@ class AiOrchestratorServiceTest {
     private final ToolRegistry tools = mock(ToolRegistry.class);
     private final PromptBuilder prompt = mock(PromptBuilder.class);
     private final AiChatApi chat = mock(AiChatApi.class);
+    private final com.onesley.oneclick.core.ai.api.ConversationMemory memory =
+        mock(com.onesley.oneclick.core.ai.api.ConversationMemory.class);
     private final AiMetrics metrics = new AiMetrics(new SimpleMeterRegistry());
 
     private AiOrchestratorService orchestrator(List<ContextSource> sources) {
-        return new AiOrchestratorService(sources, routing, tools, prompt, chat, metrics);
+        return new AiOrchestratorService(sources, routing, tools, prompt, chat, memory, metrics);
     }
 
     private static ContextSource source(String name, ContextFragment... fragments) {
@@ -109,6 +111,26 @@ class AiOrchestratorServiceTest {
         assertThat(a.toolsAvailable()).isEmpty();
         verify(memory, never()).retrieve(any()); // source non sélectionnée jamais interrogée
         verify(tools, never()).all();            // outils coupés → registre non consulté
+    }
+
+    @Test
+    void answer_withConversationId_persistsUserAndAssistantTurns() {
+        stubChat("réponse assistant");
+        when(routing.decide(any(), any())).thenReturn(new RoutingDecision(Set.of(), false));
+
+        orchestrator(List.of()).answer(new com.onesley.oneclick.core.ai.api.AiQuery(
+            "bonjour", "conv-1", Set.of(), null));
+
+        verify(memory).append(eq("conv-1"), any(), eq("user"), eq("bonjour"));
+        verify(memory).append(eq("conv-1"), any(), eq("assistant"), eq("réponse assistant"));
+    }
+
+    @Test
+    void answer_withoutConversationId_doesNotPersist() {
+        stubChat("x");
+        when(routing.decide(any(), any())).thenReturn(new RoutingDecision(Set.of(), false));
+        orchestrator(List.of()).answer(AiQuery.of("bonjour")); // conversationId null
+        org.mockito.Mockito.verifyNoInteractions(memory);
     }
 
     @Test

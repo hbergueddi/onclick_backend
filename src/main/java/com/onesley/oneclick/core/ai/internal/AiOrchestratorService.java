@@ -7,15 +7,19 @@ import com.onesley.oneclick.core.ai.api.AiQuery;
 import com.onesley.oneclick.core.ai.api.AiTool;
 import com.onesley.oneclick.core.ai.api.ContextFragment;
 import com.onesley.oneclick.core.ai.api.ContextSource;
+import com.onesley.oneclick.core.ai.api.ConversationMemory;
+import com.onesley.oneclick.core.ai.api.ConversationMessage;
 import com.onesley.oneclick.core.ai.api.PromptBuilder;
 import com.onesley.oneclick.core.ai.api.RoutingDecision;
 import com.onesley.oneclick.core.ai.api.RoutingStrategy;
 import com.onesley.oneclick.core.ai.api.ToolRegistry;
 import com.onesley.oneclick.exception.BadRequestException;
+import com.onesley.oneclick.security.SecurityHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Orchestrateur IA — implémentation du point d'entrée {@link AiOrchestrator} (module {@code core/ai}).
@@ -47,16 +51,18 @@ class AiOrchestratorService implements AiOrchestrator {
     private final ToolRegistry toolRegistry;
     private final PromptBuilder promptBuilder;
     private final AiChatApi chatApi;
+    private final ConversationMemory memory;
     private final AiMetrics metrics;
 
     AiOrchestratorService(List<ContextSource> contextSources, RoutingStrategy routingStrategy,
                           ToolRegistry toolRegistry, PromptBuilder promptBuilder,
-                          AiChatApi chatApi, AiMetrics metrics) {
+                          AiChatApi chatApi, ConversationMemory memory, AiMetrics metrics) {
         this.contextSources = List.copyOf(contextSources);
         this.routingStrategy = routingStrategy;
         this.toolRegistry = toolRegistry;
         this.promptBuilder = promptBuilder;
         this.chatApi = chatApi;
+        this.memory = memory;
         this.metrics = metrics;
     }
 
@@ -85,11 +91,23 @@ class AiOrchestratorService implements AiOrchestrator {
         String prompt = promptBuilder.build(query.question(), context);
         AiChatApi.Result result = tools.isEmpty() ? chatApi.chat(prompt) : chatApi.chat(prompt, tools);
 
+        // 4) Mémoire : on persiste le tour (question + réponse) si une conversation est fournie.
+        persistTurn(query, result.content());
+
         List<String> usedSources = decision.contextSources().stream().toList();
         List<String> toolNames = tools.stream().map(AiTool::name).toList();
         log.info("[core/ai] orchestrated — sources={} tools={} contextFragments={} durationMs={}",
             usedSources, toolNames, context.size(), result.durationMs());
 
         return new AiAnswer(result.content(), usedSources, toolNames, context.size());
+    }
+
+    /** Enregistre le tour courant dans la mémoire de conversation (no-op sans {@code conversationId}). */
+    private void persistTurn(AiQuery query, String answer) {
+        String conversationId = query.conversationId();
+        if (conversationId == null || conversationId.isBlank()) return;
+        UUID userId = SecurityHelper.currentUserId();
+        memory.append(conversationId, userId, ConversationMessage.ROLE_USER, query.question());
+        memory.append(conversationId, userId, ConversationMessage.ROLE_ASSISTANT, answer);
     }
 }
