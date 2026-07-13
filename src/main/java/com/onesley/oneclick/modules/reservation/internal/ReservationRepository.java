@@ -31,6 +31,11 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID>,
     @Query(value = "SELECT tenant_id FROM restaurants WHERE id = :restaurantId AND deleted_at IS NULL",
         nativeQuery = true)
     java.util.Optional<UUID> findTenantIdByRestaurantId(@Param("restaurantId") UUID restaurantId);
+
+    /** Nom du restaurant (SQL natif) — pour le récapitulatif de confirmation de {@code book_reservation}. */
+    @Query(value = "SELECT name FROM restaurants WHERE id = :restaurantId AND deleted_at IS NULL",
+        nativeQuery = true)
+    java.util.Optional<String> findRestaurantNameById(@Param("restaurantId") UUID restaurantId);
     java.util.List<Reservation> findAllByRestaurantId(java.util.UUID restaurantId);
     java.util.List<Reservation> findAllByTableId(java.util.UUID tableId);
     java.util.List<Reservation> findAllByServiceId(java.util.UUID serviceId);

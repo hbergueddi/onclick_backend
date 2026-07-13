@@ -9,6 +9,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -37,9 +39,10 @@ class ReservationBookingToolTest {
             Instant.parse("2030-01-01T20:00:00Z"), 4, "pending", null, Instant.now(), false, null, null);
     }
 
+    /** Args complets AVEC confirmation (chemin création effective). */
     private Map<String, Object> validArgs(UUID restaurantId) {
         return Map.of("restaurant_id", restaurantId.toString(),
-            "reservation_at", "2030-01-01T20:00:00Z", "guest_count", 4);
+            "reservation_at", "2030-01-01T20:00:00Z", "guest_count", 4, "confirm", true);
     }
 
     @Test
@@ -48,6 +51,7 @@ class ReservationBookingToolTest {
         UUID restaurantId = UUID.randomUUID();
         UUID tenantId = UUID.randomUUID();
         when(repository.findTenantIdByRestaurantId(restaurantId)).thenReturn(Optional.of(tenantId));
+        when(repository.findRestaurantNameById(restaurantId)).thenReturn(Optional.of("Aglio e Olio"));
         when(tenantScope.canSeeTenant(tenantId)).thenReturn(true);
         when(service.create(any())).thenReturn(created(tenantId, userId, restaurantId));
 
@@ -109,21 +113,45 @@ class ReservationBookingToolTest {
     }
 
     @Test
-    void execute_acceptsOffsetAndLocalDatetimes() {
-        // Un LLM émet souvent un offset (+02:00) ou une date-heure locale, pas seulement 'Z'.
+    void execute_interpretsTimeAsMoroccoLocal_ignoringOffset() {
+        // '20h30' = 20h30 au Maroc, quel que soit l'offset émis par le LLM (+02:00 / Z / sans zone).
         UUID restaurantId = UUID.randomUUID();
         UUID tenantId = UUID.randomUUID();
         when(repository.findTenantIdByRestaurantId(restaurantId)).thenReturn(Optional.of(tenantId));
+        when(repository.findRestaurantNameById(restaurantId)).thenReturn(Optional.of("Le Riad"));
         when(tenantScope.canSeeTenant(tenantId)).thenReturn(true);
         when(service.create(any())).thenReturn(created(tenantId, UUID.randomUUID(), restaurantId));
+        Instant expected = LocalDateTime.parse("2030-06-01T20:30:00")
+            .atZone(ZoneId.of("Africa/Casablanca")).toInstant();
+
         try (MockedStatic<SecurityHelper> sh = mockStatic(SecurityHelper.class)) {
             sh.when(SecurityHelper::currentUserId).thenReturn(UUID.randomUUID());
-            for (String when : new String[]{"2030-01-01T20:30:00+02:00", "2030-01-01T20:30:00Z", "2030-01-01T20:30:00"}) {
-                assertThat(tool.execute(Map.of("restaurant_id", restaurantId.toString(),
-                    "reservation_at", when, "guest_count", 2)))
-                    .as("format %s", when).contains("Réservation enregistrée");
+            for (String when : new String[]{"2030-06-01T20:30:00+02:00", "2030-06-01T20:30:00Z", "2030-06-01T20:30:00"}) {
+                tool.execute(Map.of("restaurant_id", restaurantId.toString(),
+                    "reservation_at", when, "guest_count", 2, "confirm", true));
             }
+            ArgumentCaptor<ReservationCreateDto> cap = ArgumentCaptor.forClass(ReservationCreateDto.class);
+            verify(service, org.mockito.Mockito.times(3)).create(cap.capture());
+            assertThat(cap.getAllValues())
+                .as("les 3 formats donnent la même heure locale Maroc")
+                .allSatisfy(dto -> assertThat(dto.reservationAt()).isEqualTo(expected));
         }
+    }
+
+    @Test
+    void execute_withoutConfirm_returnsRecap_withoutCreating() {
+        UUID restaurantId = UUID.randomUUID();
+        UUID tenantId = UUID.randomUUID();
+        when(repository.findTenantIdByRestaurantId(restaurantId)).thenReturn(Optional.of(tenantId));
+        when(repository.findRestaurantNameById(restaurantId)).thenReturn(Optional.of("Aglio e Olio"));
+        when(tenantScope.canSeeTenant(tenantId)).thenReturn(true);
+        try (MockedStatic<SecurityHelper> sh = mockStatic(SecurityHelper.class)) {
+            sh.when(SecurityHelper::currentUserId).thenReturn(UUID.randomUUID());
+            String out = tool.execute(Map.of("restaurant_id", restaurantId.toString(),
+                "reservation_at", "2030-06-01T20:30:00", "guest_count", 2)); // pas de confirm
+            assertThat(out).contains("À confirmer").contains("Aglio e Olio");
+        }
+        verifyNoInteractions(service); // aucune création tant que non confirmé
     }
 
     @Test
