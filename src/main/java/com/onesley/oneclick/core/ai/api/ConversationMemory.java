@@ -14,13 +14,18 @@ import java.util.UUID;
 public interface ConversationMemory {
 
     /**
-     * Derniers messages d'une conversation, en ordre <b>chronologique</b> (le plus ancien d'abord).
+     * Derniers messages d'une conversation <b>appartenant à l'utilisateur donné</b>, en ordre
+     * <b>chronologique</b> (le plus ancien d'abord).
+     *
+     * <p>Le filtrage par {@code userId} garantit qu'un utilisateur ne peut relire l'historique d'un autre
+     * en fournissant un {@code conversationId} qui ne lui appartient pas.
      *
      * @param conversationId identifiant de conversation
+     * @param userId         utilisateur propriétaire (nullable : ne matche alors que les tours non attribués)
      * @param limit          nombre maximum de messages
-     * @return les messages (vide si conversation inconnue)
+     * @return les messages (vide si conversation inconnue ou appartenant à un autre utilisateur)
      */
-    List<ConversationMessage> recent(String conversationId, int limit);
+    List<ConversationMessage> recent(String conversationId, UUID userId, int limit);
 
     /**
      * Ajoute un message à la conversation.

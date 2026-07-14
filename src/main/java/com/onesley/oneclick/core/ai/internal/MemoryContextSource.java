@@ -5,11 +5,13 @@ import com.onesley.oneclick.core.ai.api.ContextFragment;
 import com.onesley.oneclick.core.ai.api.ConversationMemory;
 import com.onesley.oneclick.core.ai.api.ConversationMessage;
 import com.onesley.oneclick.core.ai.api.ContextSource;
+import com.onesley.oneclick.security.SecurityHelper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Source de contexte « mémoire de conversation » — module {@code core/ai}.
@@ -39,7 +41,10 @@ class MemoryContextSource implements ContextSource {
         if (conversationId == null || conversationId.isBlank()) {
             return List.of();
         }
-        return memory.recent(conversationId, HISTORY_LIMIT).stream()
+        // Identité lue côté serveur (JWT du thread de requête) — jamais fournie par le client : garantit
+        // qu'on ne relit que l'historique de l'utilisateur courant, même s'il fournit un conversationId tiers.
+        UUID userId = SecurityHelper.currentUserId();
+        return memory.recent(conversationId, userId, HISTORY_LIMIT).stream()
             .map(m -> new ContextFragment(
                 label(m.role()) + " : " + m.content(),
                 Map.of("kind", "conversation", "role", m.role()),

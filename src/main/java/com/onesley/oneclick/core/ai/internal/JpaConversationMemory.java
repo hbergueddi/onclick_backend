@@ -26,11 +26,11 @@ class JpaConversationMemory implements ConversationMemory {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ConversationMessage> recent(String conversationId, int limit) {
+    public List<ConversationMessage> recent(String conversationId, UUID userId, int limit) {
         if (conversationId == null || conversationId.isBlank()) return List.of();
         int capped = Math.min(Math.max(limit, 1), 50);
-        List<AiConversationMessage> desc = repository.findByConversationIdOrderByCreatedAtDesc(
-            conversationId, PageRequest.of(0, capped));
+        List<AiConversationMessage> desc = repository.findRecentForUser(
+            conversationId, userId, PageRequest.of(0, capped));
         // Réordonne en chronologique (plus ancien d'abord) pour la construction du prompt.
         return desc.stream()
             .sorted(java.util.Comparator.comparing(AiConversationMessage::getCreatedAt))
