@@ -1,3 +1,4 @@
+
 # ════════════════════════════════════════════════════════════════════
 # OneClick Backend — ENTERPRISE profile (refonte greenfield, branche enterprise-architecture)
 # ════════════════════════════════════════════════════════════════════
@@ -60,6 +61,24 @@ app:
   google:
     places:
       api-key: ${GOOGLE_PLACES_API_KEY:}
+
+  # ─── Chatbot IA (module core/ai) — surcharge profil enterprise ────────
+  # Provider du chat : ollama (local, défaut) | groq (managé, rapide).
+  # Pour du 100 % Groq : AI_PROVIDER=groq + GROQ_API_KEY renseignée.
+  # NB : Groq ne fournit PAS d'embeddings → le RAG reste servi par Ollama.
+  ai:
+    provider: ${AI_PROVIDER:ollama}
+    groq:
+      api-key: ${GROQ_API_KEY:}                                          # externalisée — jamais en dur
+      endpoint: ${GROQ_ENDPOINT:https://api.groq.com/openai/v1/chat/completions}
+      base-url: ${GROQ_BASE_URL:https://api.groq.com/openai/v1}
+      model: ${GROQ_MODEL:llama-3.3-70b-versatile}
+      timeout: ${GROQ_TIMEOUT:PT60S}
+    ollama:
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+      chat-model: ${OLLAMA_CHAT_MODEL:llama3.2:3b}
+      embedding-model: ${OLLAMA_EMBEDDING_MODEL:nomic-embed-text}
+      timeout: ${OLLAMA_TIMEOUT:PT60S}
 
 logging:
   level:
